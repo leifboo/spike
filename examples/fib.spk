@@ -1,0 +1,12 @@
+#!/usr/bin/env spike
+
+class Program {
+    main() {
+        return self.fib(10);
+    }
+    fib(x) {
+        if (x<=2) return 1;
+        return self.fib(x-1) + self.fib(x-2);
+    }
+}
+
