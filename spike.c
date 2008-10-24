@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     }
     SpkDisassembler_disassembleModule(module, stdout);
     
-    obj = (Object *)malloc(sizeof(Object));
+    obj = (Object *)malloc(module->firstClass->instanceSize);
     obj->klass = module->firstClass;
     entry = SpkSymbol_get("main");
     result = SpkInterpreter_start(obj, entry);

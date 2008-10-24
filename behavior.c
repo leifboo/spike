@@ -56,9 +56,9 @@ void SpkClassBehavior_init2(void) {
     }
 }
 
-Behavior *SpkBehavior_new(Behavior *superclass, struct Module *module) {
+Behavior *SpkBehavior_new(Behavior *superclass, struct Module *module, size_t instVarCount) {
     Behavior *newBehavior;
-    size_t i, nInstVars = 0;
+    size_t i;
     
     newBehavior = (Behavior *)malloc(sizeof(Behavior));
     newBehavior->superclass = superclass;
@@ -79,7 +79,7 @@ Behavior *SpkBehavior_new(Behavior *superclass, struct Module *module) {
     
     /* memory layout of instances */
     newBehavior->instVarOffset = offsetof(ObjectSubclass, variables);
-    newBehavior->instanceSize = newBehavior->instVarOffset + nInstVars*sizeof(Object *);
+    newBehavior->instanceSize = newBehavior->instVarOffset + instVarCount*sizeof(Object *);
     
     return newBehavior;
 }
@@ -88,7 +88,7 @@ Behavior *SpkBehavior_fromTemplate(SpkClassTmpl *template, Behavior *superclass,
     Behavior *newBehavior;
     SpkMethodTmpl *methodTmpl;
     
-    newBehavior = SpkBehavior_new(superclass, module);
+    newBehavior = SpkBehavior_new(superclass, module, 0);
     
     for (methodTmpl = template->methods; methodTmpl->name; ++methodTmpl) {
         Symbol *messageSelector;

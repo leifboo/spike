@@ -83,6 +83,15 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             pIntValue = &intValue;
             break;
             
+        case OPCODE_STORE_LOCAL:    mnemonic = "store"; base = "local";    goto store;
+        case OPCODE_STORE_INST_VAR: mnemonic = "store"; base = "receiver"; goto store;
+        case OPCODE_STORE_GLOBAL:   mnemonic = "store"; base = "global";   goto store;
+ store:
+            DECODE_UINT(index);
+            break;
+            
+        case OPCODE_POP: mnemonic = "pop"; break;
+
         case OPCODE_BRANCH_IF_FALSE: mnemonic = "brf"; goto branch;
         case OPCODE_BRANCH_IF_TRUE:  mnemonic = "brt"; goto branch;
         case OPCODE_BRANCH_ALWAYS:   mnemonic = "bra"; goto branch;

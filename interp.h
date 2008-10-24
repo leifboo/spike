@@ -148,7 +148,7 @@ struct Method {
 };
 
 /* XXX: How much stack space is reserved for leaf routines? */
-#define contextSizeForMethod(m) ((m)->argumentCount + (m)->localCount + (m)->stackSize)
+#define contextSizeForMethod(m) ((m)->localCount + (m)->argumentCount + (m)->stackSize)
 
 
 typedef struct Thunk {

@@ -9,6 +9,7 @@
 
 
 typedef enum ExprKind {
+    EXPR_ASSIGN,
     EXPR_ATTR,
     EXPR_BINARY,
     EXPR_INT,
@@ -20,7 +21,8 @@ typedef enum ExprKind {
 
 typedef enum StmtKind {
     STMT_COMPOUND,
-    STMT_DEF,
+    STMT_DEF_VAR,
+    STMT_DEF_METHOD,
     STMT_DEF_CLASS,
     STMT_EXPR,
     STMT_IF_ELSE,
@@ -71,6 +73,7 @@ struct Stmt {
         } method;
         struct {
             Expr *super;
+            size_t instVarCount;
         } klass;
     } u;
     unsigned int codeOffset;

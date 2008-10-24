@@ -23,7 +23,7 @@ static Object *Module_print(Object *self) {
 /* C API */
 
 void SpkClassModule_init(void) {
-    ClassModule = SpkBehavior_new(0 /*ClassObject*/ , 0 /*builtInModule*/);
+    ClassModule = SpkBehavior_new(0 /*ClassObject*/ , 0 /*builtInModule*/, 0);
     ClassModule->print = &Module_print;
     ClassModule->instVarOffset = offsetof(ModuleSubclass, variables);
     

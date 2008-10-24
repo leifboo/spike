@@ -107,7 +107,7 @@ typedef struct Metaclass {
 
 void SpkClassBehavior_init(void);
 void SpkClassBehavior_init2(void);
-Behavior *SpkBehavior_new(Behavior *superclass, struct Module *module);
+Behavior *SpkBehavior_new(Behavior *superclass, struct Module *module, size_t instVarCount);
 Behavior *SpkBehavior_fromTemplate(SpkClassTmpl *template, Behavior *superclass, struct Module *module);
 void SpkBehavior_insertMethod(Behavior *, Symbol *, Method *);
 Method *SpkBehavior_lookupMethod(Behavior *, Symbol *);

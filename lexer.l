@@ -31,6 +31,7 @@ static void lcomment(yyscan_t yyscanner);
 "class"			{ count(yyscanner); return TOKEN_CLASS; }
 "if"			{ count(yyscanner); return TOKEN_IF; }
 "return"		{ count(yyscanner); return TOKEN_RETURN; }
+"var"			{ count(yyscanner); return TOKEN_VAR; }
 
 {LL}({L}|{D})*		{ count(yyscanner); return TOKEN_IDENTIFIER; }
 {UL}({L}|{D})*		{ count(yyscanner); return TOKEN_TYPE_IDENTIFIER; }
@@ -48,6 +49,7 @@ static void lcomment(yyscan_t yyscanner);
 "}"			{ count(yyscanner); return TOKEN_RCURLY; }
 ","			{ count(yyscanner); return TOKEN_COMMA; }
 ":"			{ count(yyscanner); return TOKEN_COLON; }
+"="			{ count(yyscanner); return TOKEN_ASSIGN; }
 "("			{ count(yyscanner); return TOKEN_LPAREN; }
 ")"			{ count(yyscanner); return TOKEN_RPAREN; }
 "."			{ count(yyscanner); return TOKEN_DOT; }

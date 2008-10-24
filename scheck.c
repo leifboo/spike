@@ -1,4 +1,3 @@
-
 #include "scheck.h"
 
 #include "interp.h"
@@ -13,6 +12,18 @@ typedef struct StaticChecker {
 } StaticChecker;
 
 
+static void checkVarDeclList(Expr *declList, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
+    Expr *decl;
+    
+    if (pass != 1) {
+        return;
+    }
+    for (decl = declList; decl; decl = decl->next) {
+        assert(decl->kind == EXPR_NAME);
+        SpkSymbolTable_Insert(checker->st, decl);
+    }
+}
+
 static void checkExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
     Expr *arg;
     
@@ -20,12 +31,12 @@ static void checkExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned i
     case EXPR_NAME:
         switch (pass) {
         case 1:
-            if (0 && stmt->kind == STMT_DEF) {
+            if (0 && stmt->kind == STMT_DEF_METHOD) {
                 SpkSymbolTable_Insert(checker->st, expr);
             }
             break;
         case 2:
-            if (stmt->kind != STMT_DEF) {
+            if (stmt->kind != STMT_DEF_METHOD) {
                 if (expr->sym->sym == checker->self) {
                     expr->kind = EXPR_SELF;
                 } else if (expr->sym->sym == checker->super) {
@@ -41,7 +52,7 @@ static void checkExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned i
         switch (expr->oper) {
         case OPER_CALL:
             checkExpr(expr->left, stmt, checker, pass);
-            if (stmt->kind == STMT_DEF) {
+            if (stmt->kind == STMT_DEF_METHOD) {
                 if (pass == 1) {
                     assert(expr->left->kind == EXPR_NAME);
                     stmt->u.method.name = expr->left->sym;
@@ -62,6 +73,10 @@ static void checkExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned i
         checkExpr(expr->left, stmt, checker, pass);
         checkExpr(expr->right, stmt, checker, pass);
         break;
+    case EXPR_ASSIGN:
+        checkExpr(expr->left, stmt, checker, pass);
+        checkExpr(expr->right, stmt, checker, pass);
+        break;
     }
 }
 
@@ -76,10 +91,10 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
     case STMT_COMPOUND:
         if (outerPass == 2) {
             enterNewContext = outer &&
-                              (outer->kind == STMT_DEF ||
+                              (outer->kind == STMT_DEF_METHOD ||
                                outer->kind == STMT_DEF_CLASS);
             SpkSymbolTable_EnterScope(checker->st, enterNewContext);
-            if (outer && outer->kind == STMT_DEF) {
+            if (outer && outer->kind == STMT_DEF_METHOD) {
                 /* declare function arguments */
                 for (arg = outer->u.method.argList; arg; arg = arg->next) {
                     assert(arg->kind == EXPR_NAME);
@@ -92,10 +107,24 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
                     checkStmt(s, stmt, checker, innerPass);
                 }
             }
+            if (outer) {
+                switch (outer->kind) {
+                case STMT_DEF_METHOD:
+                    outer->u.method.localCount = checker->st->currentScope->context->nDefs -
+                                                 outer->u.method.argumentCount;
+                    break;
+                case STMT_DEF_CLASS:
+                    outer->u.klass.instVarCount = checker->st->currentScope->context->nDefs;
+                    break;
+                }
+            }
             SpkSymbolTable_ExitScope(checker->st);
         }
         break;
-    case STMT_DEF:
+    case STMT_DEF_VAR:
+        checkVarDeclList(stmt->expr, stmt, checker, outerPass);
+        break;
+    case STMT_DEF_METHOD:
         checkExpr(stmt->expr, stmt, checker, outerPass);
         checkStmt(stmt->top, stmt, checker, outerPass);
         break;

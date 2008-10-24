@@ -27,9 +27,9 @@ static Object *True_print(Object *self) {
 /* C API */
 
 void SpkClassBoolean_init(void) {
-    ClassBoolean = SpkBehavior_new(0 /*ClassObject*/ , builtInModule);
-    ClassFalse = SpkBehavior_new(ClassBoolean, builtInModule);
-    ClassTrue = SpkBehavior_new(ClassBoolean, builtInModule);
+    ClassBoolean = SpkBehavior_new(0 /*ClassObject*/ , builtInModule, 0);
+    ClassFalse = SpkBehavior_new(ClassBoolean, builtInModule, 0);
+    ClassTrue = SpkBehavior_new(ClassBoolean, builtInModule, 0);
     
     ClassFalse->print = &False_print;
     ClassTrue->print = &True_print;

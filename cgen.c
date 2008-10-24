@@ -133,6 +133,21 @@ static void push(Expr *expr, CodeGen *cgen) {
     tallyPush(cgen);
 }
 
+static void store(Expr *var, CodeGen *cgen) {
+    opcode_t opcode;
+    Expr *def;
+    
+    def = var->u.ref.def;
+    assert(def);
+    switch (def->u.def.level) {
+    case 0: opcode = OPCODE_STORE_GLOBAL;   break;
+    case 1: opcode = OPCODE_STORE_INST_VAR; break;
+    case 2: opcode = OPCODE_STORE_LOCAL;    break;
+    }
+    EMIT_OPCODE(opcode);
+    encodeUnsignedInt(def->u.def.index, cgen);
+}
+
 /****************************************************************************/
 /* rodata */
 
@@ -239,6 +254,12 @@ static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
         CHECK_STACKP();    
         break;
+    case EXPR_ASSIGN:
+        assert(expr->left->kind == EXPR_NAME && "invalid lvalue");
+        emitCodeForExpr(expr->right, 0, cgen);
+        store(expr->left, cgen);
+        CHECK_STACKP();
+        break;
     }
     return;
 }
@@ -262,7 +283,9 @@ static void emitCodeForStmt(Stmt *stmt, Stmt *sentinel, CodeGen *cgen) {
             emitCodeForStmt(s, exitStmt, cgen);
         }
         break;
-    case STMT_DEF:
+    case STMT_DEF_VAR:
+        break;
+    case STMT_DEF_METHOD:
         emitCodeForMethod(stmt, cgen);
         break;
     case STMT_DEF_CLASS:
@@ -347,7 +370,7 @@ static void emitCodeForClass(Stmt *stmt, CodeGen *cgen) {
     
     assert(!cgen->currentClass && !cgen->currentMethod && "class definition not allowed here");
     
-    theClass = SpkBehavior_new(0, 0);
+    theClass = SpkBehavior_new(0, 0, stmt->u.klass.instVarCount);
     
     if (!cgen->firstClass) {
         cgen->firstClass = theClass;

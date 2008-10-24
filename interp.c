@@ -57,10 +57,10 @@ static void oopcpy(Object **dest, Object **src, size_t count) {
 /* initialization */
 
 void SpkClassInterpreter_init(void) {
-    ClassObject = SpkBehavior_new(0, builtInModule);
-    ClassSymbol = SpkBehavior_new(ClassObject, builtInModule);
-    ClassMessage = SpkBehavior_new(ClassObject, builtInModule);
-    ClassThunk = SpkBehavior_new(ClassObject, builtInModule);
+    ClassObject = SpkBehavior_new(0, builtInModule, 0);
+    ClassSymbol = SpkBehavior_new(ClassObject, builtInModule, 0);
+    ClassMessage = SpkBehavior_new(ClassObject, builtInModule, 0);
+    ClassThunk = SpkBehavior_new(ClassObject, builtInModule, 0);
 }
 
 Object *SpkInterpreter_start(Object *receiver, Symbol *entry) {
@@ -393,15 +393,15 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
 /*** store & pop opcodes ***/
         case OPCODE_STORE_LOCAL:
             DECODE_UINT(index);
-            framePointer[index] = POP_OBJECT();
+            framePointer[index] = STACK_TOP();
             break;
         case OPCODE_STORE_INST_VAR:
             DECODE_UINT(index);
-            instVarPointer[index] = POP_OBJECT();
+            instVarPointer[index] = STACK_TOP();
             break;
         case OPCODE_STORE_GLOBAL:
             DECODE_UINT(index);
-            globalPointer[index] = POP_OBJECT();
+            globalPointer[index] = STACK_TOP();
             break;
         case OPCODE_POP:
             POP(1);
@@ -539,9 +539,9 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             
         case OPCODE_SAVE: {
             /* save */
-            size_t contextSize;
+            size_t contextSize, count;
             Context *newContext;
-            Object **args, **p;
+            Object **p;
 
             /* Create a new context for the currently
              * executing method (cf. activateNewMethod).
@@ -551,21 +551,31 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
 
             newContext->sender = self->activeContext;
             newContext->pc = instructionPointer;
-            newContext->stackp = &newContext->variables[method->stackSize];
             newContext->homeContext = newContext;
             newContext->u.m.method = method;
             newContext->u.m.methodClass = methodClass;
             newContext->u.m.receiver = receiver;
-
-            args = &newContext->variables[contextSize] - method->argumentCount;
-            oopcpy(args, stackPointer, argumentCount);
-            for (p = &newContext->variables[0]; p < args; ++p) {
+            
+            /* initialize the stack */
+            count = method->stackSize;
+            for (p = &newContext->variables[0]; count > 0; ++p, --count) {
                 *p = 0;
             }
-
+            newContext->stackp = p;
+            /* copy & reverse arguments */
+            count = method->argumentCount;
+            for ( ; count > 0; ++p, --count) {
+                *p = stackPointer[count - 1];
+            }
+            /* initialize locals */
+            count = method->localCount;
+            for ( ; count > 0; ++p, --count) {
+                *p = 0;
+            }
+            
             self->activeContext->pc = linkRegister;
             self->activeContext->stackp = stackPointer;
-
+            
             framePointer = stackPointer = newContext->stackp;
             self->activeContext = homeContext = newContext;
             break; }

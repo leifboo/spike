@@ -33,7 +33,8 @@ closed_statement(r) ::= expr(expr) SEMI.                                        
 closed_statement(r) ::= compound_statement(stmt).                               { r = stmt; }
 closed_statement(r) ::= RETURN            SEMI.                                 { r = SpkParser_NewStmt(STMT_RETURN, 0, 0, 0); }
 closed_statement(r) ::= RETURN expr(expr) SEMI.                                 { r = SpkParser_NewStmt(STMT_RETURN, expr, 0, 0); }
-closed_statement(r) ::= expr(expr) compound_statement(stmt).                    { r = SpkParser_NewStmt(STMT_DEF, expr, stmt, 0); }
+closed_statement(r) ::= VAR expr(declList) SEMI.                                { r = SpkParser_NewStmt(STMT_DEF_VAR, declList, 0, 0); }
+closed_statement(r) ::= expr(expr) compound_statement(stmt).                    { r = SpkParser_NewStmt(STMT_DEF_METHOD, expr, stmt, 0); }
 closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) compound_statement(stmt).   { r = SpkParser_NewClassDef(name.sym, 0, stmt); }
 closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) COLON TYPE_IDENTIFIER(super) compound_statement(stmt).
                                                                                 { r = SpkParser_NewClassDef(name.sym, super.sym, stmt); }
@@ -43,12 +44,17 @@ compound_statement(r) ::= LCURLY                          RCURLY.               
 compound_statement(r) ::= LCURLY statement_list(stmtList) RCURLY.               { r = SpkParser_NewStmt(STMT_COMPOUND, 0, stmtList.first, stmtList.last); }
 
 %type expr {Expr *}
-expr(r) ::= binary_expr(expr).                                                  { r = expr; }
+expr(r) ::= assignment_expr(expr).                                              { r = expr; }
+expr(r) ::= expr(left) COMMA assignment_expr(right).                            { r = left; r->next = right; }
 
 %left EQ NE.
 %left GT GE LT LE.
 %left PLUS MINUS.
 %left TIMES DIVIDE.
+
+%type assignment_expr {Expr *}
+assignment_expr(r) ::= binary_expr(expr).                                       { r = expr; }
+assignment_expr(r) ::= postfix_expr(left) ASSIGN assignment_expr(right).        { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_EQ, 0, left, right); }
 
 %type binary_expr {Expr *}
 binary_expr(r) ::= binary_expr(left) EQ binary_expr(right).                     { r = SpkParser_NewExpr(EXPR_BINARY, OPER_EQ, 0, left, right); }
@@ -75,8 +81,8 @@ primary_expr(r) ::= INT(token).                                                 
 primary_expr(r) ::= LPAREN expr(expr) RPAREN.                                   { r = expr; }
 
 %type argument_expr_list {ExprList}
-argument_expr_list(r) ::= expr(arg).                                            { r.first = arg; r.last = arg; }
-argument_expr_list(r) ::= argument_expr_list(args) COMMA expr(arg).             { r = args; r.last->next = arg; r.last = arg; }
+argument_expr_list(r) ::= binary_expr(arg).                                     { r.first = arg; r.last = arg; }
+argument_expr_list(r) ::= argument_expr_list(args) COMMA binary_expr(arg).      { r = args; r.last->next = arg; r.last = arg; }
 
 %syntax_error {
     printf("syntax error! token %d, line %u\n", TOKEN.id, TOKEN.lineNo);
