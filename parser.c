@@ -38,6 +38,15 @@ Expr *SpkParser_NewClassAttrExpr(struct SymbolNode *className, struct SymbolNode
     return newExpr;
 }
 
+Expr *SpkParser_Comma(Expr *left, Expr *right) {
+    Expr *e;
+    
+    for (e = left; e->next; e = e->next)
+        ;
+    e->next = right;
+    return left;
+}
+
 Stmt *SpkParser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom) {
     Stmt *newStmt;
     

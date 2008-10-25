@@ -372,7 +372,18 @@ static void emitCodeForClass(Stmt *stmt, CodeGen *cgen) {
     
     assert(!cgen->currentClass && !cgen->currentMethod && "class definition not allowed here");
     
-    theClass = SpkBehavior_new(ClassObject, 0, stmt->u.klass.instVarCount);
+    theClass = (Behavior *)cgen->data[stmt->expr->u.def.index];
+    cgen->currentClass = theClass;
+    emitCodeForStmt(stmt->top, 0, cgen);
+    cgen->currentClass = 0;
+}
+
+/****************************************************************************/
+
+static void createClass(Stmt *stmt, CodeGen *cgen) {
+    Behavior *theClass;
+    
+    theClass = SpkBehavior_new(0, 0, stmt->u.klass.instVarCount);
     
     if (!cgen->firstClass) {
         cgen->firstClass = theClass;
@@ -381,12 +392,29 @@ static void emitCodeForClass(Stmt *stmt, CodeGen *cgen) {
     }
     cgen->lastClass = theClass;
     
-    cgen->currentClass = theClass;
-    emitCodeForStmt(stmt->top, 0, cgen);
-    cgen->currentClass = 0;
-    
     /* initialize global variable */
     cgen->data[stmt->expr->u.def.index] = (Object *)theClass;
+}
+
+static void setSuperclass(Stmt *stmt, CodeGen *cgen) {
+    Behavior *theClass, *superclass;
+    
+    theClass = (Behavior *)cgen->data[stmt->expr->u.def.index];
+    assert(theClass && theClass->base.klass == ClassBehavior);
+    superclass = stmt->u.klass.super ? (Behavior *)cgen->data[stmt->u.klass.super->u.ref.def->u.def.index] : ClassObject;
+    assert(superclass && superclass->base.klass == ClassBehavior);
+    theClass->superclass = superclass;
+}
+
+static void checkForSuperclassCycle(Stmt *stmt, CodeGen *cgen) {
+    /* XXX: Move/copy this check to 'scheck'. */
+    Behavior *theClass, *aClass;
+    
+    theClass = (Behavior *)cgen->data[stmt->expr->u.def.index];
+    assert(theClass && theClass->base.klass == ClassBehavior);
+    for (aClass = theClass->superclass; aClass; aClass = aClass->superclass) {
+        assert(aClass != theClass && "cycle in superclass chain");
+    }
 }
 
 /****************************************************************************/
@@ -403,10 +431,29 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize) {
     cgen.data = (Object **)calloc(dataSize, sizeof(Object *));
     cgen.dataSize = dataSize;
     
+    /* Create all classes. */
+    for (s = tree; s; s = s->next) {
+        if (s->kind == STMT_DEF_CLASS) {
+            createClass(s, &cgen);
+        }
+    }
+    for (s = tree; s; s = s->next) {
+        if (s->kind == STMT_DEF_CLASS) {
+            setSuperclass(s, &cgen);
+        }
+    }
+    for (s = tree; s; s = s->next) {
+        if (s->kind == STMT_DEF_CLASS) {
+            checkForSuperclassCycle(s, &cgen);
+        }
+    }
+
+    /* Generate code. */
     for (s = tree; s; s = s->next) {
         emitCodeForStmt(s, 0, &cgen);
     }
     
+    /* Create and initialize the module. */
     module = SpkModule_new(dataSize + cgen.rodataSize);
     module->firstClass = cgen.firstClass;
     globals = SpkInterpreter_instanceVars((Object *)module);
@@ -416,6 +463,8 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize) {
     for (index = 0; index < cgen.rodataSize; ++index) {
         globals[dataSize + index] = cgen.rodata[index];
     }
+    
+    /* Patch 'module' attribute of classes. */
     for (aClass = cgen.firstClass; aClass; aClass = aClass->next) {
         aClass->module = module;
     }

@@ -45,7 +45,7 @@ compound_statement(r) ::= LCURLY statement_list(stmtList) RCURLY.               
 
 %type expr {Expr *}
 expr(r) ::= assignment_expr(expr).                                              { r = expr; }
-expr(r) ::= expr(left) COMMA assignment_expr(right).                            { r = left; r->next = right; }
+expr(r) ::= expr(left) COMMA assignment_expr(right).                            { r = SpkParser_Comma(left, right); }
 
 %left EQ NE.
 %left GT GE LT LE.

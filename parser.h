@@ -14,6 +14,7 @@ typedef struct ParserState {
 
 Stmt *SpkParser_NewClassDef(struct SymbolNode *name, struct SymbolNode *super, Stmt *stmt);
 Expr *SpkParser_NewClassAttrExpr(struct SymbolNode *className, struct SymbolNode *attrName);
+Expr *SpkParser_Comma(Expr *left, Expr *right);
 Expr *SpkParser_NewExpr(ExprKind, Oper oper, Expr *, Expr *, Expr *);
 Stmt *SpkParser_NewStmt(StmtKind, Expr *, Stmt *, Stmt *);
 Stmt *SpkParser_ParseFile(const char *filename);
