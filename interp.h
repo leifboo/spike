@@ -3,6 +3,7 @@
 #define __interp_h__
 
 
+#include "obj.h"
 #include "oper.h"
 
 #include <stddef.h>
@@ -11,7 +12,6 @@
 typedef struct Method Method;
 typedef struct Context Context;
 typedef struct Fiber Fiber;
-typedef struct Object Object;
 typedef struct Symbol Symbol;
 
 
@@ -56,16 +56,6 @@ enum Opcode {
     NUM_OPCODES
 };
 
-
-struct Object {
-    int refCount;
-    struct Behavior *klass;
-};
-
-typedef struct ObjectSubclass {
-    Object base;
-    Object *variables[1]; /* stretchy */
-} ObjectSubclass;
 
 typedef ObjectSubclass Array;
 

@@ -3,7 +3,7 @@
 #define __int_h__
 
 
-#include "interp.h"
+#include "obj.h"
 
 
 typedef struct Integer {
@@ -17,8 +17,12 @@ typedef struct IntegerSubclass {
 } IntegerSubclass;
 
 
+extern struct Behavior *ClassInteger;
+
+
 void SpkClassInteger_init(void);
 Integer *SpkInteger_fromLong(long);
+long SpkInteger_asLong(Integer *);
 
 
 #endif /* __int_h__ */

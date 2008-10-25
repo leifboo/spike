@@ -73,6 +73,7 @@ binary_expr(r) ::= postfix_expr(expr).                                          
 postfix_expr(r) ::= postfix_expr(func) LPAREN RPAREN.                           { r = SpkParser_NewExpr(EXPR_POSTFIX, OPER_CALL, 0, func, 0); }
 postfix_expr(r) ::= postfix_expr(func) LPAREN argument_expr_list(args) RPAREN.  { r = SpkParser_NewExpr(EXPR_POSTFIX, OPER_CALL, 0, func, args.first); }
 postfix_expr(r) ::= postfix_expr(obj) DOT IDENTIFIER(attr).                     { r = SpkParser_NewExpr(EXPR_ATTR, 0, 0, obj, 0); r->sym = attr.sym; }
+postfix_expr(r) ::= TYPE_IDENTIFIER(name) DOT IDENTIFIER(attr).                 { r = SpkParser_NewClassAttrExpr(name.sym, attr.sym); }
 postfix_expr(r) ::= primary_expr(expr).                                         { r = expr; }
 
 %type primary_expr {Expr *}

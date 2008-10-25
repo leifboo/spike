@@ -14,7 +14,7 @@
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
 
 
-static Behavior *ClassInteger;
+Behavior *ClassInteger;
 
 
 /*------------------------------------------------------------------------*/
@@ -183,11 +183,11 @@ static Object *Integer_bor(Object *self, Object *arg0, Object *arg1) {
 /*------------------------------------------------------------------------*/
 /* methods -- other */
 
-static Object *Integer_print(Object *_self) {
+static Object *Integer_print(Object *_self, Object *arg0, Object *arg1) {
     Integer *self;
     
     self = (Integer *)_self;
-    printf("an Integer at %p with value %ld\n", self, self->value);
+    printf("%ld", self->value);
 }
 
 
@@ -195,6 +195,7 @@ static Object *Integer_print(Object *_self) {
 /* class template */
 
 static SpkMethodTmpl methods[] = {
+    /* operators */
     { "__pos__",    SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_pos    },
     { "__neg__",    SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_neg    },
     { "__bneg__",   SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_bneg   },
@@ -215,6 +216,8 @@ static SpkMethodTmpl methods[] = {
     { "__band__",   SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Integer_band   },
     { "__bxor__",   SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Integer_bxor   },
     { "__bor__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Integer_bor    },
+    /* other */
+    { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Integer_print },
     { 0, 0, 0}
 };
 
@@ -231,7 +234,6 @@ static SpkClassTmpl tmpl = {
 
 void SpkClassInteger_init(void) {
     ClassInteger = SpkBehavior_fromTemplate(&tmpl, 0 /*ClassObject*/ , builtInModule);
-    ClassInteger->print = &Integer_print;
 }
 
 Integer *SpkInteger_fromLong(long value) {
@@ -241,4 +243,8 @@ Integer *SpkInteger_fromLong(long value) {
     result->base.klass = ClassInteger;
     result->value = value;
     return result;
+}
+
+long SpkInteger_asLong(Integer *anInteger) {
+    return anInteger->value;
 }

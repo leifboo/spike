@@ -3,6 +3,7 @@
 
 #include "behavior.h"
 #include "module.h"
+#include "obj.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -14,25 +15,51 @@ static Behavior *ClassBoolean, *ClassFalse, *ClassTrue;
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static Object *False_print(Object *self) {
-    printf("false\n");
+static Object *False_print(Object *self, Object *arg0, Object *arg1) {
+    printf("false");
 }
 
-static Object *True_print(Object *self) {
-    printf("true\n");
+static Object *True_print(Object *self, Object *arg0, Object *arg1) {
+    printf("true");
 }
+
+
+/*------------------------------------------------------------------------*/
+/* class templates */
+
+static SpkMethodTmpl FalseMethods[] = {
+    { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &False_print },
+    { 0, 0, 0}
+};
+
+static SpkClassTmpl FalseTmpl = {
+    offsetof(ObjectSubclass, variables),
+    sizeof(Boolean),
+    0,
+    FalseMethods
+};
+
+
+static SpkMethodTmpl TrueMethods[] = {
+    { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &True_print },
+    { 0, 0, 0}
+};
+
+static SpkClassTmpl TrueTmpl = {
+    offsetof(ObjectSubclass, variables),
+    sizeof(Boolean),
+    0,
+    TrueMethods
+};
 
 
 /*------------------------------------------------------------------------*/
 /* C API */
 
 void SpkClassBoolean_init(void) {
-    ClassBoolean = SpkBehavior_new(0 /*ClassObject*/ , builtInModule, 0);
-    ClassFalse = SpkBehavior_new(ClassBoolean, builtInModule, 0);
-    ClassTrue = SpkBehavior_new(ClassBoolean, builtInModule, 0);
-    
-    ClassFalse->print = &False_print;
-    ClassTrue->print = &True_print;
+    ClassBoolean = SpkBehavior_new(ClassObject, builtInModule, 0);
+    ClassFalse = SpkBehavior_fromTemplate(&FalseTmpl, ClassBoolean, builtInModule);
+    ClassTrue = SpkBehavior_fromTemplate(&TrueTmpl, ClassBoolean, builtInModule);
     
     Spk_false = (Boolean *)malloc(sizeof(Boolean));
     Spk_false->klass = ClassFalse;

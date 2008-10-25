@@ -3,7 +3,7 @@
 #define __dict_h__
 
 
-#include "interp.h"
+#include "obj.h"
 
 #include <stddef.h>
 
@@ -16,7 +16,16 @@ typedef struct IdentityDictionary {
     Object **valueArray;
 } IdentityDictionary;
 
+typedef struct IdentityDictionarySubclass {
+    IdentityDictionary base;
+    Object *variables[1]; /* stretchy */
+} IdentityDictionarySubclass;
 
+
+extern struct Behavior *ClassIdentityDictionary;
+
+
+void SpkClassIdentityDictionary_init(void);
 Object *SpkIdentityDictionary_at(IdentityDictionary *self, Object *key);
 Object *SpkIdentityDictionary_keyAtValue(IdentityDictionary *self, Object *value);
 void SpkIdentityDictionary_atPut(IdentityDictionary *self, Object *key, Object *value);

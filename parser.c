@@ -28,6 +28,16 @@ Stmt *SpkParser_NewClassDef(struct SymbolNode *name, struct SymbolNode *super, S
     return newStmt;
 }
 
+Expr *SpkParser_NewClassAttrExpr(struct SymbolNode *className, struct SymbolNode *attrName) {
+    Expr *obj, *newExpr;
+    
+    obj = SpkParser_NewExpr(EXPR_NAME, 0, 0, 0, 0);
+    obj->sym = className;
+    newExpr = SpkParser_NewExpr(EXPR_ATTR, 0, 0, obj, 0);
+    newExpr->sym = attrName;
+    return newExpr;
+}
+
 Stmt *SpkParser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom) {
     Stmt *newStmt;
     

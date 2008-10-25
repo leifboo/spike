@@ -3,7 +3,7 @@
 #define __module_h__
 
 
-#include "interp.h"
+#include "obj.h"
 
 
 typedef struct Module {
@@ -21,6 +21,7 @@ extern Module *builtInModule;
 
 
 void SpkClassModule_init(void);
+void SpkClassModule_init2(void);
 Module *SpkModule_new(unsigned int);
 
 

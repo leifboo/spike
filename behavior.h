@@ -83,14 +83,18 @@ struct Behavior {
     
     /* temporary */
     Behavior *next;
-    void (*printName)(void);
-    Object *(*print)(Object *);
     
     /* memory layout of instances */
+    size_t instVarCount;
     size_t instVarOffset;
     size_t instanceSize;
     /*SpkAccessorTmpl accessorTmpl[1];*/
 };
+
+typedef struct BehaviorSubclass {
+    Behavior base;
+    Object *variables[1]; /* stretchy */
+} BehaviorSubclass;
 
 
 typedef struct Class {
@@ -105,10 +109,14 @@ typedef struct Metaclass {
 } Metaclass;
 
 
+extern Behavior *ClassBehavior;
+
+
 void SpkClassBehavior_init(void);
 void SpkClassBehavior_init2(void);
 Behavior *SpkBehavior_new(Behavior *superclass, struct Module *module, size_t instVarCount);
 Behavior *SpkBehavior_fromTemplate(SpkClassTmpl *template, Behavior *superclass, struct Module *module);
+void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template);
 void SpkBehavior_insertMethod(Behavior *, Symbol *, Method *);
 Method *SpkBehavior_lookupMethod(Behavior *, Symbol *);
 Symbol *SpkBehavior_findSelectorOfMethod(Behavior *, Method *);

@@ -3,7 +3,7 @@
 #define __bool_h__
 
 
-#include "interp.h"
+#include "obj.h"
 
 
 typedef Object Boolean;

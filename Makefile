@@ -12,6 +12,7 @@ obj = \
 	interp.o \
 	lexer.o \
 	module.o \
+	obj.o \
 	parser.o \
 	scheck.o \
 	spike.o \

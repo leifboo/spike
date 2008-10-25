@@ -4,6 +4,7 @@
 #include "behavior.h"
 #include "interp.h"
 #include "module.h"
+#include "obj.h"
 #include "st.h"
 #include "tree.h"
 #include <assert.h>
@@ -29,6 +30,7 @@ typedef struct CodeGen {
     size_t currentOffset;
     opcode_t *opcodesBegin, *opcodesEnd;
     size_t stackPointer, stackSize;
+    Object **data;
     unsigned int dataSize;
     Object **rodata;
     unsigned int rodataSize, rodataAllocSize;
@@ -370,7 +372,7 @@ static void emitCodeForClass(Stmt *stmt, CodeGen *cgen) {
     
     assert(!cgen->currentClass && !cgen->currentMethod && "class definition not allowed here");
     
-    theClass = SpkBehavior_new(0, 0, stmt->u.klass.instVarCount);
+    theClass = SpkBehavior_new(ClassObject, 0, stmt->u.klass.instVarCount);
     
     if (!cgen->firstClass) {
         cgen->firstClass = theClass;
@@ -382,6 +384,9 @@ static void emitCodeForClass(Stmt *stmt, CodeGen *cgen) {
     cgen->currentClass = theClass;
     emitCodeForStmt(stmt->top, 0, cgen);
     cgen->currentClass = 0;
+    
+    /* initialize global variable */
+    cgen->data[stmt->expr->u.def.index] = (Object *)theClass;
 }
 
 /****************************************************************************/
@@ -395,6 +400,7 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize) {
     Behavior *aClass;
     
     memset(&cgen, 0, sizeof(cgen));
+    cgen.data = (Object **)calloc(dataSize, sizeof(Object *));
     cgen.dataSize = dataSize;
     
     for (s = tree; s; s = s->next) {
@@ -404,9 +410,8 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize) {
     module = SpkModule_new(dataSize + cgen.rodataSize);
     module->firstClass = cgen.firstClass;
     globals = SpkInterpreter_instanceVars((Object *)module);
-    /* XXX: properly initialize data */
     for (index = 0; index < dataSize; ++index) {
-        globals[index] = 0;
+        globals[index] = cgen.data[index];
     }
     for (index = 0; index < cgen.rodataSize; ++index) {
         globals[dataSize + index] = cgen.rodata[index];

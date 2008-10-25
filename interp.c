@@ -18,7 +18,7 @@
 #define HIGHEST_PRIORITY XXX
 
 
-Behavior *ClassObject, *ClassSymbol, *ClassMessage, *ClassThunk;
+static Behavior *ClassSymbol, *ClassMessage, *ClassThunk;
 
 
 Object *SpkObject_new(size_t size) {
@@ -57,7 +57,6 @@ static void oopcpy(Object **dest, Object **src, size_t count) {
 /* initialization */
 
 void SpkClassInterpreter_init(void) {
-    ClassObject = SpkBehavior_new(0, builtInModule, 0);
     ClassSymbol = SpkBehavior_new(ClassObject, builtInModule, 0);
     ClassMessage = SpkBehavior_new(ClassObject, builtInModule, 0);
     ClassThunk = SpkBehavior_new(ClassObject, builtInModule, 0);
@@ -500,10 +499,6 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                     framePointer = stackPointer;
                     instVarPointer = INSTANCE_VARS(receiver);
                     globalPointer = INSTANCE_VARS((Object *)methodClass->module);
-                    /* XXX: this check belongs inside the method. */
-                    if (XXX && method->argumentCount != argumentCount) {
-                        TRAP(self->selectorWrongNumberOfArguments, 0);
-                    }
                     goto loop;
                 }
             }
@@ -632,6 +627,10 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             method = thunk->method;
             methodClass = thunk->methodClass;
             instructionPointer = thunk->pc;
+            /* XXX: What about leaf methods? */
+            if (method->argumentCount != argumentCount) {
+                TRAP(self->selectorWrongNumberOfArguments, 0);
+            }
             goto jump; }
             
 /*** traps ***/
@@ -760,10 +759,9 @@ void SpkInterpreter_printCallStack(Interpreter *self) {
         home = ctxt->homeContext;
         method = home->u.m.method;
         methodSel = SpkBehavior_findSelectorOfMethod(home->u.m.methodClass, method);
-        printf("%04x %p %s ",
-               ctxt->pc - &method->opcodes[0], ctxt, (ctxt == home ? "" : "{} in "));
-        (*home->u.m.methodClass->printName)();
-        printf(".%s\n", methodSel ? methodSel->str : "<unknown>");
+        printf("%04x %p %s XXX.%s\n",
+               ctxt->pc - &method->opcodes[0], ctxt, (ctxt == home ? "" : "{} in "),
+               methodSel ? methodSel->str : "<unknown>");
     }
 }
 
@@ -782,13 +780,16 @@ void SpkInterpreter_unknownOpcode(Interpreter *self) {
 }
 
 void SpkInterpreter_halt(Interpreter *self, Symbol *selector, Object *argument) {
-    printf("\n%s", selector->str);
     if (argument) {
         if (argument->klass == ClassSymbol) {
-            printf(" '%s'", ((Symbol *)argument)->str);
+            printf("\n%s '%s'", selector->str, ((Symbol *)argument)->str);
         } else if (argument->klass == ClassMessage) {
-            printf(" '%s'", ((Message *)argument)->messageSelector->str);
+            printf("\n%s '%s'", selector->str, ((Message *)argument)->messageSelector->str);
+        } else {
+            printf("\n%s", selector->str);
         }
+    } else {
+        printf("\n%s", selector->str);
     }
     printf("\n\n");
     if (!self->printingStack) {

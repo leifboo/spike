@@ -22,11 +22,15 @@ int main(int argc, char **argv) {
         return 1;
     }
     
+    SpkClassObject_init();
     SpkClassBehavior_init();
     SpkClassModule_init();
+    SpkClassIdentityDictionary_init();
     SpkClassInterpreter_init();
     
     SpkClassBehavior_init2();
+    SpkClassObject_init2();
+    SpkClassModule_init2();
 
     SpkClassBoolean_init();
     SpkClassInteger_init();
@@ -50,10 +54,13 @@ int main(int argc, char **argv) {
     obj->klass = module->firstClass;
     entry = SpkSymbol_get("main");
     result = SpkInterpreter_start(obj, entry);
+    puts("");
+    
     if (!result) {
         return 1;
     }
-    result->klass->print(result);
-    
+    if (result->klass == ClassInteger) {
+        return SpkInteger_asLong((Integer *)result);
+    }
     return 0;
 }
