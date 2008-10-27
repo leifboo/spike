@@ -47,7 +47,7 @@ compound_statement(r) ::= LCURLY statement_list(stmtList) RCURLY.               
 expr(r) ::= assignment_expr(expr).                                              { r = expr; }
 expr(r) ::= expr(left) COMMA assignment_expr(right).                            { r = SpkParser_Comma(left, right); }
 
-%left EQ NE.
+%left EQ NE ID NI.
 %left GT GE LT LE.
 %left PLUS MINUS.
 %left TIMES DIVIDE.
@@ -57,6 +57,8 @@ assignment_expr(r) ::= binary_expr(expr).                                       
 assignment_expr(r) ::= postfix_expr(left) ASSIGN assignment_expr(right).        { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_EQ, 0, left, right); }
 
 %type binary_expr {Expr *}
+binary_expr(r) ::= binary_expr(left) ID binary_expr(right).                     { r = SpkParser_NewExpr(EXPR_ID, 0, 0, left, right); }
+binary_expr(r) ::= binary_expr(left) NI binary_expr(right).                     { r = SpkParser_NewExpr(EXPR_NI, 0, 0, left, right); }
 binary_expr(r) ::= binary_expr(left) EQ binary_expr(right).                     { r = SpkParser_NewExpr(EXPR_BINARY, OPER_EQ, 0, left, right); }
 binary_expr(r) ::= binary_expr(left) NE binary_expr(right).                     { r = SpkParser_NewExpr(EXPR_BINARY, OPER_NE, 0, left, right); }
 binary_expr(r) ::= binary_expr(left) GT binary_expr(right).                     { r = SpkParser_NewExpr(EXPR_BINARY, OPER_GT, 0, left, right); }

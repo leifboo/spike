@@ -26,6 +26,7 @@ enum Opcode {
     OPCODE_PUSH_FALSE,
     OPCODE_PUSH_TRUE,
     OPCODE_PUSH_NULL,
+    OPCODE_PUSH_VOID,
     OPCODE_PUSH_CONTEXT,
     OPCODE_DUP,
     OPCODE_PUSH_INT,
@@ -36,6 +37,7 @@ enum Opcode {
     OPCODE_BRANCH_IF_FALSE,
     OPCODE_BRANCH_IF_TRUE,
     OPCODE_BRANCH_ALWAYS,
+    OPCODE_ID,
     OPCODE_OPER,
     OPCODE_OPER_SUPER,
     OPCODE_CALL,
@@ -58,6 +60,7 @@ enum Opcode {
 
 
 typedef ObjectSubclass Array;
+typedef Object Null, Uninit, Void;
 
 
 struct Symbol {
@@ -181,6 +184,11 @@ typedef struct Interpreter {
     int printingStack;
 
 } Interpreter;
+
+
+extern Null *Spk_null;
+extern Uninit *Spk_uninit;
+extern Void *Spk_void;
 
 
 Object *SpkObject_new(size_t);

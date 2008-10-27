@@ -18,7 +18,11 @@
 #define HIGHEST_PRIORITY XXX
 
 
-static Behavior *ClassSymbol, *ClassMessage, *ClassThunk;
+Null *Spk_null;
+Uninit *Spk_uninit;
+Void *Spk_void;
+
+static Behavior *ClassSymbol, *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
 
 
 Object *SpkObject_new(size_t size) {
@@ -60,6 +64,17 @@ void SpkClassInterpreter_init(void) {
     ClassSymbol = SpkBehavior_new(ClassObject, builtInModule, 0);
     ClassMessage = SpkBehavior_new(ClassObject, builtInModule, 0);
     ClassThunk = SpkBehavior_new(ClassObject, builtInModule, 0);
+    
+    ClassNull = SpkBehavior_new(ClassObject, builtInModule, 0);
+    ClassUninit = SpkBehavior_new(ClassObject, builtInModule, 0);
+    ClassVoid = SpkBehavior_new(ClassObject, builtInModule, 0);
+    
+    Spk_null = (Boolean *)malloc(sizeof(Null));
+    Spk_null->klass = ClassNull;
+    Spk_uninit = (Boolean *)malloc(sizeof(Uninit));
+    Spk_uninit->klass = ClassUninit;
+    Spk_void = (Boolean *)malloc(sizeof(Void));
+    Spk_void->klass = ClassVoid;
 }
 
 Object *SpkInterpreter_start(Object *receiver, Symbol *entry) {
@@ -380,7 +395,8 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_PUSH_SELF:     PUSH(receiver);             break;
         case OPCODE_PUSH_FALSE:    PUSH(Spk_false);            break;
         case OPCODE_PUSH_TRUE:     PUSH(Spk_true);             break;
-        case OPCODE_PUSH_NULL:     PUSH(0); /*null*/           break;
+        case OPCODE_PUSH_NULL:     PUSH(Spk_null);             break;
+        case OPCODE_PUSH_VOID:     PUSH(Spk_void);             break;
         case OPCODE_PUSH_CONTEXT:  PUSH(self->activeContext);  break;
         case OPCODE_DUP:           PUSH(STACK_TOP());          break;
         case OPCODE_PUSH_INT: {
@@ -434,6 +450,14 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             } else {
                 DECODE_SINT(displacement);
             }
+            break; }
+            
+/* identity comparison opcode */
+        case OPCODE_ID: {
+            Object *x, *y;
+            x = POP_OBJECT();
+            y = POP_OBJECT();
+            PUSH(x == y ? Spk_true : Spk_false);
             break; }
 
 /*** send opcodes -- operators ***/
@@ -554,7 +578,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             /* initialize the stack */
             count = method->stackSize;
             for (p = &newContext->variables[0]; count > 0; ++p, --count) {
-                *p = 0;
+                *p = Spk_uninit;
             }
             newContext->stackp = p;
             /* copy & reverse arguments */
@@ -565,7 +589,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             /* initialize locals */
             count = method->localCount;
             for ( ; count > 0; ++p, --count) {
-                *p = 0;
+                *p = Spk_uninit;
             }
             
             self->activeContext->pc = linkRegister;

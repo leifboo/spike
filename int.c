@@ -188,6 +188,7 @@ static Object *Integer_print(Object *_self, Object *arg0, Object *arg1) {
     
     self = (Integer *)_self;
     printf("%ld", self->value);
+    return Spk_void;
 }
 
 

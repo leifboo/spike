@@ -3,6 +3,7 @@
 
 #include "behavior.h"
 #include "dict.h"
+#include "interp.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +18,7 @@ Module *builtInModule;
 
 static Object *Module_print(Object *self, Object *arg0, Object *arg1) {
     printf("<Module object at %p>", self);
+    return Spk_void;
 }
 
 

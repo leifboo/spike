@@ -208,6 +208,22 @@ static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
         assert(super && "invalid use of 'super'");
         *super = 1;
         break;
+    case EXPR_NULL:
+        EMIT_OPCODE(OPCODE_PUSH_NULL);
+        tallyPush(cgen);
+        break;
+    case EXPR_FALSE:
+        EMIT_OPCODE(OPCODE_PUSH_FALSE);
+        tallyPush(cgen);
+        break;
+    case EXPR_TRUE:
+        EMIT_OPCODE(OPCODE_PUSH_TRUE);
+        tallyPush(cgen);
+        break;
+    case EXPR_CONTEXT:
+        EMIT_OPCODE(OPCODE_PUSH_CONTEXT);
+        tallyPush(cgen);
+        break;
     case EXPR_POSTFIX:
         switch (expr->oper) {
         case OPER_CALL:
@@ -254,6 +270,18 @@ static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
         }
         EMIT_OPCODE(opcode);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
+        CHECK_STACKP();    
+        break;
+    case EXPR_ID:
+    case EXPR_NI:
+        emitCodeForExpr(expr->right, 0, cgen);
+        emitCodeForExpr(expr->left, 0, cgen);
+        EMIT_OPCODE(OPCODE_ID);
+        --cgen->stackPointer;
+        if (expr->kind == EXPR_NI) {
+            EMIT_OPCODE(OPCODE_OPER);
+            encodeUnsignedInt(OPER_NOT, cgen);
+        }
         CHECK_STACKP();    
         break;
     case EXPR_ASSIGN:
@@ -312,7 +340,7 @@ static void emitCodeForStmt(Stmt *stmt, Stmt *sentinel, CodeGen *cgen) {
         if (stmt->expr) {
             emitCodeForExpr(stmt->expr, 0, cgen);
         } else {
-            EMIT_OPCODE(OPCODE_PUSH_NULL); /* void? */
+            EMIT_OPCODE(OPCODE_PUSH_VOID);
             tallyPush(cgen);
         }
         EMIT_OPCODE(OPCODE_RESTORE_SENDER);
@@ -428,7 +456,10 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize) {
     Behavior *aClass;
     
     memset(&cgen, 0, sizeof(cgen));
-    cgen.data = (Object **)calloc(dataSize, sizeof(Object *));
+    cgen.data = (Object **)malloc(dataSize * sizeof(Object *));
+    for (index = 0; index < dataSize; ++index) {
+        cgen.data[index] = Spk_uninit; /* XXX: null? */
+    }
     cgen.dataSize = dataSize;
     
     /* Create all classes. */

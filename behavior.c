@@ -54,13 +54,14 @@ static Object *Behavior_new(Object *_self, Object *arg0, Object *arg1) {
     newObject->base.refCount = 1;
     newObject->base.klass = self;
     for (i = 0; i < self->instVarCount; ++i) {
-        newObject->variables[i] = 0;
+        newObject->variables[i] = Spk_uninit;
     }
     return (Object *)newObject;
 }
 
 static Object *Behavior_print(Object *self, Object *arg0, Object *arg1) {
     printf("<Behavior object at %p>", self);
+    return Spk_void;
 }
 
 

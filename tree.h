@@ -12,11 +12,17 @@ typedef enum ExprKind {
     EXPR_ASSIGN,
     EXPR_ATTR,
     EXPR_BINARY,
+    EXPR_CONTEXT,
+    EXPR_FALSE,
+    EXPR_ID,
     EXPR_INT,
     EXPR_NAME,
+    EXPR_NI,
+    EXPR_NULL,
     EXPR_POSTFIX,
     EXPR_SELF,
-    EXPR_SUPER
+    EXPR_SUPER,
+    EXPR_TRUE
 } ExprKind;
 
 typedef enum StmtKind {

@@ -40,6 +40,8 @@ static void lcomment(yyscan_t yyscanner);
 0{D}+{IS}?		{ count(yyscanner); return TOKEN_INT; }
 {D}+{IS}?		{ count(yyscanner); return TOKEN_INT; }
 
+"==="			{ count(yyscanner); return TOKEN_ID; }
+"!=="			{ count(yyscanner); return TOKEN_NI; }
 "<="			{ count(yyscanner); return TOKEN_LE; }
 ">="			{ count(yyscanner); return TOKEN_GE; }
 "=="			{ count(yyscanner); return TOKEN_EQ; }

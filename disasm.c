@@ -74,6 +74,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         case OPCODE_PUSH_FALSE:    mnemonic = "push"; keyword = "false";       break;
         case OPCODE_PUSH_TRUE:     mnemonic = "push"; keyword = "true";        break;
         case OPCODE_PUSH_NULL:     mnemonic = "push"; keyword = "null";        break;
+        case OPCODE_PUSH_VOID:     mnemonic = "push"; keyword = "void";        break;
         case OPCODE_PUSH_CONTEXT:  mnemonic = "push"; keyword = "thisContext"; break;
         case OPCODE_DUP:           mnemonic = "dup";                           break;
             
@@ -100,6 +101,8 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             label = (ip + displacement) - begin;
             pLabel = &label;
             break;
+            
+        case OPCODE_ID:         mnemonic = "id";    break;
             
         case OPCODE_OPER:       mnemonic = "oper";  goto oper;
         case OPCODE_OPER_SUPER: mnemonic = "soper"; goto oper;

@@ -8,7 +8,7 @@
 
 typedef struct StaticChecker {
     SymbolTable *st;
-    Symbol *self, *super;
+    Symbol *self, *super, *null, *false, *true, *thisContext;
 } StaticChecker;
 
 
@@ -41,6 +41,14 @@ static void checkExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned i
                     expr->kind = EXPR_SELF;
                 } else if (expr->sym->sym == checker->super) {
                     expr->kind = EXPR_SUPER;
+                } else if (expr->sym->sym == checker->null) {
+                    expr->kind = EXPR_NULL;
+                } else if (expr->sym->sym == checker->false) {
+                    expr->kind = EXPR_FALSE;
+                } else if (expr->sym->sym == checker->true) {
+                    expr->kind = EXPR_TRUE;
+                } else if (expr->sym->sym == checker->thisContext) {
+                    expr->kind = EXPR_CONTEXT;
                 } else {
                     SpkSymbolTable_Bind(checker->st, expr);
                 }
@@ -69,6 +77,8 @@ static void checkExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned i
     case EXPR_ATTR:
         checkExpr(expr->left, stmt, checker, pass);
         break;
+    case EXPR_ID:
+    case EXPR_NI:
     case EXPR_BINARY:
         checkExpr(expr->left, stmt, checker, pass);
         checkExpr(expr->right, stmt, checker, pass);
@@ -165,6 +175,10 @@ int SpkStaticChecker_Check(Stmt *tree, unsigned int *pDataSize) {
     checker.st = SpkSymbolTable_New();
     checker.self = SpkSymbol_get("self");
     checker.super = SpkSymbol_get("super");
+    checker.null = SpkSymbol_get("null");
+    checker.false = SpkSymbol_get("false");
+    checker.true = SpkSymbol_get("true");
+    checker.thisContext = SpkSymbol_get("thisContext");
     SpkSymbolTable_EnterScope(checker.st, 1);
     
     for (pass = 1; pass < 3; ++pass) {
