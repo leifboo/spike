@@ -183,7 +183,17 @@ static unsigned int getLiteralIndex(Object *literal, CodeGen *cgen) {
 /****************************************************************************/
 /* expressions */
 
+static void emitCodeForOneExpr(Expr *, int *, CodeGen *);
+
 static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
+    for ( ; expr->next; expr = expr->next) {
+        emitCodeForOneExpr(expr, super, cgen);
+        EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
+    }
+    emitCodeForOneExpr(expr, super, cgen);
+}
+
+static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
     opcode_t opcode;
     Expr *arg;
     size_t index, argumentCount;
@@ -233,7 +243,7 @@ static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
             for (arg = expr->right, argumentCount = 0;
                  arg;
                  arg = arg->next, ++argumentCount) {
-                emitCodeForExpr(arg, 0, cgen);
+                emitCodeForOneExpr(arg, 0, cgen);
             }
             emitCodeForExpr(expr->left, &isSuper, cgen);
             if (isSuper) {
@@ -262,6 +272,18 @@ static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
         encodeUnsignedInt(index, cgen);
         CHECK_STACKP();    
         break;
+    case EXPR_UNARY:
+        emitCodeForExpr(expr->left, &isSuper, cgen);
+        if (isSuper) {
+            opcode = OPCODE_OPER_SUPER;
+            ++cgen->stackPointer;
+        } else {
+            opcode = OPCODE_OPER;
+        }
+        EMIT_OPCODE(opcode);
+        encodeUnsignedInt((unsigned int)expr->oper, cgen);
+        CHECK_STACKP();    
+        break;
     case EXPR_BINARY:
         emitCodeForExpr(expr->right, 0, cgen);
         emitCodeForExpr(expr->left, &isSuper, cgen);
@@ -283,7 +305,7 @@ static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
         --cgen->stackPointer;
         if (expr->kind == EXPR_NI) {
             EMIT_OPCODE(OPCODE_OPER);
-            encodeUnsignedInt(OPER_NOT, cgen);
+            encodeUnsignedInt(OPER_LNEG, cgen);
         }
         CHECK_STACKP();    
         break;

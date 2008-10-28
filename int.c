@@ -94,8 +94,8 @@ static Object *Integer_bneg(Object *self, Object *arg0, Object *arg1) {
     return Integer_unaryOper((Integer *)self, OPER_BNEG);
 }
 
-/* OPER_NOT */
-static Object *Integer_not(Object *self, Object *arg0, Object *arg1) {
+/* OPER_LNEG */
+static Object *Integer_lneg(Object *self, Object *arg0, Object *arg1) {
     return BOOL(!((Integer *)self)->value);
 }
 
@@ -200,7 +200,7 @@ static SpkMethodTmpl methods[] = {
     { "__pos__",    SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_pos    },
     { "__neg__",    SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_neg    },
     { "__bneg__",   SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_bneg   },
-    { "__not__",    SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_not    },
+    { "__lneg__",   SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_lneg   },
     { "__mul__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Integer_mul    },
     { "__div__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Integer_div    },
     { "__mod__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Integer_mod    },

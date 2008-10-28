@@ -22,7 +22,8 @@ typedef enum ExprKind {
     EXPR_POSTFIX,
     EXPR_SELF,
     EXPR_SUPER,
-    EXPR_TRUE
+    EXPR_TRUE,
+    EXPR_UNARY
 } ExprKind;
 
 typedef enum StmtKind {

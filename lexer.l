@@ -48,6 +48,8 @@ static void lcomment(yyscan_t yyscanner);
 
 "==="			{ count(yyscanner); return TOKEN_ID; }
 "!=="			{ count(yyscanner); return TOKEN_NI; }
+">>"			{ count(yyscanner); return TOKEN_RSHIFT; }
+"<<"			{ count(yyscanner); return TOKEN_LSHIFT; }
 "<="			{ count(yyscanner); return TOKEN_LE; }
 ">="			{ count(yyscanner); return TOKEN_GE; }
 "=="			{ count(yyscanner); return TOKEN_EQ; }
@@ -61,12 +63,18 @@ static void lcomment(yyscan_t yyscanner);
 "("			{ count(yyscanner); return TOKEN_LPAREN; }
 ")"			{ count(yyscanner); return TOKEN_RPAREN; }
 "."			{ count(yyscanner); return TOKEN_DOT; }
+"&"			{ count(yyscanner); return TOKEN_AMP; }
+"!"			{ count(yyscanner); return TOKEN_LNEG; }
+"~"			{ count(yyscanner); return TOKEN_BNEG; }
 "-"			{ count(yyscanner); return TOKEN_MINUS; }
 "+"			{ count(yyscanner); return TOKEN_PLUS; }
 "*"			{ count(yyscanner); return TOKEN_TIMES; }
 "/"			{ count(yyscanner); return TOKEN_DIVIDE; }
+"%"			{ count(yyscanner); return TOKEN_MOD; }
 "<"			{ count(yyscanner); return TOKEN_LT; }
 ">"			{ count(yyscanner); return TOKEN_GT; }
+"^"			{ count(yyscanner); return TOKEN_BXOR; }
+"|"			{ count(yyscanner); return TOKEN_BOR; }
 
 [ \t\v\n\f]		{ count(yyscanner); }
 .			{ /* ignore bad characters */ }

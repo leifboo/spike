@@ -24,7 +24,15 @@ static void checkVarDeclList(Expr *declList, Stmt *stmt, StaticChecker *checker,
     }
 }
 
+static void checkOneExpr(Expr *, Stmt *, StaticChecker *, unsigned int);
+
 static void checkExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
+    for ( ; expr; expr = expr->next) {
+        checkOneExpr(expr, stmt, checker, pass);
+    }
+}
+
+static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
     Expr *arg;
     
     switch (expr->kind) {
@@ -68,13 +76,16 @@ static void checkExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned i
                 }
             } else {
                 for (arg = expr->right; arg; arg = arg->next) {
-                    checkExpr(arg, stmt, checker, pass);
+                    checkOneExpr(arg, stmt, checker, pass);
                 }
             }
             break;
         }
         break;
     case EXPR_ATTR:
+        checkExpr(expr->left, stmt, checker, pass);
+        break;
+    case EXPR_UNARY:
         checkExpr(expr->left, stmt, checker, pass);
         break;
     case EXPR_ID:

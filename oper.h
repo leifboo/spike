@@ -10,7 +10,7 @@ typedef enum Oper {
     OPER_POS,
     OPER_NEG,
     OPER_BNEG,
-    OPER_NOT,
+    OPER_LNEG,
     OPER_MUL,
     OPER_DIV,
     OPER_MOD,

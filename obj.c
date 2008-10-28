@@ -25,7 +25,7 @@ static Object *Object_ne(Object *self, Object *arg0, Object *arg1) {
      * trampoline for interpreted methods?
      */
     temp = (*self->klass->operTable[OPER_EQ].method->nativeCode)(self, arg0, 0);
-    temp = (*temp->klass->operTable[OPER_NOT].method->nativeCode)(temp, 0, 0);
+    temp = (*temp->klass->operTable[OPER_LNEG].method->nativeCode)(temp, 0, 0);
     return temp;
 }
 

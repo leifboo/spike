@@ -20,7 +20,7 @@ SpecialSelector specialSelectors[NUM_OPER] = {
     { "__pos__",    0, 0 },
     { "__neg__",    0, 0 },
     { "__bneg__",   0, 0 },
-    { "__not__",    0, 0 },
+    { "__lneg__",   0, 0 },
     { "__mul__",    1, 0 },
     { "__div__",    1, 0 },
     { "__mod__",    1, 0 },
