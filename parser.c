@@ -59,6 +59,19 @@ Stmt *SpkParser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom) {
     return newStmt;
 }
 
+Stmt *SpkParser_NewForStmt(Expr *expr1, Expr *expr2, Expr *expr3, Stmt *body) {
+    Stmt *newStmt;
+    
+    newStmt = (Stmt *)malloc(sizeof(Stmt));
+    memset(newStmt, 0, sizeof(Stmt));
+    newStmt->kind = STMT_FOR;
+    newStmt->top = body;
+    newStmt->init = expr1;
+    newStmt->expr = expr2;
+    newStmt->incr = expr3;
+    return newStmt;
+}
+
 Expr *SpkParser_NewExpr(ExprKind kind, Oper oper, Expr *cond,
                         Expr *left, Expr *right) {
     Expr *newExpr;

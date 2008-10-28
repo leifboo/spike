@@ -148,8 +148,26 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
         }
         checkStmt(stmt->top, stmt, checker, outerPass);
         break;
-    case STMT_EXPR:
+    case STMT_DO_WHILE:
         checkExpr(stmt->expr, stmt, checker, outerPass);
+        checkStmt(stmt->top, stmt, checker, outerPass);
+        break;
+    case STMT_EXPR:
+        if (stmt->expr) {
+            checkExpr(stmt->expr, stmt, checker, outerPass);
+        }
+        break;
+    case STMT_FOR:
+        if (stmt->init) {
+            checkExpr(stmt->init, stmt, checker, outerPass);
+        }
+        if (stmt->expr) {
+            checkExpr(stmt->expr, stmt, checker, outerPass);
+        }
+        if (stmt->incr) {
+            checkExpr(stmt->incr, stmt, checker, outerPass);
+        }
+        checkStmt(stmt->top, stmt, checker, outerPass);
         break;
     case STMT_IF_ELSE:
         checkExpr(stmt->expr, stmt, checker, outerPass);
@@ -163,6 +181,10 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
         if (stmt->expr) {
             checkExpr(stmt->expr, stmt, checker, outerPass);
         }
+        break;
+    case STMT_WHILE:
+        checkExpr(stmt->expr, stmt, checker, outerPass);
+        checkStmt(stmt->top, stmt, checker, outerPass);
         break;
     }
 }

@@ -84,13 +84,13 @@ static void encodeSignedInt(long value, CodeGen *cgen) {
     } while (more);
 }
 
-static void fixUpBranch(Stmt *target, CodeGen *cgen) {
+static void fixUpBranch(size_t target, CodeGen *cgen) {
     ptrdiff_t base, displacement, filler;
     
     /* offset of branch instruction */
     base = (ptrdiff_t)(cgen->currentOffset - 1);
     
-    displacement = (ptrdiff_t)target->codeOffset - base;
+    displacement = (ptrdiff_t)target - base;
     encodeSignedInt(displacement, cgen);
     
     /* XXX: don't do this */
@@ -101,13 +101,16 @@ static void fixUpBranch(Stmt *target, CodeGen *cgen) {
     }
 }
 
-static void emitBranch(opcode_t opcode, Stmt *target, CodeGen *cgen) {
+static void emitBranch(opcode_t opcode, size_t target, CodeGen *cgen) {
     EMIT_OPCODE(opcode);
     if (cgen->opcodesEnd) {
         fixUpBranch(target, cgen);
     } else {
         EMIT_OPCODE(OPCODE_NOP);
         EMIT_OPCODE(OPCODE_NOP);
+    }
+    if (opcode != OPCODE_BRANCH_ALWAYS) {
+        --cgen->stackPointer;
     }
 }
 
@@ -300,18 +303,28 @@ static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
 static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen);
 static void emitCodeForClass(Stmt *stmt, CodeGen *cgen);
 
-static void emitCodeForStmt(Stmt *stmt, Stmt *sentinel, CodeGen *cgen) {
-    Stmt *s, *exitStmt;
+static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabel, size_t continueLabel, CodeGen *cgen) {
+    Stmt *s;
+    size_t nextLabel, childNextLabel, elseLabel;
     
-    exitStmt = stmt->next ? stmt->next : sentinel;
+    /* for branching to the next statement in the control flow */
+    nextLabel = stmt->next ? stmt->next->codeOffset : parentNextLabel;
     
     SET_OFFSET(stmt);
     
     switch (stmt->kind) {
+    case STMT_BREAK:
+        assert((!cgen->opcodesEnd || breakLabel) && "break not allowed here");
+        emitBranch(OPCODE_BRANCH_ALWAYS, breakLabel, cgen);
+        break;
     case STMT_COMPOUND:
         for (s = stmt->top; s; s = s->next) {
-            emitCodeForStmt(s, exitStmt, cgen);
+            emitCodeForStmt(s, nextLabel, breakLabel, continueLabel, cgen);
         }
+        break;
+    case STMT_CONTINUE:
+        assert((!cgen->opcodesEnd || continueLabel) && "continue not allowed here");
+        emitBranch(OPCODE_BRANCH_ALWAYS, continueLabel, cgen);
         break;
     case STMT_DEF_VAR:
         break;
@@ -321,19 +334,47 @@ static void emitCodeForStmt(Stmt *stmt, Stmt *sentinel, CodeGen *cgen) {
     case STMT_DEF_CLASS:
         emitCodeForClass(stmt, cgen);
         break;
-    case STMT_EXPR:
+    case STMT_DO_WHILE:
+        childNextLabel = stmt->expr->codeOffset;
+        emitCodeForStmt(stmt->top, childNextLabel, nextLabel, childNextLabel, cgen);
         emitCodeForExpr(stmt->expr, 0, cgen);
-        EMIT_OPCODE(OPCODE_POP);
-        --cgen->stackPointer;
+        emitBranch(OPCODE_BRANCH_IF_TRUE, stmt->codeOffset, cgen);
+        break;
+    case STMT_EXPR:
+        if (stmt->expr) {
+            emitCodeForExpr(stmt->expr, 0, cgen);
+            EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
+        }
+        break;
+    case STMT_FOR:
+        childNextLabel = stmt->incr ? stmt->incr->codeOffset : (stmt->expr ? stmt->expr->codeOffset : stmt->top->codeOffset);
+        if (stmt->init) {
+            emitCodeForExpr(stmt->init, 0, cgen);
+            EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
+        }
+        if (stmt->expr) {
+            emitBranch(OPCODE_BRANCH_ALWAYS, stmt->expr->codeOffset, cgen);
+        }
+        emitCodeForStmt(stmt->top, childNextLabel, nextLabel, childNextLabel, cgen);
+        if (stmt->incr) {
+            emitCodeForExpr(stmt->incr, 0, cgen);
+            EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
+        }
+        if (stmt->expr) {
+            emitCodeForExpr(stmt->expr, 0, cgen);
+            emitBranch(OPCODE_BRANCH_IF_TRUE, stmt->top->codeOffset, cgen);
+        } else {
+            emitBranch(OPCODE_BRANCH_ALWAYS, stmt->top->codeOffset, cgen);
+        }
         break;
     case STMT_IF_ELSE:
         emitCodeForExpr(stmt->expr, 0, cgen);
-        emitBranch(OPCODE_BRANCH_IF_FALSE, stmt->bottom ? stmt->bottom : exitStmt, cgen);
-        --cgen->stackPointer;
-        emitCodeForStmt(stmt->top, exitStmt, cgen);
+        elseLabel = stmt->bottom ? stmt->bottom->codeOffset : nextLabel;
+        emitBranch(OPCODE_BRANCH_IF_FALSE, elseLabel, cgen);
+        emitCodeForStmt(stmt->top, nextLabel, breakLabel, continueLabel, cgen);
         if (stmt->bottom) {
-            emitBranch(OPCODE_BRANCH_ALWAYS, exitStmt, cgen);
-            emitCodeForStmt(stmt->bottom, exitStmt, cgen);
+            emitBranch(OPCODE_BRANCH_ALWAYS, nextLabel, cgen);
+            emitCodeForStmt(stmt->bottom, nextLabel, breakLabel, continueLabel, cgen);
         }
         break;
     case STMT_RETURN:
@@ -346,6 +387,13 @@ static void emitCodeForStmt(Stmt *stmt, Stmt *sentinel, CodeGen *cgen) {
         EMIT_OPCODE(OPCODE_RESTORE_SENDER);
         EMIT_OPCODE(OPCODE_RET);
         --cgen->stackPointer;
+        break;
+    case STMT_WHILE:
+        childNextLabel = stmt->expr->codeOffset;
+        emitBranch(OPCODE_BRANCH_ALWAYS, stmt->expr->codeOffset, cgen);
+        emitCodeForStmt(stmt->top, childNextLabel, nextLabel, childNextLabel, cgen);
+        emitCodeForExpr(stmt->expr, 0, cgen);
+        emitBranch(OPCODE_BRANCH_IF_TRUE, stmt->top->codeOffset, cgen);
         break;
     }
     assert(cgen->stackPointer == 0);
@@ -368,8 +416,8 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     EMIT_OPCODE(OPCODE_NEW_THUNK);
     /*EMIT_OPCODE(OPCODE_RET);*/
     EMIT_OPCODE(OPCODE_SAVE);
-    emitCodeForStmt(stmt->top, &sentinel, cgen);
-    emitCodeForStmt(&sentinel, 0, cgen);
+    emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
+    emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
 
     cgen->currentMethod = SpkMethod_new(stmt->u.method.argumentCount,
                                         stmt->u.method.localCount,
@@ -383,8 +431,8 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     EMIT_OPCODE(OPCODE_NEW_THUNK);
     /*EMIT_OPCODE(OPCODE_RET);*/
     EMIT_OPCODE(OPCODE_SAVE);
-    emitCodeForStmt(stmt->top, &sentinel, cgen);
-    emitCodeForStmt(&sentinel, 0, cgen);
+    emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
+    emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
 
     assert(cgen->currentOffset == cgen->currentMethod->size);
     assert(cgen->stackSize ==  cgen->currentMethod->stackSize);
@@ -402,7 +450,7 @@ static void emitCodeForClass(Stmt *stmt, CodeGen *cgen) {
     
     theClass = (Behavior *)cgen->data[stmt->expr->u.def.index];
     cgen->currentClass = theClass;
-    emitCodeForStmt(stmt->top, 0, cgen);
+    emitCodeForStmt(stmt->top, 0, 0, 0, cgen);
     cgen->currentClass = 0;
 }
 
@@ -481,7 +529,7 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize) {
 
     /* Generate code. */
     for (s = tree; s; s = s->next) {
-        emitCodeForStmt(s, 0, &cgen);
+        emitCodeForStmt(s, 0, 0, 0, &cgen);
     }
     
     /* Create and initialize the module. */

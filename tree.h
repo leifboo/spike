@@ -26,13 +26,18 @@ typedef enum ExprKind {
 } ExprKind;
 
 typedef enum StmtKind {
+    STMT_BREAK,
     STMT_COMPOUND,
-    STMT_DEF_VAR,
-    STMT_DEF_METHOD,
+    STMT_CONTINUE,
     STMT_DEF_CLASS,
+    STMT_DEF_METHOD,
+    STMT_DEF_VAR,
+    STMT_DO_WHILE,
     STMT_EXPR,
+    STMT_FOR,
     STMT_IF_ELSE,
-    STMT_RETURN
+    STMT_RETURN,
+    STMT_WHILE
 } StmtKind;
 
 
@@ -59,7 +64,7 @@ struct Expr {
             Expr *nextMultipleDef;
         } def;
     } u;
-    unsigned int codeOffset;
+    size_t codeOffset;
 };
 
 struct ExprList {
@@ -69,7 +74,7 @@ struct ExprList {
 struct Stmt {
     StmtKind kind;
     Stmt *next, *top, *bottom;
-    Expr *expr;
+    Expr *init, *expr, *incr;
     union {
         struct {
             struct SymbolNode *name;
@@ -82,7 +87,7 @@ struct Stmt {
             size_t instVarCount;
         } klass;
     } u;
-    unsigned int codeOffset;
+    size_t codeOffset;
 };
 
 struct StmtList {

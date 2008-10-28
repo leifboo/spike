@@ -24,6 +24,23 @@ statement(r) ::= closed_statement(stmt).                                        
 open_statement(r) ::= IF LPAREN expr(expr) RPAREN statement(ifTrue).            { r = SpkParser_NewStmt(STMT_IF_ELSE, expr, ifTrue, 0); }
 open_statement(r) ::= IF LPAREN expr(expr) RPAREN closed_statement(ifTrue)
                       ELSE open_statement(ifFalse).                             { r = SpkParser_NewStmt(STMT_IF_ELSE, expr, ifTrue, ifFalse); }
+open_statement(r) ::= WHILE LPAREN expr(expr) RPAREN statement(body).           { r = SpkParser_NewStmt(STMT_WHILE, expr, body, 0); }
+open_statement(r) ::= FOR LPAREN             SEMI             SEMI             RPAREN statement(body).
+                                                                                { r = SpkParser_NewForStmt(    0,     0,     0, body); }
+open_statement(r) ::= FOR LPAREN             SEMI             SEMI expr(expr3) RPAREN statement(body).
+                                                                                { r = SpkParser_NewForStmt(    0,     0, expr3, body); }
+open_statement(r) ::= FOR LPAREN             SEMI expr(expr2) SEMI             RPAREN statement(body).
+                                                                                { r = SpkParser_NewForStmt(    0, expr2,     0, body); }
+open_statement(r) ::= FOR LPAREN             SEMI expr(expr2) SEMI expr(expr3) RPAREN statement(body).
+                                                                                { r = SpkParser_NewForStmt(    0, expr2, expr3, body); }
+open_statement(r) ::= FOR LPAREN expr(expr1) SEMI             SEMI             RPAREN statement(body).
+                                                                                { r = SpkParser_NewForStmt(expr1,     0,     0, body); }
+open_statement(r) ::= FOR LPAREN expr(expr1) SEMI             SEMI expr(expr3) RPAREN statement(body).
+                                                                                { r = SpkParser_NewForStmt(expr1,     0, expr3, body); }
+open_statement(r) ::= FOR LPAREN expr(expr1) SEMI expr(expr2) SEMI             RPAREN statement(body).
+                                                                                { r = SpkParser_NewForStmt(expr1, expr2,     0, body); }
+open_statement(r) ::= FOR LPAREN expr(expr1) SEMI expr(expr2) SEMI expr(expr3) RPAREN statement(body).
+                                                                                { r = SpkParser_NewForStmt(expr1, expr2, expr3, body); }
 
 %type closed_statement {Stmt *}
 closed_statement(r) ::= IF LPAREN expr(expr) RPAREN closed_statement(ifTrue)
@@ -31,6 +48,9 @@ closed_statement(r) ::= IF LPAREN expr(expr) RPAREN closed_statement(ifTrue)
 closed_statement(r) ::= SEMI.                                                   { r = SpkParser_NewStmt(STMT_EXPR, 0, 0, 0); }
 closed_statement(r) ::= expr(expr) SEMI.                                        { r = SpkParser_NewStmt(STMT_EXPR, expr, 0, 0); }
 closed_statement(r) ::= compound_statement(stmt).                               { r = stmt; }
+closed_statement(r) ::= DO statement(body) WHILE LPAREN expr(expr) RPAREN SEMI. { r = SpkParser_NewStmt(STMT_DO_WHILE, expr, body, 0); }
+closed_statement(r) ::= CONTINUE SEMI.                                          { r = SpkParser_NewStmt(STMT_CONTINUE, 0, 0, 0); }
+closed_statement(r) ::= BREAK SEMI.                                             { r = SpkParser_NewStmt(STMT_BREAK, 0, 0, 0); }
 closed_statement(r) ::= RETURN            SEMI.                                 { r = SpkParser_NewStmt(STMT_RETURN, 0, 0, 0); }
 closed_statement(r) ::= RETURN expr(expr) SEMI.                                 { r = SpkParser_NewStmt(STMT_RETURN, expr, 0, 0); }
 closed_statement(r) ::= VAR expr(declList) SEMI.                                { r = SpkParser_NewStmt(STMT_DEF_VAR, declList, 0, 0); }

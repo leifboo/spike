@@ -29,9 +29,15 @@ static void lcomment(yyscan_t yyscanner);
 "//"			{ lcomment(yyscanner); }
 
 "class"			{ count(yyscanner); return TOKEN_CLASS; }
+"break"			{ count(yyscanner); return TOKEN_BREAK; }
+"continue"		{ count(yyscanner); return TOKEN_CONTINUE; }
+"do"			{ count(yyscanner); return TOKEN_DO; }
+"else"			{ count(yyscanner); return TOKEN_ELSE; }
+"for"			{ count(yyscanner); return TOKEN_FOR; }
 "if"			{ count(yyscanner); return TOKEN_IF; }
 "return"		{ count(yyscanner); return TOKEN_RETURN; }
 "var"			{ count(yyscanner); return TOKEN_VAR; }
+"while"			{ count(yyscanner); return TOKEN_WHILE; }
 
 {LL}({L}|{D})*		{ count(yyscanner); return TOKEN_IDENTIFIER; }
 {UL}({L}|{D})*		{ count(yyscanner); return TOKEN_TYPE_IDENTIFIER; }
