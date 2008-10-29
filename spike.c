@@ -83,6 +83,7 @@ int main(int argc, char **argv) {
 
     SpkClassBoolean_init();
     SpkClassInteger_init();
+    SpkClassChar_init();
     SpkClassString_init();
     
     tree = SpkParser_ParseFile(sourceFilename);

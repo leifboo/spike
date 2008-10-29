@@ -12,6 +12,7 @@ typedef enum ExprKind {
     EXPR_ASSIGN,
     EXPR_ATTR,
     EXPR_BINARY,
+    EXPR_CHAR,
     EXPR_CONTEXT,
     EXPR_FALSE,
     EXPR_ID,
@@ -56,6 +57,7 @@ struct Expr {
     Expr *next, *cond, *left, *right;
     struct SymbolNode *sym;
     long intValue;
+    struct Char *charValue;
     struct String *strValue;
     union {
         struct {

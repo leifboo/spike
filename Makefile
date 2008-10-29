@@ -5,6 +5,7 @@ obj = \
 	behavior.o \
 	bool.o \
 	cgen.o \
+	char.o \
 	dict.o \
 	disasm.o \
 	gram.o \

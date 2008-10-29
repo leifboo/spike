@@ -15,6 +15,7 @@ IS			(u|U|l|L)*
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "char.h"
 #include "gram.h"
 #include "lexer.h"
 #include "st.h"
@@ -46,7 +47,7 @@ static void lcomment(yyscan_t yyscanner);
 0[xX]{H}+{IS}?		{ count(yyscanner); return TOKEN_INT; }
 0{D}+{IS}?		{ count(yyscanner); return TOKEN_INT; }
 {D}+{IS}?		{ count(yyscanner); return TOKEN_INT; }
-
+'(\\.|[^\\'])+'		{ count(yyscanner); return TOKEN_CHAR; }
 \"(\\.|[^\\"])*\"	{ count(yyscanner); return TOKEN_STR; }
 
 "==="			{ count(yyscanner); return TOKEN_ID; }
@@ -187,6 +188,9 @@ int SpkLexer_GetNextToken(Token *token, yyscan_t scanner) {
     switch (id) {
     case TOKEN_INT:
         token->intValue = strtol(yyget_text(scanner), 0, 0);
+        break;
+    case TOKEN_CHAR:
+        token->charValue = SpkChar_fromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
     case TOKEN_STR:
         token->strValue = SpkString_fromLiteral(yyget_text(scanner), yyget_leng(scanner));
