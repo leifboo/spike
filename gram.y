@@ -69,7 +69,17 @@ expr(r) ::= expr(left) COMMA assignment_expr(right).                            
 
 %type assignment_expr {Expr *}
 assignment_expr(r) ::= binary_expr(expr).                                       { r = expr; }
-assignment_expr(r) ::= unary_expr(left) ASSIGN assignment_expr(right).          { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_EQ, 0, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN        assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_EQ,     0, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_TIMES  assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_MUL,    0, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_DIVIDE assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_DIV,    0, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_MOD    assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_MOD,    0, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_PLUS   assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_ADD,    0, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_MINUS  assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_SUB,    0, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_LSHIFT assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_LSHIFT, 0, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_RSHIFT assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_RSHIFT, 0, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_BAND   assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_BAND,   0, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_BXOR   assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_BXOR,   0, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_BOR    assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_BOR,    0, left, right); }
 
 %left ID NI EQ NE.
 %left GT GE LT LE.
@@ -103,6 +113,8 @@ binary_expr(r) ::= unary_expr(expr).                                            
 
 %type unary_expr {Expr *}
 unary_expr(r) ::= postfix_expr(expr).                                           { r = expr; }
+unary_expr(r) ::= INC   unary_expr(expr).                                       { r = SpkParser_NewExpr(EXPR_PREOP, OPER_SUCC, 0, expr, 0); }
+unary_expr(r) ::= DEC   unary_expr(expr).                                       { r = SpkParser_NewExpr(EXPR_PREOP, OPER_PRED, 0, expr, 0); }
 unary_expr(r) ::= PLUS  unary_expr(expr).                                       { r = SpkParser_NewExpr(EXPR_UNARY, OPER_POS,  0, expr, 0); }
 unary_expr(r) ::= MINUS unary_expr(expr).                                       { r = SpkParser_NewExpr(EXPR_UNARY, OPER_NEG,  0, expr, 0); }
 unary_expr(r) ::= BNEG  unary_expr(expr).                                       { r = SpkParser_NewExpr(EXPR_UNARY, OPER_BNEG, 0, expr, 0); }
@@ -113,6 +125,8 @@ postfix_expr(r) ::= postfix_expr(func) LPAREN RPAREN.                           
 postfix_expr(r) ::= postfix_expr(func) LPAREN argument_expr_list(args) RPAREN.  { r = SpkParser_NewExpr(EXPR_POSTFIX, OPER_CALL, 0, func, args.first); }
 postfix_expr(r) ::= postfix_expr(obj) DOT IDENTIFIER(attr).                     { r = SpkParser_NewExpr(EXPR_ATTR, 0, 0, obj, 0); r->sym = attr.sym; }
 postfix_expr(r) ::= TYPE_IDENTIFIER(name) DOT IDENTIFIER(attr).                 { r = SpkParser_NewClassAttrExpr(name.sym, attr.sym); }
+postfix_expr(r) ::= postfix_expr(expr) INC.                                     { r = SpkParser_NewExpr(EXPR_POSTOP, OPER_SUCC, 0, expr, 0); }
+postfix_expr(r) ::= postfix_expr(expr) DEC.                                     { r = SpkParser_NewExpr(EXPR_POSTOP, OPER_PRED, 0, expr, 0); }
 postfix_expr(r) ::= primary_expr(expr).                                         { r = expr; }
 
 %type primary_expr {Expr *}

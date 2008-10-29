@@ -4,6 +4,8 @@
 
 
 typedef enum Oper {
+    OPER_SUCC,
+    OPER_PRED,
     OPER_INDEX,
     OPER_ADDR,
     OPER_IND,

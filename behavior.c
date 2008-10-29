@@ -14,6 +14,8 @@ Behavior *ClassBehavior;
 
 
 SpecialSelector specialSelectors[NUM_OPER] = {
+    { "__succ__",   0, 0 },
+    { "__pred__",   0, 0 },
     { "__item__",   1, 0 }, /* XXX: this is two operators */
     { "__addr__",   0, 0 }, /* "&x" -- not implemented */
     { "__ind__",    0, 0 }, /* "*x" -- not implemented */

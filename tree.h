@@ -20,6 +20,8 @@ typedef enum ExprKind {
     EXPR_NI,
     EXPR_NULL,
     EXPR_POSTFIX,
+    EXPR_POSTOP,
+    EXPR_PREOP,
     EXPR_SELF,
     EXPR_SUPER,
     EXPR_TRUE,

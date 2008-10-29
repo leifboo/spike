@@ -26,9 +26,11 @@ static Object *Integer_unaryOper(Integer *self, Oper oper) {
     result = (Integer *)malloc(sizeof(Integer));
     result->base.klass = ClassInteger;
     switch (oper) {
-    case OPER_POS:  result->value = +self->value; break;
-    case OPER_NEG:  result->value = -self->value; break;
-    case OPER_BNEG: result->value = ~self->value; break;
+    case OPER_SUCC: result->value = self->value + 1; break;
+    case OPER_PRED: result->value = self->value - 1; break;
+    case OPER_POS:  result->value = +self->value;    break;
+    case OPER_NEG:  result->value = -self->value;    break;
+    case OPER_BNEG: result->value = ~self->value;    break;
     default: assert(0);
     }
     return (Object *)result;
@@ -78,6 +80,16 @@ static Object *Integer_binaryLogicalOper(Integer *self, Object *arg0, Oper oper)
 
 /*------------------------------------------------------------------------*/
 /* methods -- operators */
+
+/* OPER_SUCC */
+static Object *Integer_succ(Object *self, Object *arg0, Object *arg1) {
+    return Integer_unaryOper((Integer *)self, OPER_SUCC);
+}
+
+/* OPER_PRED */
+static Object *Integer_pred(Object *self, Object *arg0, Object *arg1) {
+    return Integer_unaryOper((Integer *)self, OPER_PRED);
+}
 
 /* OPER_POS */
 static Object *Integer_pos(Object *self, Object *arg0, Object *arg1) {
@@ -197,6 +209,8 @@ static Object *Integer_print(Object *_self, Object *arg0, Object *arg1) {
 
 static SpkMethodTmpl methods[] = {
     /* operators */
+    { "__succ__",   SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_succ   },
+    { "__pred__",   SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_pred   },
     { "__pos__",    SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_pos    },
     { "__neg__",    SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_neg    },
     { "__bneg__",   SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Integer_bneg   },

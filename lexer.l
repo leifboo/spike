@@ -48,8 +48,20 @@ static void lcomment(yyscan_t yyscanner);
 
 "==="			{ count(yyscanner); return TOKEN_ID; }
 "!=="			{ count(yyscanner); return TOKEN_NI; }
+">>="			{ count(yyscanner); return TOKEN_ASSIGN_RSHIFT; }
+"<<="			{ count(yyscanner); return TOKEN_ASSIGN_LSHIFT; }
+"+="			{ count(yyscanner); return TOKEN_ASSIGN_PLUS; }
+"-="			{ count(yyscanner); return TOKEN_ASSIGN_MINUS; }
+"*="			{ count(yyscanner); return TOKEN_ASSIGN_TIMES; }
+"/="			{ count(yyscanner); return TOKEN_ASSIGN_DIVIDE; }
+"%="			{ count(yyscanner); return TOKEN_ASSIGN_MOD; }
+"&="			{ count(yyscanner); return TOKEN_ASSIGN_BAND; }
+"^="			{ count(yyscanner); return TOKEN_ASSIGN_BXOR; }
+"|="			{ count(yyscanner); return TOKEN_ASSIGN_BOR; }
 ">>"			{ count(yyscanner); return TOKEN_RSHIFT; }
 "<<"			{ count(yyscanner); return TOKEN_LSHIFT; }
+"++"			{ count(yyscanner); return TOKEN_INC; }
+"--"			{ count(yyscanner); return TOKEN_DEC; }
 "<="			{ count(yyscanner); return TOKEN_LE; }
 ">="			{ count(yyscanner); return TOKEN_GE; }
 "=="			{ count(yyscanner); return TOKEN_EQ; }

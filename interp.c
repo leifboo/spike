@@ -398,7 +398,11 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_PUSH_NULL:     PUSH(Spk_null);             break;
         case OPCODE_PUSH_VOID:     PUSH(Spk_void);             break;
         case OPCODE_PUSH_CONTEXT:  PUSH(self->activeContext);  break;
-        case OPCODE_DUP:           PUSH(STACK_TOP());          break;
+        case OPCODE_DUP: {
+            Object *temp;
+            temp = STACK_TOP();
+            PUSH(temp);
+            break; }
         case OPCODE_PUSH_INT: {
             long value;
             DECODE_SINT(value);
