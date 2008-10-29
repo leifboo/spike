@@ -210,6 +210,12 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         encodeSignedInt(expr->intValue, cgen);
         tallyPush(cgen);
         break;
+    case EXPR_STR:
+        EMIT_OPCODE(OPCODE_PUSH_GLOBAL);
+        index = LITERAL_INDEX((Object *)expr->strValue, cgen);
+        encodeUnsignedInt(index, cgen);
+        tallyPush(cgen);
+        break;
     case EXPR_NAME:
         push(expr, cgen);
         break;

@@ -248,7 +248,7 @@ static SpkClassTmpl tmpl = {
 /* C API */
 
 void SpkClassInteger_init(void) {
-    ClassInteger = SpkBehavior_fromTemplate(&tmpl, 0 /*ClassObject*/ , builtInModule);
+    ClassInteger = SpkBehavior_fromTemplate(&tmpl, ClassObject, builtInModule);
 }
 
 Integer *SpkInteger_fromLong(long value) {

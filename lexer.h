@@ -10,6 +10,7 @@ typedef struct Token {
     int id;
     struct SymbolNode *sym;
     long intValue;
+    struct String *strValue;
     unsigned int lineNo;
 } Token;
 

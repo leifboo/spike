@@ -17,6 +17,7 @@ obj = \
 	scheck.o \
 	spike.o \
 	st.o \
+	str.o \
 	$(empty)
 
 all: spike

@@ -88,6 +88,10 @@ Stmt *SpkParser_ParseFile(const char *filename) {
     char buffer[1024];
     
     yyin = fopen(filename, "r");
+    if (!yyin) {
+        fprintf(stderr, "cannot open '%s'\n", filename);
+        return 0;
+    }
     SpkLexer_lex_init(&lexer);
     SpkLexer_restart(yyin, lexer);
     fgets(buffer, sizeof(buffer), yyin); /* skip #! line */

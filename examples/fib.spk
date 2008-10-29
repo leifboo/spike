@@ -5,6 +5,7 @@ class Program {
         var result;
         result = self.fib(10);
         result.print();
+        "\n".print();
         return 0;
     }
     fib(x) {
@@ -12,4 +13,3 @@ class Program {
         return self.fib(x-1) + self.fib(x-2);
     }
 }
-
