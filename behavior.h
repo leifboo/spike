@@ -97,26 +97,14 @@ typedef struct BehaviorSubclass {
 } BehaviorSubclass;
 
 
-typedef struct Class {
-    Behavior base;
-    Symbol *name;
-} Class;
-
-
-typedef struct Metaclass {
-    Behavior base;
-    Object *thisClass; /* sole instance */
-} Metaclass;
-
-
 extern Behavior *ClassBehavior;
+extern struct SpkClassTmpl ClassBehaviorTmpl;
 
 
-void SpkClassBehavior_init(void);
-void SpkClassBehavior_init2(void);
-Behavior *SpkBehavior_new(Behavior *superclass, struct Module *module, size_t instVarCount);
+Behavior *SpkBehavior_new(void);
 Behavior *SpkBehavior_fromTemplate(SpkClassTmpl *template, Behavior *superclass, struct Module *module);
-void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template);
+void SpkBehavior_init(Behavior *self, Behavior *superclass, struct Module *module, size_t instVarCount);
+void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavior *superclass, struct Module *module);
 void SpkBehavior_insertMethod(Behavior *, Symbol *, Method *);
 Method *SpkBehavior_lookupMethod(Behavior *, Symbol *);
 Symbol *SpkBehavior_findSelectorOfMethod(Behavior *, Method *);

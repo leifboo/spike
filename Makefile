@@ -6,12 +6,14 @@ obj = \
 	bool.o \
 	cgen.o \
 	char.o \
+	class.o \
 	dict.o \
 	disasm.o \
 	gram.o \
 	int.o \
 	interp.o \
 	lexer.o \
+	metaclass.o \
 	module.o \
 	obj.o \
 	parser.o \

@@ -3,8 +3,6 @@
 
 #include "behavior.h"
 #include "bool.h"
-#include "dict.h"
-#include "module.h"
 #include <stdio.h>
 
 
@@ -45,24 +43,9 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
-static SpkClassTmpl tmpl = {
-    offsetof(ModuleSubclass, variables),
-    sizeof(Module),
+SpkClassTmpl ClassObjectTmpl = {
+    offsetof(ObjectSubclass, variables),
+    sizeof(Object),
     0,
     methods
 };
-
-
-/*------------------------------------------------------------------------*/
-/* C API */
-
-void SpkClassObject_init(void) {
-    ClassObject = SpkBehavior_new(0, 0 /*builtInModule*/, 0);
-}
-
-void SpkClassObject_init2(void) {
-    ClassObject->base.klass = ClassBehavior;
-    ClassObject->module = builtInModule;
-    ClassObject->methodDict->base.klass = ClassIdentityDictionary;
-    SpkBehavior_initFromTemplate(ClassObject, &tmpl);
-}

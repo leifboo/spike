@@ -17,11 +17,11 @@ typedef struct ModuleSubclass {
 } ModuleSubclass;
 
 
+extern struct Behavior *ClassModule;
+extern struct SpkClassTmpl ClassModuleTmpl;
 extern Module *builtInModule;
 
 
-void SpkClassModule_init(void);
-void SpkClassModule_init2(void);
 Module *SpkModule_new(unsigned int);
 
 

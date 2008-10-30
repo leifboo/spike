@@ -2,6 +2,7 @@
 #include "cgen.h"
 
 #include "behavior.h"
+#include "class.h"
 #include "interp.h"
 #include "module.h"
 #include "obj.h"
@@ -517,7 +518,9 @@ static void emitCodeForClass(Stmt *stmt, CodeGen *cgen) {
 static void createClass(Stmt *stmt, CodeGen *cgen) {
     Behavior *theClass;
     
-    theClass = SpkBehavior_new(0, 0, stmt->u.klass.instVarCount);
+    theClass = SpkBehavior_new();
+    theClass->base.klass = (Behavior *)ClassClass;
+    SpkBehavior_init(theClass, 0, 0, stmt->u.klass.instVarCount);
     
     if (!cgen->firstClass) {
         cgen->firstClass = theClass;
@@ -534,9 +537,9 @@ static void setSuperclass(Stmt *stmt, CodeGen *cgen) {
     Behavior *theClass, *superclass;
     
     theClass = (Behavior *)cgen->data[stmt->expr->u.def.index];
-    assert(theClass && theClass->base.klass == ClassBehavior);
+    assert(theClass && theClass->base.klass == (Behavior *)ClassClass);
     superclass = stmt->u.klass.super ? (Behavior *)cgen->data[stmt->u.klass.super->u.ref.def->u.def.index] : ClassObject;
-    assert(superclass && superclass->base.klass == ClassBehavior);
+    assert(superclass && superclass->base.klass == (Behavior *)ClassClass);
     theClass->superclass = superclass;
 }
 
@@ -545,7 +548,7 @@ static void checkForSuperclassCycle(Stmt *stmt, CodeGen *cgen) {
     Behavior *theClass, *aClass;
     
     theClass = (Behavior *)cgen->data[stmt->expr->u.def.index];
-    assert(theClass && theClass->base.klass == ClassBehavior);
+    assert(theClass && theClass->base.klass == (Behavior *)ClassClass);
     for (aClass = theClass->superclass; aClass; aClass = aClass->superclass) {
         assert(aClass != theClass && "cycle in superclass chain");
     }

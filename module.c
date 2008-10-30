@@ -2,14 +2,11 @@
 #include "module.h"
 
 #include "behavior.h"
-#include "dict.h"
-#include "interp.h"
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 
-static Behavior *ClassModule;
+Behavior *ClassModule;
 Module *builtInModule;
 
 
@@ -30,7 +27,7 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
-static SpkClassTmpl tmpl = {
+SpkClassTmpl ClassModuleTmpl = {
     offsetof(ModuleSubclass, variables),
     sizeof(Module),
     0,
@@ -40,17 +37,6 @@ static SpkClassTmpl tmpl = {
 
 /*------------------------------------------------------------------------*/
 /* C API */
-
-void SpkClassModule_init(void) {
-    ClassModule = SpkBehavior_new(ClassObject, 0 /*builtInModule*/, 0);
-    builtInModule = SpkModule_new(0);
-    ClassModule->module = builtInModule;
-}
-
-void SpkClassModule_init2(void) {
-    ClassModule->methodDict->base.klass = ClassIdentityDictionary;
-    SpkBehavior_initFromTemplate(ClassModule, &tmpl);
-}
 
 Module *SpkModule_new(unsigned int nGlobals) {
     Module *newModule;

@@ -22,7 +22,7 @@ Null *Spk_null;
 Uninit *Spk_uninit;
 Void *Spk_void;
 
-static Behavior *ClassSymbol, *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
+Behavior *ClassSymbol, *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
 
 
 Object *SpkObject_new(size_t size) {
@@ -58,24 +58,82 @@ static void oopcpy(Object **dest, Object **src, size_t count) {
 
 
 /*------------------------------------------------------------------------*/
-/* initialization */
+/* class templates */
 
-void SpkClassInterpreter_init(void) {
-    ClassSymbol = SpkBehavior_new(ClassObject, builtInModule, 0);
-    ClassMessage = SpkBehavior_new(ClassObject, builtInModule, 0);
-    ClassThunk = SpkBehavior_new(ClassObject, builtInModule, 0);
-    
-    ClassNull = SpkBehavior_new(ClassObject, builtInModule, 0);
-    ClassUninit = SpkBehavior_new(ClassObject, builtInModule, 0);
-    ClassVoid = SpkBehavior_new(ClassObject, builtInModule, 0);
-    
-    Spk_null = (Boolean *)malloc(sizeof(Null));
-    Spk_null->klass = ClassNull;
-    Spk_uninit = (Boolean *)malloc(sizeof(Uninit));
-    Spk_uninit->klass = ClassUninit;
-    Spk_void = (Boolean *)malloc(sizeof(Void));
-    Spk_void->klass = ClassVoid;
-}
+static SpkMethodTmpl SymbolMethods[] = {
+    { 0, 0, 0}
+};
+
+SpkClassTmpl ClassSymbolTmpl = {
+    0,
+    sizeof(Symbol),
+    0,
+    SymbolMethods
+};
+
+
+static SpkMethodTmpl MessageMethods[] = {
+    { 0, 0, 0}
+};
+
+SpkClassTmpl ClassMessageTmpl = {
+    offsetof(MessageSubclass, variables),
+    sizeof(Message),
+    0,
+    MessageMethods
+};
+
+
+static SpkMethodTmpl ThunkMethods[] = {
+    { 0, 0, 0}
+};
+
+SpkClassTmpl ClassThunkTmpl = {
+    offsetof(ThunkSubclass, variables),
+    sizeof(Thunk),
+    0,
+    ThunkMethods
+};
+
+
+static SpkMethodTmpl NullMethods[] = {
+    { 0, 0, 0}
+};
+
+SpkClassTmpl ClassNullTmpl = {
+    offsetof(ObjectSubclass, variables),
+    sizeof(Null),
+    0,
+    NullMethods
+};
+
+
+static SpkMethodTmpl UninitMethods[] = {
+    { 0, 0, 0}
+};
+
+SpkClassTmpl ClassUninitTmpl = {
+    offsetof(ObjectSubclass, variables),
+    sizeof(Uninit),
+    0,
+    UninitMethods
+};
+
+
+static SpkMethodTmpl VoidMethods[] = {
+    { 0, 0, 0}
+};
+
+SpkClassTmpl ClassVoidTmpl = {
+    offsetof(ObjectSubclass, variables),
+    sizeof(Void),
+    0,
+    VoidMethods
+};
+
+
+/*------------------------------------------------------------------------*/
+/* initialization */
 
 Object *SpkInterpreter_start(Object *receiver, Symbol *entry) {
     Method *callThunk, *trampoline;

@@ -2,7 +2,6 @@
 #include "dict.h"
 
 #include "behavior.h"
-#include "module.h"
 #include <assert.h>
 #include <stdlib.h>
 
@@ -10,14 +9,11 @@
 #define HASH(key) (mask & ((size_t)(key) / sizeof(Object *)))
 
 
-Behavior *ClassIdentityDictionary;
+struct Behavior *ClassIdentityDictionary;
 
 
-void SpkClassIdentityDictionary_init(void) {
-    ClassIdentityDictionary = SpkBehavior_new(ClassObject, builtInModule, 0);
-    ClassIdentityDictionary->methodDict->base.klass = ClassIdentityDictionary;
-    ClassIdentityDictionary->instVarOffset = offsetof(IdentityDictionarySubclass, variables);
-}
+/*------------------------------------------------------------------------*/
+/* methods */
 
 Object *SpkIdentityDictionary_at(IdentityDictionary *self, Object *key) {
     size_t mask, start, i;
@@ -134,3 +130,18 @@ IdentityDictionary *SpkIdentityDictionary_new(void) {
     self->valueArray = (Object **)calloc(self->size, sizeof(Object *));
     return self;
 }
+
+
+/*------------------------------------------------------------------------*/
+/* class template */
+
+static SpkMethodTmpl methods[] = {
+    { 0, 0, 0}
+};
+
+SpkClassTmpl ClassIdentityDictionaryTmpl = {
+    offsetof(IdentityDictionarySubclass, variables),
+    sizeof(IdentityDictionary),
+    0,
+    methods
+};

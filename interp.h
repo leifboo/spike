@@ -152,12 +152,22 @@ typedef struct Thunk {
     opcode_t *pc;
 } Thunk;
 
+typedef struct ThunkSubclass {
+    Thunk base;
+    Object *variables[1]; /* stretchy */
+} ThunkSubclass;
+
 
 typedef struct Message {
     Object base;
     Symbol *messageSelector;
     Array *argumentArray;
 } Message;
+
+typedef struct MessageSubclass {
+    Message base;
+    Object *variables[1]; /* stretchy */
+} MessageSubclass;
 
 
 typedef struct Interpreter {
@@ -190,6 +200,9 @@ extern Null *Spk_null;
 extern Uninit *Spk_uninit;
 extern Void *Spk_void;
 
+extern struct Behavior *ClassSymbol, *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
+extern struct SpkClassTmpl ClassSymbolTmpl, ClassMessageTmpl, ClassThunkTmpl, ClassNullTmpl, ClassUninitTmpl, ClassVoidTmpl;
+
 
 Object *SpkObject_new(size_t);
 
@@ -209,7 +222,6 @@ int SpkSemaphore_isEmpty(Semaphore *);
 void SpkSemaphore_addLast(Semaphore *, Fiber *);
 Fiber *SpkSemaphore_removeFirst(Semaphore *);
 
-void SpkClassInterpreter_init(void);
 Object *SpkInterpreter_start(Object *, Symbol *);
 void SpkInterpreter_init(Interpreter *, ProcessorScheduler *);
 Object *SpkInterpreter_interpret(Interpreter *);

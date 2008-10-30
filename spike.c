@@ -1,14 +1,98 @@
 
-#include "behavior.h"
 #include "cgen.h"
+#include "parser.h"
+#include "tree.h"
+
+#include "behavior.h"
+#include "bool.h"
+#include "class.h"
+#include "dict.h"
 #include "int.h"
 #include "interp.h"
+#include "metaclass.h"
 #include "module.h"
-#include "parser.h"
+#include "obj.h"
 #include "str.h"
-#include "tree.h"
+
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+
+static Behavior *ClassNULL_CLASS;
+
+
+#define CLASS_VAR(c) Class ## c
+#define CLASS_TMPL(c) Class ## c ## Tmpl
+
+#define BOOT_REC(c, v, s, i) {(Behavior **)&CLASS_VAR(c), &CLASS_TMPL(c), (Object **)&v, s, i}
+
+#define METACLASS(c) BOOT_REC(Metaclass, CLASS_VAR(c), (Behavior **)&CLASS_VAR(Behavior), &CLASS_TMPL(c))
+#define CLASS(c, s) BOOT_REC(Class, CLASS_VAR(c), (Behavior **)&CLASS_VAR(s), &CLASS_TMPL(c))
+#define OBJECT(c, v) BOOT_REC(c, v, 0, 0)
+
+
+static struct BootRec {
+    Behavior **klass;
+    SpkClassTmpl *klassTmpl;
+    Object **var;
+    Behavior **superclass;
+    SpkClassTmpl *init;
+} bootRec[] = {
+    CLASS(Object, NULL_CLASS),
+    /**/CLASS(Behavior, Class),
+    /******/METACLASS(Metaclass),
+    /******/METACLASS(Class),
+    /**/CLASS(Module, Object),
+    /**/CLASS(Boolean, Object),
+    /******/CLASS(False, Boolean),
+    /******/CLASS(True, Boolean),
+    /**/CLASS(IdentityDictionary, Object),
+    /**/CLASS(Symbol,  Object),
+    /**/CLASS(Message, Object),
+    /**/CLASS(Thunk,   Object),
+    /**/CLASS(Null,    Object),
+    /**/CLASS(Uninit,  Object),
+    /**/CLASS(Void,    Object),
+    OBJECT(False,  Spk_false),
+    OBJECT(True,   Spk_true),
+    OBJECT(Module, builtInModule),
+    OBJECT(Null,   Spk_null),
+    OBJECT(Uninit, Spk_uninit),
+    OBJECT(Void,   Spk_void),
+    {0, 0}
+};
+
+
+static void bootstrap() {
+    struct BootRec *r;
+    Oper operator;
+    
+    /* alloc */
+    for (r = bootRec; r->var; ++r) {
+        *r->var = (Object *)malloc(r->klassTmpl->instanceSize);
+        (*r->var)->refCount = 0;
+    }
+    /* init 'klass' */
+    for (r = bootRec; r->var; ++r) {
+        (*r->var)->klass = *r->klass;
+    }
+    
+    /* init classes */
+    for (operator = 0; operator < NUM_OPER; ++operator) {
+        specialSelectors[operator].messageSelector = SpkSymbol_get(specialSelectors[operator].messageSelectorStr);
+    }
+    for (r = bootRec; r->var; ++r) {
+        if (r->init) {
+            if ((*r->var)->klass == (Behavior *)ClassClass) {
+                SpkClass_initFromTemplate((Class *)*r->var, r->init, *r->superclass, builtInModule);
+            } else {
+                assert((*r->var)->klass == (Behavior *)ClassMetaclass);
+                SpkBehavior_initFromTemplate((Behavior *)*r->var, r->init, *r->superclass, builtInModule);
+            }
+        }
+    }
+}
 
 
 int main(int argc, char **argv) {
@@ -70,18 +154,9 @@ int main(int argc, char **argv) {
     }
     
     /* XXX: program arguments */
-
-    SpkClassObject_init();
-    SpkClassBehavior_init();
-    SpkClassModule_init();
-    SpkClassIdentityDictionary_init();
-    SpkClassInterpreter_init();
     
-    SpkClassBehavior_init2();
-    SpkClassObject_init2();
-    SpkClassModule_init2();
-
-    SpkClassBoolean_init();
+    bootstrap();
+    
     SpkClassInteger_init();
     SpkClassChar_init();
     SpkClassString_init();

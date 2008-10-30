@@ -45,22 +45,6 @@ SpecialSelector specialSelectors[NUM_OPER] = {
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static Object *Behavior_new(Object *_self, Object *arg0, Object *arg1) {
-    /* Answer a new instance of the receiver. */
-    Behavior *self;
-    ObjectSubclass *newObject;
-    size_t i;
-    
-    self = (Behavior *)_self;
-    newObject = (ObjectSubclass *)malloc(self->instanceSize);
-    newObject->base.refCount = 1;
-    newObject->base.klass = self;
-    for (i = 0; i < self->instVarCount; ++i) {
-        newObject->variables[i] = Spk_uninit;
-    }
-    return (Object *)newObject;
-}
-
 static Object *Behavior_print(Object *self, Object *arg0, Object *arg1) {
     printf("<Behavior object at %p>", self);
     return Spk_void;
@@ -71,12 +55,11 @@ static Object *Behavior_print(Object *self, Object *arg0, Object *arg1) {
 /* class template */
 
 static SpkMethodTmpl methods[] = {
-    { "new",   SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Behavior_new   },
     { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Behavior_print },
     { 0, 0, 0}
 };
 
-static SpkClassTmpl tmpl = {
+SpkClassTmpl ClassBehaviorTmpl = {
     offsetof(BehaviorSubclass, variables),
     sizeof(Behavior),
     0,
@@ -87,74 +70,62 @@ static SpkClassTmpl tmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-void SpkClassBehavior_init(void) {
-    ClassBehavior = SpkBehavior_new(ClassObject, 0 /*builtInModule*/, 0);
-    
-    /* Behavior is an instance of itself. */
-    ClassBehavior->base.klass = ClassBehavior;
-}
-
-void SpkClassBehavior_init2(void) {
-    Oper operator;
-    
-    for (operator = 0; operator < NUM_OPER; ++operator) {
-        specialSelectors[operator].messageSelector = SpkSymbol_get(specialSelectors[operator].messageSelectorStr);
-    }
-    
-    ClassBehavior->module = builtInModule;
-    ClassBehavior->methodDict->base.klass = ClassIdentityDictionary;
-    SpkBehavior_initFromTemplate(ClassBehavior, &tmpl);
-}
-
-Behavior *SpkBehavior_new(Behavior *superclass, struct Module *module, size_t instVarCount) {
+Behavior *SpkBehavior_new(void) {
     Behavior *newBehavior;
-    size_t i;
     
     newBehavior = (Behavior *)malloc(sizeof(Behavior));
     newBehavior->base.klass = ClassBehavior;
-    newBehavior->superclass = superclass;
-    newBehavior->module = module;
-    newBehavior->methodDict = SpkIdentityDictionary_new();
+    return newBehavior;
+}
+    
+Behavior *SpkBehavior_fromTemplate(SpkClassTmpl *template, Behavior *superclass, Module *module) {
+    Behavior *newBehavior;
+    
+    newBehavior = SpkBehavior_new();
+    SpkBehavior_initFromTemplate(newBehavior, template, superclass, module);
+    return newBehavior;
+}
+
+void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size_t instVarCount) {
+    size_t i;
+    
+    self->superclass = superclass;
+    self->module = module;
+    self->methodDict = SpkIdentityDictionary_new();
     
     if (superclass) {
-        for (i = 0; i < sizeof(newBehavior->operTable)/sizeof(newBehavior->operTable[0]); ++i) {
-            newBehavior->operTable[i].method = superclass->operTable[i].method;
-            newBehavior->operTable[i].methodClass = superclass->operTable[i].methodClass;
+        for (i = 0; i < sizeof(self->operTable)/sizeof(self->operTable[0]); ++i) {
+            self->operTable[i].method = superclass->operTable[i].method;
+            self->operTable[i].methodClass = superclass->operTable[i].methodClass;
         }
-        newBehavior->operCall.method = superclass->operCall.method;
-        newBehavior->operCall.methodClass = superclass->operCall.methodClass;
+        self->operCall.method = superclass->operCall.method;
+        self->operCall.methodClass = superclass->operCall.methodClass;
     } else {
-        for (i = 0; i < sizeof(newBehavior->operTable)/sizeof(newBehavior->operTable[0]); ++i) {
-            newBehavior->operTable[i].method = 0;
-            newBehavior->operTable[i].methodClass = 0;
+        for (i = 0; i < sizeof(self->operTable)/sizeof(self->operTable[0]); ++i) {
+            self->operTable[i].method = 0;
+            self->operTable[i].methodClass = 0;
         }
-        newBehavior->operCall.method = 0;
-        newBehavior->operCall.methodClass = 0;
+        self->operCall.method = 0;
+        self->operCall.methodClass = 0;
     }
     
     /* temporary */
-    newBehavior->next = 0;
+    self->next = 0;
     
     /* memory layout of instances */
-    newBehavior->instVarCount = instVarCount;
-    newBehavior->instVarOffset = offsetof(ObjectSubclass, variables);
-    newBehavior->instanceSize = newBehavior->instVarOffset + instVarCount*sizeof(Object *);
+    self->instVarCount = instVarCount;
+    self->instVarOffset = offsetof(ObjectSubclass, variables);
+    self->instanceSize = self->instVarOffset + instVarCount*sizeof(Object *);
     
-    return newBehavior;
+    return;
 }
 
-Behavior *SpkBehavior_fromTemplate(SpkClassTmpl *template, Behavior *superclass, struct Module *module) {
-    Behavior *newBehavior;
-    
-    newBehavior = SpkBehavior_new(superclass, module, 0);
-    SpkBehavior_initFromTemplate(newBehavior, template);
-    return newBehavior;
-}
-
-void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template) {
+void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavior *superclass, Module *module) {
     SpkMethodTmpl *methodTmpl;
     
     assert(specialSelectors[0].messageSelector && "use of 'initFromTemplate' cannot precede initialization of class Symbol");
+    
+    SpkBehavior_init(self, superclass, module, 0);
     
     self->instVarOffset = template->instVarOffset;
     self->instanceSize = template->instanceSize;

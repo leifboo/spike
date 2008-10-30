@@ -15,10 +15,7 @@ typedef struct ObjectSubclass {
 
 
 extern struct Behavior *ClassObject;
-
-
-void SpkClassObject_init(void);
-void SpkClassObject_init2(void);
+extern struct SpkClassTmpl ClassObjectTmpl;
 
 
 #endif /* __obj_h__ */
