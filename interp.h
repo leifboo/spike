@@ -42,7 +42,6 @@ enum Opcode {
     OPCODE_OPER_SUPER,
     OPCODE_CALL,
     OPCODE_CALL_SUPER,
-    OPCODE_BOUNCE,
     OPCODE_ATTR,
     OPCODE_ATTR_SUPER,
     OPCODE_RET,
@@ -50,7 +49,7 @@ enum Opcode {
     OPCODE_SAVE,
     OPCODE_RESTORE_SENDER,
     OPCODE_RESTORE_CALLER,
-    OPCODE_NEW_THUNK,
+    OPCODE_THUNK,
     OPCODE_CALL_THUNK,
     OPCODE_TRAP_NATIVE,
     OPCODE_CHECK_STACKP,
@@ -222,7 +221,7 @@ int SpkSemaphore_isEmpty(Semaphore *);
 void SpkSemaphore_addLast(Semaphore *, Fiber *);
 Fiber *SpkSemaphore_removeFirst(Semaphore *);
 
-Object *SpkInterpreter_start(Object *, Symbol *);
+Object *SpkInterpreter_start(Object *);
 void SpkInterpreter_init(Interpreter *, ProcessorScheduler *);
 Object *SpkInterpreter_interpret(Interpreter *);
 Object **SpkInterpreter_instanceVars(Object *);

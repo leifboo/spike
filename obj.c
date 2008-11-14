@@ -28,7 +28,7 @@ static Object *Object_ne(Object *self, Object *arg0, Object *arg1) {
 }
 
 static Object *Object_print(Object *self, Object *arg0, Object *arg1) {
-    printf("<object at %p>", self);
+    printf("<%s instance at %p>", SpkBehavior_name(self->klass), self);
     return Spk_void;
 }
 

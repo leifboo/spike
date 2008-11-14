@@ -1,6 +1,7 @@
 
 #include "behavior.h"
 
+#include "class.h"
 #include "dict.h"
 #include "interp.h"
 #include "module.h"
@@ -137,30 +138,33 @@ void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavi
         messageSelector = SpkSymbol_get(methodTmpl->name);
         method = SpkMethod_newNative(methodTmpl->flags, methodTmpl->code);
         SpkBehavior_insertMethod(self, messageSelector, method);
-        
-        if (methodTmpl->name[0] == '_' && methodTmpl->name[1] == '_') {
-            /* special selector */
-            if (strcmp(methodTmpl->name, "__call__") == 0) {
-                self->operCall.method = method;
-                self->operCall.methodClass = self;
-            } else {
-                Oper operator;
-                
-                for (operator = 0; operator < NUM_OPER; ++operator) {
-                    if (messageSelector == specialSelectors[operator].messageSelector) {
-                        self->operTable[operator].method = method;
-                        self->operTable[operator].methodClass = self;
-                        break;
-                    }
-                }
-                assert(operator < NUM_OPER);
-            }
-        }
     }
 }
 
 void SpkBehavior_insertMethod(Behavior *self, Symbol *messageSelector, Method *method) {
+    char *name;
+    
     SpkIdentityDictionary_atPut(self->methodDict, (Object *)messageSelector, (Object *)method);
+    
+    name = messageSelector->str;
+    if (name[0] == '_' && name[1] == '_') {
+        /* special selector */
+        if (strcmp(name, "__call__") == 0) {
+            self->operCall.method = method;
+            self->operCall.methodClass = self;
+        } else {
+            Oper operator;
+                
+            for (operator = 0; operator < NUM_OPER; ++operator) {
+                if (messageSelector == specialSelectors[operator].messageSelector) {
+                    self->operTable[operator].method = method;
+                    self->operTable[operator].methodClass = self;
+                    break;
+                }
+            }
+            assert(operator < NUM_OPER);
+        }
+    }
 }
 
 Method *SpkBehavior_lookupMethod(Behavior *self, Symbol *messageSelector) {
@@ -169,4 +173,11 @@ Method *SpkBehavior_lookupMethod(Behavior *self, Symbol *messageSelector) {
 
 Symbol *SpkBehavior_findSelectorOfMethod(Behavior *self, Method *meth) {
     return (Symbol *)SpkIdentityDictionary_keyAtValue(self->methodDict, (Object *)meth);
+}
+
+char *SpkBehavior_name(Behavior *self) {
+    if (self->base.klass == (Behavior *)ClassClass) {
+        return ((Class *)self)->name->str;
+    }
+    return "<unknown>";
 }

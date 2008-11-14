@@ -8,6 +8,7 @@
 
 typedef struct StaticChecker {
     SymbolTable *st;
+    Stmt *currentClass;
     Symbol *self, *super, *null, *false, *true, *thisContext;
 } StaticChecker;
 
@@ -39,7 +40,7 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
     case EXPR_NAME:
         switch (pass) {
         case 1:
-            if (0 && stmt->kind == STMT_DEF_METHOD) {
+            if (!checker->currentClass && stmt->kind == STMT_DEF_METHOD) {
                 SpkSymbolTable_Insert(checker->st, expr);
             }
             break;
@@ -161,7 +162,9 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
         if (stmt->u.klass.super) {
             checkExpr(stmt->u.klass.super, stmt, checker, outerPass);
         }
+        checker->currentClass = stmt;
         checkStmt(stmt->top, stmt, checker, outerPass);
+        checker->currentClass = 0;
         break;
     case STMT_DO_WHILE:
         checkExpr(stmt->expr, stmt, checker, outerPass);
@@ -210,6 +213,7 @@ int SpkStaticChecker_Check(Stmt *tree, unsigned int *pDataSize) {
     unsigned int pass;
     
     checker.st = SpkSymbolTable_New();
+    checker.currentClass = 0;
     checker.self = SpkSymbol_get("self");
     checker.super = SpkSymbol_get("super");
     checker.null = SpkSymbol_get("null");

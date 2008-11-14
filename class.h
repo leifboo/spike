@@ -21,6 +21,7 @@ extern struct Metaclass *ClassClass;
 extern struct SpkClassTmpl ClassClassTmpl;
 
 
+Class *SpkClass_new(Symbol *name);
 void SpkClass_initFromTemplate(Class *self, SpkClassTmpl *template, Behavior *superclass, struct Module *module);
 
 

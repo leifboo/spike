@@ -1,7 +1,5 @@
 #!/usr/bin/env spike
 
-class Program {
-    main() {
-        "Hello, world.\n".print();
-    }
+main() {
+    "Hello, world.\n".print();
 }

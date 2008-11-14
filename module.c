@@ -2,6 +2,7 @@
 #include "module.h"
 
 #include "behavior.h"
+#include "dict.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -38,10 +39,19 @@ SpkClassTmpl ClassModuleTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-Module *SpkModule_new(unsigned int nGlobals) {
+Module *SpkModule_new(unsigned int nGlobals, IdentityDictionary *globals) {
     Module *newModule;
     
     newModule = (Module *)malloc(ClassModule->instVarOffset + nGlobals*sizeof(Object *));
     newModule->base.klass = ClassModule;
+    if (!globals) {
+        globals = SpkIdentityDictionary_new();
+    }
+    newModule->globals = globals;
+    newModule->firstClass = 0;
     return newModule;
+}
+
+Object *SpkModule_lookupSymbol(Module *self, Symbol *messageSelector) {
+    return SpkIdentityDictionary_at(self->globals, (Object *)messageSelector);
 }

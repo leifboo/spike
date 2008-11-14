@@ -3,6 +3,7 @@
 
 #include "behavior.h"
 #include "class.h"
+#include "dict.h"
 #include "interp.h"
 #include "module.h"
 #include "obj.h"
@@ -35,6 +36,7 @@ typedef struct CodeGen {
     unsigned int dataSize;
     Object **rodata;
     unsigned int rodataSize, rodataAllocSize;
+    IdentityDictionary *globals;
 } CodeGen;
 
 
@@ -129,10 +131,19 @@ static void push(Expr *expr, CodeGen *cgen) {
     
     def = expr->u.ref.def;
     assert(def);
-    switch (def->u.def.level) {
-    case 0: opcode = OPCODE_PUSH_GLOBAL;   break;
-    case 1: opcode = OPCODE_PUSH_INST_VAR; break;
-    case 2: opcode = OPCODE_PUSH_LOCAL;    break;
+    if (cgen->currentClass) {
+        switch (def->u.def.level) {
+        case 0: opcode = OPCODE_PUSH_GLOBAL;   break;
+        case 1: opcode = OPCODE_PUSH_INST_VAR; break;
+        case 2: opcode = OPCODE_PUSH_LOCAL;    break;
+        }
+    } else {
+        /* global function */
+        switch (def->u.def.level) {
+        case 0: opcode = OPCODE_PUSH_GLOBAL;   break;
+        case 1: opcode = OPCODE_PUSH_LOCAL;    break;
+        default: assert(0);
+        }
     }
     EMIT_OPCODE(opcode);
     encodeUnsignedInt(def->u.def.index, cgen);
@@ -145,10 +156,19 @@ static void store(Expr *var, CodeGen *cgen) {
     
     def = var->u.ref.def;
     assert(def);
-    switch (def->u.def.level) {
-    case 0: opcode = OPCODE_STORE_GLOBAL;   break;
-    case 1: opcode = OPCODE_STORE_INST_VAR; break;
-    case 2: opcode = OPCODE_STORE_LOCAL;    break;
+    if (cgen->currentClass) {
+        switch (def->u.def.level) {
+        case 0: opcode = OPCODE_STORE_GLOBAL;   break;
+        case 1: opcode = OPCODE_STORE_INST_VAR; break;
+        case 2: opcode = OPCODE_STORE_LOCAL;    break;
+        }
+    } else {
+        /* global function */
+        switch (def->u.def.level) {
+        case 0: opcode = OPCODE_STORE_GLOBAL;   break;
+        case 1: opcode = OPCODE_STORE_LOCAL;    break;
+        default: assert(0);
+        }
     }
     EMIT_OPCODE(opcode);
     encodeUnsignedInt(def->u.def.index, cgen);
@@ -258,6 +278,16 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
                  arg = arg->next, ++argumentCount) {
                 emitCodeForOneExpr(arg, 0, cgen);
             }
+            /* XXX: In the Green Book (Ch. 2), Dan Ingalls writes that
+             * some find this evaluation order to be "surprising" as
+             * it differs from the left-to-right order in the source
+             * code. The Spike interpreter could go either way: we
+             * must encode 'argumentCount' in any case, since --
+             * unlike in Smalltalk -- it is not implied by the message
+             * selector. But note that Spike operators have
+             * precedence, so the evaluation order is not
+             * left-to-right anyway.
+             */
             emitCodeForExpr(expr->left, &isSuper, cgen);
             if (isSuper) {
                 opcode = OPCODE_CALL_SUPER;
@@ -461,8 +491,24 @@ static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabe
 
 static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     Stmt sentinel;
+    Behavior *methodClass;
+    Symbol *messageSelector;
+    Object *function = 0;
 
-    assert(cgen->currentClass && !cgen->currentMethod && "method definition not allowed here");
+    assert(!cgen->currentMethod && "method definition not allowed here");
+    
+    if (cgen->currentClass) {
+        methodClass = cgen->currentClass;
+        messageSelector = stmt->u.method.name->sym;
+    } else {
+        /* global function */
+        assert(stmt->expr->kind == EXPR_POSTFIX &&
+               stmt->expr->oper == OPER_CALL); /* XXX */
+        assert(stmt->expr->left->kind == EXPR_NAME); /* XXX */
+        function = cgen->data[stmt->expr->left->u.def.index];
+        methodClass = function->klass;
+        messageSelector = SpkSymbol_get("__call__");
+    }
     
     memset(&sentinel, 0, sizeof(sentinel));
     sentinel.kind = STMT_RETURN;
@@ -472,8 +518,9 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     cgen->stackPointer = cgen->stackSize = 0;
     
     /* dry run to compute offsets */
-    EMIT_OPCODE(OPCODE_NEW_THUNK);
-    /*EMIT_OPCODE(OPCODE_RET);*/
+    if (!function) {
+        EMIT_OPCODE(OPCODE_THUNK);
+    }
     EMIT_OPCODE(OPCODE_SAVE);
     emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
     emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
@@ -487,8 +534,9 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     cgen->currentOffset = 0;
     cgen->stackPointer = cgen->stackSize = 0;
     
-    EMIT_OPCODE(OPCODE_NEW_THUNK);
-    /*EMIT_OPCODE(OPCODE_RET);*/
+    if (!function) {
+        EMIT_OPCODE(OPCODE_THUNK);
+    }
     EMIT_OPCODE(OPCODE_SAVE);
     emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
     emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
@@ -496,7 +544,7 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     assert(cgen->currentOffset == cgen->currentMethod->size);
     assert(cgen->stackSize ==  cgen->currentMethod->stackSize);
     
-    SpkBehavior_insertMethod(cgen->currentClass, stmt->u.method.name->sym, cgen->currentMethod);
+    SpkBehavior_insertMethod(methodClass, messageSelector, cgen->currentMethod);
     cgen->currentMethod = 0;
     cgen->currentOffset = 0;
     cgen->opcodesBegin = cgen->opcodesEnd = 0;
@@ -517,9 +565,10 @@ static void emitCodeForClass(Stmt *stmt, CodeGen *cgen) {
 
 static void createClass(Stmt *stmt, CodeGen *cgen) {
     Behavior *theClass;
+    Symbol *className;
     
-    theClass = SpkBehavior_new();
-    theClass->base.klass = (Behavior *)ClassClass;
+    className = stmt->expr->sym->sym;
+    theClass = (Behavior *)SpkClass_new(className);
     SpkBehavior_init(theClass, 0, 0, stmt->u.klass.instVarCount);
     
     if (!cgen->firstClass) {
@@ -531,6 +580,9 @@ static void createClass(Stmt *stmt, CodeGen *cgen) {
     
     /* initialize global variable */
     cgen->data[stmt->expr->u.def.index] = (Object *)theClass;
+    SpkIdentityDictionary_atPut(cgen->globals,
+                                (Object *)className,
+                                (Object *)theClass);
 }
 
 static void setSuperclass(Stmt *stmt, CodeGen *cgen) {
@@ -556,6 +608,39 @@ static void checkForSuperclassCycle(Stmt *stmt, CodeGen *cgen) {
 
 /****************************************************************************/
 
+static void createFunction(Stmt *stmt, CodeGen *cgen) {
+    Behavior *theClass;
+    Object *theFunction;
+    Symbol *functionName;
+    
+    functionName = stmt->u.method.name->sym;
+    /* XXX: This creates a class with an ordinary identifier as a class name. */
+    theClass = (Behavior *)SpkClass_new(functionName);
+    theClass->base.klass = (Behavior *)ClassClass;
+    SpkBehavior_init(theClass, 0, 0, 0);
+    
+    if (!cgen->firstClass) {
+        cgen->firstClass = theClass;
+    } else {
+        cgen->lastClass->next = theClass;
+    }
+    cgen->lastClass = theClass;
+    
+    theFunction = (Object *)malloc(theClass->instanceSize);
+    theFunction->klass = theClass;
+
+    /* initialize global variable */
+    assert(stmt->expr->kind == EXPR_POSTFIX &&
+           stmt->expr->oper == OPER_CALL); /* XXX */
+    assert(stmt->expr->left->kind == EXPR_NAME); /* XXX */
+    cgen->data[stmt->expr->left->u.def.index] = theFunction;
+    SpkIdentityDictionary_atPut(cgen->globals,
+                                (Object *)functionName,
+                                theFunction);
+}
+
+/****************************************************************************/
+
 Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize) {
     Stmt *s;
     CodeGen cgen;
@@ -570,11 +655,17 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize) {
         cgen.data[index] = Spk_uninit; /* XXX: null? */
     }
     cgen.dataSize = dataSize;
+    cgen.globals = SpkIdentityDictionary_new();
     
     /* Create all classes. */
     for (s = tree; s; s = s->next) {
-        if (s->kind == STMT_DEF_CLASS) {
+        switch (s->kind) {
+        case STMT_DEF_CLASS:
             createClass(s, &cgen);
+            break;
+        case STMT_DEF_METHOD:
+            createFunction(s, &cgen);
+            break;
         }
     }
     for (s = tree; s; s = s->next) {
@@ -594,7 +685,7 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize) {
     }
     
     /* Create and initialize the module. */
-    module = SpkModule_new(dataSize + cgen.rodataSize);
+    module = SpkModule_new(dataSize + cgen.rodataSize, cgen.globals);
     module->firstClass = cgen.firstClass;
     globals = SpkInterpreter_instanceVars((Object *)module);
     for (index = 0; index < dataSize; ++index) {

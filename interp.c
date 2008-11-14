@@ -3,6 +3,7 @@
 
 #include "behavior.h"
 #include "bool.h"
+#include "class.h"
 #include "dict.h"
 #include "int.h"
 #include "module.h"
@@ -135,7 +136,7 @@ SpkClassTmpl ClassVoidTmpl = {
 /*------------------------------------------------------------------------*/
 /* initialization */
 
-Object *SpkInterpreter_start(Object *receiver, Symbol *entry) {
+Object *SpkInterpreter_start(Object *entry) {
     Method *callThunk, *trampoline;
     Context *context;
     Fiber fiber;
@@ -161,7 +162,7 @@ Object *SpkInterpreter_start(Object *receiver, Symbol *entry) {
     trampoline->stackSize = 1;
     trampoline->size = trampolineSize;
     ip = &trampoline->opcodes[0];
-    *ip++ = OPCODE_BOUNCE;
+    *ip++ = OPCODE_PUSH_SELF;
     *ip++ = OPCODE_CALL;
     *ip++ = (opcode_t)0;
     *ip++ = OPCODE_RETT;
@@ -173,11 +174,8 @@ Object *SpkInterpreter_start(Object *receiver, Symbol *entry) {
     context->stackp = &context->variables[trampoline->stackSize];
     context->homeContext = context;
     context->u.m.method = trampoline;
-    context->u.m.methodClass = receiver->klass;
-    context->u.m.receiver = receiver;
-    
-    /* push the argument to the trampoline */
-    *--context->stackp = (Object *)entry;
+    context->u.m.methodClass = entry->klass;
+    context->u.m.receiver = entry;
     
     fiber.nextLink = 0;
     fiber.suspendedContext = context;
@@ -268,8 +266,7 @@ Method *SpkMethod_newNative(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) 
     
     ip = &newMethod->opcodes[0];
     if (flags & SpkNativeCode_CALLABLE) {
-        *ip++ = OPCODE_NEW_THUNK;
-        /**ip++ = OPCODE_RET;*/
+        *ip++ = OPCODE_THUNK;
     }
     if (flags & SpkNativeCode_LEAF) {
         *ip++ = OPCODE_TRAP_NATIVE;
@@ -558,10 +555,6 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             break;
 
 /*** send opcodes -- "obj.attr" ***/
-        case OPCODE_BOUNCE:
-            messageSelector = (Symbol *)POP_OBJECT();
-            methodClass = receiver->klass;
-            goto lookupMethodInClass;
         case OPCODE_ATTR:
             receiver = POP_OBJECT();
             methodClass = receiver->klass;
@@ -697,7 +690,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             break; }
             
 /*** thunk opcodes ***/
-        case OPCODE_NEW_THUNK: {
+        case OPCODE_THUNK: {
             /* new thunk */
             Thunk *thunk = (Thunk *)malloc(sizeof(Thunk));
             thunk->base.klass = ClassThunk;
@@ -839,15 +832,24 @@ void SpkInterpreter_resume(Interpreter *self, Fiber *aFiber) {
 void SpkInterpreter_printCallStack(Interpreter *self) {
     Context *ctxt, *home;
     Method *method;
-    Symbol *methodSel;
+    Behavior *methodClass;
+    Symbol *methodSel, *call;
     
+    call = SpkSymbol_get("__call__");
     for (ctxt = self->activeContext; ctxt; ctxt = ctxt->sender) {
         home = ctxt->homeContext;
         method = home->u.m.method;
-        methodSel = SpkBehavior_findSelectorOfMethod(home->u.m.methodClass, method);
-        printf("%04x %p %s XXX.%s\n",
-               ctxt->pc - &method->opcodes[0], ctxt, (ctxt == home ? "" : "{} in "),
-               methodSel ? methodSel->str : "<unknown>");
+        methodClass = home->u.m.methodClass;
+        methodSel = SpkBehavior_findSelectorOfMethod(methodClass, method);
+        printf("%04x %p%s",
+               ctxt->pc - &method->opcodes[0], ctxt, (ctxt == home ? " " : " {} in "));
+        if (methodSel == call) {
+            printf("%s\n", SpkBehavior_name(methodClass));
+        } else {
+            printf("%s::%s\n",
+                   SpkBehavior_name(methodClass),
+                   methodSel ? methodSel->str : "<unknown>");
+        }
     }
 }
 

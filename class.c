@@ -2,6 +2,7 @@
 #include "class.h"
 
 #include "interp.h"
+#include "metaclass.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -56,6 +57,15 @@ SpkClassTmpl ClassClassTmpl = {
 
 /*------------------------------------------------------------------------*/
 /* C API */
+
+Class *SpkClass_new(Symbol *name) {
+    Class *newClass;
+    
+    newClass = (Class *)malloc(ClassClass->base.instanceSize);
+    newClass->base.base.klass = (Behavior *)ClassClass;
+    newClass->name = name;
+    return newClass;
+}
 
 void SpkClass_initFromTemplate(Class *self,
                                SpkClassTmpl *template,

@@ -6,8 +6,12 @@
 #include "obj.h"
 
 
+struct Symbol;
+
+
 typedef struct Module {
     Object base;
+    struct IdentityDictionary *globals;
     struct Behavior *firstClass;
 } Module;
 
@@ -22,7 +26,8 @@ extern struct SpkClassTmpl ClassModuleTmpl;
 extern Module *builtInModule;
 
 
-Module *SpkModule_new(unsigned int);
+Module *SpkModule_new(unsigned int, struct IdentityDictionary *);
+Object *SpkModule_lookupSymbol(Module *, struct Symbol *);
 
 
 #endif /* __module_h__ */

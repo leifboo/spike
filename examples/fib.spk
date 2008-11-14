@@ -1,15 +1,14 @@
 #!/usr/bin/env spike
 
-class Program {
-    main() {
-        var result;
-        result = self.fib(10);
-        result.print();
-        "\n".print();
-        return 0;
-    }
-    fib(x) {
-        if (x<=2) return 1;
-        return self.fib(x-1) + self.fib(x-2);
-    }
+fib(x) {
+    if (x<=2) return 1;
+    return fib(x-1) + fib(x-2);
+}
+
+main() {
+    var result;
+    result = fib(10);
+    result.print();
+    "\n".print();
+    return 0;
 }

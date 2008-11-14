@@ -100,8 +100,7 @@ int main(int argc, char **argv) {
     char *arg, *sourceFilename ;
     Stmt *tree;
     Module *module;
-    Object *obj, *result;
-    Symbol *entry;
+    Object *entry, *result;
     unsigned int dataSize;
     
     sourceFilename = 0;
@@ -170,20 +169,19 @@ int main(int argc, char **argv) {
         return 1;
     }
     module = SpkCodeGen_generateCode(tree, dataSize);
-    if (!module->firstClass) {
-        fprintf(stderr, "no classes\n");
-        return 1;
-    }
     
     if (disassemble) {
         SpkDisassembler_disassembleModule(module, stdout);
         return 0;
     }
     
-    obj = (Object *)malloc(module->firstClass->instanceSize);
-    obj->klass = module->firstClass;
-    entry = SpkSymbol_get("main");
-    result = SpkInterpreter_start(obj, entry);
+    entry = SpkModule_lookupSymbol(module, SpkSymbol_get("main"));
+    if (!entry) {
+        fprintf(stderr, "unresolved symbol 'main'\n");
+        return 1;
+    }
+    
+    result = SpkInterpreter_start(entry);
     
     if (!result) {
         return 1;

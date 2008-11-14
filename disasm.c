@@ -130,7 +130,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         case OPCODE_SAVE:           mnemonic = "save";  break;
         case OPCODE_RESTORE_SENDER: mnemonic = "restore"; keyword = "sender"; break;
         case OPCODE_RESTORE_CALLER: mnemonic = "restore"; keyword = "caller"; break;
-        case OPCODE_NEW_THUNK:      mnemonic = "thunk"; break;
+        case OPCODE_THUNK:          mnemonic = "thunk"; break;
         case OPCODE_CALL_THUNK:     mnemonic = "ct";    break;
         case OPCODE_TRAP_NATIVE:    mnemonic = "trap";    keyword = "native"; break;
         
@@ -174,7 +174,7 @@ void SpkDisassembler_disassembleClass(Behavior *aClass, FILE *out) {
     Method *method;
     Symbol *methodName;
     
-    fprintf(out, "class\n");
+    fprintf(out, "class %s\n", SpkBehavior_name(aClass));
     methodDict = aClass->methodDict;
     for (i = 0; i < methodDict->size; ++i) {
         method = (Method *)methodDict->valueArray[i];

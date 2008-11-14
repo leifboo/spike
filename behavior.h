@@ -108,6 +108,7 @@ void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavi
 void SpkBehavior_insertMethod(Behavior *, Symbol *, Method *);
 Method *SpkBehavior_lookupMethod(Behavior *, Symbol *);
 Symbol *SpkBehavior_findSelectorOfMethod(Behavior *, Method *);
+char *SpkBehavior_name(Behavior *);
 
 
 #endif /* __behavior_h__ */
