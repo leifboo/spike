@@ -1,0 +1,77 @@
+#!/usr/bin/env spike
+
+class Queen {
+    var row, column, neighbor, boardSize;
+    
+    build(myNeighbor, c, size) {
+        neighbor = myNeighbor;
+        column = c;
+        row = 1;
+        boardSize = size;
+        if (neighbor !== null)
+            neighbor.first();
+        return self;
+    }
+
+    check(c, r) {
+        var cd;
+        
+        if (r == row)
+            return false;
+        cd = c - column;
+        if (row + cd == r)
+            return false;
+        if (row - cd == r)
+            return false;
+        if (neighbor !== null)
+            return neighbor.check(c, r);
+        return true;
+    }
+    
+    first() {
+        row = 1;
+        return self.checkRow();
+    }
+
+    next() {
+        row = row + 1;
+        return self.checkRow();
+    }
+
+    checkRow() {
+        if (neighbor === null)
+            return row;
+        while (row <= boardSize) {
+            if (neighbor.check(column, row))
+                return row;
+            else
+                row = row + 1;
+        }
+        if (neighbor.next() === null)
+            return null;
+        return self.first();
+    }
+
+    printBoard() {
+        if (neighbor !== null)
+            neighbor.printBoard();
+        "Col ".print();
+        column.print();
+        " Row ".print();
+        row.print();
+        "\n".print();
+    }
+}
+
+main() {
+    var last, size, x;
+
+    size = 8;
+    last = null;
+    for (x = 1; x <= size; ++x) {
+        last = Queen.new().build(last, x, size);
+    }
+    last.first();
+    last.printBoard();
+    return 0;
+}

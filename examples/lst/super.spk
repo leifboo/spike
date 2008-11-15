@@ -1,0 +1,51 @@
+#!/usr/bin/env spike
+
+class One {
+    test() {
+        return 1;
+    }
+    result1() {
+        return self.test();
+    }
+}
+
+class Two : One {
+    test() {
+        return 2;
+    }
+}
+
+class Three : Two {
+    result2() {
+        return self.result1();
+    }
+    result3() {
+        return super.test();
+    }
+}
+
+class Four : Three {
+    test() {
+        return 4;
+    }
+}
+
+main() {
+    var example1, example2, example3, example4;
+    
+    example1 = One.new();
+    example2 = Two.new();
+    example3 = Three.new();
+    example4 = Four.new();
+    example1.test().print(); '\n'.print();
+    example1.result1().print(); '\n'.print();
+    example2.test().print(); '\n'.print();
+    example2.result1().print(); '\n'.print();
+    example3.test().print(); '\n'.print();
+    example4.result1().print(); '\n'.print();
+    example3.result2().print(); '\n'.print();
+    example4.result2().print(); '\n'.print();
+    example3.result3().print(); '\n'.print();
+    example4.result3().print(); '\n'.print();
+    return 0;
+}

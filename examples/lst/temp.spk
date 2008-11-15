@@ -1,0 +1,13 @@
+#!/usr/bin/env spike
+
+main() {
+    var i;
+    
+    i = 1;
+    while (i < 3) {
+        i.print();
+        '\n'.print();
+        i = i + 1;
+    }
+    return 0;
+}
