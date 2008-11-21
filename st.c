@@ -2,19 +2,18 @@
 #include "st.h"
 
 #include "interp.h"
+#include "sym.h"
 #include "tree.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
 
-SymbolNode *SpkSymbolNode_Get(const char *str) {
+SymbolNode *SpkSymbolNode_Get(Symbol *sym) {
     /* Just a simple linked list for now! */
     static SymbolNode *list = 0;
-    Symbol *sym;
     SymbolNode *s;
     
-    sym = SpkSymbol_get(str);
     for (s = list; s; s = s->next) {
         if (s->sym == sym) {
             return s;
@@ -113,7 +112,9 @@ void SpkSymbolTable_Insert(SymbolTable *st, Expr *def) {
     oldEntry = sym->entry;
     cs = st->currentScope;
     
-    if (oldEntry && oldEntry->scope == cs) {
+    if (oldEntry &&
+        (oldEntry->scope == cs ||
+         oldEntry->scope->context->level == 0 /*built-in*/ )) {
         /* multiply defined */
         registerError(st, sym);
         def->u.def.nextMultipleDef = sym->multipleDefList;
@@ -132,6 +133,8 @@ void SpkSymbolTable_Insert(SymbolTable *st, Expr *def) {
     sym->entry = newEntry;
     
     def->u.def.level = cs->context->level;
+    /* XXX: We could overlap scopes with the addition of a 'clear'
+       opcode. */
     def->u.def.index = cs->context->nDefs++;
 }
 

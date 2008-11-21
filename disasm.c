@@ -6,6 +6,7 @@
 #include "dict.h"
 #include "interp.h"
 #include "module.h"
+#include "sym.h"
 
 
 #define DECODE_UINT(result) do { \

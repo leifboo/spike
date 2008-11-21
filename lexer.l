@@ -20,6 +20,7 @@ IS			(u|U|l|L)*
 #include "lexer.h"
 #include "st.h"
 #include "str.h"
+#include "sym.h"
 
 static void count(yyscan_t yyscanner);
 static void comment(yyscan_t yyscanner);
@@ -200,7 +201,7 @@ int SpkLexer_GetNextToken(Token *token, yyscan_t scanner) {
         break;
     case TOKEN_IDENTIFIER:
     case TOKEN_TYPE_IDENTIFIER:
-        token->sym = SpkSymbolNode_Get(yyget_text(scanner));
+        token->sym = SpkSymbolNode_Get(SpkSymbol_get(yyget_text(scanner)));
         break;
     }
     return id;

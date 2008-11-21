@@ -3,6 +3,7 @@
 
 #include "interp.h"
 #include "metaclass.h"
+#include "sym.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -48,6 +49,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl ClassClassTmpl = {
+    "Class",
     offsetof(ClassSubclass, variables),
     sizeof(Class),
     0,
@@ -76,5 +78,5 @@ void SpkClass_initFromTemplate(Class *self,
                                  template,
                                  superclass,
                                  module);
-    self->name = SpkSymbol_get("Foo" /*template->name*/ );
+    self->name = SpkSymbol_get(template->name);
 }

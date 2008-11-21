@@ -5,6 +5,7 @@
 #include "dict.h"
 #include "interp.h"
 #include "module.h"
+#include "sym.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -61,6 +62,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl ClassBehaviorTmpl = {
+    "Behavior",
     offsetof(BehaviorSubclass, variables),
     sizeof(Behavior),
     0,

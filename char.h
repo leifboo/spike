@@ -19,9 +19,9 @@ typedef struct CharSubclass {
 
 
 extern struct Behavior *ClassChar;
+extern struct SpkClassTmpl ClassCharTmpl;
 
 
-void SpkClassChar_init(void);
 Char *SpkChar_fromLiteral(char *, size_t);
 
 

@@ -1,15 +1,21 @@
+
 #include "scheck.h"
 
+#include "behavior.h"
+#include "class.h"
 #include "interp.h"
 #include "st.h"
+#include "sym.h"
+#include "tree.h"
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 
 typedef struct StaticChecker {
     SymbolTable *st;
     Stmt *currentClass;
-    Symbol *self, *super, *null, *false, *true, *thisContext;
 } StaticChecker;
 
 
@@ -46,21 +52,7 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
             break;
         case 2:
             if (stmt->kind != STMT_DEF_METHOD) {
-                if (expr->sym->sym == checker->self) {
-                    expr->kind = EXPR_SELF;
-                } else if (expr->sym->sym == checker->super) {
-                    expr->kind = EXPR_SUPER;
-                } else if (expr->sym->sym == checker->null) {
-                    expr->kind = EXPR_NULL;
-                } else if (expr->sym->sym == checker->false) {
-                    expr->kind = EXPR_FALSE;
-                } else if (expr->sym->sym == checker->true) {
-                    expr->kind = EXPR_TRUE;
-                } else if (expr->sym->sym == checker->thisContext) {
-                    expr->kind = EXPR_CONTEXT;
-                } else {
-                    SpkSymbolTable_Bind(checker->st, expr);
-                }
+                SpkSymbolTable_Bind(checker->st, expr);
             }
             break;
         }
@@ -252,21 +244,79 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
     }
 }
 
-int SpkStaticChecker_Check(Stmt *tree, unsigned int *pDataSize) {
+static struct PseudoVariable {
+    const char *name;
+    opcode_t pushOpcode;
+} pseudoVariables[] = {
+    { "self",    OPCODE_PUSH_SELF },
+    { "false",   OPCODE_PUSH_FALSE },
+    { "true",    OPCODE_PUSH_TRUE },
+    { "null",    OPCODE_PUSH_NULL },
+    { "context", OPCODE_PUSH_CONTEXT },
+    { "super",   0 },
+    { 0, 0 }
+};
+
+static Expr *newNameExpr() {
+    Expr *newExpr;
+    
+    newExpr = (Expr *)malloc(sizeof(Expr));        
+    memset(newExpr, 0, sizeof(Expr));
+    newExpr->kind = EXPR_NAME;
+    return newExpr;
+}
+
+static Expr *newPseudoVariable(struct PseudoVariable *pv) {
+    Expr *newExpr;
+    
+    newExpr = newNameExpr();
+    newExpr->sym = SpkSymbolNode_Get(SpkSymbol_get(pv->name));
+    newExpr->u.def.pushOpcode = pv->pushOpcode;
+    return newExpr;
+}
+
+static Stmt *predefinedClassDef(Class *predefClass) {
+    Stmt *newStmt;
+    
+    newStmt = (Stmt *)malloc(sizeof(Stmt));
+    memset(newStmt, 0, sizeof(Stmt));
+    newStmt->kind = STMT_DEF_CLASS;
+    newStmt->expr = newNameExpr();
+    newStmt->expr->sym = SpkSymbolNode_Get(predefClass->name);
+    newStmt->expr->u.def.stmt = newStmt;
+    return newStmt;
+}
+
+int SpkStaticChecker_Check(Stmt *tree, BootRec *bootRec,
+                           unsigned int *pDataSize, StmtList *predefList) {
     Stmt *s;
     StaticChecker checker;
+    struct PseudoVariable *pv;
     unsigned int pass;
     
     checker.st = SpkSymbolTable_New();
-    checker.currentClass = 0;
-    checker.self = SpkSymbol_get("self");
-    checker.super = SpkSymbol_get("super");
-    checker.null = SpkSymbol_get("null");
-    checker.false = SpkSymbol_get("false");
-    checker.true = SpkSymbol_get("true");
-    checker.thisContext = SpkSymbol_get("thisContext");
-    SpkSymbolTable_EnterScope(checker.st, 1);
+    SpkSymbolTable_EnterScope(checker.st, 1); /* built-in scope */
+    for (pv = pseudoVariables; pv->name; ++pv) {
+        SpkSymbolTable_Insert(checker.st, newPseudoVariable(pv));
+    }
+    SpkSymbolTable_EnterScope(checker.st, 1); /* global scope */
+    predefList->first = predefList->last = 0;
+    for ( ; bootRec->var; ++bootRec) {
+        if ((*bootRec->var)->klass == (Behavior *)ClassClass) {
+            Stmt *classDef = predefinedClassDef((Class *)*bootRec->var);
+            SpkSymbolTable_Insert(checker.st, classDef->expr);
+            classDef->expr->u.def.initValue = *bootRec->var;
+            if (!predefList->first) {
+                predefList->first = classDef;
+            } else {
+                predefList->last->next = classDef;
+            }
+            predefList->last = classDef;
+        }
+    }
     
+    checker.currentClass = 0;
+
     for (pass = 1; pass < 3; ++pass) {
         for (s = tree; s; s = s->next) {
             checkStmt(s, 0, &checker, pass);
@@ -283,8 +333,13 @@ int SpkStaticChecker_Check(Stmt *tree, unsigned int *pDataSize) {
         fprintf(stderr, "errors!\n");
         for (sym = checker.st->errorList; sym; sym = sym->nextError) {
             if (sym->multipleDefList) {
-                fprintf(stderr, "symbol '%s' multiply defined\n",
-                        sym->sym->str);
+                if (sym->entry && sym->entry->scope->context->level == 0) {
+                    fprintf(stderr, "cannot redefine built-in name '%s'\n",
+                            sym->sym->str);
+                } else {
+                    fprintf(stderr, "symbol '%s' multiply defined\n",
+                            sym->sym->str);
+                }
             }
             if (sym->undefList) {
                 fprintf(stderr, "symbol '%s' undefined\n",

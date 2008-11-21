@@ -14,7 +14,7 @@ typedef struct Behavior Behavior;
 typedef struct SpecialSelector {
     char *messageSelectorStr;
     size_t argumentCount;
-    Symbol *messageSelector;
+    struct Symbol *messageSelector;
 } SpecialSelector;
 
 extern SpecialSelector specialSelectors[NUM_OPER];
@@ -66,6 +66,7 @@ typedef struct SpkMethodTmpl {
 } SpkMethodTmpl;
 
 typedef struct SpkClassTmpl {
+    const char *name;
     size_t instVarOffset;
     size_t instanceSize;
     SpkAccessorTmpl *accessors;
@@ -97,6 +98,15 @@ typedef struct BehaviorSubclass {
 } BehaviorSubclass;
 
 
+typedef struct BootRec {
+    Behavior **klass;
+    SpkClassTmpl *klassTmpl;
+    Object **var;
+    Behavior **superclass;
+    SpkClassTmpl *init;
+} BootRec;
+
+
 extern Behavior *ClassBehavior;
 extern struct SpkClassTmpl ClassBehaviorTmpl;
 
@@ -105,9 +115,9 @@ Behavior *SpkBehavior_new(void);
 Behavior *SpkBehavior_fromTemplate(SpkClassTmpl *template, Behavior *superclass, struct Module *module);
 void SpkBehavior_init(Behavior *self, Behavior *superclass, struct Module *module, size_t instVarCount);
 void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavior *superclass, struct Module *module);
-void SpkBehavior_insertMethod(Behavior *, Symbol *, Method *);
-Method *SpkBehavior_lookupMethod(Behavior *, Symbol *);
-Symbol *SpkBehavior_findSelectorOfMethod(Behavior *, Method *);
+void SpkBehavior_insertMethod(Behavior *, struct Symbol *, Method *);
+Method *SpkBehavior_lookupMethod(Behavior *, struct Symbol *);
+struct Symbol *SpkBehavior_findSelectorOfMethod(Behavior *, Method *);
 char *SpkBehavior_name(Behavior *);
 
 

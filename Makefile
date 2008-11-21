@@ -21,6 +21,7 @@ obj = \
 	spike.o \
 	st.o \
 	str.o \
+	sym.o \
 	$(empty)
 
 all: spike

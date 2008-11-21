@@ -50,7 +50,7 @@ struct SymbolTable {
 };
 
 
-SymbolNode *SpkSymbolNode_Get(const char *str);
+SymbolNode *SpkSymbolNode_Get(struct Symbol *sym);
 SymbolTable *SpkSymbolTable_New();
 void SpkSymbolTable_Destroy(SymbolTable *st);
 void SpkSymbolTable_EnterScope(SymbolTable *st, int enterNewContext);

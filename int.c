@@ -236,7 +236,8 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
-static SpkClassTmpl tmpl = {
+SpkClassTmpl ClassIntegerTmpl = {
+    "Integer",
     offsetof(IntegerSubclass, variables),
     sizeof(Integer),
     0,
@@ -246,10 +247,6 @@ static SpkClassTmpl tmpl = {
 
 /*------------------------------------------------------------------------*/
 /* C API */
-
-void SpkClassInteger_init(void) {
-    ClassInteger = SpkBehavior_fromTemplate(&tmpl, ClassObject, builtInModule);
-}
 
 Integer *SpkInteger_fromLong(long value) {
     Integer *result;

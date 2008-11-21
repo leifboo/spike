@@ -125,7 +125,8 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
-static SpkClassTmpl tmpl = {
+SpkClassTmpl ClassStringTmpl = {
+    "String",
     0,
     sizeof(String),
     0,
@@ -135,10 +136,6 @@ static SpkClassTmpl tmpl = {
 
 /*------------------------------------------------------------------------*/
 /* C API */
-
-void SpkClassString_init(void) {
-    ClassString = SpkBehavior_fromTemplate(&tmpl, ClassObject, builtInModule);
-}
 
 String *SpkString_fromLiteral(char *str, size_t len) {
     String *result;

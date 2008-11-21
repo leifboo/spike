@@ -236,7 +236,8 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
-static SpkClassTmpl tmpl = {
+SpkClassTmpl ClassCharTmpl = {
+    "Char",
     offsetof(CharSubclass, variables),
     sizeof(Char),
     0,
@@ -246,10 +247,6 @@ static SpkClassTmpl tmpl = {
 
 /*------------------------------------------------------------------------*/
 /* C API */
-
-void SpkClassChar_init(void) {
-    ClassChar = SpkBehavior_fromTemplate(&tmpl, ClassObject, builtInModule);
-}
 
 Char *SpkChar_fromLiteral(char *str, size_t len) {
     Char *result;

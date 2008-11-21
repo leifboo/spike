@@ -5,6 +5,7 @@
 
 #include "behavior.h"
 #include "bool.h"
+#include "char.h"
 #include "class.h"
 #include "dict.h"
 #include "int.h"
@@ -13,6 +14,7 @@
 #include "module.h"
 #include "obj.h"
 #include "str.h"
+#include "sym.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -32,13 +34,7 @@ static Behavior *ClassNULL_CLASS;
 #define OBJECT(c, v) BOOT_REC(c, v, 0, 0)
 
 
-static struct BootRec {
-    Behavior **klass;
-    SpkClassTmpl *klassTmpl;
-    Object **var;
-    Behavior **superclass;
-    SpkClassTmpl *init;
-} bootRec[] = {
+static BootRec bootRec[] = {
     CLASS(Object, NULL_CLASS),
     /**/CLASS(Behavior, Class),
     /******/METACLASS(Metaclass),
@@ -54,6 +50,9 @@ static struct BootRec {
     /**/CLASS(Null,    Object),
     /**/CLASS(Uninit,  Object),
     /**/CLASS(Void,    Object),
+    /**/CLASS(Integer, Object),
+    /**/CLASS(Char,    Object),
+    /**/CLASS(String,  Object),
     OBJECT(False,  Spk_false),
     OBJECT(True,   Spk_true),
     OBJECT(Module, builtInModule),
@@ -65,7 +64,7 @@ static struct BootRec {
 
 
 static void bootstrap() {
-    struct BootRec *r;
+    BootRec *r;
     Oper operator;
     
     /* alloc */
@@ -102,6 +101,7 @@ int main(int argc, char **argv) {
     Module *module;
     Object *entry, *result;
     unsigned int dataSize;
+    StmtList predefList;
     
     sourceFilename = 0;
     showHelp = error = disassemble = 0;
@@ -156,19 +156,15 @@ int main(int argc, char **argv) {
     
     bootstrap();
     
-    SpkClassInteger_init();
-    SpkClassChar_init();
-    SpkClassString_init();
-    
     tree = SpkParser_ParseFile(sourceFilename);
     if (!tree) {
         return 1;
     }
     
-    if (SpkStaticChecker_Check(tree, &dataSize) == -1) {
+    if (SpkStaticChecker_Check(tree, bootRec, &dataSize, &predefList) == -1) {
         return 1;
     }
-    module = SpkCodeGen_generateCode(tree, dataSize);
+    module = SpkCodeGen_generateCode(tree, dataSize, predefList.first);
     
     if (disassemble) {
         SpkDisassembler_disassembleModule(module, stdout);

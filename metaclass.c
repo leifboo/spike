@@ -3,6 +3,7 @@
 
 #include "class.h"
 #include "interp.h"
+#include "sym.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,6 +47,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl ClassMetaclassTmpl = {
+    "Metaclass",
     offsetof(MetaclassSubclass, variables),
     sizeof(Metaclass),
     0,

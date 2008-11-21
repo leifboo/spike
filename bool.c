@@ -73,6 +73,7 @@ static SpkMethodTmpl BooleanMethods[] = {
 };
 
 SpkClassTmpl ClassBooleanTmpl = {
+    "Boolean",
     offsetof(ObjectSubclass, variables),
     sizeof(Boolean),
     0,
@@ -93,6 +94,7 @@ static SpkMethodTmpl FalseMethods[] = {
 };
 
 SpkClassTmpl ClassFalseTmpl = {
+    "False",
     offsetof(ObjectSubclass, variables),
     sizeof(Boolean),
     0,
@@ -113,6 +115,7 @@ static SpkMethodTmpl TrueMethods[] = {
 };
 
 SpkClassTmpl ClassTrueTmpl = {
+    "True",
     offsetof(ObjectSubclass, variables),
     sizeof(Boolean),
     0,

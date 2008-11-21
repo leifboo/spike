@@ -8,6 +8,7 @@
 #include "module.h"
 #include "obj.h"
 #include "st.h"
+#include "sym.h"
 #include "tree.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -129,23 +130,38 @@ static void tallyPush(CodeGen *cgen) {
     CHECK_STACKP();
 }
 
-static void push(Expr *expr, CodeGen *cgen) {
+static void push(Expr *expr, int *super, CodeGen *cgen) {
     opcode_t opcode;
     Expr *def;
     
     def = expr->u.ref.def;
     assert(def);
+    
+    if (def->u.def.level == 0) {
+        /* built-in */
+        if (def->u.def.pushOpcode) {
+            EMIT_OPCODE(def->u.def.pushOpcode);
+            tallyPush(cgen);
+            return;
+        }
+        /* super */
+        assert(super && "invalid use of 'super'");
+        *super = 1;
+        return;
+    }
+    
     if (cgen->currentClass) {
         switch (def->u.def.level) {
-        case 0: opcode = OPCODE_PUSH_GLOBAL;   break;
-        case 1: opcode = OPCODE_PUSH_INST_VAR; break;
-        case 2: opcode = OPCODE_PUSH_LOCAL;    break;
+        case 1: opcode = OPCODE_PUSH_GLOBAL;   break;
+        case 2: opcode = OPCODE_PUSH_INST_VAR; break;
+        case 3: opcode = OPCODE_PUSH_LOCAL;    break;
+        default: assert(0);
         }
     } else {
         /* global function */
         switch (def->u.def.level) {
-        case 0: opcode = OPCODE_PUSH_GLOBAL;   break;
-        case 1: opcode = OPCODE_PUSH_LOCAL;    break;
+        case 1: opcode = OPCODE_PUSH_GLOBAL;   break;
+        case 2: opcode = OPCODE_PUSH_LOCAL;    break;
         default: assert(0);
         }
     }
@@ -162,15 +178,16 @@ static void store(Expr *var, CodeGen *cgen) {
     assert(def);
     if (cgen->currentClass) {
         switch (def->u.def.level) {
-        case 0: opcode = OPCODE_STORE_GLOBAL;   break;
-        case 1: opcode = OPCODE_STORE_INST_VAR; break;
-        case 2: opcode = OPCODE_STORE_LOCAL;    break;
+        case 1: opcode = OPCODE_STORE_GLOBAL;   break;
+        case 2: opcode = OPCODE_STORE_INST_VAR; break;
+        case 3: opcode = OPCODE_STORE_LOCAL;    break;
+        default: assert(0);
         }
     } else {
         /* global function */
         switch (def->u.def.level) {
-        case 0: opcode = OPCODE_STORE_GLOBAL;   break;
-        case 1: opcode = OPCODE_STORE_LOCAL;    break;
+        case 1: opcode = OPCODE_STORE_GLOBAL;   break;
+        case 2: opcode = OPCODE_STORE_LOCAL;    break;
         default: assert(0);
         }
     }
@@ -250,31 +267,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         tallyPush(cgen);
         break;
     case EXPR_NAME:
-        push(expr, cgen);
-        break;
-    case EXPR_SELF:
-        EMIT_OPCODE(OPCODE_PUSH_SELF);
-        tallyPush(cgen);
-        break;
-    case EXPR_SUPER:
-        assert(super && "invalid use of 'super'");
-        *super = 1;
-        break;
-    case EXPR_NULL:
-        EMIT_OPCODE(OPCODE_PUSH_NULL);
-        tallyPush(cgen);
-        break;
-    case EXPR_FALSE:
-        EMIT_OPCODE(OPCODE_PUSH_FALSE);
-        tallyPush(cgen);
-        break;
-    case EXPR_TRUE:
-        EMIT_OPCODE(OPCODE_PUSH_TRUE);
-        tallyPush(cgen);
-        break;
-    case EXPR_CONTEXT:
-        EMIT_OPCODE(OPCODE_PUSH_CONTEXT);
-        tallyPush(cgen);
+        push(expr, super, cgen);
         break;
     case EXPR_POSTFIX:
         switch (expr->oper) {
@@ -431,7 +424,26 @@ static void emitBranchForExpr(Expr *expr, int cond, size_t label, size_t fallThr
 }
 
 static void emitBranchForOneExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, CodeGen *cgen) {
+    opcode_t pushOpcode;
+    
     switch (expr->kind) {
+    case EXPR_NAME:
+        pushOpcode = expr->u.ref.def->u.def.pushOpcode;
+        if (pushOpcode == OPCODE_PUSH_FALSE ||
+            pushOpcode == OPCODE_PUSH_TRUE) {
+            int killCode = pushOpcode == OPCODE_PUSH_TRUE ? cond : !cond;
+            SET_OFFSET(expr);
+            if (killCode) {
+                if (dup) {
+                    EMIT_OPCODE(pushOpcode);
+                    tallyPush(cgen);
+                    --cgen->stackPointer;
+                }
+                emitBranch(OPCODE_BRANCH_ALWAYS, label, cgen);
+            }
+            SET_END(expr);
+            break;
+        } /* else fall through */
     default:
         emitCodeForExpr(expr, 0, cgen);
         /*
@@ -445,30 +457,6 @@ static void emitBranchForOneExpr(Expr *expr, int cond, size_t label, size_t fall
         if (dup) {
             EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
         }
-        break;
-    case EXPR_FALSE:
-        SET_OFFSET(expr);
-        if (!cond) {
-            if (dup) {
-                EMIT_OPCODE(OPCODE_PUSH_FALSE);
-                tallyPush(cgen);
-                --cgen->stackPointer;
-            }
-            emitBranch(OPCODE_BRANCH_ALWAYS, label, cgen);
-        }
-        SET_END(expr);
-        break;
-    case EXPR_TRUE:
-        SET_OFFSET(expr);
-        if (cond) {
-            if (dup) {
-                EMIT_OPCODE(OPCODE_PUSH_TRUE);
-                tallyPush(cgen);
-                --cgen->stackPointer;
-            }
-            emitBranch(OPCODE_BRANCH_ALWAYS, label, cgen);
-        }
-        SET_END(expr);
         break;
     case EXPR_AND:
         SET_OFFSET(expr);
@@ -680,12 +668,19 @@ static void emitCodeForClass(Stmt *stmt, CodeGen *cgen) {
 
 /****************************************************************************/
 
+static void initClassVar(Expr *expr, CodeGen *cgen) {
+    Object *theClass = expr->u.def.initValue;
+    cgen->data[expr->u.def.index] = theClass;
+    SpkIdentityDictionary_atPut(cgen->globals,
+                                (Object *)expr->sym->sym,
+                                theClass);
+}
+
 static void createClass(Stmt *stmt, CodeGen *cgen) {
     Behavior *theClass;
     Symbol *className;
     
-    className = stmt->expr->sym->sym;
-    theClass = (Behavior *)SpkClass_new(className);
+    theClass = (Behavior *)SpkClass_new(stmt->expr->sym->sym);
     SpkBehavior_init(theClass, 0, 0, stmt->u.klass.instVarCount);
     
     if (!cgen->firstClass) {
@@ -695,11 +690,8 @@ static void createClass(Stmt *stmt, CodeGen *cgen) {
     }
     cgen->lastClass = theClass;
     
-    /* initialize global variable */
-    cgen->data[stmt->expr->u.def.index] = (Object *)theClass;
-    SpkIdentityDictionary_atPut(cgen->globals,
-                                (Object *)className,
-                                (Object *)theClass);
+    stmt->expr->u.def.initValue = (Object *)theClass;
+    initClassVar(stmt->expr, cgen);
 }
 
 static void setSuperclass(Stmt *stmt, CodeGen *cgen) {
@@ -747,7 +739,8 @@ static void createFunction(Stmt *stmt, CodeGen *cgen) {
 
 /****************************************************************************/
 
-Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize) {
+Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize,
+                                Stmt *predefList) {
     Stmt *s;
     CodeGen cgen;
     Module *module;
@@ -762,6 +755,12 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize) {
     }
     cgen.dataSize = dataSize;
     cgen.globals = SpkIdentityDictionary_new();
+    for (s = predefList; s; s = s->next) {
+        switch (s->kind) {
+        case STMT_DEF_CLASS: initClassVar(s->expr, &cgen); break;
+        default: assert(0);
+        }
+    }
     
     /* Create all classes. */
     for (s = tree; s; s = s->next) {

@@ -44,6 +44,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl ClassObjectTmpl = {
+    "Object",
     offsetof(ObjectSubclass, variables),
     sizeof(Object),
     0,

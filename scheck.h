@@ -3,10 +3,13 @@
 #define __scheck_h__
 
 
-#include "tree.h"
+struct BootRec;
+struct Stmt;
+struct StmtList;
 
 
-int SpkStaticChecker_Check(Stmt *tree, unsigned int *pDataSize);
+int SpkStaticChecker_Check(struct Stmt *tree, struct BootRec *bootRec,
+                           unsigned int *pDataSize, struct StmtList *predefList);
 
 
 #endif /* __scheck_h__ */

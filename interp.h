@@ -12,7 +12,6 @@
 typedef struct Method Method;
 typedef struct Context Context;
 typedef struct Fiber Fiber;
-typedef struct Symbol Symbol;
 
 
 typedef unsigned char opcode_t;
@@ -60,13 +59,6 @@ enum Opcode {
 
 typedef ObjectSubclass Array;
 typedef Object Null, Uninit, Void;
-
-
-struct Symbol {
-    Object base;
-    Symbol *next;
-    char str[1];
-};
 
 
 struct Context {
@@ -159,7 +151,7 @@ typedef struct ThunkSubclass {
 
 typedef struct Message {
     Object base;
-    Symbol *messageSelector;
+    struct Symbol *messageSelector;
     Array *argumentArray;
 } Message;
 
@@ -182,12 +174,12 @@ typedef struct Interpreter {
     Context *newContext;
 
     /* special objects */
-    Symbol *selectorCannotReturn;
-    Symbol *selectorDoesNotUnderstand;
-    Symbol *selectorMustBeBoolean;
-    Symbol *selectorNoRunnableFiber;
-    Symbol *selectorUnknownOpcode;
-    Symbol *selectorWrongNumberOfArguments;
+    struct Symbol *selectorCannotReturn;
+    struct Symbol *selectorDoesNotUnderstand;
+    struct Symbol *selectorMustBeBoolean;
+    struct Symbol *selectorNoRunnableFiber;
+    struct Symbol *selectorUnknownOpcode;
+    struct Symbol *selectorWrongNumberOfArguments;
 
     /* error handling */
     int printingStack;
@@ -199,13 +191,11 @@ extern Null *Spk_null;
 extern Uninit *Spk_uninit;
 extern Void *Spk_void;
 
-extern struct Behavior *ClassSymbol, *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
-extern struct SpkClassTmpl ClassSymbolTmpl, ClassMessageTmpl, ClassThunkTmpl, ClassNullTmpl, ClassUninitTmpl, ClassVoidTmpl;
+extern struct Behavior *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
+extern struct SpkClassTmpl ClassMessageTmpl, ClassThunkTmpl, ClassNullTmpl, ClassUninitTmpl, ClassVoidTmpl;
 
 
 Object *SpkObject_new(size_t);
-
-Symbol *SpkSymbol_get(const char *str);
 
 Message *SpkMessage_new(void);
 Method *SpkMethod_new(size_t, size_t, size_t, size_t);
@@ -231,9 +221,9 @@ Fiber *SpkInterpreter_wakeHighestPriority(Interpreter *);
 void SpkInterpreter_putToSleep(Interpreter *, Fiber *);
 void SpkInterpreter_resume(Interpreter *, Fiber *);
 void SpkInterpreter_printCallStack(Interpreter *);
-Fiber *SpkInterpreter_trap(Interpreter *, Symbol *, Object *);
+Fiber *SpkInterpreter_trap(Interpreter *, struct Symbol *, Object *);
 void SpkInterpreter_unknownOpcode(Interpreter *);
-void SpkInterpreter_halt(Interpreter *, Symbol *, Object *);
+void SpkInterpreter_halt(Interpreter *, struct Symbol *, Object *);
 
 
 #endif /* __interp_h__ */

@@ -15,21 +15,15 @@ typedef enum ExprKind {
     EXPR_BINARY,
     EXPR_CHAR,
     EXPR_COND,
-    EXPR_CONTEXT,
-    EXPR_FALSE,
     EXPR_ID,
     EXPR_INT,
     EXPR_NAME,
     EXPR_NI,
-    EXPR_NULL,
     EXPR_OR,
     EXPR_POSTFIX,
     EXPR_POSTOP,
     EXPR_PREOP,
-    EXPR_SELF,
     EXPR_STR,
-    EXPR_SUPER,
-    EXPR_TRUE,
     EXPR_UNARY
 } ExprKind;
 
@@ -73,6 +67,8 @@ struct Expr {
             unsigned int index;
             Expr *nextMultipleDef;
             Stmt *stmt;
+            struct Object *initValue; /* XXX: Ugly? */
+            /*opcode_t*/ unsigned int pushOpcode;
         } def;
     } u;
     size_t codeOffset;

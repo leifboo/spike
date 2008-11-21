@@ -140,6 +140,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl ClassIdentityDictionaryTmpl = {
+    "IdentityDictionary",
     offsetof(IdentityDictionarySubclass, variables),
     sizeof(IdentityDictionary),
     0,

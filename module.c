@@ -29,6 +29,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl ClassModuleTmpl = {
+    "Module",
     offsetof(ModuleSubclass, variables),
     sizeof(Module),
     0,
@@ -52,6 +53,6 @@ Module *SpkModule_new(unsigned int nGlobals, IdentityDictionary *globals) {
     return newModule;
 }
 
-Object *SpkModule_lookupSymbol(Module *self, Symbol *messageSelector) {
+Object *SpkModule_lookupSymbol(Module *self, struct Symbol *messageSelector) {
     return SpkIdentityDictionary_at(self->globals, (Object *)messageSelector);
 }

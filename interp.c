@@ -7,6 +7,7 @@
 #include "dict.h"
 #include "int.h"
 #include "module.h"
+#include "sym.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,31 +24,11 @@ Null *Spk_null;
 Uninit *Spk_uninit;
 Void *Spk_void;
 
-Behavior *ClassSymbol, *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
+Behavior *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
 
 
 Object *SpkObject_new(size_t size) {
     return (Object *)malloc(sizeof(Object) + (size - 1) * sizeof(Object *));
-}
-
-Symbol *SpkSymbol_get(const char *str) {
-    /* Just a simple linked list for now! */
-    static Symbol *list = 0;
-    Symbol *s;
-    
-    for (s = list; s; s = s->next) {
-        if (strcmp(s->str, str) == 0) {
-            return s;
-        }
-    }
-    
-    s = (Symbol *)malloc(sizeof(Symbol) + strlen(str));
-    s->base.klass = ClassSymbol;
-    s->next = list;
-    strcpy(s->str, str);
-    list = s;
-    
-    return s;
 }
 
 
@@ -61,23 +42,12 @@ static void oopcpy(Object **dest, Object **src, size_t count) {
 /*------------------------------------------------------------------------*/
 /* class templates */
 
-static SpkMethodTmpl SymbolMethods[] = {
-    { 0, 0, 0}
-};
-
-SpkClassTmpl ClassSymbolTmpl = {
-    0,
-    sizeof(Symbol),
-    0,
-    SymbolMethods
-};
-
-
 static SpkMethodTmpl MessageMethods[] = {
     { 0, 0, 0}
 };
 
 SpkClassTmpl ClassMessageTmpl = {
+    "Message",
     offsetof(MessageSubclass, variables),
     sizeof(Message),
     0,
@@ -90,6 +60,7 @@ static SpkMethodTmpl ThunkMethods[] = {
 };
 
 SpkClassTmpl ClassThunkTmpl = {
+    "Thunk",
     offsetof(ThunkSubclass, variables),
     sizeof(Thunk),
     0,
@@ -102,6 +73,7 @@ static SpkMethodTmpl NullMethods[] = {
 };
 
 SpkClassTmpl ClassNullTmpl = {
+    "Null",
     offsetof(ObjectSubclass, variables),
     sizeof(Null),
     0,
@@ -114,6 +86,7 @@ static SpkMethodTmpl UninitMethods[] = {
 };
 
 SpkClassTmpl ClassUninitTmpl = {
+    "Uninit",
     offsetof(ObjectSubclass, variables),
     sizeof(Uninit),
     0,
@@ -126,6 +99,7 @@ static SpkMethodTmpl VoidMethods[] = {
 };
 
 SpkClassTmpl ClassVoidTmpl = {
+    "Void",
     offsetof(ObjectSubclass, variables),
     sizeof(Void),
     0,

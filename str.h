@@ -15,9 +15,9 @@ typedef struct String {
 
 
 extern struct Behavior *ClassString;
+extern struct SpkClassTmpl ClassStringTmpl;
 
 
-void SpkClassString_init(void);
 String *SpkString_fromLiteral(char *, size_t);
 
 
