@@ -9,10 +9,12 @@
 
 
 typedef enum ExprKind {
+    EXPR_AND,
     EXPR_ASSIGN,
     EXPR_ATTR,
     EXPR_BINARY,
     EXPR_CHAR,
+    EXPR_COND,
     EXPR_CONTEXT,
     EXPR_FALSE,
     EXPR_ID,
@@ -20,6 +22,7 @@ typedef enum ExprKind {
     EXPR_NAME,
     EXPR_NI,
     EXPR_NULL,
+    EXPR_OR,
     EXPR_POSTFIX,
     EXPR_POSTOP,
     EXPR_PREOP,
@@ -72,6 +75,7 @@ struct Expr {
         } def;
     } u;
     size_t codeOffset;
+    size_t endLabel;
 };
 
 struct ExprList {

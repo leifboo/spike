@@ -3,7 +3,7 @@
 main() {
     var i;
     
-    //(2 < 3 ? "correct\n" : null).print();
+    (2 < 3 ? "correct\n" : null).print();
     if (2 < 3)
         "correct\n".print();
     i = 1;

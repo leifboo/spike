@@ -68,7 +68,7 @@ expr(r) ::= assignment_expr(expr).                                              
 expr(r) ::= expr(left) COMMA assignment_expr(right).                            { r = left; r.last->next = right; r.last = right; }
 
 %type assignment_expr {Expr *}
-assignment_expr(r) ::= binary_expr(expr).                                       { r = expr; }
+assignment_expr(r) ::= conditional_expr(expr).                                  { r = expr; }
 assignment_expr(r) ::= unary_expr(left) ASSIGN        assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_EQ,     0, left, right); }
 assignment_expr(r) ::= unary_expr(left) ASSIGN_TIMES  assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_MUL,    0, left, right); }
 assignment_expr(r) ::= unary_expr(left) ASSIGN_DIVIDE assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_DIV,    0, left, right); }
@@ -80,6 +80,19 @@ assignment_expr(r) ::= unary_expr(left) ASSIGN_RSHIFT assignment_expr(right).   
 assignment_expr(r) ::= unary_expr(left) ASSIGN_BAND   assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_BAND,   0, left, right); }
 assignment_expr(r) ::= unary_expr(left) ASSIGN_BXOR   assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_BXOR,   0, left, right); }
 assignment_expr(r) ::= unary_expr(left) ASSIGN_BOR    assignment_expr(right).   { r = SpkParser_NewExpr(EXPR_ASSIGN, OPER_BOR,    0, left, right); }
+
+%type conditional_expr {Expr *}
+conditional_expr(r) ::= logical_expr(expr).                                     { r = expr; }
+conditional_expr(r) ::= logical_expr(cond) QM logical_expr(left) COLON conditional_expr(right).
+                                                                                { r = SpkParser_NewExpr(EXPR_COND, 0, cond, left, right); }
+
+%left OR.
+%left AND.
+
+%type logical_expr {Expr *}
+logical_expr(r) ::= binary_expr(expr).                                          { r = expr; }
+logical_expr(r) ::= logical_expr(left) OR logical_expr(right).                  { r = SpkParser_NewExpr(EXPR_OR, 0, 0, left, right); }
+logical_expr(r) ::= logical_expr(left) AND logical_expr(right).                 { r = SpkParser_NewExpr(EXPR_AND, 0, 0, left, right); }
 
 %left ID NI EQ NE.
 %left GT GE LT LE.

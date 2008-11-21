@@ -66,6 +66,8 @@ static void lcomment(yyscan_t yyscanner);
 "<<"			{ count(yyscanner); return TOKEN_LSHIFT; }
 "++"			{ count(yyscanner); return TOKEN_INC; }
 "--"			{ count(yyscanner); return TOKEN_DEC; }
+"&&"			{ count(yyscanner); return TOKEN_AND; }
+"||"			{ count(yyscanner); return TOKEN_OR; }
 "<="			{ count(yyscanner); return TOKEN_LE; }
 ">="			{ count(yyscanner); return TOKEN_GE; }
 "=="			{ count(yyscanner); return TOKEN_EQ; }
@@ -91,6 +93,7 @@ static void lcomment(yyscan_t yyscanner);
 ">"			{ count(yyscanner); return TOKEN_GT; }
 "^"			{ count(yyscanner); return TOKEN_BXOR; }
 "|"			{ count(yyscanner); return TOKEN_BOR; }
+"?"			{ count(yyscanner); return TOKEN_QM; }
 
 [ \t\v\n\f]		{ count(yyscanner); }
 .			{ /* ignore bad characters */ }

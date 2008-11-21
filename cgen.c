@@ -51,6 +51,10 @@ cgen->currentOffset++
 if (cgen->opcodesEnd) assert((n)->codeOffset == cgen->currentOffset); \
 else (n)->codeOffset = cgen->currentOffset;
 
+#define SET_END(n) \
+if (cgen->opcodesEnd) assert((n)->endLabel == cgen->currentOffset); \
+else (n)->endLabel = cgen->currentOffset;
+
 static void encodeUnsignedInt(unsigned long value, CodeGen *cgen) {
     opcode_t byte;
     
@@ -122,7 +126,7 @@ static void tallyPush(CodeGen *cgen) {
     if (cgen->stackPointer > cgen->stackSize) {
         cgen->stackSize = cgen->stackPointer;
     }
-    CHECK_STACKP();    
+    CHECK_STACKP();
 }
 
 static void push(Expr *expr, CodeGen *cgen) {
@@ -205,6 +209,8 @@ static unsigned int getLiteralIndex(Object *literal, CodeGen *cgen) {
 /* expressions */
 
 static void emitCodeForOneExpr(Expr *, int *, CodeGen *);
+static void emitBranchForExpr(Expr *expr, int, size_t, size_t, int, CodeGen *);
+static void emitBranchForOneExpr(Expr *, int, size_t, size_t, int, CodeGen *);
 
 static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
     for ( ; expr->next; expr = expr->next) {
@@ -287,6 +293,14 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
              * selector. But note that Spike operators have
              * precedence, so the evaluation order is not
              * left-to-right anyway.
+             *
+             * XXX: It is possible that we want the intepreter to be
+             * "ambidextrous". To conserve stack space, we should
+             * evaluate the deepest subexpression first. In order to
+             * do this, the intepreter must be able to handle both
+             * cases: receiver at the top of the stack, and receiver
+             * beneath the arguments. There would need to be two
+             * versions of the 'send' opcodes.
              */
             emitCodeForExpr(expr->left, &isSuper, cgen);
             if (isSuper) {
@@ -298,7 +312,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
             }
             EMIT_OPCODE(opcode);
             encodeUnsignedInt(argumentCount, cgen);
-            CHECK_STACKP();    
+            CHECK_STACKP();
             break;
         }
         break;
@@ -313,7 +327,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         EMIT_OPCODE(opcode);
         index = LITERAL_INDEX((Object *)expr->sym->sym, cgen);
         encodeUnsignedInt(index, cgen);
-        CHECK_STACKP();    
+        CHECK_STACKP();
         break;
     case EXPR_PREOP:
         assert(expr->left->kind == EXPR_NAME && "invalid lvalue");
@@ -343,7 +357,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         }
         EMIT_OPCODE(opcode);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
-        CHECK_STACKP();    
+        CHECK_STACKP();
         break;
     case EXPR_BINARY:
         emitCodeForExpr(expr->right, 0, cgen);
@@ -356,7 +370,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         }
         EMIT_OPCODE(opcode);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
-        CHECK_STACKP();    
+        CHECK_STACKP();
         break;
     case EXPR_ID:
     case EXPR_NI:
@@ -368,7 +382,25 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
             EMIT_OPCODE(OPCODE_OPER);
             encodeUnsignedInt(OPER_LNEG, cgen);
         }
-        CHECK_STACKP();    
+        CHECK_STACKP();
+        break;
+    case EXPR_AND:
+        emitBranchForExpr(expr->left, 0, expr->right->endLabel, expr->right->codeOffset, 1, cgen);
+        emitCodeForExpr(expr->right, 0, cgen);
+        CHECK_STACKP();
+        break;
+    case EXPR_OR:
+        emitBranchForExpr(expr->left, 1, expr->right->endLabel, expr->right->codeOffset, 1, cgen);
+        emitCodeForExpr(expr->right, 0, cgen);
+        CHECK_STACKP();
+        break;
+    case EXPR_COND:
+        emitBranchForExpr(expr->cond, 0, expr->right->codeOffset, expr->left->codeOffset, 0, cgen);
+        emitCodeForExpr(expr->left, 0, cgen);
+        emitBranch(OPCODE_BRANCH_ALWAYS, expr->right->endLabel, cgen);
+        --cgen->stackPointer;
+        emitCodeForExpr(expr->right, 0, cgen);
+        CHECK_STACKP();
         break;
     case EXPR_ASSIGN:
         assert(expr->left->kind == EXPR_NAME && "invalid lvalue");
@@ -383,7 +415,96 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         CHECK_STACKP();
         break;
     }
+    
+    SET_END(expr);
+    
     return;
+}
+
+static void emitBranchForExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, CodeGen *cgen) {
+    for ( ; expr->next; expr = expr->next) {
+        emitCodeForOneExpr(expr, 0, cgen);
+        /* XXX: We could elide this 'pop' if 'expr' is a conditional expr. */
+        EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
+    }
+    emitBranchForOneExpr(expr, cond, label, fallThroughLabel, dup, cgen);
+}
+
+static void emitBranchForOneExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, CodeGen *cgen) {
+    switch (expr->kind) {
+    default:
+        emitCodeForExpr(expr, 0, cgen);
+        /*
+         * XXX: This sequence could be replaced by a special set of
+         * branch-or-pop opcodes.
+         */
+        if (dup) {
+            EMIT_OPCODE(OPCODE_DUP); ++cgen->stackPointer;
+        }
+        emitBranch(cond ? OPCODE_BRANCH_IF_TRUE : OPCODE_BRANCH_IF_FALSE, label, cgen);
+        if (dup) {
+            EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
+        }
+        break;
+    case EXPR_FALSE:
+        SET_OFFSET(expr);
+        if (!cond) {
+            if (dup) {
+                EMIT_OPCODE(OPCODE_PUSH_FALSE);
+                tallyPush(cgen);
+                --cgen->stackPointer;
+            }
+            emitBranch(OPCODE_BRANCH_ALWAYS, label, cgen);
+        }
+        SET_END(expr);
+        break;
+    case EXPR_TRUE:
+        SET_OFFSET(expr);
+        if (cond) {
+            if (dup) {
+                EMIT_OPCODE(OPCODE_PUSH_TRUE);
+                tallyPush(cgen);
+                --cgen->stackPointer;
+            }
+            emitBranch(OPCODE_BRANCH_ALWAYS, label, cgen);
+        }
+        SET_END(expr);
+        break;
+    case EXPR_AND:
+        SET_OFFSET(expr);
+        if (cond) {
+            /* branch if true */
+            emitBranchForExpr(expr->left, 0, fallThroughLabel, expr->right->codeOffset, 0, cgen);
+            emitBranchForExpr(expr->right, 1, label, fallThroughLabel, dup, cgen);
+        } else {
+            /* branch if false */
+            emitBranchForExpr(expr->left, 0, label, expr->right->codeOffset, dup, cgen);
+            emitBranchForExpr(expr->right, 0, label, fallThroughLabel, dup, cgen);
+        }
+        SET_END(expr);
+        break;
+    case EXPR_OR:
+        SET_OFFSET(expr);
+        if (cond) {
+            /* branch if true */
+            emitBranchForExpr(expr->left, 1, label, expr->right->codeOffset, dup, cgen);
+            emitBranchForExpr(expr->right, 1, label, fallThroughLabel, dup, cgen);
+        } else {
+            /* branch if false */
+            emitBranchForExpr(expr->left, 1, fallThroughLabel, expr->right->codeOffset, 0, cgen);
+            emitBranchForExpr(expr->right, 0, label, fallThroughLabel, dup, cgen);
+        }
+        SET_END(expr);
+        break;
+    case EXPR_COND:
+        SET_OFFSET(expr);
+        emitBranchForExpr(expr->cond, 0, expr->right->codeOffset, expr->left->codeOffset, 0, cgen);
+        emitBranchForExpr(expr->left, cond, label, fallThroughLabel, dup, cgen);
+        emitBranch(OPCODE_BRANCH_ALWAYS, fallThroughLabel, cgen);
+        emitBranchForExpr(expr->right, cond, label, fallThroughLabel, dup, cgen);
+        SET_END(expr);
+        break;
+    }
 }
 
 /****************************************************************************/
@@ -426,8 +547,7 @@ static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabe
     case STMT_DO_WHILE:
         childNextLabel = stmt->expr->codeOffset;
         emitCodeForStmt(stmt->top, childNextLabel, nextLabel, childNextLabel, cgen);
-        emitCodeForExpr(stmt->expr, 0, cgen);
-        emitBranch(OPCODE_BRANCH_IF_TRUE, stmt->codeOffset, cgen);
+        emitBranchForExpr(stmt->expr, 1, stmt->codeOffset, nextLabel, 0, cgen);
         break;
     case STMT_EXPR:
         if (stmt->expr) {
@@ -450,16 +570,14 @@ static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabe
             EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
         }
         if (stmt->expr) {
-            emitCodeForExpr(stmt->expr, 0, cgen);
-            emitBranch(OPCODE_BRANCH_IF_TRUE, stmt->top->codeOffset, cgen);
+            emitBranchForExpr(stmt->expr, 1, stmt->top->codeOffset, nextLabel, 0, cgen);
         } else {
             emitBranch(OPCODE_BRANCH_ALWAYS, stmt->top->codeOffset, cgen);
         }
         break;
     case STMT_IF_ELSE:
-        emitCodeForExpr(stmt->expr, 0, cgen);
         elseLabel = stmt->bottom ? stmt->bottom->codeOffset : nextLabel;
-        emitBranch(OPCODE_BRANCH_IF_FALSE, elseLabel, cgen);
+        emitBranchForExpr(stmt->expr, 0, elseLabel, stmt->top->codeOffset, 0, cgen);
         emitCodeForStmt(stmt->top, nextLabel, breakLabel, continueLabel, cgen);
         if (stmt->bottom) {
             emitBranch(OPCODE_BRANCH_ALWAYS, nextLabel, cgen);
@@ -481,12 +599,11 @@ static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabe
         childNextLabel = stmt->expr->codeOffset;
         emitBranch(OPCODE_BRANCH_ALWAYS, stmt->expr->codeOffset, cgen);
         emitCodeForStmt(stmt->top, childNextLabel, nextLabel, childNextLabel, cgen);
-        emitCodeForExpr(stmt->expr, 0, cgen);
-        emitBranch(OPCODE_BRANCH_IF_TRUE, stmt->top->codeOffset, cgen);
+        emitBranchForExpr(stmt->expr, 1, stmt->top->codeOffset, nextLabel, 0, cgen);
         break;
     }
     assert(cgen->stackPointer == 0);
-    CHECK_STACKP();    
+    CHECK_STACKP();
 }
 
 static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {

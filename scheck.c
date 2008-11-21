@@ -99,6 +99,16 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
         checkExpr(expr->left, stmt, checker, pass);
         checkExpr(expr->right, stmt, checker, pass);
         break;
+    case EXPR_AND:
+    case EXPR_OR:
+        checkExpr(expr->left, stmt, checker, pass);
+        checkExpr(expr->right, stmt, checker, pass);
+        break;
+    case EXPR_COND:
+        checkExpr(expr->cond, stmt, checker, pass);
+        checkExpr(expr->left, stmt, checker, pass);
+        checkExpr(expr->right, stmt, checker, pass);
+        break;
     case EXPR_ASSIGN:
         checkExpr(expr->left, stmt, checker, pass);
         checkExpr(expr->right, stmt, checker, pass);
