@@ -72,6 +72,7 @@ struct Expr {
             unsigned int level;
             unsigned int index;
             Expr *nextMultipleDef;
+            Stmt *stmt;
         } def;
     } u;
     size_t codeOffset;

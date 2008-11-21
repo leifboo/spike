@@ -116,6 +116,37 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
     }
 }
 
+static Stmt *superclassDef(Stmt *aClassDef, StaticChecker *checker) {
+    Expr *expr;
+    
+    if (!aClassDef->u.klass.super)
+        return 0; /* XXX: Object */
+    expr = SpkSymbolTable_Lookup(checker->st, aClassDef->u.klass.super->sym);
+    if (!expr)
+        return 0; /* undefined */
+    assert(expr->kind == EXPR_NAME && expr->u.def.stmt);
+    return expr->u.def.stmt;
+}
+
+static void checkForSuperclassCycle(Stmt *aClassDef, StaticChecker *checker) {
+    /* Floyd's cycle-finding algorithm */
+    Stmt *tortoise, *hare;
+    
+    tortoise = hare = superclassDef(aClassDef, checker);
+    if (!tortoise)
+        return;
+    hare = superclassDef(hare, checker);
+    while (hare && tortoise != hare) {
+        tortoise = superclassDef(tortoise, checker);
+        hare = superclassDef(hare, checker);
+        if (!hare)
+            return;
+        hare = superclassDef(hare, checker);
+    }
+    
+    assert(!hare && "cycle in superclass chain");
+}
+
 static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned int outerPass) {
     Stmt *s;
     SymbolNode *sym;
@@ -168,9 +199,13 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
         if (outerPass == 1) {
             assert(stmt->expr->kind == EXPR_NAME);
             SpkSymbolTable_Insert(checker->st, stmt->expr);
+            stmt->expr->u.def.stmt = stmt;
         }
         if (stmt->u.klass.super) {
             checkExpr(stmt->u.klass.super, stmt, checker, outerPass);
+        }
+        if (outerPass == 2) {
+            checkForSuperclassCycle(stmt, checker);
         }
         checker->currentClass = stmt;
         checkStmt(stmt->top, stmt, checker, outerPass);

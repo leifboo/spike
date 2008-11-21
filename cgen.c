@@ -712,17 +712,6 @@ static void setSuperclass(Stmt *stmt, CodeGen *cgen) {
     theClass->superclass = superclass;
 }
 
-static void checkForSuperclassCycle(Stmt *stmt, CodeGen *cgen) {
-    /* XXX: Move/copy this check to 'scheck'. */
-    Behavior *theClass, *aClass;
-    
-    theClass = (Behavior *)cgen->data[stmt->expr->u.def.index];
-    assert(theClass && theClass->base.klass == (Behavior *)ClassClass);
-    for (aClass = theClass->superclass; aClass; aClass = aClass->superclass) {
-        assert(aClass != theClass && "cycle in superclass chain");
-    }
-}
-
 /****************************************************************************/
 
 static void createFunction(Stmt *stmt, CodeGen *cgen) {
@@ -788,11 +777,6 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize) {
     for (s = tree; s; s = s->next) {
         if (s->kind == STMT_DEF_CLASS) {
             setSuperclass(s, &cgen);
-        }
-    }
-    for (s = tree; s; s = s->next) {
-        if (s->kind == STMT_DEF_CLASS) {
-            checkForSuperclassCycle(s, &cgen);
         }
     }
 
