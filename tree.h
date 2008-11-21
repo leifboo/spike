@@ -57,7 +57,7 @@ typedef struct StmtList StmtList;
 struct Expr {
     ExprKind kind;
     Oper oper;
-    Expr *next, *cond, *left, *right;
+    Expr *next, *nextArg, *cond, *left, *right;
     struct SymbolNode *sym;
     long intValue;
     struct Char *charValue;

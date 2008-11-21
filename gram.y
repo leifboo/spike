@@ -151,7 +151,7 @@ primary_expr(r) ::= LPAREN expr(expr) RPAREN.                                   
 
 %type argument_expr_list {ExprList}
 argument_expr_list(r) ::= assignment_expr(arg).                                 { r.first = arg; r.last = arg; }
-argument_expr_list(r) ::= argument_expr_list(args) COMMA assignment_expr(arg).  { r = args; r.last->next = arg; r.last = arg; }
+argument_expr_list(r) ::= argument_expr_list(args) COMMA assignment_expr(arg).  { r = args; r.last->nextArg = arg; r.last = arg; }
 
 %syntax_error {
     printf("syntax error! token %d, line %u\n", TOKEN.id, TOKEN.lineNo);

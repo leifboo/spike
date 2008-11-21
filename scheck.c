@@ -76,8 +76,8 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
                     stmt->u.method.argList = expr->right;
                 }
             } else {
-                for (arg = expr->right; arg; arg = arg->next) {
-                    checkOneExpr(arg, stmt, checker, pass);
+                for (arg = expr->right; arg; arg = arg->nextArg) {
+                    checkExpr(arg, stmt, checker, pass);
                 }
             }
             break;
@@ -132,7 +132,7 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
             SpkSymbolTable_EnterScope(checker->st, enterNewContext);
             if (outer && outer->kind == STMT_DEF_METHOD) {
                 /* declare function arguments */
-                for (arg = outer->u.method.argList; arg; arg = arg->next) {
+                for (arg = outer->u.method.argList; arg; arg = arg->nextArg) {
                     assert(arg->kind == EXPR_NAME);
                     SpkSymbolTable_Insert(checker->st, arg);
                     ++outer->u.method.argumentCount;

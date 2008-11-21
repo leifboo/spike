@@ -281,8 +281,8 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         case OPER_CALL:
             for (arg = expr->right, argumentCount = 0;
                  arg;
-                 arg = arg->next, ++argumentCount) {
-                emitCodeForOneExpr(arg, 0, cgen);
+                 arg = arg->nextArg, ++argumentCount) {
+                emitCodeForExpr(arg, 0, cgen);
             }
             /* XXX: In the Green Book (Ch. 2), Dan Ingalls writes that
              * some find this evaluation order to be "surprising" as
