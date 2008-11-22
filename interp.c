@@ -610,8 +610,12 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 *p = Spk_uninit;
             }
             newContext->stackp = p;
-            /* copy & reverse arguments */
             count = method->argumentCount;
+            /* XXX: What about leaf methods? */
+            if (count != argumentCount) {
+                TRAP(self->selectorWrongNumberOfArguments, 0);
+            }
+            /* copy & reverse arguments */
             for ( ; count > 0; ++p, --count) {
                 *p = stackPointer[count - 1];
             }
@@ -680,10 +684,6 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             method = thunk->method;
             methodClass = thunk->methodClass;
             instructionPointer = thunk->pc;
-            /* XXX: What about leaf methods? */
-            if (method->argumentCount != argumentCount) {
-                TRAP(self->selectorWrongNumberOfArguments, 0);
-            }
             goto jump; }
             
 /*** traps ***/

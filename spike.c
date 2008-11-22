@@ -36,7 +36,7 @@ static Behavior *ClassNULL_CLASS;
 
 static BootRec bootRec[] = {
     CLASS(Object, NULL_CLASS),
-    /**/CLASS(Behavior, Class),
+    /**/CLASS(Behavior, Object),
     /******/METACLASS(Metaclass),
     /******/METACLASS(Class),
     /**/CLASS(Module, Object),

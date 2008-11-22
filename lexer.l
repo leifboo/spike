@@ -201,6 +201,7 @@ int SpkLexer_GetNextToken(Token *token, yyscan_t scanner) {
         break;
     case TOKEN_IDENTIFIER:
     case TOKEN_TYPE_IDENTIFIER:
+    case TOKEN_CLASS:
         token->sym = SpkSymbolNode_Get(SpkSymbol_get(yyget_text(scanner)));
         break;
     }

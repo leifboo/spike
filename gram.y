@@ -137,7 +137,9 @@ unary_expr(r) ::= LNEG  unary_expr(expr).                                       
 postfix_expr(r) ::= postfix_expr(func) LPAREN RPAREN.                           { r = SpkParser_NewExpr(EXPR_POSTFIX, OPER_CALL, 0, func, 0); }
 postfix_expr(r) ::= postfix_expr(func) LPAREN argument_expr_list(args) RPAREN.  { r = SpkParser_NewExpr(EXPR_POSTFIX, OPER_CALL, 0, func, args.first); }
 postfix_expr(r) ::= postfix_expr(obj) DOT IDENTIFIER(attr).                     { r = SpkParser_NewExpr(EXPR_ATTR, 0, 0, obj, 0); r->sym = attr.sym; }
+postfix_expr(r) ::= postfix_expr(obj) DOT CLASS(attr).                          { r = SpkParser_NewExpr(EXPR_ATTR, 0, 0, obj, 0); r->sym = attr.sym; }
 postfix_expr(r) ::= TYPE_IDENTIFIER(name) DOT IDENTIFIER(attr).                 { r = SpkParser_NewClassAttrExpr(name.sym, attr.sym); }
+postfix_expr(r) ::= TYPE_IDENTIFIER(name) DOT CLASS(attr).                      { r = SpkParser_NewClassAttrExpr(name.sym, attr.sym); }
 postfix_expr(r) ::= postfix_expr(expr) INC.                                     { r = SpkParser_NewExpr(EXPR_POSTOP, OPER_SUCC, 0, expr, 0); }
 postfix_expr(r) ::= postfix_expr(expr) DEC.                                     { r = SpkParser_NewExpr(EXPR_POSTOP, OPER_PRED, 0, expr, 0); }
 postfix_expr(r) ::= primary_expr(expr).                                         { r = expr; }

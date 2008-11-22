@@ -14,6 +14,10 @@ struct Metaclass *ClassClass;
 /*------------------------------------------------------------------------*/
 /* methods */
 
+static Object *Class_name(Object *self, Object *arg0, Object *arg1) {
+    return (Object *)((Class *)self)->name;
+}
+
 static Object *Class_new(Object *_self, Object *arg0, Object *arg1) {
     /* Answer a new instance of the receiver. */
     Class *self;
@@ -43,6 +47,7 @@ static Object *Class_print(Object *_self, Object *arg0, Object *arg1) {
 /* class template */
 
 static SpkMethodTmpl methods[] = {
+    { "name", SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Class_name },
     { "new",   SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Class_new   },
     { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Class_print },
     { 0, 0, 0}

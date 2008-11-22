@@ -47,6 +47,13 @@ SpecialSelector specialSelectors[NUM_OPER] = {
 /*------------------------------------------------------------------------*/
 /* methods */
 
+static Object *Behavior_superclass(Object *_self, Object *arg0, Object *arg1) {
+    Behavior *self;
+    
+    self = (Behavior *)_self;
+    return self->superclass ? (Object *)self->superclass : Spk_null;
+}
+
 static Object *Behavior_print(Object *self, Object *arg0, Object *arg1) {
     printf("<Behavior object at %p>", self);
     return Spk_void;
@@ -57,6 +64,7 @@ static Object *Behavior_print(Object *self, Object *arg0, Object *arg1) {
 /* class template */
 
 static SpkMethodTmpl methods[] = {
+    { "superclass", SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Behavior_superclass },
     { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Behavior_print },
     { 0, 0, 0}
 };
