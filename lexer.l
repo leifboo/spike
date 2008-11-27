@@ -79,6 +79,8 @@ static void lcomment(yyscan_t yyscanner);
 ","			{ count(yyscanner); return TOKEN_COMMA; }
 ":"			{ count(yyscanner); return TOKEN_COLON; }
 "="			{ count(yyscanner); return TOKEN_ASSIGN; }
+"["			{ count(yyscanner); return TOKEN_LBRACK; }
+"]"			{ count(yyscanner); return TOKEN_RBRACK; }
 "("			{ count(yyscanner); return TOKEN_LPAREN; }
 ")"			{ count(yyscanner); return TOKEN_RPAREN; }
 "."			{ count(yyscanner); return TOKEN_DOT; }

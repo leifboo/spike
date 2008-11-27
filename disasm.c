@@ -78,6 +78,11 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         case OPCODE_PUSH_VOID:     mnemonic = "push"; keyword = "void";        break;
         case OPCODE_PUSH_CONTEXT:  mnemonic = "push"; keyword = "thisContext"; break;
         case OPCODE_DUP:           mnemonic = "dup";                           break;
+        case OPCODE_DUP_N:
+            mnemonic = "dupn";
+            DECODE_SINT(intValue);
+            pIntValue = &intValue;
+            break;
             
         case OPCODE_PUSH_INT:
             mnemonic = "push";
@@ -93,6 +98,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             break;
             
         case OPCODE_POP: mnemonic = "pop"; break;
+        case OPCODE_SWAP: mnemonic = "swap"; break;
 
         case OPCODE_BRANCH_IF_FALSE: mnemonic = "brf"; goto branch;
         case OPCODE_BRANCH_IF_TRUE:  mnemonic = "brt"; goto branch;
@@ -109,12 +115,14 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         case OPCODE_OPER_SUPER: mnemonic = "soper"; goto oper;
  oper:
             operator = (unsigned int)(*instructionPointer++);
-            selector = specialSelectors[operator].messageSelectorStr;
+            selector = operSelectors[operator].messageSelectorStr;
             break;
             
         case OPCODE_CALL:       mnemonic = "call";  goto call;
         case OPCODE_CALL_SUPER: mnemonic = "scall"; goto call;
  call:
+            operator = (unsigned int)(*instructionPointer++);
+            selector = operCallSelectors[operator].messageSelectorStr;
             DECODE_UINT(argumentCount);
             pArgumentCount = &argumentCount;
             break;
@@ -156,10 +164,10 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             fprintf(out, "\t%ld", *pIntValue);
         } else if (keyword) {
             fprintf(out, "\t%s", keyword);
+        } else if (pArgumentCount) {
+            fprintf(out, "\t$%s %u", selector, *pArgumentCount);
         } else if (selector) {
             fprintf(out, "\t$%s", selector);
-        } else if (pArgumentCount) {
-            fprintf(out, "\t%u", *pArgumentCount);
         } else if (pLabel) {
             fprintf(out, "\t%04x", *pLabel);
         } else if (base) {

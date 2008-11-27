@@ -79,7 +79,10 @@ static void bootstrap() {
     
     /* init classes */
     for (operator = 0; operator < NUM_OPER; ++operator) {
-        specialSelectors[operator].messageSelector = SpkSymbol_get(specialSelectors[operator].messageSelectorStr);
+        operSelectors[operator].messageSelector = SpkSymbol_get(operSelectors[operator].messageSelectorStr);
+    }
+    for (operator = 0; operator < NUM_CALL_OPER; ++operator) {
+        operCallSelectors[operator].messageSelector = SpkSymbol_get(operCallSelectors[operator].messageSelectorStr);
     }
     for (r = bootRec; r->var; ++r) {
         if (r->init) {

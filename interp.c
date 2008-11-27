@@ -125,10 +125,10 @@ Object *SpkInterpreter_start(Object *entry) {
     callThunk->stackSize = 0;
     callThunk->size = 1;
     callThunk->opcodes[0] = OPCODE_CALL_THUNK;
-    ClassThunk->operCall.method = callThunk;
-    ClassThunk->operCall.methodClass = ClassThunk;
+    ClassThunk->operCallTable[OPER_APPLY].method = callThunk;
+    ClassThunk->operCallTable[OPER_APPLY].methodClass = ClassThunk;
     
-    trampolineSize = 4;
+    trampolineSize = 5;
     trampoline = (Method *)malloc(sizeof(Method) + trampolineSize*sizeof(opcode_t));
     trampoline->nativeCode = 0;
     trampoline->argumentCount = 1;
@@ -138,6 +138,7 @@ Object *SpkInterpreter_start(Object *entry) {
     ip = &trampoline->opcodes[0];
     *ip++ = OPCODE_PUSH_SELF;
     *ip++ = OPCODE_CALL;
+    *ip++ = (opcode_t)OPER_APPLY;
     *ip++ = (opcode_t)0;
     *ip++ = OPCODE_RETT;
     
@@ -432,6 +433,14 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             temp = STACK_TOP();
             PUSH(temp);
             break; }
+        case OPCODE_DUP_N: {
+            Object **s;
+            size_t n;
+            DECODE_UINT(n);
+            s = stackPointer + n;
+            while (n--)
+                *--stackPointer = *--s;
+            break; }
         case OPCODE_PUSH_INT: {
             long value;
             DECODE_SINT(value);
@@ -454,6 +463,12 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_POP:
             POP(1);
             break;
+        case OPCODE_SWAP: {
+            Object *temp;
+            temp = stackPointer[0];
+            stackPointer[0] = stackPointer[1];
+            stackPointer[1] = temp;
+            break; }
 
 /*** branch opcodes ***/
         case OPCODE_BRANCH_IF_FALSE: {
@@ -505,11 +520,11 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             method = methodClass->operTable[operator].method;
             if (method) {
                 methodClass = methodClass->operTable[operator].methodClass;
-                argumentCount = specialSelectors[operator].argumentCount;
+                argumentCount = operSelectors[operator].argumentCount;
                 goto callNewMethod;
             }
-            --instructionPointer;
-            TRAP(self->selectorDoesNotUnderstand, (Object *)specialSelectors[operator].messageSelector);
+            instructionPointer -= 2;
+            TRAP(self->selectorDoesNotUnderstand, (Object *)operSelectors[operator].messageSelector);
             break;
         case OPCODE_CALL:
             receiver = POP_OBJECT();
@@ -518,14 +533,15 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_CALL_SUPER:
             methodClass = methodClass->superclass;
  call:
-            method = methodClass->operCall.method;
+            operator = (unsigned int)(*instructionPointer++);
+            method = methodClass->operCallTable[operator].method;
             if (method) {
+                methodClass = methodClass->operCallTable[operator].methodClass;
                 DECODE_UINT(argumentCount);
-                methodClass = methodClass->operCall.methodClass;
                 goto callNewMethod;
             }
-            --instructionPointer;
-            TRAP(self->selectorDoesNotUnderstand, (Object *)SpkSymbol_get("__call__"));
+            instructionPointer -= 2;
+            TRAP(self->selectorDoesNotUnderstand, (Object *)operCallSelectors[operator].messageSelector);
             break;
 
 /*** send opcodes -- "obj.attr" ***/
@@ -691,9 +707,12 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             Object *result, *arg1 = 0, *arg2 = 0;
             switch (method->argumentCount) {
             case 2:
-                arg2 = STACK_VALUE(1);
+                arg1 = STACK_VALUE(1);
+                arg2 = STACK_VALUE(0);
+                break;
             case 1:
                 arg1 = STACK_VALUE(0);
+                break;
             case 0:
                 break;
             default:
@@ -809,7 +828,7 @@ void SpkInterpreter_printCallStack(Interpreter *self) {
     Behavior *methodClass;
     Symbol *methodSel, *call;
     
-    call = SpkSymbol_get("__call__");
+    call = SpkSymbol_get("__apply__");
     for (ctxt = self->activeContext; ctxt; ctxt = ctxt->sender) {
         home = ctxt->homeContext;
         method = home->u.m.method;

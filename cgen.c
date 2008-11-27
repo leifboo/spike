@@ -130,6 +130,16 @@ static void tallyPush(CodeGen *cgen) {
     CHECK_STACKP();
 }
 
+static void dupN(unsigned long n, CodeGen *cgen) {
+    EMIT_OPCODE(OPCODE_DUP_N);
+    encodeUnsignedInt(n, cgen);
+    cgen->stackPointer += n;
+    if (cgen->stackPointer > cgen->stackSize) {
+        cgen->stackSize = cgen->stackPointer;
+    }
+    CHECK_STACKP();
+}
+
 static void push(Expr *expr, int *super, CodeGen *cgen) {
     opcode_t opcode;
     Expr *def;
@@ -269,45 +279,42 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
     case EXPR_NAME:
         push(expr, super, cgen);
         break;
-    case EXPR_POSTFIX:
-        switch (expr->oper) {
-        case OPER_CALL:
-            for (arg = expr->right, argumentCount = 0;
-                 arg;
-                 arg = arg->nextArg, ++argumentCount) {
-                emitCodeForExpr(arg, 0, cgen);
-            }
-            /* XXX: In the Green Book (Ch. 2), Dan Ingalls writes that
-             * some find this evaluation order to be "surprising" as
-             * it differs from the left-to-right order in the source
-             * code. The Spike interpreter could go either way: we
-             * must encode 'argumentCount' in any case, since --
-             * unlike in Smalltalk -- it is not implied by the message
-             * selector. But note that Spike operators have
-             * precedence, so the evaluation order is not
-             * left-to-right anyway.
-             *
-             * XXX: It is possible that we want the intepreter to be
-             * "ambidextrous". To conserve stack space, we should
-             * evaluate the deepest subexpression first. In order to
-             * do this, the intepreter must be able to handle both
-             * cases: receiver at the top of the stack, and receiver
-             * beneath the arguments. There would need to be two
-             * versions of the 'send' opcodes.
-             */
-            emitCodeForExpr(expr->left, &isSuper, cgen);
-            if (isSuper) {
-                opcode = OPCODE_CALL_SUPER;
-                cgen->stackPointer -= argumentCount - 1;
-            } else {
-                opcode = OPCODE_CALL;
-                cgen->stackPointer -= argumentCount;
-            }
-            EMIT_OPCODE(opcode);
-            encodeUnsignedInt(argumentCount, cgen);
-            CHECK_STACKP();
-            break;
+    case EXPR_CALL:
+        for (arg = expr->right, argumentCount = 0;
+             arg;
+             arg = arg->nextArg, ++argumentCount) {
+            emitCodeForExpr(arg, 0, cgen);
         }
+        /* XXX: In the Green Book (Ch. 2), Dan Ingalls writes that
+         * some find this evaluation order to be "surprising" as
+         * it differs from the left-to-right order in the source
+         * code. The Spike interpreter could go either way: we
+         * must encode 'argumentCount' in any case, since --
+         * unlike in Smalltalk -- it is not implied by the message
+         * selector. But note that Spike operators have
+         * precedence, so the evaluation order is not
+         * left-to-right anyway.
+         *
+         * XXX: It is possible that we want the intepreter to be
+         * "ambidextrous". To conserve stack space, we should
+         * evaluate the deepest subexpression first. In order to
+         * do this, the intepreter must be able to handle both
+         * cases: receiver at the top of the stack, and receiver
+         * beneath the arguments. There would need to be two
+         * versions of the 'send' opcodes.
+         */
+        emitCodeForExpr(expr->left, &isSuper, cgen);
+        if (isSuper) {
+            opcode = OPCODE_CALL_SUPER;
+            cgen->stackPointer -= argumentCount - 1;
+        } else {
+            opcode = OPCODE_CALL;
+            cgen->stackPointer -= argumentCount;
+        }
+        EMIT_OPCODE(opcode);
+        encodeUnsignedInt((unsigned int)expr->oper, cgen);
+        encodeUnsignedInt(argumentCount, cgen);
+        CHECK_STACKP();
         break;
     case EXPR_ATTR:
         emitCodeForExpr(expr->left, &isSuper, cgen);
@@ -396,17 +403,68 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         CHECK_STACKP();
         break;
     case EXPR_ASSIGN:
-        assert(expr->left->kind == EXPR_NAME && "invalid lvalue");
-        emitCodeForExpr(expr->right, 0, cgen);
-        if (expr->oper != OPER_EQ) {
-            emitCodeForExpr(expr->left, 0, cgen);
-            EMIT_OPCODE(OPCODE_OPER);
-            encodeUnsignedInt((unsigned int)expr->oper, cgen);
-            --cgen->stackPointer;
+        switch (expr->left->kind) {
+        case EXPR_NAME:
+            emitCodeForExpr(expr->right, 0, cgen);
+            if (expr->oper != OPER_EQ) {
+                emitCodeForExpr(expr->left, 0, cgen);
+                EMIT_OPCODE(OPCODE_OPER);
+                encodeUnsignedInt((unsigned int)expr->oper, cgen);
+                --cgen->stackPointer;
+            }
+            store(expr->left, cgen);
+            CHECK_STACKP();
+            break;
+        case EXPR_CALL:
+            assert(expr->left->oper == OPER_GET_ITEM && "invalid lvalue");
+            /* __item__/__setItem__ common arguments */
+            for (arg = expr->left->right, argumentCount = 0;
+                 arg;
+                 arg = arg->nextArg, ++argumentCount) {
+                    emitCodeForExpr(arg, 0, cgen);
+            }
+            /* __item__/__setItem__ common receiver */
+            emitCodeForExpr(expr->left->left, &isSuper, cgen);
+            /* rhs */
+            if (expr->oper == OPER_EQ) {
+                emitCodeForExpr(expr->right, 0, cgen);
+            } else {
+                /* __item__ { */
+                dupN(argumentCount + 1, cgen);
+                if (isSuper) {
+                    opcode = OPCODE_CALL_SUPER;
+                    cgen->stackPointer -= argumentCount - 1;
+                } else {
+                    opcode = OPCODE_CALL;
+                    cgen->stackPointer -= argumentCount;
+                }
+                EMIT_OPCODE(opcode);
+                encodeUnsignedInt((unsigned int)expr->left->oper, cgen);
+                encodeUnsignedInt(argumentCount, cgen);
+                /* } __item__ */
+                emitCodeForExpr(expr->right, 0, cgen);
+                EMIT_OPCODE(OPCODE_SWAP);
+                EMIT_OPCODE(OPCODE_OPER);
+                encodeUnsignedInt((unsigned int)expr->oper, cgen);
+                --cgen->stackPointer;
+            }
+            ++argumentCount; /* new item value */
+            EMIT_OPCODE(OPCODE_SWAP);
+            if (isSuper) {
+                opcode = OPCODE_CALL_SUPER;
+                cgen->stackPointer -= argumentCount - 1;
+            } else {
+                opcode = OPCODE_CALL;
+                cgen->stackPointer -= argumentCount;
+            }
+            EMIT_OPCODE(opcode);
+            encodeUnsignedInt((unsigned int)OPER_SET_ITEM, cgen);
+            encodeUnsignedInt(argumentCount, cgen);
+            CHECK_STACKP();
+            break;
+        default:
+            assert(0 && "invalid lvalue");
         }
-        store(expr->left, cgen);
-        CHECK_STACKP();
-        break;
     }
     
     SET_END(expr);
@@ -607,12 +665,12 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
         messageSelector = stmt->u.method.name->sym;
     } else {
         /* global function */
-        assert(stmt->expr->kind == EXPR_POSTFIX &&
-               stmt->expr->oper == OPER_CALL); /* XXX */
+        assert(stmt->expr->kind == EXPR_CALL &&
+               stmt->expr->oper == OPER_APPLY); /* XXX */
         assert(stmt->expr->left->kind == EXPR_NAME); /* XXX */
         function = cgen->data[stmt->expr->left->u.def.index];
         methodClass = function->klass;
-        messageSelector = SpkSymbol_get("__call__");
+        messageSelector = SpkSymbol_get("__apply__");
     }
     
     memset(&sentinel, 0, sizeof(sentinel));
@@ -728,8 +786,8 @@ static void createFunction(Stmt *stmt, CodeGen *cgen) {
     theFunction->klass = theClass;
 
     /* initialize global variable */
-    assert(stmt->expr->kind == EXPR_POSTFIX &&
-           stmt->expr->oper == OPER_CALL); /* XXX */
+    assert(stmt->expr->kind == EXPR_CALL &&
+           stmt->expr->oper == OPER_APPLY); /* XXX */
     assert(stmt->expr->left->kind == EXPR_NAME); /* XXX */
     cgen->data[stmt->expr->left->u.def.index] = theFunction;
     SpkIdentityDictionary_atPut(cgen->globals,

@@ -1,8 +1,10 @@
 
 #include "str.h"
 
+#include "char.h"
 #include "behavior.h"
 #include "bool.h"
+#include "int.h"
 #include "interp.h"
 #include "module.h"
 #include <assert.h>
@@ -91,6 +93,38 @@ static Object *String_ne(Object *self, Object *arg0, Object *arg1) {
     return String_binaryLogicalOper((String *)self, arg0, OPER_NE);
 }
 
+/* OPER_GET_ITEM */
+static Object *String_item(Object *_self, Object *arg0, Object *arg1) {
+    String *self;
+    long index;
+    
+    self = (String *)_self;
+    assert(arg0->klass == ClassInteger); /* XXX */
+    index = SpkInteger_asLong((Integer *)arg0);
+    assert(0 <= index && index < self->len); /* XXX */
+    return (Object *)SpkChar_fromChar(self->str[index]);
+}
+
+/* XXX: temporary */
+static Object *String_setItem(Object *_self, Object *arg0, Object *arg1) {
+    String *self;
+    long index;
+    char value;
+    
+    self = (String *)_self;
+    assert(arg0->klass == ClassInteger); /* XXX */
+    index = SpkInteger_asLong((Integer *)arg0);
+    assert(0 <= index && index < self->len); /* XXX */
+    assert(arg1->klass == ClassChar); /* XXX */
+    value = SpkChar_asChar((Char *)arg1);
+    self->str[index] = value;
+    if (0) {
+        /* XXX */
+        return Spk_void;
+    }
+    return arg1;
+}
+
 
 /*------------------------------------------------------------------------*/
 /* methods -- other */
@@ -120,6 +154,9 @@ static SpkMethodTmpl methods[] = {
     { "__ge__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_ge     },
     { "__eq__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_eq     },
     { "__ne__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_ne     },
+    /* call operators */
+    { "__item__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_item    },
+    { "__setItem__", SpkNativeCode_ARGS_2 | SpkNativeCode_LEAF, &String_setItem },
     /* other */
     { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &String_print },
     { 0, 0, 0}

@@ -57,22 +57,18 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
             break;
         }
         break;
-    case EXPR_POSTFIX:
-        switch (expr->oper) {
-        case OPER_CALL:
-            checkExpr(expr->left, stmt, checker, pass);
-            if (stmt->kind == STMT_DEF_METHOD) {
-                if (pass == 1) {
-                    assert(expr->left->kind == EXPR_NAME);
-                    stmt->u.method.name = expr->left->sym;
-                    stmt->u.method.argList = expr->right;
-                }
-            } else {
-                for (arg = expr->right; arg; arg = arg->nextArg) {
-                    checkExpr(arg, stmt, checker, pass);
-                }
+    case EXPR_CALL:
+        checkExpr(expr->left, stmt, checker, pass);
+        if (stmt->kind == STMT_DEF_METHOD) {
+            if (pass == 1) {
+                assert(expr->oper == OPER_APPLY && expr->left->kind == EXPR_NAME);
+                stmt->u.method.name = expr->left->sym;
+                stmt->u.method.argList = expr->right;
             }
-            break;
+        } else {
+            for (arg = expr->right; arg; arg = arg->nextArg) {
+                checkExpr(arg, stmt, checker, pass);
+            }
         }
         break;
     case EXPR_ATTR:

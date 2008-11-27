@@ -15,10 +15,9 @@
 Behavior *ClassBehavior;
 
 
-SpecialSelector specialSelectors[NUM_OPER] = {
+SpecialSelector operSelectors[NUM_OPER] = {
     { "__succ__",   0, 0 },
     { "__pred__",   0, 0 },
-    { "__item__",   1, 0 }, /* XXX: this is two operators */
     { "__addr__",   0, 0 }, /* "&x" -- not implemented */
     { "__ind__",    0, 0 }, /* "*x" -- not implemented */
     { "__pos__",    0, 0 },
@@ -40,7 +39,13 @@ SpecialSelector specialSelectors[NUM_OPER] = {
     { "__ne__",     1, 0 },
     { "__band__",   1, 0 },
     { "__bxor__",   1, 0 },
-    { "__bor__",    1, 0 },
+    { "__bor__",    1, 0 }
+};
+
+SpecialSelector operCallSelectors[NUM_CALL_OPER] = {
+    { "__apply__",     0, 0 },
+    { "__item__",      0, 0 },
+    { "__setItem__",   0, 0 }
 };
 
 
@@ -105,19 +110,23 @@ void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size
     self->methodDict = SpkIdentityDictionary_new();
     
     if (superclass) {
-        for (i = 0; i < sizeof(self->operTable)/sizeof(self->operTable[0]); ++i) {
+        for (i = 0; i < NUM_OPER; ++i) {
             self->operTable[i].method = superclass->operTable[i].method;
             self->operTable[i].methodClass = superclass->operTable[i].methodClass;
         }
-        self->operCall.method = superclass->operCall.method;
-        self->operCall.methodClass = superclass->operCall.methodClass;
+        for (i = 0; i < NUM_CALL_OPER; ++i) {
+            self->operCallTable[i].method = superclass->operCallTable[i].method;
+            self->operCallTable[i].methodClass = superclass->operCallTable[i].methodClass;
+        }
     } else {
-        for (i = 0; i < sizeof(self->operTable)/sizeof(self->operTable[0]); ++i) {
+        for (i = 0; i < NUM_OPER; ++i) {
             self->operTable[i].method = 0;
             self->operTable[i].methodClass = 0;
         }
-        self->operCall.method = 0;
-        self->operCall.methodClass = 0;
+        for (i = 0; i < NUM_CALL_OPER; ++i) {
+            self->operCallTable[i].method = 0;
+            self->operCallTable[i].methodClass = 0;
+        }
     }
     
     /* temporary */
@@ -134,7 +143,7 @@ void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size
 void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavior *superclass, Module *module) {
     SpkMethodTmpl *methodTmpl;
     
-    assert(specialSelectors[0].messageSelector && "use of 'initFromTemplate' cannot precede initialization of class Symbol");
+    assert(operSelectors[0].messageSelector && "use of 'initFromTemplate' cannot precede initialization of class Symbol");
     
     SpkBehavior_init(self, superclass, module, 0);
     
@@ -153,20 +162,23 @@ void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavi
 
 void SpkBehavior_insertMethod(Behavior *self, Symbol *messageSelector, Method *method) {
     char *name;
+    Oper operator;
     
     SpkIdentityDictionary_atPut(self->methodDict, (Object *)messageSelector, (Object *)method);
     
     name = messageSelector->str;
     if (name[0] == '_' && name[1] == '_') {
         /* special selector */
-        if (strcmp(name, "__call__") == 0) {
-            self->operCall.method = method;
-            self->operCall.methodClass = self;
-        } else {
-            Oper operator;
-                
+        for (operator = 0; operator < NUM_CALL_OPER; ++operator) {
+            if (messageSelector == operCallSelectors[operator].messageSelector) {
+                self->operCallTable[operator].method = method;
+                self->operCallTable[operator].methodClass = self;
+                break;
+            }
+        }
+        if (operator >= NUM_CALL_OPER) {
             for (operator = 0; operator < NUM_OPER; ++operator) {
-                if (messageSelector == specialSelectors[operator].messageSelector) {
+                if (messageSelector == operSelectors[operator].messageSelector) {
                     self->operTable[operator].method = method;
                     self->operTable[operator].methodClass = self;
                     break;

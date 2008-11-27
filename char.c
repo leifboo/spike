@@ -248,6 +248,15 @@ SpkClassTmpl ClassCharTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
+Char *SpkChar_fromChar(char c) {
+    Char *result;
+    
+    result = (Char *)malloc(sizeof(Char));
+    result->base.klass = ClassChar;
+    result->value = c;
+    return result;
+}
+
 Char *SpkChar_fromLiteral(char *str, size_t len) {
     Char *result;
     char *d, *s;
@@ -292,4 +301,8 @@ Char *SpkChar_fromLiteral(char *str, size_t len) {
     }
     
     return result;
+}
+
+char SpkChar_asChar(Char *aChar) {
+    return aChar->value;
 }

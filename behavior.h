@@ -17,7 +17,8 @@ typedef struct SpecialSelector {
     struct Symbol *messageSelector;
 } SpecialSelector;
 
-extern SpecialSelector specialSelectors[NUM_OPER];
+extern SpecialSelector operSelectors[NUM_OPER];
+extern SpecialSelector operCallSelectors[NUM_CALL_OPER];
 
 
 typedef struct oper_entry_t {
@@ -26,6 +27,7 @@ typedef struct oper_entry_t {
 } oper_entry_t;
 
 typedef oper_entry_t oper_table_t[NUM_OPER];
+typedef oper_entry_t oper_call_table_t[NUM_CALL_OPER];
 
 
 typedef enum SpkInstVarType {
@@ -80,7 +82,7 @@ struct Behavior {
     struct Module *module;
     struct IdentityDictionary *methodDict;
     oper_table_t operTable;
-    oper_entry_t operCall;
+    oper_call_table_t operCallTable;
     
     /* temporary */
     Behavior *next;

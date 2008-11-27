@@ -6,7 +6,6 @@
 typedef enum Oper {
     OPER_SUCC,
     OPER_PRED,
-    OPER_INDEX,
     OPER_ADDR,
     OPER_IND,
     OPER_POS,
@@ -30,9 +29,17 @@ typedef enum Oper {
     OPER_BXOR,
     OPER_BOR,
 
-    NUM_OPER,
-    OPER_CALL
+    NUM_OPER
 } Oper;
+    
+
+typedef enum CallOper {
+    OPER_APPLY,
+    OPER_GET_ITEM,
+    OPER_SET_ITEM,
+    
+    NUM_CALL_OPER
+} CallOper;
 
 
 #endif /* __oper_h__ */

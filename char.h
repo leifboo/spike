@@ -22,7 +22,9 @@ extern struct Behavior *ClassChar;
 extern struct SpkClassTmpl ClassCharTmpl;
 
 
+Char *SpkChar_fromChar(char);
 Char *SpkChar_fromLiteral(char *, size_t);
+char SpkChar_asChar(Char *);
 
 
 #endif /* __char_h__ */
