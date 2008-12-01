@@ -280,30 +280,12 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         push(expr, super, cgen);
         break;
     case EXPR_CALL:
+        emitCodeForExpr(expr->left, &isSuper, cgen);
         for (arg = expr->right, argumentCount = 0;
              arg;
              arg = arg->nextArg, ++argumentCount) {
             emitCodeForExpr(arg, 0, cgen);
         }
-        /* XXX: In the Green Book (Ch. 2), Dan Ingalls writes that
-         * some find this evaluation order to be "surprising" as
-         * it differs from the left-to-right order in the source
-         * code. The Spike interpreter could go either way: we
-         * must encode 'argumentCount' in any case, since --
-         * unlike in Smalltalk -- it is not implied by the message
-         * selector. But note that Spike operators have
-         * precedence, so the evaluation order is not
-         * left-to-right anyway.
-         *
-         * XXX: It is possible that we want the intepreter to be
-         * "ambidextrous". To conserve stack space, we should
-         * evaluate the deepest subexpression first. In order to
-         * do this, the intepreter must be able to handle both
-         * cases: receiver at the top of the stack, and receiver
-         * beneath the arguments. There would need to be two
-         * versions of the 'send' opcodes.
-         */
-        emitCodeForExpr(expr->left, &isSuper, cgen);
         if (isSuper) {
             opcode = OPCODE_CALL_SUPER;
             cgen->stackPointer -= argumentCount - 1;
@@ -360,8 +342,8 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         CHECK_STACKP();
         break;
     case EXPR_BINARY:
-        emitCodeForExpr(expr->right, 0, cgen);
         emitCodeForExpr(expr->left, &isSuper, cgen);
+        emitCodeForExpr(expr->right, 0, cgen);
         if (isSuper) {
             opcode = OPCODE_OPER_SUPER;
         } else {
@@ -374,8 +356,8 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         break;
     case EXPR_ID:
     case EXPR_NI:
-        emitCodeForExpr(expr->right, 0, cgen);
         emitCodeForExpr(expr->left, 0, cgen);
+        emitCodeForExpr(expr->right, 0, cgen);
         EMIT_OPCODE(OPCODE_ID);
         --cgen->stackPointer;
         if (expr->kind == EXPR_NI) {
@@ -405,9 +387,11 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
     case EXPR_ASSIGN:
         switch (expr->left->kind) {
         case EXPR_NAME:
-            emitCodeForExpr(expr->right, 0, cgen);
-            if (expr->oper != OPER_EQ) {
+            if (expr->oper == OPER_EQ) {
+                emitCodeForExpr(expr->right, 0, cgen);
+            } else {
                 emitCodeForExpr(expr->left, 0, cgen);
+                emitCodeForExpr(expr->right, 0, cgen);
                 EMIT_OPCODE(OPCODE_OPER);
                 encodeUnsignedInt((unsigned int)expr->oper, cgen);
                 --cgen->stackPointer;
@@ -417,14 +401,14 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
             break;
         case EXPR_CALL:
             assert(expr->left->oper == OPER_GET_ITEM && "invalid lvalue");
+            /* __item__/__setItem__ common receiver */
+            emitCodeForExpr(expr->left->left, &isSuper, cgen);
             /* __item__/__setItem__ common arguments */
             for (arg = expr->left->right, argumentCount = 0;
                  arg;
                  arg = arg->nextArg, ++argumentCount) {
                     emitCodeForExpr(arg, 0, cgen);
             }
-            /* __item__/__setItem__ common receiver */
-            emitCodeForExpr(expr->left->left, &isSuper, cgen);
             /* rhs */
             if (expr->oper == OPER_EQ) {
                 emitCodeForExpr(expr->right, 0, cgen);
@@ -443,13 +427,11 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
                 encodeUnsignedInt(argumentCount, cgen);
                 /* } __item__ */
                 emitCodeForExpr(expr->right, 0, cgen);
-                EMIT_OPCODE(OPCODE_SWAP);
                 EMIT_OPCODE(OPCODE_OPER);
                 encodeUnsignedInt((unsigned int)expr->oper, cgen);
                 --cgen->stackPointer;
             }
             ++argumentCount; /* new item value */
-            EMIT_OPCODE(OPCODE_SWAP);
             if (isSuper) {
                 opcode = OPCODE_CALL_SUPER;
                 cgen->stackPointer -= argumentCount - 1;
@@ -706,6 +688,10 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
 
     assert(cgen->currentOffset == cgen->currentMethod->size);
     assert(cgen->stackSize ==  cgen->currentMethod->stackSize);
+    
+    /* XXX: How much stack space should be reserved for leaf
+       routines? */
+    cgen->currentMethod->stackSize += 1;
     
     SpkBehavior_insertMethod(methodClass, messageSelector, cgen->currentMethod);
     cgen->currentMethod = 0;

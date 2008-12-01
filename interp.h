@@ -34,7 +34,6 @@ enum Opcode {
     OPCODE_STORE_INST_VAR,
     OPCODE_STORE_GLOBAL,
     OPCODE_POP,
-    OPCODE_SWAP,
     OPCODE_BRANCH_IF_FALSE,
     OPCODE_BRANCH_IF_TRUE,
     OPCODE_BRANCH_ALWAYS,
@@ -133,8 +132,7 @@ struct Method {
     opcode_t opcodes[1]; /* stretchy */
 };
 
-/* XXX: How much stack space is reserved for leaf routines? */
-#define contextSizeForMethod(m) ((m)->localCount + (m)->argumentCount + (m)->stackSize)
+#define contextSizeForMethod(m) ((m)->stackSize + (m)->argumentCount + (m)->localCount)
 
 
 typedef struct Thunk {

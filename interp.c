@@ -372,6 +372,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
     Symbol *messageSelector = 0;
     size_t argumentCount = 0;
     unsigned int operator;
+    opcode_t *oldIP;
     
  fetchContextRegisters:
     homeContext = self->activeContext->homeContext;
@@ -463,12 +464,6 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_POP:
             POP(1);
             break;
-        case OPCODE_SWAP: {
-            Object *temp;
-            temp = stackPointer[0];
-            stackPointer[0] = stackPointer[1];
-            stackPointer[1] = temp;
-            break; }
 
 /*** branch opcodes ***/
         case OPCODE_BRANCH_IF_FALSE: {
@@ -510,48 +505,56 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
 
 /*** send opcodes -- operators ***/
         case OPCODE_OPER:
-            receiver = POP_OBJECT();
+            operator = (unsigned int)(*instructionPointer++);
+            argumentCount = operSelectors[operator].argumentCount;
+            receiver = stackPointer[argumentCount];
             methodClass = receiver->klass;
             goto oper;
         case OPCODE_OPER_SUPER:
+            operator = (unsigned int)(*instructionPointer++);
+            argumentCount = operSelectors[operator].argumentCount;
             methodClass = methodClass->superclass;
  oper:
-            operator = (unsigned int)(*instructionPointer++);
             method = methodClass->operTable[operator].method;
             if (method) {
                 methodClass = methodClass->operTable[operator].methodClass;
-                argumentCount = operSelectors[operator].argumentCount;
                 goto callNewMethod;
             }
             instructionPointer -= 2;
             TRAP(self->selectorDoesNotUnderstand, (Object *)operSelectors[operator].messageSelector);
             break;
         case OPCODE_CALL:
-            receiver = POP_OBJECT();
+            oldIP = instructionPointer - 1;
+            operator = (unsigned int)(*instructionPointer++);
+            DECODE_UINT(argumentCount);
+            receiver = stackPointer[argumentCount];
             methodClass = receiver->klass;
             goto call;
         case OPCODE_CALL_SUPER:
+            oldIP = instructionPointer - 1;
+            operator = (unsigned int)(*instructionPointer++);
+            DECODE_UINT(argumentCount);
             methodClass = methodClass->superclass;
  call:
-            operator = (unsigned int)(*instructionPointer++);
             method = methodClass->operCallTable[operator].method;
             if (method) {
                 methodClass = methodClass->operCallTable[operator].methodClass;
-                DECODE_UINT(argumentCount);
                 goto callNewMethod;
             }
-            instructionPointer -= 2;
+            instructionPointer = oldIP;
             TRAP(self->selectorDoesNotUnderstand, (Object *)operCallSelectors[operator].messageSelector);
             break;
 
 /*** send opcodes -- "obj.attr" ***/
         case OPCODE_ATTR:
-            receiver = POP_OBJECT();
+            oldIP = instructionPointer - 1;
+            receiver = STACK_TOP();
             methodClass = receiver->klass;
             DECODE_UINT(index);
             messageSelector = (Symbol *)(globalPointer[index]);
             goto lookupMethodInClass;
         case OPCODE_ATTR_SUPER:
+            oldIP = instructionPointer - 1;
             methodClass = methodClass->superclass;
             DECODE_UINT(index);
             messageSelector = (Symbol *)(globalPointer[index]);
@@ -577,7 +580,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 message->messageSelector = messageSelector;
                 message->argumentArray = argumentArray;
                 oopcpy(&argumentArray->variables[0], stackPointer, argumentCount);
-                /* XXX: fix instructionPointer */
+                instructionPointer = oldIP;
                 TRAP(self->selectorDoesNotUnderstand, (Object *)message);
             } while (0);
             break;
@@ -586,7 +589,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_RET: {
             /* ret/retl (blr) */
             Object *ret = POP_OBJECT();
-            POP(method->argumentCount);
+            POP(method->argumentCount + 1);
             PUSH(ret);
  ret:
             instructionPointer = linkRegister;
@@ -692,6 +695,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             thunk->method = method;
             thunk->methodClass = methodClass;
             thunk->pc = instructionPointer;
+            POP(1); /* receiver */
             PUSH(thunk);
             goto ret; }
         case OPCODE_CALL_THUNK: {

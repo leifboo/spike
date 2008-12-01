@@ -98,7 +98,6 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             break;
             
         case OPCODE_POP: mnemonic = "pop"; break;
-        case OPCODE_SWAP: mnemonic = "swap"; break;
 
         case OPCODE_BRANCH_IF_FALSE: mnemonic = "brf"; goto branch;
         case OPCODE_BRANCH_IF_TRUE:  mnemonic = "brt"; goto branch;
