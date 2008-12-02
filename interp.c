@@ -448,7 +448,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             PUSH(SpkInteger_fromLong(value));
             break; }
                 
-/*** store & pop opcodes ***/
+/*** store opcodes ***/
         case OPCODE_STORE_LOCAL:
             DECODE_UINT(index);
             framePointer[index] = STACK_TOP();
@@ -461,9 +461,26 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             DECODE_UINT(index);
             globalPointer[index] = STACK_TOP();
             break;
+            
+/*** additional stack opcodes ***/
         case OPCODE_POP:
             POP(1);
             break;
+        case OPCODE_ROT: {
+            Object **s, **end, *temp;
+            size_t n;
+            DECODE_UINT(n);
+            if (n > 1) {
+                temp = STACK_TOP();
+                s = stackPointer;
+                end = stackPointer + n - 1;
+                while (s < end) {
+                    s[0] = s[1];
+                    ++s;
+                }
+                *s = temp;
+            }
+            break; }
 
 /*** branch opcodes ***/
         case OPCODE_BRANCH_IF_FALSE: {

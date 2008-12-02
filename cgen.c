@@ -238,6 +238,7 @@ static unsigned int getLiteralIndex(Object *literal, CodeGen *cgen) {
 static void emitCodeForOneExpr(Expr *, int *, CodeGen *);
 static void emitBranchForExpr(Expr *expr, int, size_t, size_t, int, CodeGen *);
 static void emitBranchForOneExpr(Expr *, int, size_t, size_t, int, CodeGen *);
+static void inPlaceIndexOp(Expr *, CodeGen *);
 
 static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
     for ( ; expr->next; expr = expr->next) {
@@ -312,22 +313,38 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         CHECK_STACKP();
         break;
     case EXPR_PREOP:
-        assert(expr->left->kind == EXPR_NAME && "invalid lvalue");
-        emitCodeForExpr(expr->left, 0, cgen);
-        EMIT_OPCODE(OPCODE_OPER);
-        encodeUnsignedInt((unsigned int)expr->oper, cgen);
-        store(expr->left, cgen);
-        CHECK_STACKP();
+        switch (expr->left->kind) {
+        case EXPR_NAME:
+            emitCodeForExpr(expr->left, 0, cgen);
+            EMIT_OPCODE(OPCODE_OPER);
+            encodeUnsignedInt((unsigned int)expr->oper, cgen);
+            store(expr->left, cgen);
+            CHECK_STACKP();
+            break;
+        case EXPR_CALL:
+            inPlaceIndexOp(expr, cgen);
+            break;
+        default:
+            assert(0 && "invalid lvalue");
+        }
         break;
     case EXPR_POSTOP:
-        assert(expr->left->kind == EXPR_NAME && "invalid lvalue");
-        emitCodeForExpr(expr->left, 0, cgen);
-        EMIT_OPCODE(OPCODE_DUP); ++cgen->stackPointer;
-        EMIT_OPCODE(OPCODE_OPER);
-        encodeUnsignedInt((unsigned int)expr->oper, cgen);
-        store(expr->left, cgen);
-        EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
-        CHECK_STACKP();
+        switch (expr->left->kind) {
+        case EXPR_NAME:
+            emitCodeForExpr(expr->left, 0, cgen);
+            EMIT_OPCODE(OPCODE_DUP); ++cgen->stackPointer;
+            EMIT_OPCODE(OPCODE_OPER);
+            encodeUnsignedInt((unsigned int)expr->oper, cgen);
+            store(expr->left, cgen);
+            EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
+            CHECK_STACKP();
+            break;
+        case EXPR_CALL:
+            inPlaceIndexOp(expr, cgen);
+            break;
+        default:
+            assert(0 && "invalid lvalue");
+        }
         break;
     case EXPR_UNARY:
         emitCodeForExpr(expr->left, &isSuper, cgen);
@@ -400,49 +417,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
             CHECK_STACKP();
             break;
         case EXPR_CALL:
-            assert(expr->left->oper == OPER_GET_ITEM && "invalid lvalue");
-            /* __item__/__setItem__ common receiver */
-            emitCodeForExpr(expr->left->left, &isSuper, cgen);
-            /* __item__/__setItem__ common arguments */
-            for (arg = expr->left->right, argumentCount = 0;
-                 arg;
-                 arg = arg->nextArg, ++argumentCount) {
-                    emitCodeForExpr(arg, 0, cgen);
-            }
-            /* rhs */
-            if (expr->oper == OPER_EQ) {
-                emitCodeForExpr(expr->right, 0, cgen);
-            } else {
-                /* __item__ { */
-                dupN(argumentCount + 1, cgen);
-                if (isSuper) {
-                    opcode = OPCODE_CALL_SUPER;
-                    cgen->stackPointer -= argumentCount - 1;
-                } else {
-                    opcode = OPCODE_CALL;
-                    cgen->stackPointer -= argumentCount;
-                }
-                EMIT_OPCODE(opcode);
-                encodeUnsignedInt((unsigned int)expr->left->oper, cgen);
-                encodeUnsignedInt(argumentCount, cgen);
-                /* } __item__ */
-                emitCodeForExpr(expr->right, 0, cgen);
-                EMIT_OPCODE(OPCODE_OPER);
-                encodeUnsignedInt((unsigned int)expr->oper, cgen);
-                --cgen->stackPointer;
-            }
-            ++argumentCount; /* new item value */
-            if (isSuper) {
-                opcode = OPCODE_CALL_SUPER;
-                cgen->stackPointer -= argumentCount - 1;
-            } else {
-                opcode = OPCODE_CALL;
-                cgen->stackPointer -= argumentCount;
-            }
-            EMIT_OPCODE(opcode);
-            encodeUnsignedInt((unsigned int)OPER_SET_ITEM, cgen);
-            encodeUnsignedInt(argumentCount, cgen);
-            CHECK_STACKP();
+            inPlaceIndexOp(expr, cgen);
             break;
         default:
             assert(0 && "invalid lvalue");
@@ -452,6 +427,70 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
     SET_END(expr);
     
     return;
+}
+
+static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
+    opcode_t opcode;
+    Expr *arg;
+    size_t argumentCount;
+    int isSuper;
+    
+    assert(expr->left->oper == OPER_GET_ITEM && "invalid lvalue");
+    /* __item__/__setItem__ common receiver */
+    emitCodeForExpr(expr->left->left, &isSuper, cgen);
+    /* __item__/__setItem__ common arguments */
+    for (arg = expr->left->right, argumentCount = 0;
+         arg;
+         arg = arg->nextArg, ++argumentCount) {
+        emitCodeForExpr(arg, 0, cgen);
+    }
+    /* rhs */
+    if (expr->oper == OPER_EQ) {
+        emitCodeForExpr(expr->right, 0, cgen);
+    } else {
+        /* __item__ { */
+        dupN(argumentCount + 1, cgen);
+        if (isSuper) {
+            opcode = OPCODE_CALL_SUPER;
+            cgen->stackPointer -= argumentCount - 1;
+        } else {
+            opcode = OPCODE_CALL;
+            cgen->stackPointer -= argumentCount;
+        }
+        EMIT_OPCODE(opcode);
+        encodeUnsignedInt((unsigned int)expr->left->oper, cgen);
+        encodeUnsignedInt(argumentCount, cgen);
+        /* } __item__ */
+        
+        if (expr->right) {
+            emitCodeForExpr(expr->right, 0, cgen);
+        } else if (expr->kind == EXPR_POSTOP) {
+            EMIT_OPCODE(OPCODE_DUP); ++cgen->stackPointer;
+            EMIT_OPCODE(OPCODE_ROT);
+            encodeUnsignedInt(argumentCount + 3, cgen);
+        }
+        
+        EMIT_OPCODE(OPCODE_OPER);
+        encodeUnsignedInt((unsigned int)expr->oper, cgen);
+        if (expr->right) {
+            --cgen->stackPointer;
+        }
+    }
+    ++argumentCount; /* new item value */
+    if (isSuper) {
+        opcode = OPCODE_CALL_SUPER;
+        cgen->stackPointer -= argumentCount - 1;
+    } else {
+        opcode = OPCODE_CALL;
+        cgen->stackPointer -= argumentCount;
+    }
+    EMIT_OPCODE(opcode);
+    encodeUnsignedInt((unsigned int)OPER_SET_ITEM, cgen);
+    encodeUnsignedInt(argumentCount, cgen);
+    CHECK_STACKP();
+    if (expr->kind == EXPR_POSTOP) {
+        EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
+    }
 }
 
 static void emitBranchForExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, CodeGen *cgen) {

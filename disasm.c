@@ -54,6 +54,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         size_t index = 0;
         ptrdiff_t displacement = 0;
         size_t argumentCount = 0, *pArgumentCount = 0;
+        size_t count = 0, *pCount = 0;
         unsigned int operator = 0;
         size_t label = 0, *pLabel = 0;
         int i;
@@ -80,8 +81,8 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         case OPCODE_DUP:           mnemonic = "dup";                           break;
         case OPCODE_DUP_N:
             mnemonic = "dupn";
-            DECODE_SINT(intValue);
-            pIntValue = &intValue;
+            DECODE_UINT(count);
+            pCount = &count;
             break;
             
         case OPCODE_PUSH_INT:
@@ -98,6 +99,11 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             break;
             
         case OPCODE_POP: mnemonic = "pop"; break;
+        case OPCODE_ROT:
+            mnemonic = "rot";
+            DECODE_UINT(count);
+            pCount = &count;
+            break;
 
         case OPCODE_BRANCH_IF_FALSE: mnemonic = "brf"; goto branch;
         case OPCODE_BRANCH_IF_TRUE:  mnemonic = "brt"; goto branch;
@@ -161,6 +167,8 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         fprintf(out, "\t%s", mnemonic);
         if (pIntValue) {
             fprintf(out, "\t%ld", *pIntValue);
+        } else if (count) {
+            fprintf(out, "\t%lu", *pCount);
         } else if (keyword) {
             fprintf(out, "\t%s", keyword);
         } else if (pArgumentCount) {
