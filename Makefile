@@ -2,6 +2,7 @@
 CFLAGS = -g -ansi
 
 obj = \
+	array.o \
 	behavior.o \
 	bool.o \
 	cgen.o \

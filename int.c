@@ -241,6 +241,7 @@ SpkClassTmpl ClassIntegerTmpl = {
     offsetof(IntegerSubclass, variables),
     sizeof(Integer),
     0,
+    0,
     methods
 };
 

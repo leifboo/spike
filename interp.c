@@ -1,6 +1,7 @@
 
 #include "interp.h"
 
+#include "array.h"
 #include "behavior.h"
 #include "bool.h"
 #include "class.h"
@@ -27,17 +28,6 @@ Void *Spk_void;
 Behavior *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
 
 
-Object *SpkObject_new(size_t size) {
-    return (Object *)malloc(sizeof(Object) + (size - 1) * sizeof(Object *));
-}
-
-
-static void oopcpy(Object **dest, Object **src, size_t count) {
-    for ( ; count > 0; --count)
-        *dest++ = *src++;
-}
-
-
 
 /*------------------------------------------------------------------------*/
 /* class templates */
@@ -50,6 +40,7 @@ SpkClassTmpl ClassMessageTmpl = {
     "Message",
     offsetof(MessageSubclass, variables),
     sizeof(Message),
+    0,
     0,
     MessageMethods
 };
@@ -64,6 +55,7 @@ SpkClassTmpl ClassThunkTmpl = {
     offsetof(ThunkSubclass, variables),
     sizeof(Thunk),
     0,
+    0,
     ThunkMethods
 };
 
@@ -76,6 +68,7 @@ SpkClassTmpl ClassNullTmpl = {
     "Null",
     offsetof(ObjectSubclass, variables),
     sizeof(Null),
+    0,
     0,
     NullMethods
 };
@@ -90,6 +83,7 @@ SpkClassTmpl ClassUninitTmpl = {
     offsetof(ObjectSubclass, variables),
     sizeof(Uninit),
     0,
+    0,
     UninitMethods
 };
 
@@ -102,6 +96,7 @@ SpkClassTmpl ClassVoidTmpl = {
     "Void",
     offsetof(ObjectSubclass, variables),
     sizeof(Void),
+    0,
     0,
     VoidMethods
 };
@@ -592,11 +587,10 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 }
             }
             do { /* createActualMessage */
-                Array *argumentArray = (Array *)SpkObject_new(argumentCount);
+                Array *argumentArray = SpkArray_withItems(stackPointer, argumentCount);
                 Message *message = SpkMessage_new();
                 message->messageSelector = messageSelector;
                 message->argumentArray = argumentArray;
-                oopcpy(&argumentArray->variables[0], stackPointer, argumentCount);
                 instructionPointer = oldIP;
                 TRAP(self->selectorDoesNotUnderstand, (Object *)message);
             } while (0);
@@ -727,14 +721,14 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_TRAP_NATIVE: {
             Object *result, *arg1 = 0, *arg2 = 0;
             switch (method->argumentCount) {
-            case 2:
-                arg1 = STACK_VALUE(1);
-                arg2 = STACK_VALUE(0);
+            case 0:
                 break;
             case 1:
                 arg1 = STACK_VALUE(0);
                 break;
-            case 0:
+            case 2:
+                arg1 = STACK_VALUE(1);
+                arg2 = STACK_VALUE(0);
                 break;
             default:
                 assert(XXX);

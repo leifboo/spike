@@ -33,6 +33,7 @@ SpkClassTmpl ClassModuleTmpl = {
     offsetof(ModuleSubclass, variables),
     sizeof(Module),
     0,
+    0,
     methods
 };
 

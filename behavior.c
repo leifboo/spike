@@ -79,6 +79,7 @@ SpkClassTmpl ClassBehaviorTmpl = {
     offsetof(BehaviorSubclass, variables),
     sizeof(Behavior),
     0,
+    0,
     methods
 };
 
@@ -133,9 +134,10 @@ void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size
     self->next = 0;
     
     /* memory layout of instances */
-    self->instVarCount = instVarCount;
-    self->instVarOffset = offsetof(ObjectSubclass, variables);
-    self->instanceSize = self->instVarOffset + instVarCount*sizeof(Object *);
+    self->instVarCount = (superclass ? superclass->instVarCount : 0) + instVarCount;
+    self->instVarOffset = superclass ? superclass->instVarOffset : offsetof(ObjectSubclass, variables);
+    self->instanceSize = self->instVarOffset + self->instVarCount*sizeof(Object *);
+    self->itemSize = superclass ? superclass->itemSize : 0;
     
     return;
 }
@@ -149,6 +151,7 @@ void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavi
     
     self->instVarOffset = template->instVarOffset;
     self->instanceSize = template->instanceSize;
+    self->itemSize = template->itemSize;
     
     for (methodTmpl = template->methods; methodTmpl->name; ++methodTmpl) {
         Symbol *messageSelector;

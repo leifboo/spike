@@ -51,5 +51,6 @@ SpkClassTmpl ClassMetaclassTmpl = {
     offsetof(MetaclassSubclass, variables),
     sizeof(Metaclass),
     0,
+    0,
     methods
 };

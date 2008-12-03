@@ -15,6 +15,8 @@
 
 
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
+#define STR(op) ((char *)SpkObject_ITEM_BASE(op))
+#define LEN(op) ((op)->size - 1)
 
 
 Behavior *ClassString;
@@ -30,12 +32,12 @@ static Object *String_binaryLogicalOper(String *self, Object *arg0, Oper oper) {
     assert(arg0->klass == ClassString); /* XXX */
     arg = (String *)arg0;
     switch (oper) {
-    case OPER_LT: result = BOOL(strcmp(self->str, arg->str) < 0);  break;
-    case OPER_GT: result = BOOL(strcmp(self->str, arg->str) > 0);  break;
-    case OPER_LE: result = BOOL(strcmp(self->str, arg->str) <= 0); break;
-    case OPER_GE: result = BOOL(strcmp(self->str, arg->str) >= 0); break;
-    case OPER_EQ: result = BOOL(strcmp(self->str, arg->str) == 0); break;
-    case OPER_NE: result = BOOL(strcmp(self->str, arg->str) != 0); break;
+    case OPER_LT: result = BOOL(strcmp(STR(self), STR(arg)) < 0);  break;
+    case OPER_GT: result = BOOL(strcmp(STR(self), STR(arg)) > 0);  break;
+    case OPER_LE: result = BOOL(strcmp(STR(self), STR(arg)) <= 0); break;
+    case OPER_GE: result = BOOL(strcmp(STR(self), STR(arg)) >= 0); break;
+    case OPER_EQ: result = BOOL(strcmp(STR(self), STR(arg)) == 0); break;
+    case OPER_NE: result = BOOL(strcmp(STR(self), STR(arg)) != 0); break;
     default: assert(0);
     }
     return (Object *)result;
@@ -53,13 +55,12 @@ static Object *String_add(Object *_self, Object *arg0, Object *arg1) {
     assert(arg0->klass == ClassString); /* XXX */
     self = (String *)_self;
     arg = (String *)arg0;
-    resultLen = self->len + arg->len;
-    result = (String *)malloc(sizeof(String) + resultLen);
+    resultLen = LEN(self) + LEN(arg);
+    result = (String *)malloc(sizeof(String) + resultLen + 1);
     result->base.klass = ClassString;
-    result->len = resultLen;
-    memcpy(result->str, self->str, self->len);
-    memcpy(result->str + self->len, arg->str, arg->len);
-    result->str[resultLen] = '\0';
+    result->size = resultLen + 1;
+    memcpy(STR(result), STR(self), LEN(self));
+    memcpy(STR(result) + LEN(self), STR(arg), arg->size);
     return (Object *)result;
 }
 
@@ -101,28 +102,8 @@ static Object *String_item(Object *_self, Object *arg0, Object *arg1) {
     self = (String *)_self;
     assert(arg0->klass == ClassInteger); /* XXX */
     index = SpkInteger_asLong((Integer *)arg0);
-    assert(0 <= index && index < self->len); /* XXX */
-    return (Object *)SpkChar_fromChar(self->str[index]);
-}
-
-/* XXX: temporary */
-static Object *String_setItem(Object *_self, Object *arg0, Object *arg1) {
-    String *self;
-    long index;
-    char value;
-    
-    self = (String *)_self;
-    assert(arg0->klass == ClassInteger); /* XXX */
-    index = SpkInteger_asLong((Integer *)arg0);
-    assert(0 <= index && index < self->len); /* XXX */
-    assert(arg1->klass == ClassChar); /* XXX */
-    value = SpkChar_asChar((Char *)arg1);
-    self->str[index] = value;
-    if (0) {
-        /* XXX */
-        return Spk_void;
-    }
-    return arg1;
+    assert(0 <= index && index < LEN(self)); /* XXX */
+    return (Object *)SpkChar_fromChar(STR(self)[index]);
 }
 
 
@@ -133,7 +114,7 @@ static Object *String_print(Object *_self, Object *arg0, Object *arg1) {
     String *self;
     
     self = (String *)_self;
-    fwrite(self->str, 1, self->len, stdout);
+    fwrite(STR(self), 1, LEN(self), stdout);
     return Spk_void;
 }
 
@@ -156,7 +137,6 @@ static SpkMethodTmpl methods[] = {
     { "__ne__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_ne     },
     /* call operators */
     { "__item__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_item    },
-    { "__setItem__", SpkNativeCode_ARGS_2 | SpkNativeCode_LEAF, &String_setItem },
     /* other */
     { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &String_print },
     { 0, 0, 0}
@@ -164,8 +144,9 @@ static SpkMethodTmpl methods[] = {
 
 SpkClassTmpl ClassStringTmpl = {
     "String",
-    0,
+    offsetof(StringSubclass, variables),
     sizeof(String),
+    sizeof(char),
     0,
     methods
 };
@@ -183,9 +164,9 @@ String *SpkString_fromLiteral(char *str, size_t len) {
     s = str + 1; len -= 2;
     
     /* XXX: This allocates too much. */
-    result = (String *)malloc(sizeof(String) + len*sizeof(char));
+    result = (String *)malloc(sizeof(String) + len*sizeof(char) + 1);
     result->base.klass = ClassString;
-    d = result->str;
+    d = STR(result);
     
     while (len--) {
         c = *s++;
@@ -219,7 +200,11 @@ String *SpkString_fromLiteral(char *str, size_t len) {
         }
     }
     
-    result->len = d - result->str;
     *d++ = '\0';
+    result->size = d - STR(result);
     return result;
+}
+
+char *SpkString_asString(String *self) {
+    return STR(self);
 }

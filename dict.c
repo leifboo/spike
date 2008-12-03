@@ -144,5 +144,6 @@ SpkClassTmpl ClassIdentityDictionaryTmpl = {
     offsetof(IdentityDictionarySubclass, variables),
     sizeof(IdentityDictionary),
     0,
+    0,
     methods
 };

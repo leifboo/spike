@@ -71,6 +71,7 @@ typedef struct SpkClassTmpl {
     const char *name;
     size_t instVarOffset;
     size_t instanceSize;
+    size_t itemSize;
     SpkAccessorTmpl *accessors;
     SpkMethodTmpl *methods;
 } SpkClassTmpl;
@@ -91,6 +92,7 @@ struct Behavior {
     size_t instVarCount;
     size_t instVarOffset;
     size_t instanceSize;
+    size_t itemSize;
     /*SpkAccessorTmpl accessorTmpl[1];*/
 };
 

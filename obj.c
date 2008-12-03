@@ -53,5 +53,6 @@ SpkClassTmpl ClassObjectTmpl = {
     offsetof(ObjectSubclass, variables),
     sizeof(Object),
     0,
+    0,
     methods
 };

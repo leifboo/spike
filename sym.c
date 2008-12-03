@@ -34,6 +34,7 @@ SpkClassTmpl ClassSymbolTmpl = {
     "Symbol",
     0,
     sizeof(Symbol),
+    sizeof(char),
     0,
     SymbolMethods
 };

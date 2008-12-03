@@ -241,6 +241,7 @@ SpkClassTmpl ClassCharTmpl = {
     offsetof(CharSubclass, variables),
     sizeof(Char),
     0,
+    0,
     methods
 };
 

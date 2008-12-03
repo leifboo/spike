@@ -55,7 +55,7 @@ struct Expr {
     struct SymbolNode *sym;
     long intValue;
     struct Char *charValue;
-    struct String *strValue;
+    struct VariableObject *strValue;
     union {
         struct {
             Expr *def;

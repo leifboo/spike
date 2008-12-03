@@ -3,6 +3,7 @@
 #include "parser.h"
 #include "tree.h"
 
+#include "array.h"
 #include "behavior.h"
 #include "bool.h"
 #include "char.h"
@@ -53,6 +54,7 @@ static BootRec bootRec[] = {
     /**/CLASS(Integer, Object),
     /**/CLASS(Char,    Object),
     /**/CLASS(String,  Object),
+    /**/CLASS(Array,   Object),
     OBJECT(False,  Spk_false),
     OBJECT(True,   Spk_true),
     OBJECT(Module, builtInModule),

@@ -77,6 +77,7 @@ SpkClassTmpl ClassBooleanTmpl = {
     offsetof(ObjectSubclass, variables),
     sizeof(Boolean),
     0,
+    0,
     BooleanMethods
 };
 
@@ -98,6 +99,7 @@ SpkClassTmpl ClassFalseTmpl = {
     offsetof(ObjectSubclass, variables),
     sizeof(Boolean),
     0,
+    0,
     FalseMethods
 };
 
@@ -118,6 +120,7 @@ SpkClassTmpl ClassTrueTmpl = {
     "True",
     offsetof(ObjectSubclass, variables),
     sizeof(Boolean),
+    0,
     0,
     TrueMethods
 };

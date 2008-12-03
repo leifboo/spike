@@ -59,7 +59,6 @@ enum Opcode {
 };
 
 
-typedef ObjectSubclass Array;
 typedef Object Null, Uninit, Void;
 
 
@@ -153,7 +152,7 @@ typedef struct ThunkSubclass {
 typedef struct Message {
     Object base;
     struct Symbol *messageSelector;
-    Array *argumentArray;
+    struct VariableObject *argumentArray;
 } Message;
 
 typedef struct MessageSubclass {
@@ -195,8 +194,6 @@ extern Void *Spk_void;
 extern struct Behavior *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
 extern struct SpkClassTmpl ClassMessageTmpl, ClassThunkTmpl, ClassNullTmpl, ClassUninitTmpl, ClassVoidTmpl;
 
-
-Object *SpkObject_new(size_t);
 
 Message *SpkMessage_new(void);
 Method *SpkMethod_new(size_t, size_t, size_t, size_t);

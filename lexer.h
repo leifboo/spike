@@ -11,7 +11,7 @@ typedef struct Token {
     struct SymbolNode *sym;
     long intValue;
     struct Char *charValue;
-    struct String *strValue;
+    struct VariableObject *strValue;
     unsigned int lineNo;
 } Token;
 
