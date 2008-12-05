@@ -125,20 +125,20 @@ static Object *String_print(Object *_self, Object *arg0, Object *arg1) {
 static SpkMethodTmpl methods[] = {
     /* operators */
 #if 0 /*XXX*/
-    { "__mul__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_mul    },
-    { "__mod__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_mod    },
+    { "__mul__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_mul    },
+    { "__mod__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_mod    },
 #endif
-    { "__add__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_add    },
-    { "__lt__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_lt     },
-    { "__gt__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_gt     },
-    { "__le__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_le     },
-    { "__ge__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_ge     },
-    { "__eq__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_eq     },
-    { "__ne__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_ne     },
+    { "__add__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_add    },
+    { "__lt__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_lt     },
+    { "__gt__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_gt     },
+    { "__le__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_le     },
+    { "__ge__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_ge     },
+    { "__eq__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_eq     },
+    { "__ne__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_ne     },
     /* call operators */
-    { "__item__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_item    },
+    { "__item__", SpkNativeCode_CALL | SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_item },
     /* other */
-    { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &String_print },
+    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &String_print },
     { 0, 0, 0}
 };
 

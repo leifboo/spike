@@ -74,21 +74,21 @@ static Object *Array_print(Object *_self, Object *arg0, Object *arg1) {
 static SpkMethodTmpl methods[] = {
     /* operators */
 #if 0 /*XXX*/
-    { "__mul__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_mul    },
-    { "__mod__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_mod    },
-    { "__add__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_add    },
-    { "__lt__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_lt     },
-    { "__gt__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_gt     },
-    { "__le__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_le     },
-    { "__ge__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_ge     },
-    { "__eq__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_eq     },
-    { "__ne__",     SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_ne     },
+    { "__mul__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_mul },
+    { "__mod__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_mod },
+    { "__add__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_add },
+    { "__lt__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_lt  },
+    { "__gt__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_gt  },
+    { "__le__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_le  },
+    { "__ge__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_ge  },
+    { "__eq__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_eq  },
+    { "__ne__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_ne  },
 #endif
     /* call operators */
-    { "__item__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_item    },
-    { "__setItem__", SpkNativeCode_ARGS_2 | SpkNativeCode_LEAF, &Array_setItem },
+    { "__item__",    SpkNativeCode_CALL | SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_item },
+    { "__setItem__", SpkNativeCode_CALL | SpkNativeCode_ARGS_2 | SpkNativeCode_LEAF, &Array_setItem },
     /* other */
-    { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Array_print },
+    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Array_print },
     { 0, 0, 0}
 };
 

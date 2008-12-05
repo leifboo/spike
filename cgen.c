@@ -130,16 +130,6 @@ static void tallyPush(CodeGen *cgen) {
     CHECK_STACKP();
 }
 
-static void dupN(unsigned long n, CodeGen *cgen) {
-    EMIT_OPCODE(OPCODE_DUP_N);
-    encodeUnsignedInt(n, cgen);
-    cgen->stackPointer += n;
-    if (cgen->stackPointer > cgen->stackSize) {
-        cgen->stackSize = cgen->stackPointer;
-    }
-    CHECK_STACKP();
-}
-
 static void push(Expr *expr, int *super, CodeGen *cgen) {
     opcode_t opcode;
     Expr *def;
@@ -149,14 +139,13 @@ static void push(Expr *expr, int *super, CodeGen *cgen) {
     
     if (def->u.def.level == 0) {
         /* built-in */
-        if (def->u.def.pushOpcode) {
-            EMIT_OPCODE(def->u.def.pushOpcode);
-            tallyPush(cgen);
-            return;
+        assert(def->u.def.pushOpcode);
+        if (def->u.def.pushOpcode == OPCODE_PUSH_SUPER) {
+            assert(super && "invalid use of 'super'");
+            *super = 1;
         }
-        /* super */
-        assert(super && "invalid use of 'super'");
-        *super = 1;
+        EMIT_OPCODE(def->u.def.pushOpcode);
+        tallyPush(cgen);
         return;
     }
     
@@ -205,6 +194,13 @@ static void store(Expr *var, CodeGen *cgen) {
     encodeUnsignedInt(def->u.def.index, cgen);
 }
 
+static void clean(size_t argumentCount, CodeGen *cgen) {
+    EMIT_OPCODE(OPCODE_CLEAN);
+    encodeUnsignedInt(argumentCount, cgen);
+    cgen->stackPointer -= argumentCount + 1;
+}
+
+
 /****************************************************************************/
 /* rodata */
 
@@ -249,7 +245,6 @@ static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
 }
 
 static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
-    opcode_t opcode;
     Expr *arg;
     size_t index, argumentCount;
     int isSuper;
@@ -287,27 +282,16 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
              arg = arg->nextArg, ++argumentCount) {
             emitCodeForExpr(arg, 0, cgen);
         }
-        if (isSuper) {
-            opcode = OPCODE_CALL_SUPER;
-            cgen->stackPointer -= argumentCount - 1;
-        } else {
-            opcode = OPCODE_CALL;
-            cgen->stackPointer -= argumentCount;
-        }
-        EMIT_OPCODE(opcode);
+        EMIT_OPCODE(isSuper ? OPCODE_CALL_SUPER : OPCODE_CALL);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
         encodeUnsignedInt(argumentCount, cgen);
+        tallyPush(cgen); /* result */
+        clean(argumentCount, cgen);
         CHECK_STACKP();
         break;
     case EXPR_ATTR:
         emitCodeForExpr(expr->left, &isSuper, cgen);
-        if (isSuper) {
-            opcode = OPCODE_ATTR_SUPER;
-            ++cgen->stackPointer;
-        } else {
-            opcode = OPCODE_ATTR;
-        }
-        EMIT_OPCODE(opcode);
+        EMIT_OPCODE(isSuper ? OPCODE_ATTR_SUPER : OPCODE_ATTR);
         index = LITERAL_INDEX((Object *)expr->sym->sym, cgen);
         encodeUnsignedInt(index, cgen);
         CHECK_STACKP();
@@ -332,7 +316,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         switch (expr->left->kind) {
         case EXPR_NAME:
             emitCodeForExpr(expr->left, 0, cgen);
-            EMIT_OPCODE(OPCODE_DUP); ++cgen->stackPointer;
+            EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
             EMIT_OPCODE(OPCODE_OPER);
             encodeUnsignedInt((unsigned int)expr->oper, cgen);
             store(expr->left, cgen);
@@ -348,27 +332,16 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         break;
     case EXPR_UNARY:
         emitCodeForExpr(expr->left, &isSuper, cgen);
-        if (isSuper) {
-            opcode = OPCODE_OPER_SUPER;
-            ++cgen->stackPointer;
-        } else {
-            opcode = OPCODE_OPER;
-        }
-        EMIT_OPCODE(opcode);
+        EMIT_OPCODE(isSuper ? OPCODE_OPER_SUPER : OPCODE_OPER);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
         CHECK_STACKP();
         break;
     case EXPR_BINARY:
         emitCodeForExpr(expr->left, &isSuper, cgen);
         emitCodeForExpr(expr->right, 0, cgen);
-        if (isSuper) {
-            opcode = OPCODE_OPER_SUPER;
-        } else {
-            opcode = OPCODE_OPER;
-            --cgen->stackPointer;
-        }
-        EMIT_OPCODE(opcode);
+        EMIT_OPCODE(isSuper ? OPCODE_OPER_SUPER : OPCODE_OPER);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
+        --cgen->stackPointer;
         CHECK_STACKP();
         break;
     case EXPR_ID:
@@ -430,7 +403,6 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
 }
 
 static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
-    opcode_t opcode;
     Expr *arg;
     size_t argumentCount;
     int isSuper;
@@ -449,23 +421,20 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
         emitCodeForExpr(expr->right, 0, cgen);
     } else {
         /* __item__ { */
-        dupN(argumentCount + 1, cgen);
-        if (isSuper) {
-            opcode = OPCODE_CALL_SUPER;
-            cgen->stackPointer -= argumentCount - 1;
-        } else {
-            opcode = OPCODE_CALL;
-            cgen->stackPointer -= argumentCount;
-        }
-        EMIT_OPCODE(opcode);
+        EMIT_OPCODE(isSuper ? OPCODE_CALL_SUPER : OPCODE_CALL);
         encodeUnsignedInt((unsigned int)expr->left->oper, cgen);
         encodeUnsignedInt(argumentCount, cgen);
+        tallyPush(cgen); /* result */
+        if (0) {
+            /* leave receiver & arguments on the stack */
+            clean(argumentCount, cgen);
+        }
         /* } __item__ */
         
         if (expr->right) {
             emitCodeForExpr(expr->right, 0, cgen);
         } else if (expr->kind == EXPR_POSTOP) {
-            EMIT_OPCODE(OPCODE_DUP); ++cgen->stackPointer;
+            EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
             EMIT_OPCODE(OPCODE_ROT);
             encodeUnsignedInt(argumentCount + 3, cgen);
         }
@@ -477,16 +446,11 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
         }
     }
     ++argumentCount; /* new item value */
-    if (isSuper) {
-        opcode = OPCODE_CALL_SUPER;
-        cgen->stackPointer -= argumentCount - 1;
-    } else {
-        opcode = OPCODE_CALL;
-        cgen->stackPointer -= argumentCount;
-    }
-    EMIT_OPCODE(opcode);
+    EMIT_OPCODE(isSuper ? OPCODE_CALL_SUPER : OPCODE_CALL);
     encodeUnsignedInt((unsigned int)OPER_SET_ITEM, cgen);
     encodeUnsignedInt(argumentCount, cgen);
+    tallyPush(cgen); /* result */
+    clean(argumentCount, cgen);
     CHECK_STACKP();
     if (expr->kind == EXPR_POSTOP) {
         EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
@@ -530,7 +494,7 @@ static void emitBranchForOneExpr(Expr *expr, int cond, size_t label, size_t fall
          * branch-or-pop opcodes.
          */
         if (dup) {
-            EMIT_OPCODE(OPCODE_DUP); ++cgen->stackPointer;
+            EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
         }
         emitBranch(cond ? OPCODE_BRANCH_IF_TRUE : OPCODE_BRANCH_IF_FALSE, label, cgen);
         if (dup) {
@@ -659,7 +623,7 @@ static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabe
             tallyPush(cgen);
         }
         EMIT_OPCODE(OPCODE_RESTORE_SENDER);
-        EMIT_OPCODE(OPCODE_RET);
+        EMIT_OPCODE(OPCODE_RET_CALL);
         --cgen->stackPointer;
         break;
     case STMT_WHILE:
@@ -678,6 +642,7 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     Behavior *methodClass;
     Symbol *messageSelector;
     Object *function = 0;
+    size_t stackSize;
 
     assert(!cgen->currentMethod && "method definition not allowed here");
     
@@ -705,14 +670,22 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     if (!function) {
         EMIT_OPCODE(OPCODE_THUNK);
     }
+    
     EMIT_OPCODE(OPCODE_SAVE);
+    encodeUnsignedInt(stmt->u.method.argumentCount, cgen);
+    encodeUnsignedInt(stmt->u.method.localCount, cgen);
+    encodeUnsignedInt(cgen->stackSize, cgen); /* XXX: 'stackSize' is zero here */
+    
     emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
     emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
+    
+    /* XXX: How much stack space should be reserved for leaf
+       routines? */
+    cgen->stackSize += 1;
+    stackSize = cgen->stackSize;
 
-    cgen->currentMethod = SpkMethod_new(stmt->u.method.argumentCount,
-                                        stmt->u.method.localCount,
-                                        cgen->stackSize,
-                                        cgen->currentOffset);
+    /* now generate code for real */
+    cgen->currentMethod = SpkMethod_new(cgen->currentOffset);
     cgen->opcodesBegin = &cgen->currentMethod->opcodes[0];
     cgen->opcodesEnd = cgen->opcodesBegin;
     cgen->currentOffset = 0;
@@ -721,16 +694,19 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     if (!function) {
         EMIT_OPCODE(OPCODE_THUNK);
     }
+    
     EMIT_OPCODE(OPCODE_SAVE);
+    encodeUnsignedInt(stmt->u.method.argumentCount, cgen);
+    encodeUnsignedInt(stmt->u.method.localCount, cgen);
+    encodeUnsignedInt(stackSize, cgen);
+    
     emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
     emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
+    
+    cgen->stackSize += 1;
 
     assert(cgen->currentOffset == cgen->currentMethod->size);
-    assert(cgen->stackSize ==  cgen->currentMethod->stackSize);
-    
-    /* XXX: How much stack space should be reserved for leaf
-       routines? */
-    cgen->currentMethod->stackSize += 1;
+    assert(cgen->stackSize == stackSize);
     
     SpkBehavior_insertMethod(methodClass, messageSelector, cgen->currentMethod);
     cgen->currentMethod = 0;

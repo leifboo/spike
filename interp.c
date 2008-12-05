@@ -115,9 +115,6 @@ Object *SpkInterpreter_start(Object *entry) {
     
     callThunk = (Method *)malloc(sizeof(Method));
     callThunk->nativeCode = 0;
-    callThunk->argumentCount = 0;
-    callThunk->localCount = 0;
-    callThunk->stackSize = 0;
     callThunk->size = 1;
     callThunk->opcodes[0] = OPCODE_CALL_THUNK;
     ClassThunk->operCallTable[OPER_APPLY].method = callThunk;
@@ -126,26 +123,24 @@ Object *SpkInterpreter_start(Object *entry) {
     trampolineSize = 5;
     trampoline = (Method *)malloc(sizeof(Method) + trampolineSize*sizeof(opcode_t));
     trampoline->nativeCode = 0;
-    trampoline->argumentCount = 1;
-    trampoline->localCount = 0;
-    trampoline->stackSize = 1;
     trampoline->size = trampolineSize;
     ip = &trampoline->opcodes[0];
     *ip++ = OPCODE_PUSH_SELF;
     *ip++ = OPCODE_CALL;
     *ip++ = (opcode_t)OPER_APPLY;
     *ip++ = (opcode_t)0;
-    *ip++ = OPCODE_RETT;
+    *ip++ = OPCODE_RET_TRAMP;
     
-    context = SpkContext_new(contextSizeForMethod(trampoline));
+    context = SpkContext_new(2);
 
     context->caller = 0;
     context->pc = &trampoline->opcodes[0];
-    context->stackp = &context->variables[trampoline->stackSize];
+    context->stackp = &context->variables[2];
     context->homeContext = context;
     context->u.m.method = trampoline;
     context->u.m.methodClass = entry->klass;
     context->u.m.receiver = entry;
+    context->u.m.framep = context->stackp;
     
     fiber.nextLink = 0;
     fiber.suspendedContext = context;
@@ -189,36 +184,31 @@ Message *SpkMessage_new() {
     return newMessage;
 }
 
-Method *SpkMethod_new(size_t argumentCount,
-                      size_t localCount,
-                      size_t stackSize,
-                      size_t size) {
+Method *SpkMethod_new(size_t size) {
     Method *newMethod;
     
     newMethod = (Method *)malloc(sizeof(Method) + size*sizeof(opcode_t));
     newMethod->nativeCode = 0;
-    newMethod->argumentCount = argumentCount;
-    newMethod->localCount = localCount;
-    newMethod->stackSize = stackSize;
     newMethod->size = size;
     return newMethod;
 }
 
 Method *SpkMethod_newNative(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) {
     Method *newMethod;
-    size_t size, argumentCount;
-    opcode_t *ip;
+    size_t argumentCount, localCount, stackSize;
+    size_t size;
+    opcode_t ret, *ip;
     
     size = 0;
-    if (flags & SpkNativeCode_CALLABLE) {
+    if (flags & SpkNativeCode_CALL) {
         size += 2; /* thunk, ret */
     }
     if (flags & SpkNativeCode_LEAF) {
-        size += 1; /* trap */
+        size += 2; /* leaf */
     } else {
-        size += 3; /* save, trap, restore */
+        size += 5; /* save, restore */
     }
-    size += 1; /* ret */
+    size += 2; /* ret */
     
     switch (flags & SpkNativeCode_SIGNATURE_MASK) {
     case SpkNativeCode_ARGS_0: argumentCount = 0; break;
@@ -229,23 +219,37 @@ Method *SpkMethod_newNative(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) 
     
     newMethod = (Method *)malloc(sizeof(Method) + size*sizeof(opcode_t));
     newMethod->nativeCode = nativeCode;
-    newMethod->argumentCount = argumentCount;
-    newMethod->localCount = 0;
-    newMethod->stackSize = argumentCount + 1;
     newMethod->size = size;
     
     ip = &newMethod->opcodes[0];
-    if (flags & SpkNativeCode_CALLABLE) {
+    if (flags & SpkNativeCode_THUNK) {
         *ip++ = OPCODE_THUNK;
     }
     if (flags & SpkNativeCode_LEAF) {
-        *ip++ = OPCODE_TRAP_NATIVE;
+        *ip++ = OPCODE_LEAF;
+        *ip++ = (opcode_t)argumentCount;
     } else {
+        localCount = 0;
+        stackSize = argumentCount + 1;
         *ip++ = OPCODE_SAVE;
-        *ip++ = OPCODE_TRAP_NATIVE;
+        *ip++ = (opcode_t)argumentCount;
+        *ip++ = (opcode_t)localCount;
+        *ip++ = (opcode_t)stackSize;
         *ip++ = OPCODE_RESTORE_SENDER;
     }
-    *ip++ = OPCODE_RET;
+    
+    switch (flags & SpkNativeCode_MSC_MASK) {
+    case SpkNativeCode_OPER: ret = OPCODE_RET_OPER; break;
+    case SpkNativeCode_CALL: ret = OPCODE_RET_CALL; break;
+    case SpkNativeCode_ATTR: ret = OPCODE_RET_ATTR; break;
+    default: assert(0 && "missing message sending convention");
+    }
+    *ip++ = ret;
+    if (ret == OPCODE_RET_OPER) {
+        *ip++ = (opcode_t)argumentCount;
+    } else {
+        *ip++ = OPCODE_NOP;
+    }
     
     return newMethod;
 }
@@ -255,13 +259,16 @@ Method *SpkMethod_newNative(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) 
 /* contexts */
 
 Context *SpkContext_new(size_t size) {
-    return (Context *)malloc(sizeof(Context) + (size - 1) * sizeof(Object *));
+    Context *newContext;
+    
+    newContext = (Context *)malloc(sizeof(Context) + (size - 1) * sizeof(Object *));
+    newContext->base.size = size;
+    return newContext;
 }
 
 Context *SpkContext_blockCopy(Context *self, size_t numArgs, opcode_t *instructionPointer) {
     Context *home = self->homeContext;
-    size_t contextSize = contextSizeForMethod(home->u.m.method);
-    Context *newContext = SpkContext_new(contextSize);
+    Context *newContext = SpkContext_new(home->base.size);
     newContext->sender = 0;
     newContext->pc = instructionPointer;
     newContext->stackp = 0;
@@ -272,27 +279,21 @@ Context *SpkContext_blockCopy(Context *self, size_t numArgs, opcode_t *instructi
 }
 
 void SpkContext_init(Context *self, Context *activeContext) {
-    size_t contextSize;
-    
     if (self->u.b.nargs != 0) {
         assert(XXX);
     }
-    contextSize = contextSizeForMethod(self->homeContext->u.m.method);
     self->pc = self->u.b.startpc;
-    self->stackp = &self->variables[contextSize];
+    self->stackp = &self->variables[self->homeContext->base.size];
     self->sender = activeContext;
 }
 
 void SpkContext_initWithArg(Context *self, Object *argument, Context *activeContext) {
-    size_t contextSize;
-    
     if (self->u.b.nargs != 1) {
         assert(XXX);
     }
-    contextSize = contextSizeForMethod(self->homeContext->u.m.method);
     self->variables[0] = argument;
     self->pc = self->u.b.startpc;
-    self->stackp = &self->variables[contextSize - 1];
+    self->stackp = &self->variables[self->homeContext->base.size - 1];
     self->sender = activeContext;
 }
 
@@ -306,7 +307,6 @@ void SpkContext_initWithArg(Context *self, Object *argument, Context *activeCont
 #define UNPOP(nItems) (stackPointer -= nItems)
 #define PUSH(object) (*--stackPointer = (Object *)(object))
 #define STACK_TOP() (*stackPointer)
-#define STACK_VALUE(offset) (stackPointer[offset])
 
 #define INSTANCE_VARS(op) ((Object **)(((char *)op) + (op)->klass->instVarOffset))
 
@@ -377,7 +377,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
     instructionPointer = self->activeContext->pc;
     linkRegister = 0;
     stackPointer = self->activeContext->stackp;
-    framePointer = &homeContext->variables[method->stackSize]; /* XXX: inconsistent */
+    framePointer = homeContext->u.m.framep;
     instVarPointer = INSTANCE_VARS(receiver);
     globalPointer = INSTANCE_VARS((Object *)methodClass->module);
     self->newContext = 0;
@@ -418,6 +418,12 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             DECODE_UINT(index);
             PUSH(globalPointer[index]);
             break;
+        case OPCODE_PUSH_SUPER:
+            /* OPCODE_PUSH_SUPER is a pseudo-op equivalent to
+             * OPCODE_PUSH_SELF.  The receiver is always pushed onto
+             * the stack so that the stack clean-up machinery doesn't
+             * have to distinguish between sends and super-sends.
+             */
         case OPCODE_PUSH_SELF:     PUSH(receiver);             break;
         case OPCODE_PUSH_FALSE:    PUSH(Spk_false);            break;
         case OPCODE_PUSH_TRUE:     PUSH(Spk_true);             break;
@@ -428,14 +434,6 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             Object *temp;
             temp = STACK_TOP();
             PUSH(temp);
-            break; }
-        case OPCODE_DUP_N: {
-            Object **s;
-            size_t n;
-            DECODE_UINT(n);
-            s = stackPointer + n;
-            while (n--)
-                *--stackPointer = *--s;
             break; }
         case OPCODE_PUSH_INT: {
             long value;
@@ -518,6 +516,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
 /*** send opcodes -- operators ***/
         case OPCODE_OPER:
             operator = (unsigned int)(*instructionPointer++);
+            /* XXX: 'argumentCount' is always either 0 or 1 */
             argumentCount = operSelectors[operator].argumentCount;
             receiver = stackPointer[argumentCount];
             methodClass = receiver->klass;
@@ -597,26 +596,65 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             break;
 
 /*** save/restore/return opcodes ***/
-        case OPCODE_RET: {
-            /* ret/retl (blr) */
-            Object *ret = POP_OBJECT();
-            POP(method->argumentCount + 1);
-            PUSH(ret);
- ret:
+        case OPCODE_RET_OPER:
+            DECODE_UINT(argumentCount);
+            stackPointer[argumentCount + 1] = STACK_TOP();
+            POP(argumentCount + 1);
+            goto ret;
+        case OPCODE_RET_ATTR:
+            stackPointer[1] = STACK_TOP();
+            POP(1);
+        case OPCODE_RET_CALL:
+ ret:       /* ret/retl (blr) */
             instructionPointer = linkRegister;
             receiver = homeContext->u.m.receiver;
             method = homeContext->u.m.method;
             methodClass = homeContext->u.m.methodClass;
-            framePointer = &homeContext->variables[method->stackSize];
+            framePointer = homeContext->u.m.framep;
             instVarPointer = INSTANCE_VARS(receiver);
             globalPointer = INSTANCE_VARS((Object *)methodClass->module);
-            break; }
-        case OPCODE_RETT:
+            break;
+        case OPCODE_RET_TRAMP:
             /* return from trampoline */
             return POP_OBJECT();
             
+        case OPCODE_CLEAN:
+            /* clean the receiver & arguments from the stack after a call */
+            DECODE_UINT(argumentCount);
+            stackPointer[argumentCount + 1] = STACK_TOP();
+            POP(argumentCount + 1);
+            break;
+            
+        case OPCODE_LEAF: {
+            size_t mArgumentCount;
+            DECODE_UINT(mArgumentCount);
+            if (mArgumentCount != argumentCount) {
+                TRAP(self->selectorWrongNumberOfArguments, 0);
+            }
+            assert(method->nativeCode);
+            if (method->nativeCode) {
+                Object *result, *arg1 = 0, *arg2 = 0;
+                switch (argumentCount) {
+                case 0:
+                    break;
+                case 1:
+                    arg1 = stackPointer[0];
+                    break;
+                case 2:
+                    arg1 = stackPointer[1];
+                    arg2 = stackPointer[0];
+                    break;
+                default:
+                    assert(XXX);
+                }
+                result = (*method->nativeCode)(receiver, arg1, arg2);
+                PUSH(result);
+            }
+            break; }
+            
         case OPCODE_SAVE: {
             /* save */
+            size_t mArgumentCount, localCount, stackSize;
             size_t contextSize, count;
             Context *newContext;
             Object **p;
@@ -624,7 +662,11 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             /* Create a new context for the currently
              * executing method (cf. activateNewMethod).
              */
-            contextSize = contextSizeForMethod(method);
+            DECODE_UINT(mArgumentCount);
+            DECODE_UINT(localCount);
+            DECODE_UINT(stackSize);
+            
+            contextSize = stackSize + mArgumentCount + localCount;
             newContext = SpkContext_new(contextSize);
 
             newContext->sender = self->activeContext;
@@ -635,13 +677,12 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             newContext->u.m.receiver = receiver;
             
             /* initialize the stack */
-            count = method->stackSize;
+            count = stackSize;
             for (p = &newContext->variables[0]; count > 0; ++p, --count) {
                 *p = Spk_uninit;
             }
-            newContext->stackp = p;
-            count = method->argumentCount;
-            /* XXX: What about leaf methods? */
+            newContext->stackp = newContext->u.m.framep = p;
+            count = mArgumentCount;
             if (count != argumentCount) {
                 TRAP(self->selectorWrongNumberOfArguments, 0);
             }
@@ -650,7 +691,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 *p = stackPointer[count - 1];
             }
             /* initialize locals */
-            count = method->localCount;
+            count = localCount;
             for ( ; count > 0; ++p, --count) {
                 *p = Spk_uninit;
             }
@@ -658,8 +699,21 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             self->activeContext->pc = linkRegister;
             self->activeContext->stackp = stackPointer;
             
-            framePointer = stackPointer = newContext->stackp;
+            stackPointer = newContext->stackp;
+            framePointer = newContext->u.m.framep;
             self->activeContext = homeContext = newContext;
+            
+            if (method->nativeCode) {
+                Object *result, *arg1 = 0, *arg2 = 0;
+                switch (argumentCount) {
+                case 2: arg2 = framePointer[1];
+                case 1: arg1 = framePointer[0];
+                case 0: break;
+                default: assert(XXX);
+                }
+                result = (*method->nativeCode)(receiver, arg1, arg2);
+                PUSH(result);
+            }
             break; }
             
         case OPCODE_RESTORE_SENDER: {
@@ -679,13 +733,13 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             }
             goto restore; }
         case OPCODE_RESTORE_CALLER: {
-            Object *ret;
+            Object *result;
             /* restore caller */
             self->activeContext->sender = 0;
             self->activeContext->pc = 0;
             self->newContext = self->activeContext->caller;
  restore:
-            ret = POP_OBJECT();
+            result = POP_OBJECT();
 
             self->activeContext = self->newContext; self->newContext = 0;
             homeContext = self->activeContext->homeContext;
@@ -694,7 +748,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             stackPointer = self->activeContext->stackp;
             framePointer = 0;
             
-            PUSH(ret);
+            PUSH(result);
             break; }
             
 /*** thunk opcodes ***/
@@ -706,8 +760,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             thunk->method = method;
             thunk->methodClass = methodClass;
             thunk->pc = instructionPointer;
-            POP(1); /* receiver */
-            PUSH(thunk);
+            stackPointer[0] = (Object *)thunk; /* replace receiver */
             goto ret; }
         case OPCODE_CALL_THUNK: {
             Thunk *thunk = (Thunk *)(receiver);
@@ -717,32 +770,13 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             instructionPointer = thunk->pc;
             goto jump; }
             
-/*** traps ***/
-        case OPCODE_TRAP_NATIVE: {
-            Object *result, *arg1 = 0, *arg2 = 0;
-            switch (method->argumentCount) {
-            case 0:
-                break;
-            case 1:
-                arg1 = STACK_VALUE(0);
-                break;
-            case 2:
-                arg1 = STACK_VALUE(1);
-                arg2 = STACK_VALUE(0);
-                break;
-            default:
-                assert(XXX);
-            }
-            result = (*method->nativeCode)(receiver, arg1, arg2);
-            PUSH(result);
-            break; }
-            
 /*** debugging ***/
         case OPCODE_CHECK_STACKP: {
             size_t offset;
             DECODE_UINT(offset);
-            assert(method != self->activeContext->u.m.method /* in leaf routine */ ||
-                   stackPointer == &self->activeContext->variables[method->stackSize] - offset);
+            assert(method != self->activeContext->u.m.method || /* in leaf routine */
+                   /* XXX: What about BlockContexts? */
+                   stackPointer == homeContext->u.m.framep - offset);
             break; }
         }
     }

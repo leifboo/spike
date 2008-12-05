@@ -245,11 +245,11 @@ static struct PseudoVariable {
     opcode_t pushOpcode;
 } pseudoVariables[] = {
     { "self",    OPCODE_PUSH_SELF },
+    { "super",   OPCODE_PUSH_SUPER },
     { "false",   OPCODE_PUSH_FALSE },
     { "true",    OPCODE_PUSH_TRUE },
     { "null",    OPCODE_PUSH_NULL },
     { "context", OPCODE_PUSH_CONTEXT },
-    { "super",   0 },
     { 0, 0 }
 };
 

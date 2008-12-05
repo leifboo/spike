@@ -84,13 +84,13 @@ SpkClassTmpl ClassBooleanTmpl = {
 
 static SpkMethodTmpl FalseMethods[] = {
     /* operators */
-    { "__lneg__", SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &False_lneg },
-    { "__bneg__", SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &False_bneg },
-    { "__band__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &False_band },
-    { "__bxor__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &False_bxor },
-    { "__bor__",  SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &False_bor  },
+    { "__lneg__", SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &False_lneg },
+    { "__bneg__", SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &False_bneg },
+    { "__band__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &False_band },
+    { "__bxor__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &False_bxor },
+    { "__bor__",  SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &False_bor  },
     /* other */
-    { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &False_print },
+    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &False_print },
     { 0, 0, 0}
 };
 
@@ -106,13 +106,13 @@ SpkClassTmpl ClassFalseTmpl = {
 
 static SpkMethodTmpl TrueMethods[] = {
     /* operators */
-    { "__lneg__", SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &True_lneg },
-    { "__bneg__", SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &True_bneg },
-    { "__band__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &True_band },
-    { "__bxor__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &True_bxor },
-    { "__bor__",  SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &True_bor  },
+    { "__lneg__", SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &True_lneg },
+    { "__bneg__", SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &True_bneg },
+    { "__band__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &True_band },
+    { "__bxor__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &True_bxor },
+    { "__bor__",  SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &True_bor  },
     /* other */
-    { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &True_print },
+    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &True_print },
     { 0, 0, 0}
 };
 

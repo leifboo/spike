@@ -119,10 +119,10 @@ static Object *Class_print(Object *_self, Object *arg0, Object *arg1) {
 /* class template */
 
 static SpkMethodTmpl methods[] = {
-    { "name", SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Class_name },
-    { "new", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Class_new },
-    { "new_", SpkNativeCode_ARGS_1 | SpkNativeCode_CALLABLE, &Class_new_ },
-    { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Class_print },
+    { "name", SpkNativeCode_ATTR | SpkNativeCode_LEAF, &Class_name },
+    { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Class_new },
+    { "new_", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &Class_new_ },
+    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Class_print },
     { 0, 0, 0}
 };
 

@@ -24,7 +24,7 @@ static Object *Module_print(Object *self, Object *arg0, Object *arg1) {
 /* class template */
 
 static SpkMethodTmpl methods[] = {
-    { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Module_print },
+    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Module_print },
     { 0, 0, 0}
 };
 

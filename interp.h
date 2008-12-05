@@ -22,13 +22,13 @@ enum Opcode {
     OPCODE_PUSH_INST_VAR,
     OPCODE_PUSH_GLOBAL,
     OPCODE_PUSH_SELF,
+    OPCODE_PUSH_SUPER,
     OPCODE_PUSH_FALSE,
     OPCODE_PUSH_TRUE,
     OPCODE_PUSH_NULL,
     OPCODE_PUSH_VOID,
     OPCODE_PUSH_CONTEXT,
     OPCODE_DUP,
-    OPCODE_DUP_N,
     OPCODE_PUSH_INT,
     OPCODE_STORE_LOCAL,
     OPCODE_STORE_INST_VAR,
@@ -45,14 +45,17 @@ enum Opcode {
     OPCODE_CALL_SUPER,
     OPCODE_ATTR,
     OPCODE_ATTR_SUPER,
-    OPCODE_RET,
-    OPCODE_RETT,
+    OPCODE_RET_OPER,
+    OPCODE_RET_CALL,
+    OPCODE_RET_ATTR,
+    OPCODE_RET_TRAMP,
+    OPCODE_CLEAN,
+    OPCODE_LEAF,
     OPCODE_SAVE,
     OPCODE_RESTORE_SENDER,
     OPCODE_RESTORE_CALLER,
     OPCODE_THUNK,
     OPCODE_CALL_THUNK,
-    OPCODE_TRAP_NATIVE,
     OPCODE_CHECK_STACKP,
     
     NUM_OPCODES
@@ -63,7 +66,7 @@ typedef Object Null, Uninit, Void;
 
 
 struct Context {
-    Object base;
+    VariableObject base;
     Context *caller; /* a.k.a. "sender" */
     opcode_t *pc;
     Object **stackp;
@@ -73,6 +76,7 @@ struct Context {
             Method *method;
             struct Behavior *methodClass;
             Object *receiver;
+            Object **framep;
         } m;
         struct /* BlockContext */ {
             size_t nargs;
@@ -116,8 +120,18 @@ typedef enum SpkNativeCodeFlags {
     SpkNativeCode_ARGS_TUPLE_KEYWORDS = 0x0007,
     SpkNativeCode_SIGNATURE_MASK      = 0x000f,
     
-    SpkNativeCode_LEAF                = 0x0010,
-    SpkNativeCode_CALLABLE            = 0x0020
+    SpkNativeCode_OPER                = 0x0010,
+    SpkNativeCode_CALL                = 0x0020,
+    SpkNativeCode_ATTR                = 0x0030,
+    SpkNativeCode_MSC_MASK            = 0x0030,
+    
+    SpkNativeCode_LEAF                = 0x0040,
+    SpkNativeCode_THUNK               = 0x0080,
+    
+    SpkNativeCode_UNARY_OPER          = SpkNativeCode_OPER | SpkNativeCode_ARGS_0,
+    SpkNativeCode_BINARY_OPER         = SpkNativeCode_OPER | SpkNativeCode_ARGS_1,
+    SpkNativeCode_TERNARY_OPER        = SpkNativeCode_OPER | SpkNativeCode_ARGS_2,
+    SpkNativeCode_METH_ATTR           = SpkNativeCode_CALL | SpkNativeCode_THUNK
 } SpkNativeCodeFlags;
 
 typedef Object *(*SpkNativeCode)(Object *, Object *, Object *);
@@ -125,14 +139,9 @@ typedef Object *(*SpkNativeCode)(Object *, Object *, Object *);
 struct Method {
     Object base;
     SpkNativeCode nativeCode;
-    size_t argumentCount;
-    size_t localCount;
-    size_t stackSize;
     size_t size;
     opcode_t opcodes[1]; /* stretchy */
 };
-
-#define contextSizeForMethod(m) ((m)->stackSize + (m)->argumentCount + (m)->localCount)
 
 
 typedef struct Thunk {
@@ -196,7 +205,7 @@ extern struct SpkClassTmpl ClassMessageTmpl, ClassThunkTmpl, ClassNullTmpl, Clas
 
 
 Message *SpkMessage_new(void);
-Method *SpkMethod_new(size_t, size_t, size_t, size_t);
+Method *SpkMethod_new(size_t);
 Method *SpkMethod_newNative(SpkNativeCodeFlags, SpkNativeCode);
 
 Context *SpkContext_new(size_t);

@@ -41,8 +41,8 @@ static Object *Metaclass_print(Object *self, Object *arg0, Object *arg1) {
 /* class template */
 
 static SpkMethodTmpl methods[] = {
-    { "new",   SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Metaclass_new   },
-    { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Metaclass_print },
+    { "new",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Metaclass_new   },
+    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Metaclass_print },
     { 0, 0, 0}
 };
 

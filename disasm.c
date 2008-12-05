@@ -47,6 +47,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
     instructionPointer = begin;
     
     while (instructionPointer < end) {
+        opcode_t opcode;
         long intValue = 0, *pIntValue = 0;
         char *keyword = 0;
         char *selector = 0;
@@ -54,14 +55,16 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         size_t index = 0;
         ptrdiff_t displacement = 0;
         size_t argumentCount = 0, *pArgumentCount = 0;
+        size_t localCount = 0, stackSize = 0;
         size_t count = 0, *pCount = 0;
         unsigned int operator = 0;
         size_t label = 0, *pLabel = 0;
         int i;
         
         ip = instructionPointer;
+        opcode = *instructionPointer++;
         
-        switch (*instructionPointer++) {
+        switch (opcode) {
             
         case OPCODE_NOP: mnemonic = "nop"; break;
             
@@ -73,17 +76,13 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             break;
             
         case OPCODE_PUSH_SELF:     mnemonic = "push"; keyword = "self";        break;
+        case OPCODE_PUSH_SUPER:    mnemonic = "push"; keyword = "super";       break;
         case OPCODE_PUSH_FALSE:    mnemonic = "push"; keyword = "false";       break;
         case OPCODE_PUSH_TRUE:     mnemonic = "push"; keyword = "true";        break;
         case OPCODE_PUSH_NULL:     mnemonic = "push"; keyword = "null";        break;
         case OPCODE_PUSH_VOID:     mnemonic = "push"; keyword = "void";        break;
         case OPCODE_PUSH_CONTEXT:  mnemonic = "push"; keyword = "thisContext"; break;
         case OPCODE_DUP:           mnemonic = "dup";                           break;
-        case OPCODE_DUP_N:
-            mnemonic = "dupn";
-            DECODE_UINT(count);
-            pCount = &count;
-            break;
             
         case OPCODE_PUSH_INT:
             mnemonic = "push";
@@ -99,6 +98,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             break;
             
         case OPCODE_POP: mnemonic = "pop"; break;
+            
         case OPCODE_ROT:
             mnemonic = "rot";
             DECODE_UINT(count);
@@ -139,15 +139,39 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             DECODE_UINT(index);
             break;
             
-        case OPCODE_RET:            mnemonic = "ret";   break;
-        case OPCODE_RETT:           mnemonic = "rett";  break;
-        case OPCODE_SAVE:           mnemonic = "save";  break;
+        case OPCODE_RET_ATTR:       mnemonic = "rta";  break;
+        case OPCODE_RET_CALL:       mnemonic = "rtc";  break;
+        case OPCODE_RET_TRAMP:      mnemonic = "rtt";  break;
+            
+        case OPCODE_RET_OPER:
+            mnemonic = "rto";
+            operator = (unsigned int)(*instructionPointer++);
+            selector = operSelectors[operator].messageSelectorStr;
+            break;
+        
+        case OPCODE_CLEAN:
+            mnemonic = "clean";
+            DECODE_UINT(count);
+            pCount = &count;
+            break;
+            
+        case OPCODE_LEAF:
+            mnemonic = "leaf";
+            DECODE_UINT(argumentCount);
+            break;
+            
+        case OPCODE_SAVE:
+            mnemonic = "save";
+            DECODE_UINT(argumentCount);
+            DECODE_UINT(localCount);
+            DECODE_UINT(stackSize);
+            break;
+            
         case OPCODE_RESTORE_SENDER: mnemonic = "restore"; keyword = "sender"; break;
         case OPCODE_RESTORE_CALLER: mnemonic = "restore"; keyword = "caller"; break;
         case OPCODE_THUNK:          mnemonic = "thunk"; break;
         case OPCODE_CALL_THUNK:     mnemonic = "ct";    break;
-        case OPCODE_TRAP_NATIVE:    mnemonic = "trap";    keyword = "native"; break;
-        
+            
         case OPCODE_CHECK_STACKP:
             mnemonic = "check";
             base = "stackp";
@@ -167,7 +191,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         fprintf(out, "\t%s", mnemonic);
         if (pIntValue) {
             fprintf(out, "\t%ld", *pIntValue);
-        } else if (count) {
+        } else if (pCount) {
             fprintf(out, "\t%lu", *pCount);
         } else if (keyword) {
             fprintf(out, "\t%s", keyword);
@@ -179,6 +203,10 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             fprintf(out, "\t%04x", *pLabel);
         } else if (base) {
             fprintf(out, "\t%s[%u]", base, index);
+        } else if (opcode == OPCODE_LEAF) {
+            fprintf(out, "\t%lu", argumentCount);
+        } else if (opcode == OPCODE_SAVE) {
+            fprintf(out, "\t%lu,%lu,%lu", argumentCount, localCount, stackSize);
         }
         fprintf(out, "\n");
     }

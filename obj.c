@@ -41,10 +41,10 @@ static Object *Object_print(Object *self, Object *arg0, Object *arg1) {
 /* class template */
 
 static SpkMethodTmpl methods[] = {
-    { "__eq__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Object_eq },
-    { "__ne__", SpkNativeCode_ARGS_1, &Object_ne },
-    { "class", SpkNativeCode_ARGS_0 | SpkNativeCode_LEAF, &Object_class },
-    { "print", SpkNativeCode_ARGS_0 | SpkNativeCode_CALLABLE, &Object_print },
+    { "__eq__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Object_eq },
+    { "__ne__", SpkNativeCode_BINARY_OPER, &Object_ne },
+    { "class", SpkNativeCode_ATTR | SpkNativeCode_LEAF, &Object_class },
+    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Object_print },
     { 0, 0, 0}
 };
 
