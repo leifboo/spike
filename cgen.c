@@ -15,13 +15,17 @@
 #include <string.h>
 
 
+/* XXX: This is arbitrary. */
+#define LEAF_STACK_SPACE (4)
+
+
 #if DEBUG_STACKP
 /* Emit debug opcodes which check to see whether the stack depth at
  * runtime is what the compiler thought it should be.
  */
 #define CHECK_STACKP() \
-    EMIT_OPCODE(OPCODE_CHECK_STACKP); \
-    encodeUnsignedInt(cgen->stackPointer, cgen)
+    do { EMIT_OPCODE(OPCODE_CHECK_STACKP); \
+    encodeUnsignedInt(cgen->stackPointer, cgen); } while (0)
 #else
 #define CHECK_STACKP()
 #endif
@@ -30,9 +34,13 @@
 typedef struct CodeGen {
     Behavior *firstClass, *lastClass, *currentClass;
     Method *currentMethod;
+    Stmt *currentMethodDef;
     size_t currentOffset;
     opcode_t *opcodesBegin, *opcodesEnd;
     size_t stackPointer, stackSize;
+    unsigned int nMessageSends;
+    unsigned int nContextRefs;
+    int inLeaf;
     Object **data;
     unsigned int dataSize;
     Object **rodata;
@@ -45,16 +53,16 @@ typedef struct CodeGen {
 /* opcodes */
 
 #define EMIT_OPCODE(opcode) \
-if (cgen->opcodesEnd) *cgen->opcodesEnd++ = (opcode); \
-cgen->currentOffset++
+do { if (cgen->opcodesEnd) *cgen->opcodesEnd++ = (opcode); \
+cgen->currentOffset++; } while (0)
 
 #define SET_OFFSET(n) \
-if (cgen->opcodesEnd) assert((n)->codeOffset == cgen->currentOffset); \
-else (n)->codeOffset = cgen->currentOffset;
+do { if (cgen->opcodesEnd) assert((n)->codeOffset == cgen->currentOffset); \
+else (n)->codeOffset = cgen->currentOffset; } while (0)
 
 #define SET_END(n) \
-if (cgen->opcodesEnd) assert((n)->endLabel == cgen->currentOffset); \
-else (n)->endLabel = cgen->currentOffset;
+do { if (cgen->opcodesEnd) assert((n)->endLabel == cgen->currentOffset); \
+else (n)->endLabel = cgen->currentOffset; } while (0)
 
 static void encodeUnsignedInt(unsigned long value, CodeGen *cgen) {
     opcode_t byte;
@@ -130,6 +138,15 @@ static void tallyPush(CodeGen *cgen) {
     CHECK_STACKP();
 }
 
+static unsigned int indexOfVar(Expr *def, opcode_t opcode, CodeGen *cgen) {
+    /* In leaf methods, the arguments are reversed. */
+    return
+        (cgen->inLeaf &&
+         (opcode == OPCODE_PUSH_LOCAL || opcode == OPCODE_STORE_LOCAL))
+        ? cgen->currentMethodDef->u.method.argumentCount - def->u.def.index - 1
+        : def->u.def.index;
+}
+
 static void push(Expr *expr, int *super, CodeGen *cgen) {
     opcode_t opcode;
     Expr *def;
@@ -140,9 +157,14 @@ static void push(Expr *expr, int *super, CodeGen *cgen) {
     if (def->u.def.level == 0) {
         /* built-in */
         assert(def->u.def.pushOpcode);
-        if (def->u.def.pushOpcode == OPCODE_PUSH_SUPER) {
+        switch (def->u.def.pushOpcode) {
+        case OPCODE_PUSH_SUPER:
             assert(super && "invalid use of 'super'");
             *super = 1;
+            break;
+        case OPCODE_PUSH_CONTEXT:
+            ++cgen->nContextRefs;
+            break;
         }
         EMIT_OPCODE(def->u.def.pushOpcode);
         tallyPush(cgen);
@@ -165,7 +187,7 @@ static void push(Expr *expr, int *super, CodeGen *cgen) {
         }
     }
     EMIT_OPCODE(opcode);
-    encodeUnsignedInt(def->u.def.index, cgen);
+    encodeUnsignedInt(indexOfVar(def, opcode, cgen), cgen);
     tallyPush(cgen);
 }
 
@@ -191,7 +213,19 @@ static void store(Expr *var, CodeGen *cgen) {
         }
     }
     EMIT_OPCODE(opcode);
-    encodeUnsignedInt(def->u.def.index, cgen);
+    encodeUnsignedInt(indexOfVar(def, opcode, cgen), cgen);
+}
+
+static void save(Stmt *stmt, CodeGen *cgen) {
+    EMIT_OPCODE(OPCODE_SAVE);
+    encodeUnsignedInt(stmt->u.method.argumentCount, cgen);
+    encodeUnsignedInt(stmt->u.method.localCount, cgen);
+    encodeUnsignedInt(cgen->stackSize, cgen);
+}
+
+static void leaf(Stmt *stmt, CodeGen *cgen) {
+    EMIT_OPCODE(OPCODE_LEAF);
+    encodeUnsignedInt(stmt->u.method.argumentCount, cgen);
 }
 
 static void clean(size_t argumentCount, CodeGen *cgen) {
@@ -282,6 +316,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
              arg = arg->nextArg, ++argumentCount) {
             emitCodeForExpr(arg, 0, cgen);
         }
+        ++cgen->nMessageSends;
         EMIT_OPCODE(isSuper ? OPCODE_CALL_SUPER : OPCODE_CALL);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
         encodeUnsignedInt(argumentCount, cgen);
@@ -291,6 +326,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         break;
     case EXPR_ATTR:
         emitCodeForExpr(expr->left, &isSuper, cgen);
+        ++cgen->nMessageSends;
         EMIT_OPCODE(isSuper ? OPCODE_ATTR_SUPER : OPCODE_ATTR);
         index = LITERAL_INDEX((Object *)expr->sym->sym, cgen);
         encodeUnsignedInt(index, cgen);
@@ -300,6 +336,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         switch (expr->left->kind) {
         case EXPR_NAME:
             emitCodeForExpr(expr->left, 0, cgen);
+            ++cgen->nMessageSends;
             EMIT_OPCODE(OPCODE_OPER);
             encodeUnsignedInt((unsigned int)expr->oper, cgen);
             store(expr->left, cgen);
@@ -317,6 +354,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         case EXPR_NAME:
             emitCodeForExpr(expr->left, 0, cgen);
             EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
+            ++cgen->nMessageSends;
             EMIT_OPCODE(OPCODE_OPER);
             encodeUnsignedInt((unsigned int)expr->oper, cgen);
             store(expr->left, cgen);
@@ -332,6 +370,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         break;
     case EXPR_UNARY:
         emitCodeForExpr(expr->left, &isSuper, cgen);
+        ++cgen->nMessageSends;
         EMIT_OPCODE(isSuper ? OPCODE_OPER_SUPER : OPCODE_OPER);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
         CHECK_STACKP();
@@ -339,6 +378,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
     case EXPR_BINARY:
         emitCodeForExpr(expr->left, &isSuper, cgen);
         emitCodeForExpr(expr->right, 0, cgen);
+        ++cgen->nMessageSends;
         EMIT_OPCODE(isSuper ? OPCODE_OPER_SUPER : OPCODE_OPER);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
         --cgen->stackPointer;
@@ -351,6 +391,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         EMIT_OPCODE(OPCODE_ID);
         --cgen->stackPointer;
         if (expr->kind == EXPR_NI) {
+            ++cgen->nMessageSends;
             EMIT_OPCODE(OPCODE_OPER);
             encodeUnsignedInt(OPER_LNEG, cgen);
         }
@@ -382,6 +423,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
             } else {
                 emitCodeForExpr(expr->left, 0, cgen);
                 emitCodeForExpr(expr->right, 0, cgen);
+                ++cgen->nMessageSends;
                 EMIT_OPCODE(OPCODE_OPER);
                 encodeUnsignedInt((unsigned int)expr->oper, cgen);
                 --cgen->stackPointer;
@@ -421,6 +463,7 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
         emitCodeForExpr(expr->right, 0, cgen);
     } else {
         /* __item__ { */
+        ++cgen->nMessageSends;
         EMIT_OPCODE(isSuper ? OPCODE_CALL_SUPER : OPCODE_CALL);
         encodeUnsignedInt((unsigned int)expr->left->oper, cgen);
         encodeUnsignedInt(argumentCount, cgen);
@@ -439,6 +482,7 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
             encodeUnsignedInt(argumentCount + 3, cgen);
         }
         
+        ++cgen->nMessageSends;
         EMIT_OPCODE(OPCODE_OPER);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
         if (expr->right) {
@@ -446,6 +490,7 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
         }
     }
     ++argumentCount; /* new item value */
+    ++cgen->nMessageSends;
     EMIT_OPCODE(isSuper ? OPCODE_CALL_SUPER : OPCODE_CALL);
     encodeUnsignedInt((unsigned int)OPER_SET_ITEM, cgen);
     encodeUnsignedInt(argumentCount, cgen);
@@ -622,7 +667,7 @@ static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabe
             EMIT_OPCODE(OPCODE_PUSH_VOID);
             tallyPush(cgen);
         }
-        EMIT_OPCODE(OPCODE_RESTORE_SENDER);
+        if (!cgen->inLeaf) EMIT_OPCODE(OPCODE_RESTORE_SENDER);
         EMIT_OPCODE(OPCODE_RET_CALL);
         --cgen->stackPointer;
         break;
@@ -637,6 +682,32 @@ static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabe
     CHECK_STACKP();
 }
 
+static void rewind(CodeGen *cgen) {
+    if (cgen->currentMethod) {
+        cgen->opcodesBegin = &cgen->currentMethod->opcodes[0];
+        cgen->opcodesEnd = cgen->opcodesBegin;
+        cgen->currentOffset = 0;
+        cgen->stackPointer = cgen->stackSize = 0;
+        cgen->nMessageSends = 0;
+        cgen->nContextRefs = 0;
+    } else {
+        cgen->currentOffset = 0;
+        cgen->opcodesBegin = cgen->opcodesEnd = 0;
+        cgen->stackPointer = cgen->stackSize = 0;
+        cgen->nMessageSends = 0;
+        cgen->nContextRefs = 0;
+        cgen->inLeaf = 0;
+    }
+}
+
+static int isLeafMethod(Stmt *stmt, CodeGen *cgen) {
+    return
+        cgen->nMessageSends == 0 &&
+        cgen->nContextRefs == 0 &&
+        cgen->stackSize <= LEAF_STACK_SPACE &&
+        stmt->u.method.localCount == 0;
+}
+
 static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     Stmt sentinel;
     Behavior *methodClass;
@@ -646,6 +717,8 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
 
     assert(!cgen->currentMethod && "method definition not allowed here");
     
+    cgen->currentMethodDef = stmt;
+
     if (cgen->currentClass) {
         methodClass = cgen->currentClass;
         messageSelector = stmt->u.method.name->sym;
@@ -661,57 +734,59 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     
     memset(&sentinel, 0, sizeof(sentinel));
     sentinel.kind = STMT_RETURN;
-
-    cgen->currentOffset = 0;
-    cgen->opcodesBegin = cgen->opcodesEnd = 0;
-    cgen->stackPointer = cgen->stackSize = 0;
+    
+    rewind(cgen);
     
     /* dry run to compute offsets */
-    if (!function) {
-        EMIT_OPCODE(OPCODE_THUNK);
-    }
-    
-    EMIT_OPCODE(OPCODE_SAVE);
-    encodeUnsignedInt(stmt->u.method.argumentCount, cgen);
-    encodeUnsignedInt(stmt->u.method.localCount, cgen);
-    encodeUnsignedInt(cgen->stackSize, cgen); /* XXX: 'stackSize' is zero here */
+    if (!function) EMIT_OPCODE(OPCODE_THUNK);
+    save(stmt, cgen); /* XXX: 'stackSize' is zero here */
     
     emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
     emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
     
-    /* XXX: How much stack space should be reserved for leaf
-       routines? */
-    cgen->stackSize += 1;
-    stackSize = cgen->stackSize;
+    if (isLeafMethod(stmt, cgen)) {
+        stackSize = cgen->stackSize;
+        
+        /* re-compute offsets w/o save & restore */
+        rewind(cgen);
+        cgen->inLeaf = 1;
+        if (!function) EMIT_OPCODE(OPCODE_THUNK);
+        leaf(stmt, cgen);
+        emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
+        emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
+        
+        /* now generate code for real */
+        cgen->currentMethod = SpkMethod_new(cgen->currentOffset);
+        rewind(cgen);
+        if (!function) EMIT_OPCODE(OPCODE_THUNK);
+        leaf(stmt, cgen);
+        emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
+        emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
 
-    /* now generate code for real */
-    cgen->currentMethod = SpkMethod_new(cgen->currentOffset);
-    cgen->opcodesBegin = &cgen->currentMethod->opcodes[0];
-    cgen->opcodesEnd = cgen->opcodesBegin;
-    cgen->currentOffset = 0;
-    cgen->stackPointer = cgen->stackSize = 0;
+    } else {
+        stackSize = cgen->stackSize + LEAF_STACK_SPACE;
+
+        /* now generate code for real */
+        cgen->currentMethod = SpkMethod_new(cgen->currentOffset);
+        rewind(cgen);
     
-    if (!function) {
-        EMIT_OPCODE(OPCODE_THUNK);
+        if (!function) EMIT_OPCODE(OPCODE_THUNK);
+        cgen->stackSize = stackSize;
+        save(stmt, cgen);
+        cgen->stackSize = 0;
+        
+        emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
+        emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
+        cgen->stackSize += LEAF_STACK_SPACE;
     }
-    
-    EMIT_OPCODE(OPCODE_SAVE);
-    encodeUnsignedInt(stmt->u.method.argumentCount, cgen);
-    encodeUnsignedInt(stmt->u.method.localCount, cgen);
-    encodeUnsignedInt(stackSize, cgen);
-    
-    emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
-    emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
-    
-    cgen->stackSize += 1;
 
     assert(cgen->currentOffset == cgen->currentMethod->size);
     assert(cgen->stackSize == stackSize);
     
     SpkBehavior_insertMethod(methodClass, messageSelector, cgen->currentMethod);
     cgen->currentMethod = 0;
-    cgen->currentOffset = 0;
-    cgen->opcodesBegin = cgen->opcodesEnd = 0;
+    cgen->currentMethodDef = 0;
+    rewind(cgen);
 }
 
 static void emitCodeForClass(Stmt *stmt, CodeGen *cgen) {

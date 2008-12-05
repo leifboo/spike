@@ -631,7 +631,6 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             if (mArgumentCount != argumentCount) {
                 TRAP(self->selectorWrongNumberOfArguments, 0);
             }
-            assert(method->nativeCode);
             if (method->nativeCode) {
                 Object *result, *arg1 = 0, *arg2 = 0;
                 switch (argumentCount) {
