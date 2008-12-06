@@ -101,7 +101,7 @@ static void bootstrap() {
 
 int main(int argc, char **argv) {
     int i, showHelp, error, disassemble;
-    char *arg, *sourceFilename ;
+    char *arg, *sourceFilename;
     Stmt *tree;
     Module *module;
     Object *entry, *result;

@@ -46,6 +46,8 @@ enum Opcode {
     OPCODE_CALL_SUPER,
     OPCODE_ATTR,
     OPCODE_ATTR_SUPER,
+    OPCODE_ATTR_VAR,
+    OPCODE_ATTR_VAR_SUPER,
     OPCODE_RET,
     OPCODE_RET_LEAF,
     OPCODE_RET_TRAMP,
@@ -180,6 +182,7 @@ typedef struct Interpreter {
     struct Symbol *selectorCannotReturn;
     struct Symbol *selectorDoesNotUnderstand;
     struct Symbol *selectorMustBeBoolean;
+    struct Symbol *selectorMustBeSymbol;
     struct Symbol *selectorNoRunnableFiber;
     struct Symbol *selectorUnknownOpcode;
     struct Symbol *selectorWrongNumberOfArguments;

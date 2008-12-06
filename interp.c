@@ -168,6 +168,7 @@ void SpkInterpreter_init(Interpreter *self, ProcessorScheduler *aScheduler) {
     self->selectorCannotReturn           = SpkSymbol_get("cannotReturn");
     self->selectorDoesNotUnderstand      = SpkSymbol_get("doesNotUnderstand");
     self->selectorMustBeBoolean          = SpkSymbol_get("mustBeBoolean");
+    self->selectorMustBeSymbol           = SpkSymbol_get("mustBeSymbol");
     self->selectorNoRunnableFiber        = SpkSymbol_get("noRunnableFiber");
     self->selectorUnknownOpcode          = SpkSymbol_get("unknownOpcode");
     self->selectorWrongNumberOfArguments = SpkSymbol_get("wrongNumberOfArguments");
@@ -594,6 +595,22 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 TRAP(self->selectorDoesNotUnderstand, (Object *)message);
             } while (0);
             break;
+            
+/*** send opcodes -- "obj.*attr" ***/
+        case OPCODE_ATTR_VAR:
+            receiver = stackPointer[1];
+            methodClass = receiver->klass;
+ perform:
+            if (stackPointer[0]->klass != ClassSymbol) {
+                --instructionPointer;
+                TRAP(self->selectorMustBeSymbol, 0);
+            }
+            messageSelector = (Symbol *)POP_OBJECT();
+            oldIP = instructionPointer - 1;
+            goto lookupMethodInClass;
+        case OPCODE_ATTR_VAR_SUPER:
+            methodClass = methodClass->superclass;
+            goto perform;
 
 /*** save/restore/return opcodes ***/
         case OPCODE_RET_LEAF:

@@ -104,7 +104,7 @@ logical_expr(r) ::= logical_expr(left) AND logical_expr(right).                 
 %left TIMES DIVIDE MOD.
 
 %type binary_expr {Expr *}
-binary_expr(r) ::= unary_expr(expr).                                            { r = expr; }
+binary_expr(r) ::= pm_expr(expr).                                               { r = expr; }
 binary_expr(r) ::= binary_expr(left) ID binary_expr(right).                     { r = SpkParser_NewExpr(EXPR_ID, 0, 0, left, right); }
 binary_expr(r) ::= binary_expr(left) NI binary_expr(right).                     { r = SpkParser_NewExpr(EXPR_NI, 0, 0, left, right); }
 binary_expr(r) ::= binary_expr(left) EQ binary_expr(right).                     { r = SpkParser_NewExpr(EXPR_BINARY, OPER_EQ, 0, left, right); }
@@ -123,6 +123,10 @@ binary_expr(r) ::= binary_expr(left) MINUS binary_expr(right).                  
 binary_expr(r) ::= binary_expr(left) TIMES binary_expr(right).                  { r = SpkParser_NewExpr(EXPR_BINARY, OPER_MUL, 0, left, right); }
 binary_expr(r) ::= binary_expr(left) DIVIDE binary_expr(right).                 { r = SpkParser_NewExpr(EXPR_BINARY, OPER_DIV, 0, left, right); }
 binary_expr(r) ::= binary_expr(left) MOD binary_expr(right).                    { r = SpkParser_NewExpr(EXPR_BINARY, OPER_MOD, 0, left, right); }
+
+%type pm_expr {Expr *}
+pm_expr(r) ::= unary_expr(expr).                                                { r = expr; }
+pm_expr(r) ::= pm_expr(obj) DOT_STAR unary_expr(attr).                          { r = SpkParser_NewExpr(EXPR_ATTR_VAR, 0, 0, obj, attr); }
 
 %type unary_expr {Expr *}
 unary_expr(r) ::= postfix_expr(expr).                                           { r = expr; }
@@ -147,6 +151,7 @@ postfix_expr(r) ::= postfix_expr(expr) DEC.                                     
 
 %type primary_expr {Expr *}
 primary_expr(r) ::= IDENTIFIER(token).                                          { r = SpkParser_NewExpr(EXPR_NAME, 0, 0, 0, 0); r->sym = token.sym; }
+primary_expr(r) ::= SYMBOL(token).                                              { r = SpkParser_NewExpr(EXPR_SYMBOL, 0, 0, 0, 0); r->sym = token.sym; }
 primary_expr(r) ::= INT(token).                                                 { r = SpkParser_NewExpr(EXPR_INT, 0, 0, 0, 0); r->intValue = token.intValue; }
 primary_expr(r) ::= CHAR(token).                                                { r = SpkParser_NewExpr(EXPR_CHAR, 0, 0, 0, 0); r->charValue = token.charValue; }
 primary_expr(r) ::= STR(token).                                                 { r = SpkParser_NewExpr(EXPR_STR, 0, 0, 0, 0); r->strValue = token.strValue; }

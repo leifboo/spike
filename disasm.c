@@ -145,6 +145,9 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             DECODE_UINT(index);
             break;
             
+        case OPCODE_ATTR_VAR:        mnemonic = "attrv";   break;
+        case OPCODE_ATTR_VAR_SUPER:  mnemonic = "sattrv";  break;
+
         case OPCODE_RET:       mnemonic = "ret";   break;
         case OPCODE_RET_LEAF:  mnemonic = "retl";  break;
         case OPCODE_RET_TRAMP: mnemonic = "rett";  break;

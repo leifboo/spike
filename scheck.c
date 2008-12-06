@@ -74,6 +74,10 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
     case EXPR_ATTR:
         checkExpr(expr->left, stmt, checker, pass);
         break;
+    case EXPR_ATTR_VAR:
+        checkExpr(expr->left, stmt, checker, pass);
+        checkExpr(expr->right, stmt, checker, pass);
+        break;
     case EXPR_PREOP:
     case EXPR_POSTOP:
         checkExpr(expr->left, stmt, checker, pass);

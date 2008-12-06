@@ -313,6 +313,12 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
     case EXPR_NAME:
         push(expr, super, cgen);
         break;
+    case EXPR_SYMBOL:
+        EMIT_OPCODE(OPCODE_PUSH_GLOBAL);
+        index = LITERAL_INDEX((Object *)expr->sym->sym, cgen);
+        encodeUnsignedInt(index, cgen);
+        tallyPush(cgen);
+        break;
     case EXPR_CALL:
         emitCodeForExpr(expr->left, &isSuper, cgen);
         for (arg = expr->right, argumentCount = 0;
@@ -334,6 +340,14 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         EMIT_OPCODE(isSuper ? OPCODE_ATTR_SUPER : OPCODE_ATTR);
         index = LITERAL_INDEX((Object *)expr->sym->sym, cgen);
         encodeUnsignedInt(index, cgen);
+        CHECK_STACKP();
+        break;
+    case EXPR_ATTR_VAR:
+        emitCodeForExpr(expr->left, &isSuper, cgen);
+        emitCodeForExpr(expr->right, 0, cgen);
+        ++cgen->nMessageSends;
+        EMIT_OPCODE(isSuper ? OPCODE_ATTR_VAR_SUPER : OPCODE_ATTR_VAR);
+        --cgen->stackPointer;
         CHECK_STACKP();
         break;
     case EXPR_PREOP:

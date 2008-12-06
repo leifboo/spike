@@ -44,6 +44,7 @@ static void lcomment(yyscan_t yyscanner);
 
 {LL}({L}|{D})*		{ count(yyscanner); return TOKEN_IDENTIFIER; }
 {UL}({L}|{D})*		{ count(yyscanner); return TOKEN_TYPE_IDENTIFIER; }
+$({L}|{D})*		{ count(yyscanner); return TOKEN_SYMBOL; }
 
 0[xX]{H}+{IS}?		{ count(yyscanner); return TOKEN_INT; }
 0{D}+{IS}?		{ count(yyscanner); return TOKEN_INT; }
@@ -73,6 +74,7 @@ static void lcomment(yyscan_t yyscanner);
 ">="			{ count(yyscanner); return TOKEN_GE; }
 "=="			{ count(yyscanner); return TOKEN_EQ; }
 "!="			{ count(yyscanner); return TOKEN_NE; }
+".*"			{ count(yyscanner); return TOKEN_DOT_STAR; }
 ";"			{ count(yyscanner); return TOKEN_SEMI; }
 "{"			{ count(yyscanner); return TOKEN_LCURLY; }
 "}"			{ count(yyscanner); return TOKEN_RCURLY; }
@@ -205,6 +207,9 @@ int SpkLexer_GetNextToken(Token *token, yyscan_t scanner) {
     case TOKEN_TYPE_IDENTIFIER:
     case TOKEN_CLASS:
         token->sym = SpkSymbolNode_Get(SpkSymbol_get(yyget_text(scanner)));
+        break;
+    case TOKEN_SYMBOL:
+        token->sym = SpkSymbolNode_Get(SpkSymbol_get(yyget_text(scanner) + 1));
         break;
     }
     return id;

@@ -12,6 +12,7 @@ typedef enum ExprKind {
     EXPR_AND,
     EXPR_ASSIGN,
     EXPR_ATTR,
+    EXPR_ATTR_VAR,
     EXPR_BINARY,
     EXPR_CALL,
     EXPR_CHAR,
@@ -24,6 +25,7 @@ typedef enum ExprKind {
     EXPR_POSTOP,
     EXPR_PREOP,
     EXPR_STR,
+    EXPR_SYMBOL,
     EXPR_UNARY
 } ExprKind;
 
