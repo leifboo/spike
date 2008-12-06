@@ -197,18 +197,18 @@ Method *SpkMethod_newNative(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) 
     Method *newMethod;
     size_t argumentCount, localCount, stackSize;
     size_t size;
-    opcode_t ret, *ip;
+    opcode_t *ip;
     
     size = 0;
-    if (flags & SpkNativeCode_CALL) {
-        size += 2; /* thunk, ret */
+    if (flags & SpkNativeCode_THUNK) {
+        size += 1; /* thunk */
     }
     if (flags & SpkNativeCode_LEAF) {
         size += 2; /* leaf */
     } else {
         size += 5; /* save, restore */
     }
-    size += 2; /* ret */
+    size += 1; /* ret/retl */
     
     switch (flags & SpkNativeCode_SIGNATURE_MASK) {
     case SpkNativeCode_ARGS_0: argumentCount = 0; break;
@@ -238,17 +238,10 @@ Method *SpkMethod_newNative(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) 
         *ip++ = OPCODE_RESTORE_SENDER;
     }
     
-    switch (flags & SpkNativeCode_MSC_MASK) {
-    case SpkNativeCode_OPER: ret = OPCODE_RET_OPER; break;
-    case SpkNativeCode_CALL: ret = OPCODE_RET_CALL; break;
-    case SpkNativeCode_ATTR: ret = OPCODE_RET_ATTR; break;
-    default: assert(0 && "missing message sending convention");
-    }
-    *ip++ = ret;
-    if (ret == OPCODE_RET_OPER) {
-        *ip++ = (opcode_t)argumentCount;
+    if (flags & SpkNativeCode_LEAF) {
+        *ip++ = OPCODE_RET_LEAF;
     } else {
-        *ip++ = OPCODE_NOP;
+        *ip++ = OPCODE_RET;
     }
     
     return newMethod;
@@ -435,6 +428,14 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             temp = STACK_TOP();
             PUSH(temp);
             break; }
+        case OPCODE_DUP_N: {
+            Object **s;
+            size_t n;
+            DECODE_UINT(n);
+            s = stackPointer + n;
+            while (n--)
+                *--stackPointer = *--s;
+            break; }
         case OPCODE_PUSH_INT: {
             long value;
             DECODE_SINT(value);
@@ -516,7 +517,6 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
 /*** send opcodes -- operators ***/
         case OPCODE_OPER:
             operator = (unsigned int)(*instructionPointer++);
-            /* XXX: 'argumentCount' is always either 0 or 1 */
             argumentCount = operSelectors[operator].argumentCount;
             receiver = stackPointer[argumentCount];
             methodClass = receiver->klass;
@@ -596,15 +596,11 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             break;
 
 /*** save/restore/return opcodes ***/
-        case OPCODE_RET_OPER:
-            DECODE_UINT(argumentCount);
+        case OPCODE_RET_LEAF:
+            /* return from leaf method */
             stackPointer[argumentCount + 1] = STACK_TOP();
             POP(argumentCount + 1);
-            goto ret;
-        case OPCODE_RET_ATTR:
-            stackPointer[1] = STACK_TOP();
-            POP(1);
-        case OPCODE_RET_CALL:
+        case OPCODE_RET:
  ret:       /* ret/retl (blr) */
             instructionPointer = linkRegister;
             receiver = homeContext->u.m.receiver;
@@ -618,17 +614,10 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             /* return from trampoline */
             return POP_OBJECT();
             
-        case OPCODE_CLEAN:
-            /* clean the receiver & arguments from the stack after a call */
-            DECODE_UINT(argumentCount);
-            stackPointer[argumentCount + 1] = STACK_TOP();
-            POP(argumentCount + 1);
-            break;
-            
         case OPCODE_LEAF: {
             size_t mArgumentCount;
             DECODE_UINT(mArgumentCount);
-            if (mArgumentCount != argumentCount) {
+            if (argumentCount != mArgumentCount) {
                 TRAP(self->selectorWrongNumberOfArguments, 0);
             }
             if (method->nativeCode) {
@@ -681,14 +670,16 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 *p = Spk_uninit;
             }
             newContext->stackp = newContext->u.m.framep = p;
-            count = mArgumentCount;
-            if (count != argumentCount) {
+            if (argumentCount != mArgumentCount) {
                 TRAP(self->selectorWrongNumberOfArguments, 0);
             }
+            count = mArgumentCount;
             /* copy & reverse arguments */
             for ( ; count > 0; ++p, --count) {
                 *p = stackPointer[count - 1];
             }
+            /* clean up the caller's stack */
+            POP(argumentCount + 1);
             /* initialize locals */
             count = localCount;
             for ( ; count > 0; ++p, --count) {
@@ -753,7 +744,11 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
 /*** thunk opcodes ***/
         case OPCODE_THUNK: {
             /* new thunk */
-            Thunk *thunk = (Thunk *)malloc(sizeof(Thunk));
+            Thunk *thunk;
+            if (argumentCount != 0) {
+                TRAP(self->selectorWrongNumberOfArguments, 0);
+            }
+            thunk = (Thunk *)malloc(sizeof(Thunk));
             thunk->base.klass = ClassThunk;
             thunk->receiver = receiver;
             thunk->method = method;

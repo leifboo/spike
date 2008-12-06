@@ -69,7 +69,7 @@ static Object *Behavior_print(Object *self, Object *arg0, Object *arg1) {
 /* class template */
 
 static SpkMethodTmpl methods[] = {
-    { "superclass", SpkNativeCode_ATTR | SpkNativeCode_LEAF, &Behavior_superclass },
+    { "superclass", SpkNativeCode_LEAF, &Behavior_superclass },
     { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Behavior_print },
     { 0, 0, 0}
 };

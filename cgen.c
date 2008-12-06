@@ -138,6 +138,16 @@ static void tallyPush(CodeGen *cgen) {
     CHECK_STACKP();
 }
 
+static void dupN(unsigned long n, CodeGen *cgen) {
+    EMIT_OPCODE(OPCODE_DUP_N);
+    encodeUnsignedInt(n, cgen);
+    cgen->stackPointer += n;
+    if (cgen->stackPointer > cgen->stackSize) {
+        cgen->stackSize = cgen->stackPointer;
+    }
+    CHECK_STACKP();
+}
+
 static unsigned int indexOfVar(Expr *def, opcode_t opcode, CodeGen *cgen) {
     /* In leaf methods, the arguments are reversed. */
     return
@@ -228,12 +238,6 @@ static void leaf(Stmt *stmt, CodeGen *cgen) {
     encodeUnsignedInt(stmt->u.method.argumentCount, cgen);
 }
 
-static void clean(size_t argumentCount, CodeGen *cgen) {
-    EMIT_OPCODE(OPCODE_CLEAN);
-    encodeUnsignedInt(argumentCount, cgen);
-    cgen->stackPointer -= argumentCount + 1;
-}
-
 
 /****************************************************************************/
 /* rodata */
@@ -320,8 +324,8 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         EMIT_OPCODE(isSuper ? OPCODE_CALL_SUPER : OPCODE_CALL);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
         encodeUnsignedInt(argumentCount, cgen);
+        cgen->stackPointer -= argumentCount + 1;
         tallyPush(cgen); /* result */
-        clean(argumentCount, cgen);
         CHECK_STACKP();
         break;
     case EXPR_ATTR:
@@ -463,15 +467,13 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
         emitCodeForExpr(expr->right, 0, cgen);
     } else {
         /* __item__ { */
+        dupN(argumentCount + 1, cgen);
         ++cgen->nMessageSends;
         EMIT_OPCODE(isSuper ? OPCODE_CALL_SUPER : OPCODE_CALL);
         encodeUnsignedInt((unsigned int)expr->left->oper, cgen);
         encodeUnsignedInt(argumentCount, cgen);
+        cgen->stackPointer -= argumentCount + 1;
         tallyPush(cgen); /* result */
-        if (0) {
-            /* leave receiver & arguments on the stack */
-            clean(argumentCount, cgen);
-        }
         /* } __item__ */
         
         if (expr->right) {
@@ -494,8 +496,8 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
     EMIT_OPCODE(isSuper ? OPCODE_CALL_SUPER : OPCODE_CALL);
     encodeUnsignedInt((unsigned int)OPER_SET_ITEM, cgen);
     encodeUnsignedInt(argumentCount, cgen);
+    cgen->stackPointer -= argumentCount + 1;
     tallyPush(cgen); /* result */
-    clean(argumentCount, cgen);
     CHECK_STACKP();
     if (expr->kind == EXPR_POSTOP) {
         EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
@@ -667,8 +669,12 @@ static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabe
             EMIT_OPCODE(OPCODE_PUSH_VOID);
             tallyPush(cgen);
         }
-        if (!cgen->inLeaf) EMIT_OPCODE(OPCODE_RESTORE_SENDER);
-        EMIT_OPCODE(OPCODE_RET_CALL);
+        if (cgen->inLeaf) {
+            EMIT_OPCODE(OPCODE_RET_LEAF);
+        } else {
+            EMIT_OPCODE(OPCODE_RESTORE_SENDER);
+            EMIT_OPCODE(OPCODE_RET);
+        }
         --cgen->stackPointer;
         break;
     case STMT_WHILE:

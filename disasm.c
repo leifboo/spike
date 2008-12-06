@@ -82,8 +82,14 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         case OPCODE_PUSH_NULL:     mnemonic = "push"; keyword = "null";        break;
         case OPCODE_PUSH_VOID:     mnemonic = "push"; keyword = "void";        break;
         case OPCODE_PUSH_CONTEXT:  mnemonic = "push"; keyword = "thisContext"; break;
-        case OPCODE_DUP:           mnemonic = "dup";                           break;
             
+        case OPCODE_DUP_N:
+            DECODE_UINT(count);
+            pCount = &count;
+        case OPCODE_DUP:
+            mnemonic = "dup";
+            break;
+
         case OPCODE_PUSH_INT:
             mnemonic = "push";
             DECODE_SINT(intValue);
@@ -139,21 +145,9 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             DECODE_UINT(index);
             break;
             
-        case OPCODE_RET_ATTR:       mnemonic = "rta";  break;
-        case OPCODE_RET_CALL:       mnemonic = "rtc";  break;
-        case OPCODE_RET_TRAMP:      mnemonic = "rtt";  break;
-            
-        case OPCODE_RET_OPER:
-            mnemonic = "rto";
-            operator = (unsigned int)(*instructionPointer++);
-            selector = operSelectors[operator].messageSelectorStr;
-            break;
-        
-        case OPCODE_CLEAN:
-            mnemonic = "clean";
-            DECODE_UINT(count);
-            pCount = &count;
-            break;
+        case OPCODE_RET:       mnemonic = "ret";   break;
+        case OPCODE_RET_LEAF:  mnemonic = "retl";  break;
+        case OPCODE_RET_TRAMP: mnemonic = "rett";  break;
             
         case OPCODE_LEAF:
             mnemonic = "leaf";
