@@ -102,9 +102,10 @@ logical_expr(r) ::= logical_expr(left) AND logical_expr(right).                 
 %left LSHIFT RSHIFT.
 %left PLUS MINUS.
 %left TIMES DIVIDE MOD.
+%left DOT_STAR.
 
 %type binary_expr {Expr *}
-binary_expr(r) ::= pm_expr(expr).                                               { r = expr; }
+binary_expr(r) ::= unary_expr(expr).                                            { r = expr; }
 binary_expr(r) ::= binary_expr(left) ID binary_expr(right).                     { r = SpkParser_NewExpr(EXPR_ID, 0, 0, left, right); }
 binary_expr(r) ::= binary_expr(left) NI binary_expr(right).                     { r = SpkParser_NewExpr(EXPR_NI, 0, 0, left, right); }
 binary_expr(r) ::= binary_expr(left) EQ binary_expr(right).                     { r = SpkParser_NewExpr(EXPR_BINARY, OPER_EQ, 0, left, right); }
@@ -123,10 +124,7 @@ binary_expr(r) ::= binary_expr(left) MINUS binary_expr(right).                  
 binary_expr(r) ::= binary_expr(left) TIMES binary_expr(right).                  { r = SpkParser_NewExpr(EXPR_BINARY, OPER_MUL, 0, left, right); }
 binary_expr(r) ::= binary_expr(left) DIVIDE binary_expr(right).                 { r = SpkParser_NewExpr(EXPR_BINARY, OPER_DIV, 0, left, right); }
 binary_expr(r) ::= binary_expr(left) MOD binary_expr(right).                    { r = SpkParser_NewExpr(EXPR_BINARY, OPER_MOD, 0, left, right); }
-
-%type pm_expr {Expr *}
-pm_expr(r) ::= unary_expr(expr).                                                { r = expr; }
-pm_expr(r) ::= pm_expr(obj) DOT_STAR unary_expr(attr).                          { r = SpkParser_NewExpr(EXPR_ATTR_VAR, 0, 0, obj, attr); }
+binary_expr(r) ::= binary_expr(left) DOT_STAR binary_expr(right).               { r = SpkParser_NewExpr(EXPR_ATTR_VAR, 0, 0, left, right); }
 
 %type unary_expr {Expr *}
 unary_expr(r) ::= postfix_expr(expr).                                           { r = expr; }
