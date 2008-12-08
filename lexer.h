@@ -9,9 +9,12 @@
 typedef struct Token {
     int id;
     struct SymbolNode *sym;
-    long intValue;
-    struct Char *charValue;
-    struct VariableObject *strValue;
+    union {
+        long intValue;
+        struct Float *floatValue;
+        struct Char *charValue;
+        struct VariableObject *strValue;
+    } lit;
     unsigned int lineNo;
 } Token;
 

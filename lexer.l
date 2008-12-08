@@ -16,6 +16,7 @@ IS			(u|U|l|L)*
 #include <stdio.h>
 #include <stdlib.h>
 #include "char.h"
+#include "float.h"
 #include "gram.h"
 #include "lexer.h"
 #include "st.h"
@@ -49,6 +50,9 @@ $({L}|{D})*		{ count(yyscanner); return TOKEN_SYMBOL; }
 0[xX]{H}+{IS}?		{ count(yyscanner); return TOKEN_INT; }
 0{D}+{IS}?		{ count(yyscanner); return TOKEN_INT; }
 {D}+{IS}?		{ count(yyscanner); return TOKEN_INT; }
+{D}+{E}{FS}?		{ count(yyscanner); return TOKEN_FLOAT; }
+{D}*"."{D}+({E})?{FS}?	{ count(yyscanner); return TOKEN_FLOAT; }
+{D}+"."{D}*({E})?{FS}?	{ count(yyscanner); return TOKEN_FLOAT; }
 '(\\.|[^\\'])+'		{ count(yyscanner); return TOKEN_CHAR; }
 \"(\\.|[^\\"])*\"	{ count(yyscanner); return TOKEN_STR; }
 
@@ -195,13 +199,16 @@ int SpkLexer_GetNextToken(Token *token, yyscan_t scanner) {
     }
     switch (id) {
     case TOKEN_INT:
-        token->intValue = strtol(yyget_text(scanner), 0, 0);
+        token->lit.intValue = strtol(yyget_text(scanner), 0, 0);
+        break;
+    case TOKEN_FLOAT:
+        token->lit.floatValue = SpkFloat_fromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
     case TOKEN_CHAR:
-        token->charValue = SpkChar_fromLiteral(yyget_text(scanner), yyget_leng(scanner));
+        token->lit.charValue = SpkChar_fromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
     case TOKEN_STR:
-        token->strValue = SpkString_fromLiteral(yyget_text(scanner), yyget_leng(scanner));
+        token->lit.strValue = SpkString_fromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
     case TOKEN_IDENTIFIER:
     case TOKEN_TYPE_IDENTIFIER:

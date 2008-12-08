@@ -1,0 +1,27 @@
+#!/usr/bin/env spike
+
+// freefall acceleration without air friction or drag
+
+main() {
+    // constants
+    var g, dt, dvy, totalTime;
+    g         = -9.8;
+    dt        = 0.1; // smaller timesteps increase accuracy
+    dvy       = g * dt;
+    totalTime = 3.0;
+    
+    var t, vy, y;
+    t = 0.0;
+    vy = 0.0;
+    y = 10.0;
+    
+    "t\ty\tvy\n".print();
+    for ( ; t < totalTime; t += dt) {
+        t.print(); '\t'.print(); y.print(); '\t'.print(); vy.print(); '\n'.print();
+        
+        vy += dvy; // compute change in velocity
+        y += vy * dt; // compute change in position
+    }
+    
+    return 0;
+}

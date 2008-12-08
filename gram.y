@@ -150,9 +150,10 @@ postfix_expr(r) ::= postfix_expr(expr) DEC.                                     
 %type primary_expr {Expr *}
 primary_expr(r) ::= IDENTIFIER(token).                                          { r = SpkParser_NewExpr(EXPR_NAME, 0, 0, 0, 0); r->sym = token.sym; }
 primary_expr(r) ::= SYMBOL(token).                                              { r = SpkParser_NewExpr(EXPR_SYMBOL, 0, 0, 0, 0); r->sym = token.sym; }
-primary_expr(r) ::= INT(token).                                                 { r = SpkParser_NewExpr(EXPR_INT, 0, 0, 0, 0); r->intValue = token.intValue; }
-primary_expr(r) ::= CHAR(token).                                                { r = SpkParser_NewExpr(EXPR_CHAR, 0, 0, 0, 0); r->charValue = token.charValue; }
-primary_expr(r) ::= STR(token).                                                 { r = SpkParser_NewExpr(EXPR_STR, 0, 0, 0, 0); r->strValue = token.strValue; }
+primary_expr(r) ::= INT(token).                                                 { r = SpkParser_NewExpr(EXPR_INT, 0, 0, 0, 0); r->lit.intValue = token.lit.intValue; }
+primary_expr(r) ::= FLOAT(token).                                               { r = SpkParser_NewExpr(EXPR_FLOAT, 0, 0, 0, 0); r->lit.floatValue = token.lit.floatValue; }
+primary_expr(r) ::= CHAR(token).                                                { r = SpkParser_NewExpr(EXPR_CHAR, 0, 0, 0, 0); r->lit.charValue = token.lit.charValue; }
+primary_expr(r) ::= STR(token).                                                 { r = SpkParser_NewExpr(EXPR_STR, 0, 0, 0, 0); r->lit.strValue = token.lit.strValue; }
 primary_expr(r) ::= LPAREN expr(expr) RPAREN.                                   { r = expr.first; }
 
 %type argument_expr_list {ExprList}

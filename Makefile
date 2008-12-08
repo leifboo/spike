@@ -10,6 +10,7 @@ obj = \
 	class.o \
 	dict.o \
 	disasm.o \
+	float.o \
 	gram.o \
 	int.o \
 	interp.o \

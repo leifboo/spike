@@ -17,6 +17,7 @@ typedef enum ExprKind {
     EXPR_CALL,
     EXPR_CHAR,
     EXPR_COND,
+    EXPR_FLOAT,
     EXPR_ID,
     EXPR_INT,
     EXPR_NAME,
@@ -55,9 +56,12 @@ struct Expr {
     Oper oper;
     Expr *next, *nextArg, *cond, *left, *right;
     struct SymbolNode *sym;
-    long intValue;
-    struct Char *charValue;
-    struct VariableObject *strValue;
+    union {
+        long intValue;
+        struct Float *floatValue;
+        struct Char *charValue;
+        struct VariableObject *strValue;
+    } lit;
     union {
         struct {
             Expr *def;

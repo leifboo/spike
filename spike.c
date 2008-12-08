@@ -9,6 +9,7 @@
 #include "char.h"
 #include "class.h"
 #include "dict.h"
+#include "float.h"
 #include "int.h"
 #include "interp.h"
 #include "metaclass.h"
@@ -52,6 +53,7 @@ static BootRec bootRec[] = {
     /**/CLASS(Uninit,  Object),
     /**/CLASS(Void,    Object),
     /**/CLASS(Integer, Object),
+    /**/CLASS(Float,   Object),
     /**/CLASS(Char,    Object),
     /**/CLASS(String,  Object),
     /**/CLASS(Array,   Object),

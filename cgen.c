@@ -295,18 +295,24 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
     switch (expr->kind) {
     case EXPR_INT:
         EMIT_OPCODE(OPCODE_PUSH_INT);
-        encodeSignedInt(expr->intValue, cgen);
+        encodeSignedInt(expr->lit.intValue, cgen);
+        tallyPush(cgen);
+        break;
+    case EXPR_FLOAT:
+        EMIT_OPCODE(OPCODE_PUSH_GLOBAL);
+        index = LITERAL_INDEX((Object *)expr->lit.floatValue, cgen);
+        encodeUnsignedInt(index, cgen);
         tallyPush(cgen);
         break;
     case EXPR_CHAR:
         EMIT_OPCODE(OPCODE_PUSH_GLOBAL);
-        index = LITERAL_INDEX((Object *)expr->charValue, cgen);
+        index = LITERAL_INDEX((Object *)expr->lit.charValue, cgen);
         encodeUnsignedInt(index, cgen);
         tallyPush(cgen);
         break;
     case EXPR_STR:
         EMIT_OPCODE(OPCODE_PUSH_GLOBAL);
-        index = LITERAL_INDEX((Object *)expr->strValue, cgen);
+        index = LITERAL_INDEX((Object *)expr->lit.strValue, cgen);
         encodeUnsignedInt(index, cgen);
         tallyPush(cgen);
         break;
