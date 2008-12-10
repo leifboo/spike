@@ -56,6 +56,7 @@ $({L}|{D})*		{ count(yyscanner); return TOKEN_SYMBOL; }
 '(\\.|[^\\'])+'		{ count(yyscanner); return TOKEN_CHAR; }
 \"(\\.|[^\\"])*\"	{ count(yyscanner); return TOKEN_STR; }
 
+"..."			{ count(yyscanner); return TOKEN_ELLIPSIS; }
 "==="			{ count(yyscanner); return TOKEN_ID; }
 "!=="			{ count(yyscanner); return TOKEN_NI; }
 ">>="			{ count(yyscanner); return TOKEN_ASSIGN_RSHIFT; }

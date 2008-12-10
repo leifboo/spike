@@ -43,7 +43,9 @@ enum Opcode {
     OPCODE_OPER,
     OPCODE_OPER_SUPER,
     OPCODE_CALL,
+    OPCODE_CALL_VAR,
     OPCODE_CALL_SUPER,
+    OPCODE_CALL_SUPER_VAR,
     OPCODE_ATTR,
     OPCODE_ATTR_SUPER,
     OPCODE_ATTR_VAR,
@@ -53,6 +55,7 @@ enum Opcode {
     OPCODE_RET_TRAMP,
     OPCODE_LEAF,
     OPCODE_SAVE,
+    OPCODE_SAVE_VAR,
     OPCODE_RESTORE_SENDER,
     OPCODE_RESTORE_CALLER,
     OPCODE_THUNK,
@@ -181,6 +184,7 @@ typedef struct Interpreter {
     /* special objects */
     struct Symbol *selectorCannotReturn;
     struct Symbol *selectorDoesNotUnderstand;
+    struct Symbol *selectorMustBeArray;
     struct Symbol *selectorMustBeBoolean;
     struct Symbol *selectorMustBeSymbol;
     struct Symbol *selectorNoRunnableFiber;

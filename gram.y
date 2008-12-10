@@ -137,9 +137,9 @@ unary_expr(r) ::= LNEG  unary_expr(expr).                                       
 
 %type postfix_expr {Expr *}
 postfix_expr(r) ::= primary_expr(expr).                                         { r = expr; }
-postfix_expr(r) ::= postfix_expr(func) LBRACK argument_expr_list(args) RBRACK.  { r = SpkParser_NewExpr(EXPR_CALL, OPER_GET_ITEM, 0, func, args.first); }
+postfix_expr(r) ::= postfix_expr(func) LBRACK argument_list(args) RBRACK.       { r = SpkParser_NewExpr(EXPR_CALL, OPER_GET_ITEM, 0, func, args.fixed); r->var = args.var; }
 postfix_expr(r) ::= postfix_expr(func) LPAREN RPAREN.                           { r = SpkParser_NewExpr(EXPR_CALL, OPER_APPLY, 0, func, 0); }
-postfix_expr(r) ::= postfix_expr(func) LPAREN argument_expr_list(args) RPAREN.  { r = SpkParser_NewExpr(EXPR_CALL, OPER_APPLY, 0, func, args.first); }
+postfix_expr(r) ::= postfix_expr(func) LPAREN argument_list(args) RPAREN.       { r = SpkParser_NewExpr(EXPR_CALL, OPER_APPLY, 0, func, args.fixed); r->var = args.var; }
 postfix_expr(r) ::= postfix_expr(obj) DOT IDENTIFIER(attr).                     { r = SpkParser_NewExpr(EXPR_ATTR, 0, 0, obj, 0); r->sym = attr.sym; }
 postfix_expr(r) ::= postfix_expr(obj) DOT CLASS(attr).                          { r = SpkParser_NewExpr(EXPR_ATTR, 0, 0, obj, 0); r->sym = attr.sym; }
 postfix_expr(r) ::= TYPE_IDENTIFIER(name) DOT IDENTIFIER(attr).                 { r = SpkParser_NewClassAttrExpr(name.sym, attr.sym); }
@@ -156,9 +156,14 @@ primary_expr(r) ::= CHAR(token).                                                
 primary_expr(r) ::= STR(token).                                                 { r = SpkParser_NewExpr(EXPR_STR, 0, 0, 0, 0); r->lit.strValue = token.lit.strValue; }
 primary_expr(r) ::= LPAREN expr(expr) RPAREN.                                   { r = expr.first; }
 
-%type argument_expr_list {ExprList}
-argument_expr_list(r) ::= assignment_expr(arg).                                 { r.first = arg; r.last = arg; }
-argument_expr_list(r) ::= argument_expr_list(args) COMMA assignment_expr(arg).  { r = args; r.last->nextArg = arg; r.last = arg; }
+%type argument_list {ArgList}
+argument_list(r) ::= expr_list(f).                                              { r.fixed = f.first; r.var = 0; }
+argument_list(r) ::= expr_list(f) COMMA ELLIPSIS assignment_expr(v).            { r.fixed = f.first; r.var = v; }
+argument_list(r) ::= ELLIPSIS assignment_expr(v).                               { r.fixed = 0;       r.var = v; }
+
+%type expr_list {ExprList}
+expr_list(r) ::= assignment_expr(arg).                                          { r.first = arg; r.last = arg; }
+expr_list(r) ::= expr_list(args) COMMA assignment_expr(arg).                    { r = args; r.last->nextArg = arg; r.last = arg; }
 
 %syntax_error {
     printf("syntax error! token %d, line %u\n", TOKEN.id, TOKEN.lineNo);

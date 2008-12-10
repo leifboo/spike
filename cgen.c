@@ -227,7 +227,7 @@ static void store(Expr *var, CodeGen *cgen) {
 }
 
 static void save(Stmt *stmt, CodeGen *cgen) {
-    EMIT_OPCODE(OPCODE_SAVE);
+    EMIT_OPCODE(stmt->u.method.argList.var ? OPCODE_SAVE_VAR : OPCODE_SAVE);
     encodeUnsignedInt(stmt->u.method.argumentCount, cgen);
     encodeUnsignedInt(stmt->u.method.localCount, cgen);
     encodeUnsignedInt(cgen->stackSize, cgen);
@@ -332,11 +332,20 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
              arg = arg->nextArg, ++argumentCount) {
             emitCodeForExpr(arg, 0, cgen);
         }
+        if (expr->var) {
+            emitCodeForExpr(expr->var, 0, cgen);
+        }
         ++cgen->nMessageSends;
-        EMIT_OPCODE(isSuper ? OPCODE_CALL_SUPER : OPCODE_CALL);
+        EMIT_OPCODE(isSuper
+                    ? (expr->var
+                       ? OPCODE_CALL_SUPER_VAR
+                       : OPCODE_CALL_SUPER)
+                    : (expr->var
+                       ? OPCODE_CALL_VAR
+                       : OPCODE_CALL));
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
         encodeUnsignedInt(argumentCount, cgen);
-        cgen->stackPointer -= argumentCount + 1;
+        cgen->stackPointer -= (expr->var ? 1 : 0) + argumentCount + 1;
         tallyPush(cgen); /* result */
         CHECK_STACKP();
         break;
@@ -731,7 +740,8 @@ static int isLeafMethod(Stmt *stmt, CodeGen *cgen) {
         cgen->nMessageSends == 0 &&
         cgen->nContextRefs == 0 &&
         cgen->stackSize <= LEAF_STACK_SPACE &&
-        stmt->u.method.localCount == 0;
+        stmt->u.method.localCount == 0 &&
+        !stmt->u.method.argList.var;
 }
 
 static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {

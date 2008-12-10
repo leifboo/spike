@@ -63,11 +63,15 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
             if (pass == 1) {
                 assert(expr->oper == OPER_APPLY && expr->left->kind == EXPR_NAME);
                 stmt->u.method.name = expr->left->sym;
-                stmt->u.method.argList = expr->right;
+                stmt->u.method.argList.fixed = expr->right;
+                stmt->u.method.argList.var = expr->var;
             }
         } else {
             for (arg = expr->right; arg; arg = arg->nextArg) {
                 checkExpr(arg, stmt, checker, pass);
+            }
+            if (expr->var) {
+                checkExpr(expr->var, stmt, checker, pass);
             }
         }
         break;
@@ -155,10 +159,15 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
             SpkSymbolTable_EnterScope(checker->st, enterNewContext);
             if (outer && outer->kind == STMT_DEF_METHOD) {
                 /* declare function arguments */
-                for (arg = outer->u.method.argList; arg; arg = arg->nextArg) {
+                for (arg = outer->u.method.argList.fixed; arg; arg = arg->nextArg) {
                     assert(arg->kind == EXPR_NAME);
                     SpkSymbolTable_Insert(checker->st, arg);
                     ++outer->u.method.argumentCount;
+                }
+                arg = outer->u.method.argList.var;
+                if (arg) {
+                    assert(arg->kind == EXPR_NAME);
+                    SpkSymbolTable_Insert(checker->st, arg);
                 }
             }
             for (innerPass = 1; innerPass < 3; ++innerPass) {
@@ -170,7 +179,8 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
                 switch (outer->kind) {
                 case STMT_DEF_METHOD:
                     outer->u.method.localCount = checker->st->currentScope->context->nDefs -
-                                                 outer->u.method.argumentCount;
+                                                 outer->u.method.argumentCount -
+                                                 (outer->u.method.argList.var ? 1 : 0);
                     break;
                 case STMT_DEF_CLASS:
                     outer->u.klass.instVarCount = checker->st->currentScope->context->nDefs;

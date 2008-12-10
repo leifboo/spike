@@ -14,7 +14,7 @@ extern struct Behavior *ClassArray;
 extern struct SpkClassTmpl ClassArrayTmpl;
 
 
-Array *SpkArray_withItems(Object **, size_t);
+Array *SpkArray_withArguments(Object **, size_t, Array *, size_t);
 size_t SpkArray_size(Array *);
 Object *SpkArray_item(Array *, long);
 

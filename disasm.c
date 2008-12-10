@@ -55,7 +55,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         size_t index = 0;
         ptrdiff_t displacement = 0;
         size_t argumentCount = 0, *pArgumentCount = 0;
-        size_t localCount = 0, stackSize = 0;
+        size_t variadic = 0, localCount = 0, stackSize = 0;
         size_t count = 0, *pCount = 0;
         unsigned int operator = 0;
         size_t label = 0, *pLabel = 0;
@@ -129,8 +129,10 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             selector = operSelectors[operator].messageSelectorStr;
             break;
             
-        case OPCODE_CALL:       mnemonic = "call";  goto call;
-        case OPCODE_CALL_SUPER: mnemonic = "scall"; goto call;
+        case OPCODE_CALL:           mnemonic = "call";   goto call;
+        case OPCODE_CALL_VAR:       mnemonic = "callv";  goto call;
+        case OPCODE_CALL_SUPER:     mnemonic = "scall";  goto call;
+        case OPCODE_CALL_SUPER_VAR: mnemonic = "scallv"; goto call;
  call:
             operator = (unsigned int)(*instructionPointer++);
             selector = operCallSelectors[operator].messageSelectorStr;
@@ -157,8 +159,9 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             DECODE_UINT(argumentCount);
             break;
             
-        case OPCODE_SAVE:
-            mnemonic = "save";
+        case OPCODE_SAVE:     mnemonic = "save";  goto save;
+        case OPCODE_SAVE_VAR: mnemonic = "savev"; goto save;
+ save:
             DECODE_UINT(argumentCount);
             DECODE_UINT(localCount);
             DECODE_UINT(stackSize);
@@ -202,7 +205,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             fprintf(out, "\t%s[%u]", base, index);
         } else if (opcode == OPCODE_LEAF) {
             fprintf(out, "\t%lu", argumentCount);
-        } else if (opcode == OPCODE_SAVE) {
+        } else if (opcode == OPCODE_SAVE || opcode == OPCODE_SAVE_VAR) {
             fprintf(out, "\t%lu,%lu,%lu", argumentCount, localCount, stackSize);
         }
         fprintf(out, "\n");

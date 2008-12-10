@@ -167,6 +167,7 @@ void SpkInterpreter_init(Interpreter *self, ProcessorScheduler *aScheduler) {
     /* special objects */
     self->selectorCannotReturn           = SpkSymbol_get("cannotReturn");
     self->selectorDoesNotUnderstand      = SpkSymbol_get("doesNotUnderstand");
+    self->selectorMustBeArray            = SpkSymbol_get("mustBeArray");
     self->selectorMustBeBoolean          = SpkSymbol_get("mustBeBoolean");
     self->selectorMustBeSymbol           = SpkSymbol_get("mustBeSymbol");
     self->selectorNoRunnableFiber        = SpkSymbol_get("noRunnableFiber");
@@ -359,7 +360,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
 
     /* message sending */
     Symbol *messageSelector = 0;
-    size_t argumentCount = 0;
+    size_t argumentCount = 0, varArg = 0, variadic = 0;
     unsigned int operator;
     opcode_t *oldIP;
     
@@ -519,12 +520,14 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_OPER:
             operator = (unsigned int)(*instructionPointer++);
             argumentCount = operSelectors[operator].argumentCount;
+            varArg = 0;
             receiver = stackPointer[argumentCount];
             methodClass = receiver->klass;
             goto oper;
         case OPCODE_OPER_SUPER:
             operator = (unsigned int)(*instructionPointer++);
             argumentCount = operSelectors[operator].argumentCount;
+            varArg = 0;
             methodClass = methodClass->superclass;
  oper:
             method = methodClass->operTable[operator].method;
@@ -539,13 +542,23 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             oldIP = instructionPointer - 1;
             operator = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
+            varArg = 0;
             receiver = stackPointer[argumentCount];
+            methodClass = receiver->klass;
+            goto call;
+        case OPCODE_CALL_VAR:
+            oldIP = instructionPointer - 1;
+            operator = (unsigned int)(*instructionPointer++);
+            DECODE_UINT(argumentCount);
+            varArg = 1;
+            receiver = stackPointer[argumentCount + 1];
             methodClass = receiver->klass;
             goto call;
         case OPCODE_CALL_SUPER:
             oldIP = instructionPointer - 1;
             operator = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
+            varArg = 0;
             methodClass = methodClass->superclass;
  call:
             method = methodClass->operCallTable[operator].method;
@@ -556,6 +569,13 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             instructionPointer = oldIP;
             TRAP(self->selectorDoesNotUnderstand, (Object *)operCallSelectors[operator].messageSelector);
             break;
+        case OPCODE_CALL_SUPER_VAR:
+            oldIP = instructionPointer - 1;
+            operator = (unsigned int)(*instructionPointer++);
+            DECODE_UINT(argumentCount);
+            varArg = 1;
+            methodClass = methodClass->superclass;
+            goto call;
 
 /*** send opcodes -- "obj.attr" ***/
         case OPCODE_ATTR:
@@ -571,7 +591,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             DECODE_UINT(index);
             messageSelector = (Symbol *)(globalPointer[index]);
  lookupMethodInClass:
-            argumentCount = 0;
+            argumentCount = varArg = 0;
             for ( ; methodClass; methodClass = methodClass->superclass) {
                 method = SpkBehavior_lookupMethod(methodClass, messageSelector);
                 if (method) {
@@ -587,10 +607,21 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 }
             }
             do { /* createActualMessage */
-                Array *argumentArray = SpkArray_withItems(stackPointer, argumentCount);
-                Message *message = SpkMessage_new();
+                Message *message;
+                Array *varArgArray;
+                
+                if (varArg) {
+                    varArgArray = (Array *)stackPointer[0];
+                    if (varArgArray->base.klass != ClassArray) {
+                        TRAP(self->selectorMustBeArray, 0);
+                    }
+                } else {
+                    varArgArray = 0;
+                }
+                message = SpkMessage_new();
                 message->messageSelector = messageSelector;
-                message->argumentArray = argumentArray;
+                message->argumentArray = SpkArray_withArguments(stackPointer + varArg, argumentCount,
+                                                                varArgArray, 0);
                 instructionPointer = oldIP;
                 TRAP(self->selectorDoesNotUnderstand, (Object *)message);
             } while (0);
@@ -615,8 +646,8 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
 /*** save/restore/return opcodes ***/
         case OPCODE_RET_LEAF:
             /* return from leaf method */
-            stackPointer[argumentCount + 1] = STACK_TOP();
-            POP(argumentCount + 1);
+            stackPointer[varArg + argumentCount + 1] = STACK_TOP();
+            POP(varArg + argumentCount + 1);
         case OPCODE_RET:
  ret:       /* ret/retl (blr) */
             instructionPointer = linkRegister;
@@ -632,11 +663,43 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             return POP_OBJECT();
             
         case OPCODE_LEAF: {
-            size_t mArgumentCount;
-            DECODE_UINT(mArgumentCount);
-            if (argumentCount != mArgumentCount) {
+            size_t fixedArgumentCount;
+            
+            DECODE_UINT(fixedArgumentCount);
+            
+            /* process arguments */
+            if (varArg) {
+                Array *varArgArray;
+                size_t i;
+                
+                varArgArray = (Array *)stackPointer[0];
+                if (varArgArray->base.klass != ClassArray) {
+                    TRAP(self->selectorMustBeArray, 0);
+                }
+                if (argumentCount + varArgArray->size != fixedArgumentCount) {
+                    TRAP(self->selectorWrongNumberOfArguments, 0);
+                }
+                
+                if (varArgArray->size > 0) {
+                    /* There must be enough stack space for all the
+                     * arguments; otherwise, this wouldn't be a leaf
+                     * method.
+                     */
+                    for (i = 1; i < varArgArray->size; ++i) {
+                        PUSH(SpkArray_item(varArgArray, (long)i));
+                    }
+                    /* replace array with 1st array arg */
+                    stackPointer[varArgArray->size - 1] = SpkArray_item(varArgArray, 0);
+                } else {
+                    POP(1); /* empty argument array */
+                }
+                
+                framePointer = stackPointer;
+                
+            } else if (argumentCount != fixedArgumentCount) {
                 TRAP(self->selectorWrongNumberOfArguments, 0);
             }
+            
             if (method->nativeCode) {
                 Object *result, *arg1 = 0, *arg2 = 0;
                 switch (argumentCount) {
@@ -657,21 +720,28 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             }
             break; }
             
+        case OPCODE_SAVE_VAR:
+            variadic = 1;
+            goto save;
         case OPCODE_SAVE: {
             /* save */
-            size_t mArgumentCount, localCount, stackSize;
-            size_t contextSize, count;
+            size_t fixedArgumentCount, localCount, stackSize;
+            size_t contextSize, i, count, varArgArraySize;
+            size_t excessStackArgCount, consumedArrayArgCount;
             Context *newContext;
+            Array *varArgArray;
             Object **p;
-
+            
+            variadic = 0;
+ save:
             /* Create a new context for the currently
              * executing method (cf. activateNewMethod).
              */
-            DECODE_UINT(mArgumentCount);
+            DECODE_UINT(fixedArgumentCount);
             DECODE_UINT(localCount);
             DECODE_UINT(stackSize);
             
-            contextSize = stackSize + mArgumentCount + localCount;
+            contextSize = stackSize + variadic + fixedArgumentCount + localCount;
             newContext = SpkContext_new(contextSize);
 
             newContext->sender = self->activeContext;
@@ -687,16 +757,52 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 *p = Spk_uninit;
             }
             newContext->stackp = newContext->u.m.framep = p;
-            if (argumentCount != mArgumentCount) {
+            
+            /* process arguments */
+            if (varArg) {
+                varArgArray = (Array *)stackPointer[0];
+                if (varArgArray->base.klass != ClassArray) {
+                    TRAP(self->selectorMustBeArray, 0);
+                }
+                varArgArraySize = varArgArray->size;
+            } else {
+                varArgArray = 0;
+                varArgArraySize = 0;
+            }
+                
+            if (variadic
+                ? argumentCount + varArgArraySize < fixedArgumentCount
+                : argumentCount + varArgArraySize != fixedArgumentCount) {
                 TRAP(self->selectorWrongNumberOfArguments, 0);
             }
-            count = mArgumentCount;
-            /* copy & reverse arguments */
-            for ( ; count > 0; ++p, --count) {
-                *p = stackPointer[count - 1];
+            if (fixedArgumentCount > argumentCount) {
+                /* copy & reverse fixed arguments from stack */
+                for (i = 0; i < argumentCount; ++p, ++i) {
+                    *p = stackPointer[varArg + argumentCount - i - 1];
+                }
+                excessStackArgCount = 0;
+                /* copy fixed arguments from array */
+                consumedArrayArgCount = fixedArgumentCount - argumentCount;
+                for (i = 0; i < consumedArrayArgCount; ++p, ++i) {
+                    *p = SpkArray_item(varArgArray, (long)i);
+                }
+            } else {
+                /* copy & reverse fixed arguments from stack */
+                for (i = 0; i < fixedArgumentCount; ++p, ++i) {
+                    *p = stackPointer[varArg + argumentCount - i - 1];
+                }
+                excessStackArgCount = argumentCount - fixedArgumentCount;
+                consumedArrayArgCount = 0;
             }
+            if (variadic) {
+                /* initialize the argument array variable */
+                *p++ = (Object *)SpkArray_withArguments(stackPointer + varArg, excessStackArgCount,
+                                                        varArgArray, consumedArrayArgCount);
+            }
+            
             /* clean up the caller's stack */
-            POP(argumentCount + 1);
+            POP(varArg + argumentCount + 1);
+            
             /* initialize locals */
             count = localCount;
             for ( ; count > 0; ++p, --count) {
@@ -764,6 +870,15 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             Thunk *thunk;
             if (argumentCount != 0) {
                 TRAP(self->selectorWrongNumberOfArguments, 0);
+            }
+            if (varArg) {
+                Array *varArgArray = (Array *)stackPointer[0];
+                if (varArgArray->base.klass != ClassArray) {
+                    TRAP(self->selectorMustBeArray, 0);
+                }
+                if (varArgArray->size != 0) {
+                    TRAP(self->selectorWrongNumberOfArguments, 0);
+                }
             }
             thunk = (Thunk *)malloc(sizeof(Thunk));
             thunk->base.klass = ClassThunk;

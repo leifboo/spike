@@ -48,13 +48,14 @@ typedef enum StmtKind {
 
 typedef struct Expr Expr;
 typedef struct ExprList ExprList;
+typedef struct ArgList ArgList;
 typedef struct Stmt Stmt;
 typedef struct StmtList StmtList;
 
 struct Expr {
     ExprKind kind;
     Oper oper;
-    Expr *next, *nextArg, *cond, *left, *right;
+    Expr *next, *nextArg, *cond, *left, *right, *var;
     struct SymbolNode *sym;
     union {
         long intValue;
@@ -85,6 +86,10 @@ struct ExprList {
     Expr *first, *last;
 };
 
+struct ArgList {
+    Expr *fixed, *var;
+};
+
 struct Stmt {
     StmtKind kind;
     Stmt *next, *top, *bottom;
@@ -92,7 +97,7 @@ struct Stmt {
     union {
         struct {
             struct SymbolNode *name;
-            Expr *argList;
+            struct { Expr *fixed, *var; } argList;
             size_t argumentCount;
             size_t localCount;
         } method;

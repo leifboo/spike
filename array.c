@@ -54,6 +54,10 @@ static Object *Array_setItem(Object *_self, Object *arg0, Object *arg1) {
 /*------------------------------------------------------------------------*/
 /* methods -- other */
 
+static Object *Array_size(Object *self, Object *arg0, Object *arg1) {
+    return (Object *)SpkInteger_fromLong((long)((Array *)self)->size);
+}
+
 static Object *Array_print(Object *_self, Object *arg0, Object *arg1) {
     Array *self;
     int i;
@@ -88,6 +92,7 @@ static SpkMethodTmpl methods[] = {
     { "__item__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_item },
     { "__setItem__", SpkNativeCode_ARGS_2 | SpkNativeCode_LEAF, &Array_setItem },
     /* other */
+    { "size", SpkNativeCode_LEAF, &Array_size },
     { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Array_print },
     { 0, 0, 0}
 };
@@ -105,17 +110,28 @@ SpkClassTmpl ClassArrayTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-Array *SpkArray_withItems(Object **items, size_t n) {
-    Array *newArray;
-    size_t i;
+Array *SpkArray_withArguments(Object **stackPointer, size_t argumentCount,
+                              Array *varArgArray, size_t skip) {
+    Array *argumentArray;
+    size_t i, n, varArgCount;
     
-    newArray = (Array *)malloc(sizeof(Array) + n*sizeof(Object **));
-    newArray->base.klass = ClassArray;
-    newArray->size = n;
-    for (i = 0; i < n; ++i) {
-        ARRAY(newArray)[i] = items[n];
+    varArgCount = varArgArray ? varArgArray->size - skip : 0;
+    n = argumentCount + varArgCount;
+    
+    argumentArray = (Array *)malloc(sizeof(Array) + n*sizeof(Object **));
+    argumentArray->base.klass = ClassArray;
+    argumentArray->size = n;
+    
+    /* copy & reverse fixed arguments */
+    for (i = 0; i < argumentCount; ++i) {
+        ARRAY(argumentArray)[i] = stackPointer[argumentCount - i - 1];
     }
-    return newArray;
+    /* copy variable arguments */
+    for ( ; i < n; ++i) {
+        ARRAY(argumentArray)[i] = ARRAY(varArgArray)[skip + i - argumentCount];
+    }
+    
+    return argumentArray;
 }
 
 size_t SpkArray_size(Array *self) {
