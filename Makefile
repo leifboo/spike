@@ -17,6 +17,7 @@ obj = \
 	lexer.o \
 	metaclass.o \
 	module.o \
+	native.o \
 	obj.o \
 	parser.o \
 	scheck.o \

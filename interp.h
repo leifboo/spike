@@ -3,10 +3,15 @@
 #define __interp_h__
 
 
+#include "native.h"
 #include "obj.h"
 #include "oper.h"
 
 #include <stddef.h>
+
+
+/* XXX: This is arbitrary. */
+#define LEAF_STACK_SPACE (4)
 
 
 typedef struct Method Method;
@@ -50,6 +55,8 @@ enum Opcode {
     OPCODE_ATTR_SUPER,
     OPCODE_ATTR_VAR,
     OPCODE_ATTR_VAR_SUPER,
+    OPCODE_SEND_MESSAGE,
+    OPCODE_SEND_MESSAGE_SUPER,
     OPCODE_RET,
     OPCODE_RET_LEAF,
     OPCODE_RET_TRAMP,
@@ -114,26 +121,6 @@ typedef struct ProcessorScheduler {
     Fiber *activeFiber;
 } ProcessorScheduler;
 
-
-typedef enum SpkNativeCodeFlags {
-    SpkNativeCode_ARGS_0              = 0x0000,
-    SpkNativeCode_ARGS_1              = 0x0001,
-    SpkNativeCode_ARGS_2              = 0x0002,
-    SpkNativeCode_ARGS_TUPLE          = 0x0003,
-    SpkNativeCode_ARGS_KEYWORDS       = 0x0004,
-    SpkNativeCode_ARGS_TUPLE_KEYWORDS = 0x0007,
-    SpkNativeCode_SIGNATURE_MASK      = 0x000f,
-    
-    SpkNativeCode_LEAF                = 0x0010,
-    SpkNativeCode_THUNK               = 0x0020,
-    
-    SpkNativeCode_UNARY_OPER          = SpkNativeCode_ARGS_0,
-    SpkNativeCode_BINARY_OPER         = SpkNativeCode_ARGS_1,
-    SpkNativeCode_TERNARY_OPER        = SpkNativeCode_ARGS_2,
-    SpkNativeCode_METH_ATTR           = SpkNativeCode_THUNK
-} SpkNativeCodeFlags;
-
-typedef Object *(*SpkNativeCode)(Object *, Object *, Object *);
 
 struct Method {
     Object base;
@@ -203,11 +190,11 @@ extern Void *Spk_void;
 
 extern struct Behavior *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
 extern struct SpkClassTmpl ClassMessageTmpl, ClassThunkTmpl, ClassNullTmpl, ClassUninitTmpl, ClassVoidTmpl;
+extern Interpreter *theInterpreter; /* XXX */
 
 
 Message *SpkMessage_new(void);
 Method *SpkMethod_new(size_t);
-Method *SpkMethod_newNative(SpkNativeCodeFlags, SpkNativeCode);
 
 Context *SpkContext_new(size_t);
 Context *SpkContext_blockCopy(Context *, size_t, opcode_t *);

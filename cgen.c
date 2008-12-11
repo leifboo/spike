@@ -15,10 +15,6 @@
 #include <string.h>
 
 
-/* XXX: This is arbitrary. */
-#define LEAF_STACK_SPACE (4)
-
-
 #if DEBUG_STACKP
 /* Emit debug opcodes which check to see whether the stack depth at
  * runtime is what the compiler thought it should be.
@@ -851,6 +847,7 @@ static void createClass(Stmt *stmt, CodeGen *cgen) {
     Symbol *className;
     
     theClass = (Behavior *)SpkClass_new(stmt->expr->sym->sym);
+    /* XXX: BUG: operators, etc. are not inherited */
     SpkBehavior_init(theClass, 0, 0, stmt->u.klass.instVarCount);
     
     if (!cgen->firstClass) {

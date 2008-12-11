@@ -3,6 +3,7 @@
 
 #include "behavior.h"
 #include "interp.h"
+#include "native.h"
 #include <stdio.h>
 
 
@@ -51,8 +52,7 @@ static Object *True_band(Object *self, Object *arg0, Object *arg1) {
 }
 
 static Object *True_bxor(Object *self, Object *arg0, Object *arg1) {
-    /* XXX: Assumes native code. */
-    return (*arg0->klass->operTable[OPER_BNEG].method->nativeCode)(arg0, 0, 0);
+    return Spk_oper(theInterpreter, arg0, OPER_BNEG, 0);
 }
 
 static Object *True_bor(Object *self, Object *arg0, Object *arg1) {

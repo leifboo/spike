@@ -4,6 +4,7 @@
 #include "behavior.h"
 #include "int.h"
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -110,6 +111,19 @@ SpkClassTmpl ClassArrayTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
+Array *SpkArray_new(size_t size) {
+    Array *newArray;
+    size_t i;
+    
+    newArray = (Array *)malloc(sizeof(Array) + size*sizeof(Object **));
+    newArray->base.klass = ClassArray;
+    newArray->size = size;
+    for (i = 0; i < size; ++i) {
+        ARRAY(newArray)[i] = Spk_uninit;
+    }
+    return newArray;
+}
+
 Array *SpkArray_withArguments(Object **stackPointer, size_t argumentCount,
                               Array *varArgArray, size_t skip) {
     Array *argumentArray;
@@ -118,9 +132,7 @@ Array *SpkArray_withArguments(Object **stackPointer, size_t argumentCount,
     varArgCount = varArgArray ? varArgArray->size - skip : 0;
     n = argumentCount + varArgCount;
     
-    argumentArray = (Array *)malloc(sizeof(Array) + n*sizeof(Object **));
-    argumentArray->base.klass = ClassArray;
-    argumentArray->size = n;
+    argumentArray = SpkArray_new(n);
     
     /* copy & reverse fixed arguments */
     for (i = 0; i < argumentCount; ++i) {
@@ -132,6 +144,27 @@ Array *SpkArray_withArguments(Object **stackPointer, size_t argumentCount,
     }
     
     return argumentArray;
+}
+
+Array *SpkArray_fromVAList(va_list ap) {
+    Array *newArray;
+    Object *obj;
+    size_t size, i;
+    
+    size = 2;
+    newArray = (Array *)malloc(sizeof(Array) + size*sizeof(Object **));
+    newArray->base.klass = ClassArray;
+    for (i = 0,  obj = va_arg(ap, Object *);
+                 obj;
+         ++i,    obj = va_arg(ap, Object *)) {
+        if (i >= size) {
+            size *= 2;
+            newArray = (Array *)realloc(newArray, sizeof(Array) + size*sizeof(Object **));
+        }
+        ARRAY(newArray)[i] = obj;
+    }
+    newArray->size = i;
+    return newArray;
 }
 
 size_t SpkArray_size(Array *self) {

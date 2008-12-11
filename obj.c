@@ -3,6 +3,8 @@
 
 #include "behavior.h"
 #include "bool.h"
+#include "interp.h"
+#include "native.h"
 #include <stdio.h>
 
 
@@ -19,11 +21,8 @@ static Object *Object_eq(Object *self, Object *arg0, Object *arg1) {
 static Object *Object_ne(Object *self, Object *arg0, Object *arg1) {
     Object *temp;
     
-    /* XXX: Assumes native code.  Should 'nativeCode' point to a
-     * trampoline for interpreted methods?
-     */
-    temp = (*self->klass->operTable[OPER_EQ].method->nativeCode)(self, arg0, 0);
-    temp = (*temp->klass->operTable[OPER_LNEG].method->nativeCode)(temp, 0, 0);
+    temp = Spk_oper(theInterpreter, self, OPER_EQ, arg0, 0);
+    temp = Spk_oper(theInterpreter, temp, OPER_LNEG, 0);
     return temp;
 }
 

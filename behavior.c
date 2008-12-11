@@ -5,6 +5,7 @@
 #include "dict.h"
 #include "interp.h"
 #include "module.h"
+#include "native.h"
 #include "sym.h"
 #include <assert.h>
 #include <stdio.h>
@@ -158,7 +159,7 @@ void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavi
         Method *method;
         
         messageSelector = SpkSymbol_get(methodTmpl->name);
-        method = SpkMethod_newNative(methodTmpl->flags, methodTmpl->code);
+        method = Spk_newNativeMethod(methodTmpl->flags, methodTmpl->code);
         SpkBehavior_insertMethod(self, messageSelector, method);
     }
 }
