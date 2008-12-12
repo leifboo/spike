@@ -104,6 +104,12 @@ Stmt *SpkParser_ParseFile(const char *filename) {
     while (SpkLexer_GetNextToken(&token, lexer)) {
         SpkParser_Parse(parser, token.id, token, &parserState);
     }
+    if (token.id == -1) {
+        SpkParser_ParseFree(parser, &free);
+        SpkLexer_lex_destroy(lexer);
+        fclose(yyin);
+        return 0;
+    }
     SpkParser_Parse(parser, 0, token, &parserState);
     SpkParser_ParseFree(parser, &free);
     

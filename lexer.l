@@ -4,8 +4,8 @@
 
 D			[0-9]
 L			[a-zA-Z_]
-UL			[A-Z]
-LL			[a-z]
+UL			[A-Z_]
+LL			[a-z_]
 H			[a-fA-F0-9]
 E			[Ee][+-]?{D}+
 FS			(f|F|l|L)
@@ -106,7 +106,7 @@ $({L}|{D})*		{ count(yyscanner); return TOKEN_SYMBOL; }
 "?"			{ count(yyscanner); return TOKEN_QM; }
 
 [ \t\v\n\f]		{ count(yyscanner); }
-.			{ /* ignore bad characters */ }
+.			{ fprintf(stderr, "bad character in source: '%s'\n", yyget_text(yyscanner)); return -1; }
 
 %%
 
@@ -195,7 +195,7 @@ int SpkLexer_GetNextToken(Token *token, yyscan_t scanner) {
     token->id = id;
     token->sym = 0;
     token->lineNo = yylineno;
-    if (!id) {
+    if (id <= 0) {
         return 0;
     }
     switch (id) {
