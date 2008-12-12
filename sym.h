@@ -8,7 +8,7 @@
 
 typedef struct Symbol {
     Object base;
-    struct Symbol *next;
+    size_t hash;
     char str[1];
 } Symbol;
 

@@ -2,12 +2,18 @@
 #include "sym.h"
 
 #include "behavior.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 
 Behavior *ClassSymbol;
+
+static struct {
+    size_t size, mask, tally;
+    Symbol **array;
+} hashTable;
 
 
 /*------------------------------------------------------------------------*/
@@ -43,22 +49,96 @@ SpkClassTmpl ClassSymbolTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-Symbol *SpkSymbol_get(const char *str) {
-    /* Just a simple linked list for now! */
-    static Symbol *list = 0;
-    Symbol *s;
+static size_t getHash(unsigned char *str, size_t *len) {
+    /* djb2 from http://www.cse.yorku.ca/~oz/hash.html */
+    unsigned char *p;
+    size_t hash = 5381;
+    int c;
     
-    for (s = list; s; s = s->next) {
-        if (strcmp(s->str, str) == 0) {
-            return s;
+    p = str;
+    while (c = *p++)
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    *len = p - str - 1;
+    return hash;
+}
+
+Symbol *SpkSymbol_get(const char *str) {
+    Symbol *sym;
+    size_t hash, start, len, i, o;
+    
+    if (!hashTable.array) {
+        hashTable.size = 2; /* must be a power of 2 */
+        hashTable.mask = hashTable.size - 1;
+        hashTable.array = (Symbol **)calloc(hashTable.size, sizeof(Symbol *));
+    }
+    
+    hash = getHash((unsigned char *)str, &len);
+    start = hash & hashTable.mask;
+    
+    for (i = start; i < hashTable.size; ++i) {
+        sym = hashTable.array[i];
+        if (!sym) {
+            goto insert;
+        } else if (strcmp(sym->str, str) == 0) {
+            return sym;
         }
     }
     
-    s = (Symbol *)malloc(sizeof(Symbol) + strlen(str));
-    s->base.klass = ClassSymbol;
-    s->next = list;
-    strcpy(s->str, str);
-    list = s;
+    for (i = 0; i < start; ++i) {
+        sym = hashTable.array[i];
+        if (!sym) {
+            goto insert;
+        } else if (strcmp(sym->str, str) == 0) {
+            return sym;
+        }
+    }
     
-    return s;
+    assert(0 && "not reached");
+    
+ insert:
+    sym = (Symbol *)malloc(sizeof(Symbol) + len);
+    sym->base.klass = ClassSymbol;
+    sym->hash = hash;
+    memcpy(sym->str, str, len + 1);
+    
+    hashTable.array[i] = sym;
+    ++hashTable.tally;
+    
+    if (hashTable.size - hashTable.tally < hashTable.size / 4 + 1) {
+        /* grow */
+        size_t oldSize;
+        Symbol **oldArray;
+        Symbol *oldSym;
+        
+        oldSize = hashTable.size;
+        oldArray = hashTable.array;
+        
+        hashTable.size <<= 1;
+        hashTable.mask = hashTable.size - 1;
+        hashTable.array = (Symbol **)calloc(hashTable.size, sizeof(Symbol *));
+        
+        for (o = 0; o < oldSize; ++o) {
+            oldSym = oldArray[o];
+            if (oldSym) {
+                start = oldSym->hash & hashTable.mask;
+                for (i = start; i < hashTable.size; ++i) {
+                    if (!hashTable.array[i]) {
+                        goto reinsert;
+                    }
+                }
+                for (i = 0; i < start; ++i) {
+                    if (!hashTable.array[i]) {
+                        goto reinsert;
+                    }
+                }
+                assert(0 && "not reached");
+ reinsert:
+                hashTable.array[i] = oldSym;
+            }
+        }
+        
+        free(oldArray);
+    }
+    
+    return sym;
 }
