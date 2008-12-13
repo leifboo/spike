@@ -11,7 +11,7 @@
 
 Method *Spk_newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) {
     Method *newMethod;
-    size_t argumentCount;
+    size_t argumentCount, variadic;
     size_t size;
     opcode_t *ip;
     
@@ -26,10 +26,17 @@ Method *Spk_newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) 
     }
     size += 1; /* ret/retl */
     
+    variadic = 0;
     switch (flags & SpkNativeCode_SIGNATURE_MASK) {
     case SpkNativeCode_ARGS_0: argumentCount = 0; break;
     case SpkNativeCode_ARGS_1: argumentCount = 1; break;
     case SpkNativeCode_ARGS_2: argumentCount = 2; break;
+        
+    case SpkNativeCode_ARGS_ARRAY:
+        argumentCount = 0;
+        variadic = 1;
+        break;
+        
     default: assert(0); /* XXX */
     }
     
@@ -41,12 +48,13 @@ Method *Spk_newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) 
         *ip++ = OPCODE_THUNK;
     }
     if (flags & SpkNativeCode_LEAF) {
+        assert(!variadic && "SpkNativeCode_ARGS_ARRAY cannot be combined with SpkNativeCode_LEAF");
         *ip++ = OPCODE_LEAF;
         *ip++ = (opcode_t)argumentCount;
     } else {
-        *ip++ = OPCODE_SAVE;
+        *ip++ = variadic ? OPCODE_SAVE_VAR : OPCODE_SAVE;
         *ip++ = (opcode_t)argumentCount;
-        *ip++ = (opcode_t)0; /* localCount */
+        *ip++ = (opcode_t)variadic; /* localCount */
         *ip++ = (opcode_t)3 + LEAF_STACK_SPACE; /* stackSize */
         
         /* skip trampoline code */

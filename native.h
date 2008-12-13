@@ -21,9 +21,9 @@ typedef enum SpkNativeCodeFlags {
     SpkNativeCode_ARGS_0              = 0x0000,
     SpkNativeCode_ARGS_1              = 0x0001,
     SpkNativeCode_ARGS_2              = 0x0002,
-    SpkNativeCode_ARGS_TUPLE          = 0x0003,
+    SpkNativeCode_ARGS_ARRAY          = 0x0003,
     SpkNativeCode_ARGS_KEYWORDS       = 0x0004,
-    SpkNativeCode_ARGS_TUPLE_KEYWORDS = 0x0007,
+    SpkNativeCode_ARGS_ARRAY_KEYWORDS = 0x0007,
     SpkNativeCode_SIGNATURE_MASK      = 0x000f,
     
     SpkNativeCode_LEAF                = 0x0010,

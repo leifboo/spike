@@ -818,7 +818,9 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             
             if (method->nativeCode) {
                 Object *result, *arg1 = 0, *arg2 = 0;
-                switch (argumentCount) {
+                if (variadic) {
+                    arg1 = framePointer[0];
+                } else switch (argumentCount) {
                 case 2: arg2 = framePointer[1];
                 case 1: arg1 = framePointer[0];
                 case 0: break;

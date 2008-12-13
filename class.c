@@ -22,7 +22,6 @@ static Object *Class_name(Object *self, Object *arg0, Object *arg1) {
     return (Object *)((Class *)self)->name;
 }
 
-#if 0 /* XXX: the calling convention doesn't support this yet */
 static Object *Class_new(Object *_self, Object *arg0, Object *arg1) {
     /* Answer a new instance of the receiver. */
     Class *self;
@@ -37,18 +36,18 @@ static Object *Class_new(Object *_self, Object *arg0, Object *arg1) {
     
     switch (SpkArray_size(args)) {
     case 0:
-        assert(self->base.itemSize == 0 && "object size expected");
+        assert(self->base.itemSize == 0 && "wrong number of arguments to 'new'");
         nItems = 0;
         break;
     case 1:
-        assert(self->base.itemSize > 0 && "variable size class expected");
+        assert(self->base.itemSize > 0 && "wrong number of arguments to 'new'");
         nItemsObj = SpkArray_item(args, 0);
         assert(nItemsObj->klass == ClassInteger);
         nItems = SpkInteger_asLong((Integer *)nItemsObj);
         assert(nItems >= 0); /* XXX */
         break;
     default:
-        assert(0 && "wrong number of arguments"); /* XXX */
+        assert(0 && "wrong number of arguments to 'new'"); /* XXX */
     }
     itemArraySize = (size_t)nItems * self->base.itemSize;
     
@@ -58,53 +57,12 @@ static Object *Class_new(Object *_self, Object *arg0, Object *arg1) {
     for (i = 0; i < self->base.instVarCount; ++i) {
         newObject->variables[i] = Spk_uninit;
     }
-    ((VariableObject *)newObject)->size = (size_t)nItems;
-    memset(SpkObject_ITEM_BASE(newObject), 0, itemArraySize);
-    return (Object *)newObject;
-}
-#else
-static Object *Class_new(Object *_self, Object *arg0, Object *arg1) {
-    /* Answer a new instance of the receiver. */
-    Class *self;
-    ObjectSubclass *newObject;
-    size_t i;
-
-    self = (Class *)_self;
-    assert(self->base.itemSize == 0 && "call new_ instead of new");
-    newObject = (ObjectSubclass *)malloc(self->base.instanceSize);
-    newObject->base.refCount = 1;
-    newObject->base.klass = (Behavior *)self;
-    for (i = 0; i < self->base.instVarCount; ++i) {
-        newObject->variables[i] = Spk_uninit;
+    if (self->base.itemSize > 0) {
+        ((VariableObject *)newObject)->size = (size_t)nItems;
+        memset(SpkObject_ITEM_BASE(newObject), 0, itemArraySize);
     }
     return (Object *)newObject;
 }
-
-static Object *Class_new_(Object *_self, Object *arg0, Object *arg1) {
-    /* Answer a new instance of the receiver. */
-    Class *self;
-    VariableObjectSubclass *newObject;
-    long nItems;
-    size_t i, itemArraySize;
-    
-    self = (Class *)_self;
-    assert(self->base.itemSize > 0 && "variable size class expected");
-    assert(arg0->klass == ClassInteger);
-    nItems = SpkInteger_asLong((Integer *)arg0);
-    assert(nItems >= 0); /* XXX */
-    itemArraySize = (size_t)nItems * self->base.itemSize;
-    
-    newObject = (VariableObjectSubclass *)malloc(self->base.instanceSize + itemArraySize);
-    newObject->base.base.refCount = 1;
-    newObject->base.base.klass = (Behavior *)self;
-    for (i = 0; i < self->base.instVarCount; ++i) {
-        newObject->variables[i] = Spk_uninit;
-    }
-    newObject->base.size = (size_t)nItems;
-    memset(SpkObject_ITEM_BASE((VariableObject *)newObject), 0, itemArraySize);
-    return (Object *)newObject;
-}
-#endif
 
 static Object *Class_print(Object *_self, Object *arg0, Object *arg1) {
     Class *self;
@@ -120,8 +78,7 @@ static Object *Class_print(Object *_self, Object *arg0, Object *arg1) {
 
 static SpkMethodTmpl methods[] = {
     { "name", SpkNativeCode_LEAF, &Class_name },
-    { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Class_new },
-    { "new_", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &Class_new_ },
+    { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_ARRAY, &Class_new },
     { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Class_print },
     { 0, 0, 0}
 };
