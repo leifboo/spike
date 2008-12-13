@@ -12,7 +12,7 @@
 Behavior *ClassArray;
 
 
-#define ARRAY(op) ((Object **)SpkObject_ITEM_BASE(op))
+#define ARRAY(op) ((Object **)SpkVariableObject_ITEM_BASE(op))
 
 
 /*------------------------------------------------------------------------*/

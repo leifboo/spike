@@ -20,7 +20,7 @@ typedef struct ModuleSubclass {
     Object *variables[1]; /* stretchy */
 } ModuleSubclass;
 
-#define SpkModule_VARIABLES(op) ((Object **)SpkObject_ITEM_BASE(op))
+#define SpkModule_VARIABLES(op) ((Object **)SpkVariableObject_ITEM_BASE(op))
 
 
 extern struct Behavior *ClassModule;

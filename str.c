@@ -15,7 +15,7 @@
 
 
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
-#define STR(op) ((char *)SpkObject_ITEM_BASE(op))
+#define STR(op) ((char *)SpkVariableObject_ITEM_BASE(op))
 #define LEN(op) ((op)->size - 1)
 
 

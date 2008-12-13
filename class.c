@@ -25,6 +25,7 @@ static Object *Class_name(Object *self, Object *arg0, Object *arg1) {
 static Object *Class_new(Object *_self, Object *arg0, Object *arg1) {
     /* Answer a new instance of the receiver. */
     Class *self;
+    Behavior *poly;
     Array *args;
     ObjectSubclass *newObject;
     Object *nItemsObj; long nItems;
@@ -34,20 +35,23 @@ static Object *Class_new(Object *_self, Object *arg0, Object *arg1) {
     assert(arg0->klass == ClassArray); /* XXX */
     args = (Array *)arg0;
     
-    switch (SpkArray_size(args)) {
-    case 0:
-        assert(self->base.itemSize == 0 && "wrong number of arguments to 'new'");
+    /* Add-hoc class polymorphism, in lieu of metaclasses. */
+    for (poly = (Behavior *)self;
+         poly != ClassObject && poly != ClassVariableObject;
+         poly = poly->superclass)
+        ;
+    if (poly == ClassObject) {
+        assert(SpkArray_size(args) == 0 && "wrong number of arguments to 'new'");
         nItems = 0;
-        break;
-    case 1:
-        assert(self->base.itemSize > 0 && "wrong number of arguments to 'new'");
+    } else if (poly == ClassVariableObject) {
+        assert(SpkArray_size(args) == 1 && "wrong number of arguments to 'new'");
+        assert(self->base.itemSize > 0);
         nItemsObj = SpkArray_item(args, 0);
         assert(nItemsObj->klass == ClassInteger);
         nItems = SpkInteger_asLong((Integer *)nItemsObj);
         assert(nItems >= 0); /* XXX */
-        break;
-    default:
-        assert(0 && "wrong number of arguments to 'new'"); /* XXX */
+    } else {
+        assert(0 && "not reached");
     }
     itemArraySize = (size_t)nItems * self->base.itemSize;
     
@@ -57,9 +61,9 @@ static Object *Class_new(Object *_self, Object *arg0, Object *arg1) {
     for (i = 0; i < self->base.instVarCount; ++i) {
         newObject->variables[i] = Spk_uninit;
     }
-    if (self->base.itemSize > 0) {
+    if (poly == ClassVariableObject) {
         ((VariableObject *)newObject)->size = (size_t)nItems;
-        memset(SpkObject_ITEM_BASE(newObject), 0, itemArraySize);
+        memset(SpkVariableObject_ITEM_BASE(newObject), 0, itemArraySize);
     }
     return (Object *)newObject;
 }

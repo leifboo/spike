@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 
-Behavior *ClassObject;
+Behavior *ClassObject, *ClassVariableObject;
 
 
 /*------------------------------------------------------------------------*/
@@ -37,9 +37,9 @@ static Object *Object_print(Object *self, Object *arg0, Object *arg1) {
 
 
 /*------------------------------------------------------------------------*/
-/* class template */
+/* class templates */
 
-static SpkMethodTmpl methods[] = {
+static SpkMethodTmpl ObjectMethods[] = {
     { "__eq__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Object_eq },
     { "__ne__", SpkNativeCode_BINARY_OPER, &Object_ne },
     { "class", SpkNativeCode_LEAF, &Object_class },
@@ -53,5 +53,19 @@ SpkClassTmpl ClassObjectTmpl = {
     sizeof(Object),
     0,
     0,
-    methods
+    ObjectMethods
+};
+
+
+static SpkMethodTmpl VariableObjectMethods[] = {
+    { 0, 0, 0}
+};
+
+SpkClassTmpl ClassVariableObjectTmpl = {
+    "VariableObject",
+    offsetof(VariableObjectSubclass, variables),
+    sizeof(VariableObject),
+    0,
+    0,
+    VariableObjectMethods
 };

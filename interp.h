@@ -101,7 +101,7 @@ typedef struct ContextSubclass {
     Object *variables[1]; /* stretchy */
 } ContextSubclass;
 
-#define SpkContext_VARIABLES(op) ((Object **)SpkObject_ITEM_BASE(op))
+#define SpkContext_VARIABLES(op) ((Object **)SpkVariableObject_ITEM_BASE(op))
 
 
 typedef struct Semaphore {
@@ -138,7 +138,7 @@ typedef struct MethodSubclass {
     Object *variables[1]; /* stretchy */
 } MethodSubclass;
 
-#define SpkMethod_OPCODES(op) ((opcode_t *)SpkObject_ITEM_BASE(op))
+#define SpkMethod_OPCODES(op) ((opcode_t *)SpkVariableObject_ITEM_BASE(op))
 
 
 typedef struct Thunk {

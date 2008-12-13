@@ -27,11 +27,11 @@ typedef struct VariableObjectSubclass {
 } VariableObjectSubclass;
 
 
-extern struct Behavior *ClassObject;
-extern struct SpkClassTmpl ClassObjectTmpl;
+extern struct Behavior *ClassObject, *ClassVariableObject;
+extern struct SpkClassTmpl ClassObjectTmpl, ClassVariableObjectTmpl;
 
 
-#define SpkObject_ITEM_BASE(op) (((char *)op) + ((Object *)op)->klass->instanceSize)
+#define SpkVariableObject_ITEM_BASE(op) (((char *)op) + ((VariableObject *)op)->base.klass->instanceSize)
 
 
 #endif /* __obj_h__ */
