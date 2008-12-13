@@ -119,6 +119,7 @@ Behavior *SpkBehavior_new(void);
 Behavior *SpkBehavior_fromTemplate(SpkClassTmpl *template, Behavior *superclass, struct Module *module);
 void SpkBehavior_init(Behavior *self, Behavior *superclass, struct Module *module, size_t instVarCount);
 void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavior *superclass, struct Module *module);
+void SpkBehavior_addMethodsFromTemplate(Behavior *self, SpkClassTmpl *template);
 void SpkBehavior_insertMethod(Behavior *, struct Symbol *, Method *);
 Method *SpkBehavior_lookupMethod(Behavior *, struct Symbol *);
 struct Symbol *SpkBehavior_findSelectorOfMethod(Behavior *, Method *);

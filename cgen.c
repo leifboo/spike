@@ -715,7 +715,7 @@ static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabe
 
 static void rewind(CodeGen *cgen) {
     if (cgen->currentMethod) {
-        cgen->opcodesBegin = &cgen->currentMethod->opcodes[0];
+        cgen->opcodesBegin = SpkMethod_OPCODES(cgen->currentMethod);
         cgen->opcodesEnd = cgen->opcodesBegin;
         cgen->currentOffset = 0;
         cgen->stackPointer = cgen->stackSize = 0;
@@ -812,7 +812,7 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
         cgen->stackSize += LEAF_STACK_SPACE;
     }
 
-    assert(cgen->currentOffset == cgen->currentMethod->size);
+    assert(cgen->currentOffset == cgen->currentMethod->base.size);
     assert(cgen->stackSize == stackSize);
     
     SpkBehavior_insertMethod(methodClass, messageSelector, cgen->currentMethod);
@@ -954,7 +954,7 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize,
     /* Create and initialize the module. */
     module = SpkModule_new(dataSize + cgen.rodataSize, cgen.globals);
     module->firstClass = cgen.firstClass;
-    globals = SpkInterpreter_instanceVars((Object *)module);
+    globals = SpkModule_VARIABLES((Object *)module);
     for (index = 0; index < dataSize; ++index) {
         globals[index] = cgen.data[index];
     }

@@ -144,7 +144,6 @@ void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size
 }
 
 void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavior *superclass, Module *module) {
-    SpkMethodTmpl *methodTmpl;
     
     assert(operSelectors[0].messageSelector && "use of 'initFromTemplate' cannot precede initialization of class Symbol");
     
@@ -153,6 +152,10 @@ void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavi
     self->instVarOffset = template->instVarOffset;
     self->instanceSize = template->instanceSize;
     self->itemSize = template->itemSize;
+}
+
+void SpkBehavior_addMethodsFromTemplate(Behavior *self, SpkClassTmpl *template) {
+    SpkMethodTmpl *methodTmpl;
     
     for (methodTmpl = template->methods; methodTmpl->name; ++methodTmpl) {
         Symbol *messageSelector;

@@ -31,7 +31,7 @@ extern struct Behavior *ClassObject;
 extern struct SpkClassTmpl ClassObjectTmpl;
 
 
-#define SpkObject_ITEM_BASE(op) (((char *)op) + (op)->base.klass->instanceSize)
+#define SpkObject_ITEM_BASE(op) (((char *)op) + ((Object *)op)->klass->instanceSize)
 
 
 #endif /* __obj_h__ */

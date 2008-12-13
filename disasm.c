@@ -42,8 +42,8 @@
 void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
     opcode_t *begin, *ip, *instructionPointer, *end;
     
-    begin = &method->opcodes[0];
-    end = begin + method->size;
+    begin = SpkMethod_OPCODES(method);
+    end = begin + method->base.size;
     instructionPointer = begin;
     
     while (instructionPointer < end) {

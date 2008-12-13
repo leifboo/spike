@@ -25,7 +25,7 @@ Null *Spk_null;
 Uninit *Spk_uninit;
 Void *Spk_void;
 
-Behavior *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
+Behavior *ClassMessage, *ClassMethod, *ClassThunk, *ClassContext, *ClassNull, *ClassUninit, *ClassVoid;
 Interpreter *theInterpreter; /* XXX */
 
 
@@ -47,6 +47,20 @@ SpkClassTmpl ClassMessageTmpl = {
 };
 
 
+static SpkMethodTmpl MethodMethods[] = {
+    { 0, 0, 0}
+};
+
+SpkClassTmpl ClassMethodTmpl = {
+    "Method",
+    offsetof(MethodSubclass, variables),
+    sizeof(Method),
+    sizeof(opcode_t),
+    0,
+    MethodMethods
+};
+
+
 static SpkMethodTmpl ThunkMethods[] = {
     { 0, 0, 0}
 };
@@ -58,6 +72,20 @@ SpkClassTmpl ClassThunkTmpl = {
     0,
     0,
     ThunkMethods
+};
+
+
+static SpkMethodTmpl ContextMethods[] = {
+    { 0, 0, 0}
+};
+
+SpkClassTmpl ClassContextTmpl = {
+    "Context",
+    offsetof(ContextSubclass, variables),
+    sizeof(Context),
+    sizeof(Object *),
+    0,
+    ContextMethods
 };
 
 
@@ -114,17 +142,13 @@ Object *SpkInterpreter_start(Object *entry) {
     Interpreter interpreter;
     opcode_t *ip; size_t trampolineSize;
     
-    callThunk = (Method *)malloc(sizeof(Method));
-    callThunk->nativeCode = 0;
-    callThunk->size = 1;
-    callThunk->opcodes[0] = OPCODE_CALL_THUNK;
+    callThunk = SpkMethod_new(1);
+    SpkMethod_OPCODES(callThunk)[0] = OPCODE_CALL_THUNK;
     SpkBehavior_insertMethod(ClassThunk, SpkSymbol_get("__apply__"), callThunk);
     
     trampolineSize = 5;
-    trampoline = (Method *)malloc(sizeof(Method) + trampolineSize*sizeof(opcode_t));
-    trampoline->nativeCode = 0;
-    trampoline->size = trampolineSize;
-    ip = &trampoline->opcodes[0];
+    trampoline = SpkMethod_new(trampolineSize);
+    ip = SpkMethod_OPCODES(trampoline);
     *ip++ = OPCODE_PUSH_SELF;
     *ip++ = OPCODE_CALL;
     *ip++ = (opcode_t)OPER_APPLY;
@@ -134,8 +158,8 @@ Object *SpkInterpreter_start(Object *entry) {
     context = SpkContext_new(2);
 
     context->caller = 0;
-    context->pc = &trampoline->opcodes[0];
-    context->stackp = &context->variables[2];
+    context->pc = SpkMethod_OPCODES(trampoline);
+    context->stackp = &SpkContext_VARIABLES(context)[2];
     context->homeContext = context;
     context->u.m.method = trampoline;
     context->u.m.methodClass = entry->klass;
@@ -191,8 +215,9 @@ Method *SpkMethod_new(size_t size) {
     Method *newMethod;
     
     newMethod = (Method *)malloc(sizeof(Method) + size*sizeof(opcode_t));
+    newMethod->base.base.klass = ClassMethod;
+    newMethod->base.size = size;
     newMethod->nativeCode = 0;
-    newMethod->size = size;
     return newMethod;
 }
 
@@ -203,7 +228,8 @@ Method *SpkMethod_new(size_t size) {
 Context *SpkContext_new(size_t size) {
     Context *newContext;
     
-    newContext = (Context *)malloc(sizeof(Context) + (size - 1) * sizeof(Object *));
+    newContext = (Context *)malloc(sizeof(Context) + size*sizeof(Object *));
+    newContext->base.base.klass = ClassContext;
     newContext->base.size = size;
     return newContext;
 }
@@ -225,7 +251,7 @@ void SpkContext_init(Context *self, Context *activeContext) {
         assert(XXX);
     }
     self->pc = self->u.b.startpc;
-    self->stackp = &self->variables[self->homeContext->base.size];
+    self->stackp = &SpkContext_VARIABLES(self)[self->homeContext->base.size];
     self->sender = activeContext;
 }
 
@@ -233,9 +259,9 @@ void SpkContext_initWithArg(Context *self, Object *argument, Context *activeCont
     if (self->u.b.nargs != 1) {
         assert(XXX);
     }
-    self->variables[0] = argument;
+    SpkContext_VARIABLES(self)[0] = argument;
     self->pc = self->u.b.startpc;
-    self->stackp = &self->variables[self->homeContext->base.size - 1];
+    self->stackp = &SpkContext_VARIABLES(self)[self->homeContext->base.size - 1];
     self->sender = activeContext;
 }
 
@@ -321,7 +347,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
     stackPointer = self->activeContext->stackp;
     framePointer = homeContext->u.m.framep;
     instVarPointer = INSTANCE_VARS(receiver);
-    globalPointer = INSTANCE_VARS((Object *)methodClass->module);
+    globalPointer = SpkModule_VARIABLES(methodClass->module);
     self->newContext = 0;
 
  checkForInterrupts:
@@ -546,11 +572,11 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
  callNewMethod:
                     /* call (jmpl -- jump and link) */
                     linkRegister = instructionPointer;
-                    instructionPointer = &method->opcodes[0];
+                    instructionPointer = SpkMethod_OPCODES(method);
  jump:
                     framePointer = stackPointer;
                     instVarPointer = INSTANCE_VARS(receiver);
-                    globalPointer = INSTANCE_VARS((Object *)methodClass->module);
+                    globalPointer = SpkModule_VARIABLES(methodClass->module);
                     goto loop;
                 }
             }
@@ -625,7 +651,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             methodClass = homeContext->u.m.methodClass;
             framePointer = homeContext->u.m.framep;
             instVarPointer = INSTANCE_VARS(receiver);
-            globalPointer = INSTANCE_VARS((Object *)methodClass->module);
+            globalPointer = SpkModule_VARIABLES(methodClass->module);
             break;
         case OPCODE_RET_TRAMP: {
             /* return from trampoline */
@@ -727,7 +753,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             
             /* initialize the stack */
             count = stackSize;
-            for (p = &newContext->variables[0]; count > 0; ++p, --count) {
+            for (p = SpkContext_VARIABLES(newContext); count > 0; ++p, --count) {
                 *p = Spk_uninit;
             }
             newContext->stackp = newContext->u.m.framep = p;
@@ -884,10 +910,6 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
 
 }
 
-Object **SpkInterpreter_instanceVars(Object *object) {
-    return INSTANCE_VARS(object);
-}
-
 
 /*------------------------------------------------------------------------*/
 /* fibers */
@@ -985,7 +1007,7 @@ void SpkInterpreter_printCallStack(Interpreter *self) {
         methodClass = home->u.m.methodClass;
         methodSel = SpkBehavior_findSelectorOfMethod(methodClass, method);
         printf("%04x %p%s",
-               ctxt->pc - &method->opcodes[0], ctxt, (ctxt == home ? " " : " {} in "));
+               ctxt->pc - SpkMethod_OPCODES(method), ctxt, (ctxt == home ? " " : " {} in "));
         if (methodSel == call) {
             printf("%s\n", SpkBehavior_name(methodClass));
         } else {

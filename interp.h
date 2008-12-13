@@ -94,8 +94,14 @@ struct Context {
             opcode_t *startpc;
         } b;
     } u;
-    Object *variables[1]; /* stretchy */
 };
+
+typedef struct ContextSubclass {
+    Context base;
+    Object *variables[1]; /* stretchy */
+} ContextSubclass;
+
+#define SpkContext_VARIABLES(op) ((Object **)SpkObject_ITEM_BASE(op))
 
 
 typedef struct Semaphore {
@@ -123,11 +129,16 @@ typedef struct ProcessorScheduler {
 
 
 struct Method {
-    Object base;
+    VariableObject base;
     SpkNativeCode nativeCode;
-    size_t size;
-    opcode_t opcodes[1]; /* stretchy */
 };
+
+typedef struct MethodSubclass {
+    Method base;
+    Object *variables[1]; /* stretchy */
+} MethodSubclass;
+
+#define SpkMethod_OPCODES(op) ((opcode_t *)SpkObject_ITEM_BASE(op))
 
 
 typedef struct Thunk {
@@ -188,8 +199,8 @@ extern Null *Spk_null;
 extern Uninit *Spk_uninit;
 extern Void *Spk_void;
 
-extern struct Behavior *ClassMessage, *ClassThunk, *ClassNull, *ClassUninit, *ClassVoid;
-extern struct SpkClassTmpl ClassMessageTmpl, ClassThunkTmpl, ClassNullTmpl, ClassUninitTmpl, ClassVoidTmpl;
+extern struct Behavior *ClassMessage, *ClassMethod, *ClassThunk, *ClassContext, *ClassNull, *ClassUninit, *ClassVoid;
+extern struct SpkClassTmpl ClassMessageTmpl, ClassMethodTmpl, ClassThunkTmpl, ClassContextTmpl, ClassNullTmpl, ClassUninitTmpl, ClassVoidTmpl;
 extern Interpreter *theInterpreter; /* XXX */
 
 
@@ -209,7 +220,6 @@ Fiber *SpkSemaphore_removeFirst(Semaphore *);
 Object *SpkInterpreter_start(Object *);
 void SpkInterpreter_init(Interpreter *, ProcessorScheduler *);
 Object *SpkInterpreter_interpret(Interpreter *);
-Object **SpkInterpreter_instanceVars(Object *);
 void SpkInterpreter_synchronousSignal(Interpreter *, Semaphore *);
 void SpkInterpreter_transferTo(Interpreter *, Fiber *);
 Fiber *SpkInterpreter_wakeHighestPriority(Interpreter *);

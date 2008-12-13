@@ -32,7 +32,7 @@ SpkClassTmpl ClassModuleTmpl = {
     "Module",
     offsetof(ModuleSubclass, variables),
     sizeof(Module),
-    0,
+    sizeof(Object *),
     0,
     methods
 };
@@ -45,7 +45,8 @@ Module *SpkModule_new(unsigned int nGlobals, IdentityDictionary *globals) {
     Module *newModule;
     
     newModule = (Module *)malloc(ClassModule->instVarOffset + nGlobals*sizeof(Object *));
-    newModule->base.klass = ClassModule;
+    newModule->base.base.klass = ClassModule;
+    newModule->base.size = nGlobals;
     if (!globals) {
         globals = SpkIdentityDictionary_new();
     }

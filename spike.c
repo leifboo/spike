@@ -48,7 +48,9 @@ static BootRec bootRec[] = {
     /**/CLASS(IdentityDictionary, Object),
     /**/CLASS(Symbol,  Object),
     /**/CLASS(Message, Object),
+    /**/CLASS(Method,  Object),
     /**/CLASS(Thunk,   Object),
+    /**/CLASS(Context, Object),
     /**/CLASS(Null,    Object),
     /**/CLASS(Uninit,  Object),
     /**/CLASS(Void,    Object),
@@ -95,6 +97,18 @@ static void bootstrap() {
             } else {
                 assert((*r->var)->klass == (Behavior *)ClassMetaclass);
                 SpkBehavior_initFromTemplate((Behavior *)*r->var, r->init, *r->superclass, builtInModule);
+            }
+        }
+    }
+    
+    /* init methods */
+    for (r = bootRec; r->var; ++r) {
+        if (r->init) {
+            if ((*r->var)->klass == (Behavior *)ClassClass) {
+                SpkClass_addMethodsFromTemplate((Class *)*r->var, r->init);
+            } else {
+                assert((*r->var)->klass == (Behavior *)ClassMetaclass);
+                SpkBehavior_addMethodsFromTemplate((Behavior *)*r->var, r->init);
             }
         }
     }

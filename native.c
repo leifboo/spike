@@ -36,7 +36,7 @@ Method *Spk_newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) 
     newMethod = SpkMethod_new(size);
     newMethod->nativeCode = nativeCode;
     
-    ip = &newMethod->opcodes[0];
+    ip = SpkMethod_OPCODES(newMethod);
     if (flags & SpkNativeCode_THUNK) {
         *ip++ = OPCODE_THUNK;
     }
@@ -98,7 +98,7 @@ static Object *sendMessage(Interpreter *interpreter,
     *--thisContext->stackp = obj ? obj : thisContext->u.m.receiver;
     *--thisContext->stackp = (Object *)selector;
     *--thisContext->stackp = (Object *)argumentArray;
-    assert(thisContext->stackp >= &thisContext->variables[LEAF_STACK_SPACE]);
+    assert(thisContext->stackp >= &SpkContext_VARIABLES(thisContext)[LEAF_STACK_SPACE]);
     
     /* interpret */
     result = SpkInterpreter_interpret(interpreter);

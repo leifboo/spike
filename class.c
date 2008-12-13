@@ -159,3 +159,7 @@ void SpkClass_initFromTemplate(Class *self,
                                  module);
     self->name = SpkSymbol_get(template->name);
 }
+
+void SpkClass_addMethodsFromTemplate(Class *self, SpkClassTmpl *template) {
+    SpkBehavior_addMethodsFromTemplate((Behavior *)self, template);
+}
