@@ -14,6 +14,7 @@
 #include "interp.h"
 #include "metaclass.h"
 #include "module.h"
+#include "native.h"
 #include "obj.h"
 #include "str.h"
 #include "sym.h"
@@ -43,6 +44,7 @@ static BootRec bootRec[] = {
     /******/METACLASS(Class),
     /**/CLASS(VariableObject, Object),
     /******/CLASS(Method,  VariableObject),
+    /**********/CLASS(NativeAccessor,  Method),
     /******/CLASS(Context, VariableObject),
     /******/CLASS(Module,  VariableObject),
     /******/CLASS(String,  VariableObject),

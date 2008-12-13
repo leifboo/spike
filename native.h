@@ -6,6 +6,7 @@
 #include "oper.h"
 
 #include <stdarg.h>
+#include <stddef.h>
 
 
 struct Interpreter;
@@ -39,6 +40,8 @@ typedef struct Object *(*SpkNativeCode)(struct Object *, struct Object *, struct
 
 
 struct Method *Spk_newNativeMethod(SpkNativeCodeFlags, SpkNativeCode);
+struct Method *Spk_newNativeReadAccessor(unsigned int, size_t);
+struct Method *Spk_newNativeWriteAccessor(unsigned int, size_t);
 
 struct Object *Spk_oper(struct Interpreter *, struct Object *, Oper, ...);
 struct Object *Spk_vOper(struct Interpreter *, struct Object *, Oper, va_list);
@@ -46,6 +49,12 @@ struct Object *Spk_call(struct Interpreter *, struct Object *, CallOper, ...);
 struct Object *Spk_vCall(struct Interpreter *, struct Object *, CallOper, va_list);
 struct Object *Spk_attr(struct Interpreter *, struct Object *, struct Symbol *);
 struct Object *Spk_callAttr(struct Interpreter *, struct Object *, struct Symbol *, ...);
+
+struct Method *Spk_thisMethod(struct Interpreter *);
+
+
+extern struct Behavior *ClassNativeAccessor;
+extern struct SpkClassTmpl ClassNativeAccessorTmpl;
 
 
 #endif /* __native_h__ */

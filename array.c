@@ -55,10 +55,6 @@ static Object *Array_setItem(Object *_self, Object *arg0, Object *arg1) {
 /*------------------------------------------------------------------------*/
 /* methods -- other */
 
-static Object *Array_size(Object *self, Object *arg0, Object *arg1) {
-    return (Object *)SpkInteger_fromLong((long)((Array *)self)->size);
-}
-
 static Object *Array_print(Object *_self, Object *arg0, Object *arg1) {
     Array *self;
     int i;
@@ -75,6 +71,11 @@ static Object *Array_print(Object *_self, Object *arg0, Object *arg1) {
 
 /*------------------------------------------------------------------------*/
 /* class template */
+
+static SpkAccessorTmpl accessors[] = {
+    { "size", Spk_T_SIZE, offsetof(Array, size), SpkAccessor_READ },
+    { 0, 0, 0, 0 }
+};
 
 static SpkMethodTmpl methods[] = {
     /* operators */
@@ -93,7 +94,6 @@ static SpkMethodTmpl methods[] = {
     { "__item__",    SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_item },
     { "__setItem__", SpkNativeCode_ARGS_2 | SpkNativeCode_LEAF, &Array_setItem },
     /* other */
-    { "size", SpkNativeCode_LEAF, &Array_size },
     { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Array_print },
     { 0, 0, 0}
 };
@@ -103,7 +103,7 @@ SpkClassTmpl ClassArrayTmpl = {
     offsetof(ArraySubclass, variables),
     sizeof(Array),
     sizeof(Object *),
-    0,
+    accessors,
     methods
 };
 

@@ -53,13 +53,6 @@ SpecialSelector operCallSelectors[NUM_CALL_OPER] = {
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static Object *Behavior_superclass(Object *_self, Object *arg0, Object *arg1) {
-    Behavior *self;
-    
-    self = (Behavior *)_self;
-    return self->superclass ? (Object *)self->superclass : Spk_null;
-}
-
 static Object *Behavior_print(Object *self, Object *arg0, Object *arg1) {
     printf("<Behavior object at %p>", self);
     return Spk_void;
@@ -69,8 +62,12 @@ static Object *Behavior_print(Object *self, Object *arg0, Object *arg1) {
 /*------------------------------------------------------------------------*/
 /* class template */
 
+static SpkAccessorTmpl accessors[] = {
+    { "superclass", Spk_T_OBJECT, offsetof(Behavior, superclass), SpkAccessor_READ },
+    { 0, 0, 0, 0 }
+};
+
 static SpkMethodTmpl methods[] = {
-    { "superclass", SpkNativeCode_LEAF, &Behavior_superclass },
     { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Behavior_print },
     { 0, 0, 0}
 };
@@ -80,7 +77,7 @@ SpkClassTmpl ClassBehaviorTmpl = {
     offsetof(BehaviorSubclass, variables),
     sizeof(Behavior),
     0,
-    0,
+    accessors,
     methods
 };
 
@@ -155,15 +152,48 @@ void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavi
 }
 
 void SpkBehavior_addMethodsFromTemplate(Behavior *self, SpkClassTmpl *template) {
-    SpkMethodTmpl *methodTmpl;
     
-    for (methodTmpl = template->methods; methodTmpl->name; ++methodTmpl) {
-        Symbol *messageSelector;
-        Method *method;
+    if (template->accessors) {
+        SpkAccessorTmpl *accessorTmpl;
         
-        messageSelector = SpkSymbol_get(methodTmpl->name);
-        method = Spk_newNativeMethod(methodTmpl->flags, methodTmpl->code);
-        SpkBehavior_insertMethod(self, messageSelector, method);
+        for (accessorTmpl = template->accessors; accessorTmpl->name; ++accessorTmpl) {
+            Symbol *messageSelector;
+            Method *method;
+        
+            if (accessorTmpl->flags & SpkAccessor_READ) {
+                messageSelector = SpkSymbol_get(accessorTmpl->name);
+                method = Spk_newNativeReadAccessor(accessorTmpl->type, accessorTmpl->offset);
+                SpkBehavior_insertMethod(self, messageSelector, method);
+            }
+            
+            if (accessorTmpl->flags & SpkAccessor_WRITE) {
+                static const char *mangle = "__set__%s";
+                size_t len;
+                char *buffer;
+            
+                len = strlen(mangle) - 2 + strlen(accessorTmpl->name);
+                buffer = (char *)malloc(len + 1);
+                sprintf(buffer, mangle, accessorTmpl->name);
+                messageSelector = SpkSymbol_get(buffer);
+                free(buffer);
+            
+                method = Spk_newNativeWriteAccessor(accessorTmpl->type, accessorTmpl->offset);
+                SpkBehavior_insertMethod(self, messageSelector, method);
+            }
+        }
+    }
+    
+    if (template->methods) {
+        SpkMethodTmpl *methodTmpl;
+        
+        for (methodTmpl = template->methods; methodTmpl->name; ++methodTmpl) {
+            Symbol *messageSelector;
+            Method *method;
+            
+            messageSelector = SpkSymbol_get(methodTmpl->name);
+            method = Spk_newNativeMethod(methodTmpl->flags, methodTmpl->code);
+            SpkBehavior_insertMethod(self, messageSelector, method);
+        }
     }
 }
 

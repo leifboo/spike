@@ -18,10 +18,6 @@ struct Metaclass *ClassClass;
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static Object *Class_name(Object *self, Object *arg0, Object *arg1) {
-    return (Object *)((Class *)self)->name;
-}
-
 static Object *Class_new(Object *_self, Object *arg0, Object *arg1) {
     /* Answer a new instance of the receiver. */
     Class *self;
@@ -80,8 +76,12 @@ static Object *Class_print(Object *_self, Object *arg0, Object *arg1) {
 /*------------------------------------------------------------------------*/
 /* class template */
 
+static SpkAccessorTmpl accessors[] = {
+    { "name", Spk_T_OBJECT, offsetof(Class, name), SpkAccessor_READ },
+    { 0, 0, 0, 0 }
+};
+
 static SpkMethodTmpl methods[] = {
-    { "name", SpkNativeCode_LEAF, &Class_name },
     { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_ARRAY, &Class_new },
     { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Class_print },
     { 0, 0, 0}
@@ -92,7 +92,7 @@ SpkClassTmpl ClassClassTmpl = {
     offsetof(ClassSubclass, variables),
     sizeof(Class),
     0,
-    0,
+    accessors,
     methods
 };
 

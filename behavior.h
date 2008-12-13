@@ -31,22 +31,23 @@ typedef oper_entry_t oper_call_table_t[NUM_CALL_OPER];
 
 
 typedef enum SpkInstVarType {
-    T_SHORT,
-    T_INT,
-    T_LONG,
-    T_FLOAT,
-    T_DOUBLE,
-    T_STRING,
-    T_OBJECT,
-    T_CHAR,
-    T_BYTE,
-    T_UBYTE,
-    T_USHORT,
-    T_UINT,
-    T_ULONG,
-    T_STRING_INPLACE,
-    T_LONGLONG,
-    T_ULONGLONG,
+    Spk_T_SHORT,
+    Spk_T_INT,
+    Spk_T_LONG,
+    Spk_T_FLOAT,
+    Spk_T_DOUBLE,
+    Spk_T_STRING,
+    Spk_T_OBJECT,
+    Spk_T_CHAR,
+    Spk_T_BYTE,
+    Spk_T_UBYTE,
+    Spk_T_USHORT,
+    Spk_T_UINT,
+    Spk_T_ULONG,
+    Spk_T_STRING_INPLACE,
+    Spk_T_LONGLONG,
+    Spk_T_ULONGLONG,
+    Spk_T_SIZE
 } SpkInstVarType;
 
 enum /*flags*/ {
