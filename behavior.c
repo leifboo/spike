@@ -132,6 +132,9 @@ void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size
     self->next = 0;
     
     /* memory layout of instances */
+    self->traverse.init = 0;
+    self->traverse.current = 0;
+    self->traverse.next = 0;
     self->instVarCount = (superclass ? superclass->instVarCount : 0) + instVarCount;
     self->instVarOffset = superclass ? superclass->instVarOffset : offsetof(ObjectSubclass, variables);
     self->instanceSize = self->instVarOffset + self->instVarCount*sizeof(Object *);
@@ -146,6 +149,9 @@ void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavi
     
     SpkBehavior_init(self, superclass, module, 0);
     
+    if (template->traverse) {
+        self->traverse = *template->traverse;
+    }
     self->instVarOffset = template->instVarOffset;
     self->instanceSize = template->instanceSize;
     self->itemSize = template->itemSize;

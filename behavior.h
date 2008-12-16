@@ -29,6 +29,12 @@ typedef struct oper_entry_t {
 typedef oper_entry_t oper_table_t[NUM_OPER];
 typedef oper_entry_t oper_call_table_t[NUM_CALL_OPER];
 
+typedef struct traverse_t {
+    void (*init)(Object *);
+    Object **(*current)(Object *);
+    void (*next)(Object *);
+} traverse_t;
+
 
 typedef enum SpkInstVarType {
     Spk_T_SHORT,
@@ -75,6 +81,7 @@ typedef struct SpkClassTmpl {
     size_t itemSize;
     SpkAccessorTmpl *accessors;
     SpkMethodTmpl *methods;
+    traverse_t *traverse;
 } SpkClassTmpl;
 
 
@@ -90,6 +97,7 @@ struct Behavior {
     Behavior *next;
     
     /* memory layout of instances */
+    traverse_t traverse;
     size_t instVarCount;
     size_t instVarOffset;
     size_t instanceSize;

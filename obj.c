@@ -6,6 +6,7 @@
 #include "interp.h"
 #include "native.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 
 Behavior *ClassObject, *ClassVariableObject;
@@ -33,6 +34,24 @@ static Object *Object_print(Object *self, Object *arg0, Object *arg1) {
 
 
 /*------------------------------------------------------------------------*/
+/* memory layout of instances */
+
+static void Object_traverse_init(Object *self) {
+    self->refCount = 0;
+}
+
+static Object **Object_traverse_current(Object *self) {
+    if (self->refCount >= self->klass->instVarCount)
+        return 0;
+    return (Object **)(self->klass->instVarOffset + self->refCount * sizeof(Object *));
+}
+
+static void Object_traverse_next(Object *self) {
+    ++self->refCount;
+}
+
+
+/*------------------------------------------------------------------------*/
 /* class templates */
 
 static SpkAccessorTmpl ObjectAccessors[] = {
@@ -47,13 +66,20 @@ static SpkMethodTmpl ObjectMethods[] = {
     { 0, 0, 0}
 };
 
+static traverse_t ObjectTraverse = {
+    &Object_traverse_init,
+    &Object_traverse_current,
+    &Object_traverse_next,
+};
+
 SpkClassTmpl ClassObjectTmpl = {
     "Object",
     offsetof(ObjectSubclass, variables),
     sizeof(Object),
     0,
     ObjectAccessors,
-    ObjectMethods
+    ObjectMethods,
+    &ObjectTraverse
 };
 
 
@@ -69,3 +95,47 @@ SpkClassTmpl ClassVariableObjectTmpl = {
     0,
     VariableObjectMethods
 };
+
+
+/*------------------------------------------------------------------------*/
+/* object memory */
+
+Object *Spk_alloc(size_t size) {
+    Object *newObject;
+    
+    newObject = (Object *)malloc(size);
+    newObject->refCount = 1;
+    return newObject;
+}
+
+void Spk_dealloc(Object *obj) {
+    /* cf. "A Space-efficient Reference-counting Collector", pp. 678-681 */
+    Object *prior, *current;
+    Object **var;
+    
+    prior = 0;
+    current = obj;
+ dealloc:
+    (*current->klass->traverse.init)(current);
+    while (1) {
+        /* XXX: visit 'klass' field */
+        while ((var = (*current->klass->traverse.current)(current))) {
+            if (--(*var)->refCount == 0) {
+                Object *tmp = *var;
+                *var = prior;
+                prior = current;
+                current = tmp;
+                goto dealloc;
+            }
+            (*current->klass->traverse.next)(current);
+        }
+        free(current);
+        current = prior;
+        if (!current)
+            break;
+        /* resume where we left off */
+        var = (*current->klass->traverse.current)(current);
+        prior = *var;
+        (*current->klass->traverse.next)(current);
+    }
+}

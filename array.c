@@ -70,6 +70,33 @@ static Object *Array_print(Object *_self, Object *arg0, Object *arg1) {
 
 
 /*------------------------------------------------------------------------*/
+/* memory layout of instances */
+
+static void Array_traverse_init(Object *self) {
+    (*self->klass->superclass->traverse.init)(self);
+}
+
+static Object **Array_traverse_current(Object *_self) {
+    Array *self;
+    
+    self = (Array *)_self;
+    if (self->size > 0)
+        return &(ARRAY(self)[self->size - 1]);
+    return (*self->base.klass->superclass->traverse.current)(_self);
+}
+
+static void Array_traverse_next(Object *_self) {
+    Array *self;
+    
+    self = (Array *)_self;
+    if (self->size > 0)
+        --self->size;
+    else
+        (*self->base.klass->superclass->traverse.next)(_self);
+}
+
+
+/*------------------------------------------------------------------------*/
 /* class template */
 
 static SpkAccessorTmpl accessors[] = {
@@ -98,13 +125,20 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
+static traverse_t traverse = {
+    &Array_traverse_init,
+    &Array_traverse_current,
+    &Array_traverse_next,
+};
+
 SpkClassTmpl ClassArrayTmpl = {
     "Array",
     offsetof(ArraySubclass, variables),
     sizeof(Array),
     sizeof(Object *),
     accessors,
-    methods
+    methods,
+    &traverse
 };
 
 
