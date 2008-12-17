@@ -199,8 +199,8 @@ extern Null *Spk_null;
 extern Uninit *Spk_uninit;
 extern Void *Spk_void;
 
-extern struct Behavior *ClassMessage, *ClassMethod, *ClassThunk, *ClassContext, *ClassNull, *ClassUninit, *ClassVoid;
-extern struct SpkClassTmpl ClassMessageTmpl, ClassMethodTmpl, ClassThunkTmpl, ClassContextTmpl, ClassNullTmpl, ClassUninitTmpl, ClassVoidTmpl;
+extern struct Behavior *Spk_ClassMessage,*Spk_ClassMethod, *Spk_ClassThunk, *Spk_ClassContext, *Spk_ClassNull, *Spk_ClassUninit, *Spk_ClassVoid;
+extern struct SpkClassTmpl Spk_ClassMessageTmpl, Spk_ClassMethodTmpl, Spk_ClassThunkTmpl, Spk_ClassContextTmpl, Spk_ClassNullTmpl, Spk_ClassUninitTmpl, Spk_ClassVoidTmpl;
 extern Interpreter *theInterpreter; /* XXX */
 
 

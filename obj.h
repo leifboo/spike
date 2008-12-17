@@ -27,12 +27,14 @@ typedef struct VariableObjectSubclass {
 } VariableObjectSubclass;
 
 
+Object *Spk_cast(struct Behavior *, Object *);
+
 Object *Spk_alloc(size_t);
 void Spk_dealloc(Object *);
 
 
-extern struct Behavior *ClassObject, *ClassVariableObject;
-extern struct SpkClassTmpl ClassObjectTmpl, ClassVariableObjectTmpl;
+extern struct Behavior *Spk_ClassObject, *Spk_ClassVariableObject;
+extern struct SpkClassTmpl Spk_ClassObjectTmpl, Spk_ClassVariableObjectTmpl;
 
 
 #define Spk_INCREF(op) (((Object *)(op))->refCount++)
@@ -51,6 +53,8 @@ extern struct SpkClassTmpl ClassObjectTmpl, ClassVariableObjectTmpl;
 
 
 #define SpkVariableObject_ITEM_BASE(op) (((char *)op) + ((VariableObject *)op)->base.klass->instanceSize)
+
+#define Spk_CAST(c, op) ((c *)Spk_cast(Spk_Class ## c, (Object *)(op)))
 
 
 #endif /* __obj_h__ */

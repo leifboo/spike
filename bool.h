@@ -9,8 +9,8 @@
 typedef Object Boolean;
 
 
-extern struct Behavior *ClassBoolean, *ClassFalse, *ClassTrue;
-extern struct SpkClassTmpl ClassBooleanTmpl, ClassFalseTmpl, ClassTrueTmpl;
+extern struct Behavior *Spk_ClassBoolean, *Spk_ClassFalse, *Spk_ClassTrue;
+extern struct SpkClassTmpl Spk_ClassBooleanTmpl, Spk_ClassFalseTmpl, Spk_ClassTrueTmpl;
 extern Boolean *Spk_false, *Spk_true;
 
 

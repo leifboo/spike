@@ -23,9 +23,9 @@ typedef struct ModuleSubclass {
 #define SpkModule_VARIABLES(op) ((Object **)SpkVariableObject_ITEM_BASE(op))
 
 
-extern struct Behavior *ClassModule;
-extern struct SpkClassTmpl ClassModuleTmpl;
-extern Module *builtInModule;
+extern struct Behavior *Spk_ClassModule;
+extern struct SpkClassTmpl Spk_ClassModuleTmpl;
+extern Module *Spk_builtInModule;
 
 
 Module *SpkModule_new(unsigned int, struct IdentityDictionary *);

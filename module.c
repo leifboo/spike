@@ -7,8 +7,8 @@
 #include <stdlib.h>
 
 
-Behavior *ClassModule;
-Module *builtInModule;
+Behavior *Spk_ClassModule;
+Module *Spk_builtInModule;
 
 
 /*------------------------------------------------------------------------*/
@@ -28,7 +28,7 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassModuleTmpl = {
+SpkClassTmpl Spk_ClassModuleTmpl = {
     "Module",
     offsetof(ModuleSubclass, variables),
     sizeof(Module),
@@ -44,8 +44,8 @@ SpkClassTmpl ClassModuleTmpl = {
 Module *SpkModule_new(unsigned int nGlobals, IdentityDictionary *globals) {
     Module *newModule;
     
-    newModule = (Module *)malloc(ClassModule->instVarOffset + nGlobals*sizeof(Object *));
-    newModule->base.base.klass = ClassModule;
+    newModule = (Module *)malloc(Spk_ClassModule->instVarOffset + nGlobals*sizeof(Object *));
+    newModule->base.base.klass = Spk_ClassModule;
     newModule->base.size = nGlobals;
     if (!globals) {
         globals = SpkIdentityDictionary_new();

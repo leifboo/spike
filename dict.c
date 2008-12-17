@@ -9,7 +9,7 @@
 #define HASH(key) (mask & ((size_t)(key) / sizeof(Object *)))
 
 
-struct Behavior *ClassIdentityDictionary;
+struct Behavior *Spk_ClassIdentityDictionary;
 
 
 /*------------------------------------------------------------------------*/
@@ -123,7 +123,7 @@ IdentityDictionary *SpkIdentityDictionary_new(void) {
     IdentityDictionary *self;
     
     self = (IdentityDictionary *)malloc(sizeof(IdentityDictionary));
-    self->base.klass = ClassIdentityDictionary;
+    self->base.klass = Spk_ClassIdentityDictionary;
     self->size = 2; /* must be a power of 2 */
     self->tally = 0;
     self->keyArray = (Object **)calloc(self->size, sizeof(Object *));
@@ -139,7 +139,7 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassIdentityDictionaryTmpl = {
+SpkClassTmpl Spk_ClassIdentityDictionaryTmpl = {
     "IdentityDictionary",
     offsetof(IdentityDictionarySubclass, variables),
     sizeof(IdentityDictionary),

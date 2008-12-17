@@ -8,7 +8,7 @@
 
 
 Boolean *Spk_false, *Spk_true;
-Behavior *ClassBoolean, *ClassFalse, *ClassTrue;
+Behavior *Spk_ClassBoolean, *Spk_ClassFalse, *Spk_ClassTrue;
 
 
 /*------------------------------------------------------------------------*/
@@ -72,7 +72,7 @@ static SpkMethodTmpl BooleanMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassBooleanTmpl = {
+SpkClassTmpl Spk_ClassBooleanTmpl = {
     "Boolean",
     offsetof(ObjectSubclass, variables),
     sizeof(Boolean),
@@ -94,7 +94,7 @@ static SpkMethodTmpl FalseMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassFalseTmpl = {
+SpkClassTmpl Spk_ClassFalseTmpl = {
     "False",
     offsetof(ObjectSubclass, variables),
     sizeof(Boolean),
@@ -116,7 +116,7 @@ static SpkMethodTmpl TrueMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassTrueTmpl = {
+SpkClassTmpl Spk_ClassTrueTmpl = {
     "True",
     offsetof(ObjectSubclass, variables),
     sizeof(Boolean),

@@ -17,8 +17,8 @@ typedef struct FloatSubclass {
 } FloatSubclass;
 
 
-extern struct Behavior *ClassFloat;
-extern struct SpkClassTmpl ClassFloatTmpl;
+extern struct Behavior *Spk_ClassFloat;
+extern struct SpkClassTmpl Spk_ClassFloatTmpl;
 
 
 Float *SpkFloat_fromLiteral(char *, size_t);

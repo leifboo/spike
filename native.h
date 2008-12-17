@@ -53,8 +53,8 @@ struct Object *Spk_callAttr(struct Interpreter *, struct Object *, struct Symbol
 struct Method *Spk_thisMethod(struct Interpreter *);
 
 
-extern struct Behavior *ClassNativeAccessor;
-extern struct SpkClassTmpl ClassNativeAccessorTmpl;
+extern struct Behavior *Spk_ClassNativeAccessor;
+extern struct SpkClassTmpl Spk_ClassNativeAccessorTmpl;
 
 
 #endif /* __native_h__ */

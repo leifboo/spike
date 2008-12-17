@@ -17,8 +17,8 @@ typedef struct IntegerSubclass {
 } IntegerSubclass;
 
 
-extern struct Behavior *ClassInteger;
-extern struct SpkClassTmpl ClassIntegerTmpl;
+extern struct Behavior *Spk_ClassInteger;
+extern struct SpkClassTmpl Spk_ClassIntegerTmpl;
 
 
 Integer *SpkInteger_fromLong(long);

@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 
-Behavior *ClassObject, *ClassVariableObject;
+Behavior *Spk_ClassObject, *Spk_ClassVariableObject;
 
 
 /*------------------------------------------------------------------------*/
@@ -72,7 +72,7 @@ static traverse_t ObjectTraverse = {
     &Object_traverse_next,
 };
 
-SpkClassTmpl ClassObjectTmpl = {
+SpkClassTmpl Spk_ClassObjectTmpl = {
     "Object",
     offsetof(ObjectSubclass, variables),
     sizeof(Object),
@@ -87,7 +87,7 @@ static SpkMethodTmpl VariableObjectMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassVariableObjectTmpl = {
+SpkClassTmpl Spk_ClassVariableObjectTmpl = {
     "VariableObject",
     offsetof(VariableObjectSubclass, variables),
     sizeof(VariableObject),
@@ -95,6 +95,21 @@ SpkClassTmpl ClassVariableObjectTmpl = {
     0,
     VariableObjectMethods
 };
+
+
+/*------------------------------------------------------------------------*/
+/* casting */
+
+Object *Spk_cast(Behavior *target, Object *op) {
+    Behavior *c;
+    
+    for (c = op->klass; c; c = c->superclass) {
+        if (c == target) {
+            return op;
+        }
+    }
+    return 0;
+}
 
 
 /*------------------------------------------------------------------------*/

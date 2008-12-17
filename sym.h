@@ -13,8 +13,8 @@ typedef struct Symbol {
 } Symbol;
 
 
-extern struct Behavior *ClassSymbol;
-extern struct SpkClassTmpl ClassSymbolTmpl;
+extern struct Behavior *Spk_ClassSymbol;
+extern struct SpkClassTmpl Spk_ClassSymbolTmpl;
 
 
 Symbol *SpkSymbol_get(const char *str);

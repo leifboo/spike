@@ -14,7 +14,7 @@
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
 
 
-Behavior *ClassInteger;
+Behavior *Spk_ClassInteger;
 
 
 /*------------------------------------------------------------------------*/
@@ -24,7 +24,7 @@ static Object *Integer_unaryOper(Integer *self, Oper oper) {
     Integer *result;
     
     result = (Integer *)malloc(sizeof(Integer));
-    result->base.klass = ClassInteger;
+    result->base.klass = Spk_ClassInteger;
     switch (oper) {
     case OPER_SUCC: result->value = self->value + 1; break;
     case OPER_PRED: result->value = self->value - 1; break;
@@ -39,10 +39,9 @@ static Object *Integer_unaryOper(Integer *self, Oper oper) {
 static Object *Integer_binaryOper(Integer *self, Object *arg0, Oper oper) {
     Integer *arg, *result;
     
-    assert(arg0->klass == ClassInteger); /* XXX */
-    arg = (Integer *)arg0;
+    assert(arg = Spk_CAST(Integer, arg0)); /* XXX */
     result = (Integer *)malloc(sizeof(Integer));
-    result->base.klass = ClassInteger;
+    result->base.klass = Spk_ClassInteger;
     switch (oper) {
     case OPER_MUL:    result->value = self->value * arg->value;  break;
     case OPER_DIV:    result->value = self->value / arg->value;  break;
@@ -63,8 +62,7 @@ static Object *Integer_binaryLogicalOper(Integer *self, Object *arg0, Oper oper)
     Integer *arg;
     Boolean *result;
     
-    assert(arg0->klass == ClassInteger); /* XXX */
-    arg = (Integer *)arg0;
+    assert(arg = Spk_CAST(Integer, arg0)); /* XXX */
     switch (oper) {
     case OPER_LT: result = BOOL(self->value < arg->value);  break;
     case OPER_GT: result = BOOL(self->value > arg->value);  break;
@@ -236,7 +234,7 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassIntegerTmpl = {
+SpkClassTmpl Spk_ClassIntegerTmpl = {
     "Integer",
     offsetof(IntegerSubclass, variables),
     sizeof(Integer),
@@ -253,7 +251,7 @@ Integer *SpkInteger_fromLong(long value) {
     Integer *result;
     
     result = (Integer *)malloc(sizeof(Integer));
-    result->base.klass = ClassInteger;
+    result->base.klass = Spk_ClassInteger;
     result->value = value;
     return result;
 }

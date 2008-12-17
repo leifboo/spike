@@ -14,7 +14,7 @@
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
 
 
-Behavior *ClassChar;
+Behavior *Spk_ClassChar;
 
 
 /*------------------------------------------------------------------------*/
@@ -24,7 +24,7 @@ static Object *Char_unaryOper(Char *self, Oper oper) {
     Char *result;
     
     result = (Char *)malloc(sizeof(Char));
-    result->base.klass = ClassChar;
+    result->base.klass = Spk_ClassChar;
     switch (oper) {
     case OPER_SUCC: result->value = self->value + 1; break;
     case OPER_PRED: result->value = self->value - 1; break;
@@ -39,10 +39,9 @@ static Object *Char_unaryOper(Char *self, Oper oper) {
 static Object *Char_binaryOper(Char *self, Object *arg0, Oper oper) {
     Char *arg, *result;
     
-    assert(arg0->klass == ClassChar); /* XXX */
-    arg = (Char *)arg0;
+    assert(arg = Spk_CAST(Char, arg0)); /* XXX */
     result = (Char *)malloc(sizeof(Char));
-    result->base.klass = ClassChar;
+    result->base.klass = Spk_ClassChar;
     switch (oper) {
     case OPER_MUL:    result->value = self->value * arg->value;  break;
     case OPER_DIV:    result->value = self->value / arg->value;  break;
@@ -63,8 +62,7 @@ static Object *Char_binaryLogicalOper(Char *self, Object *arg0, Oper oper) {
     Char *arg;
     Boolean *result;
     
-    assert(arg0->klass == ClassChar); /* XXX */
-    arg = (Char *)arg0;
+    assert(arg = Spk_CAST(Char, arg0)); /* XXX */
     switch (oper) {
     case OPER_LT: result = BOOL(self->value < arg->value);  break;
     case OPER_GT: result = BOOL(self->value > arg->value);  break;
@@ -236,7 +234,7 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassCharTmpl = {
+SpkClassTmpl Spk_ClassCharTmpl = {
     "Char",
     offsetof(CharSubclass, variables),
     sizeof(Char),
@@ -253,7 +251,7 @@ Char *SpkChar_fromChar(char c) {
     Char *result;
     
     result = (Char *)malloc(sizeof(Char));
-    result->base.klass = ClassChar;
+    result->base.klass = Spk_ClassChar;
     result->value = c;
     return result;
 }
@@ -267,7 +265,7 @@ Char *SpkChar_fromLiteral(char *str, size_t len) {
     s = str + 1; len -= 2;
     
     result = (Char *)malloc(sizeof(Char));
-    result->base.klass = ClassChar;
+    result->base.klass = Spk_ClassChar;
     
     while (len--) {
         c = *s++;

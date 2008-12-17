@@ -18,8 +18,8 @@ typedef struct CharSubclass {
 } CharSubclass;
 
 
-extern struct Behavior *ClassChar;
-extern struct SpkClassTmpl ClassCharTmpl;
+extern struct Behavior *Spk_ClassChar;
+extern struct SpkClassTmpl Spk_ClassCharTmpl;
 
 
 Char *SpkChar_fromChar(char);

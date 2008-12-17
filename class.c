@@ -12,7 +12,7 @@
 #include <string.h>
 
 
-struct Metaclass *ClassClass;
+struct Behavior *Spk_ClassClass;
 
 
 /*------------------------------------------------------------------------*/
@@ -24,27 +24,26 @@ static Object *Class_new(Object *_self, Object *arg0, Object *arg1) {
     Behavior *poly;
     Array *args;
     ObjectSubclass *newObject;
-    Object *nItemsObj; long nItems;
+    Object *nItemsObj; Integer *nItemsInt; long nItems;
     size_t i, itemArraySize;
     
     self = (Class *)_self;
-    assert(arg0->klass == ClassArray); /* XXX */
-    args = (Array *)arg0;
+    assert(args = Spk_CAST(Array, arg0)); /* XXX */
     
     /* Add-hoc class polymorphism, in lieu of metaclasses. */
     for (poly = (Behavior *)self;
-         poly != ClassObject && poly != ClassVariableObject;
+         poly != Spk_ClassObject && poly != Spk_ClassVariableObject;
          poly = poly->superclass)
         ;
-    if (poly == ClassObject) {
+    if (poly == Spk_ClassObject) {
         assert(SpkArray_size(args) == 0 && "wrong number of arguments to 'new'");
         nItems = 0;
-    } else if (poly == ClassVariableObject) {
+    } else if (poly == Spk_ClassVariableObject) {
         assert(SpkArray_size(args) == 1 && "wrong number of arguments to 'new'");
         assert(self->base.itemSize > 0);
         nItemsObj = SpkArray_item(args, 0);
-        assert(nItemsObj->klass == ClassInteger);
-        nItems = SpkInteger_asLong((Integer *)nItemsObj);
+        assert(nItemsInt = Spk_CAST(Integer, nItemsObj));
+        nItems = SpkInteger_asLong(nItemsInt);
         assert(nItems >= 0); /* XXX */
     } else {
         assert(0 && "not reached");
@@ -57,7 +56,7 @@ static Object *Class_new(Object *_self, Object *arg0, Object *arg1) {
     for (i = 0; i < self->base.instVarCount; ++i) {
         newObject->variables[i] = Spk_uninit;
     }
-    if (poly == ClassVariableObject) {
+    if (poly == Spk_ClassVariableObject) {
         ((VariableObject *)newObject)->size = (size_t)nItems;
         memset(SpkVariableObject_ITEM_BASE(newObject), 0, itemArraySize);
     }
@@ -87,7 +86,7 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassClassTmpl = {
+SpkClassTmpl Spk_ClassClassTmpl = {
     "Class",
     offsetof(ClassSubclass, variables),
     sizeof(Class),
@@ -103,8 +102,8 @@ SpkClassTmpl ClassClassTmpl = {
 Class *SpkClass_new(Symbol *name) {
     Class *newClass;
     
-    newClass = (Class *)malloc(ClassClass->base.instanceSize);
-    newClass->base.base.klass = (Behavior *)ClassClass;
+    newClass = (Class *)malloc(Spk_ClassClass->instanceSize);
+    newClass->base.base.klass = Spk_ClassClass;
     newClass->name = name;
     return newClass;
 }

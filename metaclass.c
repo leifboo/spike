@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 
-Metaclass *ClassMetaclass;
+Metaclass *Spk_ClassMetaclass;
 
 
 /*------------------------------------------------------------------------*/
@@ -22,9 +22,8 @@ static Object *Metaclass_new(Object *_self, Object *_name, Object *arg1) {
     size_t i;
     
     self = (Metaclass *)_self;
-    assert(_name->klass == ClassSymbol);
-    name = (Symbol *)_name;
-    newClass = (Class *)malloc(ClassClass->base.instanceSize);
+    assert(name = Spk_CAST(Symbol, _name)); /* XXX */
+    newClass = (Class *)malloc(Spk_ClassClass->instanceSize);
     newClass->base.base.refCount = 1;
     newClass->base.base.klass = (Behavior *)self;
     newClass->name = name;
@@ -46,7 +45,7 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassMetaclassTmpl = {
+SpkClassTmpl Spk_ClassMetaclassTmpl = {
     "Metaclass",
     offsetof(MetaclassSubclass, variables),
     sizeof(Metaclass),

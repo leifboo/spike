@@ -17,8 +17,8 @@ typedef struct ClassSubclass {
 } ClassSubclass;
 
 
-extern struct Metaclass *ClassClass;
-extern struct SpkClassTmpl ClassClassTmpl;
+extern struct Behavior *Spk_ClassClass;
+extern struct SpkClassTmpl Spk_ClassClassTmpl;
 
 
 Class *SpkClass_new(struct Symbol *name);

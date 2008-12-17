@@ -8,7 +8,7 @@
 #include <string.h>
 
 
-Behavior *ClassSymbol;
+Behavior *Spk_ClassSymbol;
 
 static struct {
     size_t size, mask, tally;
@@ -36,7 +36,7 @@ static SpkMethodTmpl SymbolMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassSymbolTmpl = {
+SpkClassTmpl Spk_ClassSymbolTmpl = {
     "Symbol",
     0,
     sizeof(Symbol),
@@ -97,7 +97,7 @@ Symbol *SpkSymbol_get(const char *str) {
     
  insert:
     sym = (Symbol *)malloc(sizeof(Symbol) + len);
-    sym->base.klass = ClassSymbol;
+    sym->base.klass = Spk_ClassSymbol;
     sym->hash = hash;
     memcpy(sym->str, str, len + 1);
     

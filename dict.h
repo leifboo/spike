@@ -22,8 +22,8 @@ typedef struct IdentityDictionarySubclass {
 } IdentityDictionarySubclass;
 
 
-extern struct Behavior *ClassIdentityDictionary;
-extern struct SpkClassTmpl ClassIdentityDictionaryTmpl;
+extern struct Behavior *Spk_ClassIdentityDictionary;
+extern struct SpkClassTmpl Spk_ClassIdentityDictionaryTmpl;
 
 
 Object *SpkIdentityDictionary_at(IdentityDictionary *self, Object *key);

@@ -17,8 +17,8 @@ typedef struct MetaclassSubclass {
 } MetaclassSubclass;
 
 
-extern Metaclass *ClassMetaclass;
-extern struct SpkClassTmpl ClassMetaclassTmpl;
+extern Metaclass *Spk_ClassMetaclass;
+extern struct SpkClassTmpl Spk_ClassMetaclassTmpl;
 
 
 #endif /* __metaclass_h__ */

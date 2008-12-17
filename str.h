@@ -10,8 +10,8 @@ typedef VariableObject String;
 typedef VariableObjectSubclass StringSubclass;
 
 
-extern struct Behavior *ClassString;
-extern struct SpkClassTmpl ClassStringTmpl;
+extern struct Behavior *Spk_ClassString;
+extern struct SpkClassTmpl Spk_ClassStringTmpl;
 
 
 String *SpkString_fromLiteral(char *, size_t);

@@ -843,10 +843,11 @@ static void initClassVar(Expr *expr, CodeGen *cgen) {
 }
 
 static Behavior *getSuperclass(Stmt *classDef, CodeGen *cgen) {
+    Object *data;
     Behavior *superclass;
     
-    superclass =  (Behavior *)cgen->data[classDef->u.klass.superclassName->u.ref.def->u.def.index];
-    assert(superclass && superclass->base.klass == (Behavior *)ClassClass);
+    data = cgen->data[classDef->u.klass.superclassName->u.ref.def->u.def.index];
+    assert(data && (superclass = (Behavior *)Spk_CAST(Class, data)));
     return superclass;
 }
 
@@ -890,7 +891,7 @@ static void createFunction(Stmt *stmt, CodeGen *cgen) {
     functionName = stmt->u.method.name->sym;
     /* XXX: This creates a class with an ordinary identifier as a class name. */
     theClass = (Behavior *)SpkClass_new(functionName);
-    theClass->base.klass = (Behavior *)ClassClass;
+    theClass->base.klass = (Behavior *)Spk_ClassClass;
     SpkBehavior_init(theClass, 0, 0, 0);
     
     if (!cgen->firstClass) {

@@ -29,7 +29,7 @@ static Object *nativeReadAccessor(Object *, Object *, Object *);
 static Object *nativeWriteAccessor(Object *, Object *, Object *);
 
 
-Behavior *ClassNativeAccessor;
+Behavior *Spk_ClassNativeAccessor;
 
 
 static Method *newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCode, new_method_hook_t *newMethodHook) {
@@ -110,7 +110,7 @@ Method *SpkNativeAccessor_new(size_t size) {
     NativeAccessor *newAccessor;
     
     newAccessor = (NativeAccessor *)malloc(sizeof(NativeAccessor) + size*sizeof(opcode_t));
-    newAccessor->base.base.base.klass = ClassNativeAccessor;
+    newAccessor->base.base.base.klass = Spk_ClassNativeAccessor;
     newAccessor->base.base.size = size;
     return (Method *)newAccessor;
 }
@@ -192,7 +192,7 @@ Object *Spk_oper(Interpreter *interpreter, Object *obj, Oper oper, ...) {
 }
 
 Object *Spk_vOper(Interpreter *interpreter, Object *obj, Oper oper, va_list ap) {
-    return vSendMessage(interpreter, obj, operSelectors[oper].messageSelector, ap);
+    return vSendMessage(interpreter, obj, Spk_operSelectors[oper].messageSelector, ap);
 }
 
 Object *Spk_call(Interpreter *interpreter, Object *obj, CallOper oper, ...) {
@@ -206,7 +206,7 @@ Object *Spk_call(Interpreter *interpreter, Object *obj, CallOper oper, ...) {
 }
 
 Object *Spk_vCall(Interpreter *interpreter, Object *obj, CallOper oper, va_list ap) {
-    return vSendMessage(interpreter, obj, operCallSelectors[oper].messageSelector, ap);
+    return vSendMessage(interpreter, obj, Spk_operCallSelectors[oper].messageSelector, ap);
 }
 
 Object *Spk_attr(Interpreter *interpreter, Object *obj, Symbol *name) {
@@ -241,7 +241,7 @@ static SpkMethodTmpl NativeAccessorMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassNativeAccessorTmpl = {
+SpkClassTmpl Spk_ClassNativeAccessorTmpl = {
     "NativeAccessor",
     offsetof(NativeAccessorSubclass, variables),
     sizeof(NativeAccessor),
@@ -255,8 +255,7 @@ static Object *nativeReadAccessor(Object *self, Object *arg0, Object *arg1) {
     char *addr;
     Object *result;
     
-    accessor = (NativeAccessor *)Spk_thisMethod(theInterpreter);
-    assert(accessor->base.base.base.klass == ClassNativeAccessor);
+    assert(accessor = Spk_CAST(NativeAccessor, Spk_thisMethod(theInterpreter)));
     
     addr = (char *)self + accessor->offset;
     
@@ -282,8 +281,7 @@ static Object *nativeWriteAccessor(Object *self, Object *arg0, Object *arg1) {
     NativeAccessor *accessor;
     char *addr;
     
-    accessor = (NativeAccessor *)Spk_thisMethod(theInterpreter);
-    assert(accessor->base.base.base.klass == ClassNativeAccessor);
+    assert(accessor = Spk_CAST(NativeAccessor, Spk_thisMethod(theInterpreter)));
     
     addr = (char *)self + accessor->offset;
     

@@ -14,7 +14,7 @@
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
 
 
-Behavior *ClassFloat;
+Behavior *Spk_ClassFloat;
 
 
 /*------------------------------------------------------------------------*/
@@ -24,7 +24,7 @@ static Object *Float_unaryOper(Float *self, Oper oper) {
     Float *result;
     
     result = (Float *)malloc(sizeof(Float));
-    result->base.klass = ClassFloat;
+    result->base.klass = Spk_ClassFloat;
     switch (oper) {
     case OPER_SUCC: result->value = self->value + 1; break;
     case OPER_PRED: result->value = self->value - 1; break;
@@ -38,10 +38,9 @@ static Object *Float_unaryOper(Float *self, Oper oper) {
 static Object *Float_binaryOper(Float *self, Object *arg0, Oper oper) {
     Float *arg, *result;
     
-    assert(arg0->klass == ClassFloat); /* XXX */
-    arg = (Float *)arg0;
+    assert(arg = Spk_CAST(Float, arg0)); /* XXX */
     result = (Float *)malloc(sizeof(Float));
-    result->base.klass = ClassFloat;
+    result->base.klass = Spk_ClassFloat;
     switch (oper) {
     case OPER_MUL:    result->value = self->value * arg->value;  break;
     case OPER_DIV:    result->value = self->value / arg->value;  break;
@@ -56,8 +55,7 @@ static Object *Float_binaryLogicalOper(Float *self, Object *arg0, Oper oper) {
     Float *arg;
     Boolean *result;
     
-    assert(arg0->klass == ClassFloat); /* XXX */
-    arg = (Float *)arg0;
+    assert(arg = Spk_CAST(Float, arg0)); /* XXX */
     switch (oper) {
     case OPER_LT: result = BOOL(self->value < arg->value);  break;
     case OPER_GT: result = BOOL(self->value > arg->value);  break;
@@ -187,7 +185,7 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassFloatTmpl = {
+SpkClassTmpl Spk_ClassFloatTmpl = {
     "Float",
     offsetof(FloatSubclass, variables),
     sizeof(Float),
@@ -204,7 +202,7 @@ Float *SpkFloat_fromLiteral(char *str, size_t len) {
     Float *result;
     
     result = (Float *)malloc(sizeof(Float));
-    result->base.klass = ClassFloat;
+    result->base.klass = Spk_ClassFloat;
     result->value = strtod(str, 0);
     return result;
 }

@@ -12,8 +12,8 @@ typedef VariableObject Array;
 typedef VariableObjectSubclass ArraySubclass;
 
 
-extern struct Behavior *ClassArray;
-extern struct SpkClassTmpl ClassArrayTmpl;
+extern struct Behavior *Spk_ClassArray;
+extern struct SpkClassTmpl Spk_ClassArrayTmpl;
 
 
 Array *SpkArray_new(size_t);

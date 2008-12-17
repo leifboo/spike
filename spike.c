@@ -24,11 +24,11 @@
 #include <stdlib.h>
 
 
-static Behavior *ClassNULL_CLASS;
+static Behavior *Spk_ClassNULL_CLASS;
 
 
-#define CLASS_VAR(c) Class ## c
-#define CLASS_TMPL(c) Class ## c ## Tmpl
+#define CLASS_VAR(c) Spk_Class ## c
+#define CLASS_TMPL(c) Spk_Class ## c ## Tmpl
 
 #define BOOT_REC(c, v, s, i) {(Behavior **)&CLASS_VAR(c), &CLASS_TMPL(c), (Object **)&v, s, i}
 
@@ -64,7 +64,7 @@ static BootRec bootRec[] = {
     /**/CLASS(Char,    Object),
     OBJECT(False,  Spk_false),
     OBJECT(True,   Spk_true),
-    OBJECT(Module, builtInModule),
+    OBJECT(Module, Spk_builtInModule),
     OBJECT(Null,   Spk_null),
     OBJECT(Uninit, Spk_uninit),
     OBJECT(Void,   Spk_void),
@@ -88,18 +88,19 @@ static void bootstrap() {
     
     /* init classes */
     for (operator = 0; operator < NUM_OPER; ++operator) {
-        operSelectors[operator].messageSelector = SpkSymbol_get(operSelectors[operator].messageSelectorStr);
+        Spk_operSelectors[operator].messageSelector = SpkSymbol_get(Spk_operSelectors[operator].messageSelectorStr);
     }
     for (operator = 0; operator < NUM_CALL_OPER; ++operator) {
-        operCallSelectors[operator].messageSelector = SpkSymbol_get(operCallSelectors[operator].messageSelectorStr);
+        Spk_operCallSelectors[operator].messageSelector = SpkSymbol_get(Spk_operCallSelectors[operator].messageSelectorStr);
     }
     for (r = bootRec; r->var; ++r) {
         if (r->init) {
-            if ((*r->var)->klass == (Behavior *)ClassClass) {
-                SpkClass_initFromTemplate((Class *)*r->var, r->init, *r->superclass, builtInModule);
+            Class *c;
+            if ((c = Spk_CAST(Class, *r->var))) {
+                SpkClass_initFromTemplate(c, r->init, *r->superclass, Spk_builtInModule);
             } else {
-                assert((*r->var)->klass == (Behavior *)ClassMetaclass);
-                SpkBehavior_initFromTemplate((Behavior *)*r->var, r->init, *r->superclass, builtInModule);
+                assert((*r->var)->klass == (Behavior *)Spk_ClassMetaclass);
+                SpkBehavior_initFromTemplate((Behavior *)*r->var, r->init, *r->superclass, Spk_builtInModule);
             }
         }
     }
@@ -107,10 +108,11 @@ static void bootstrap() {
     /* init methods */
     for (r = bootRec; r->var; ++r) {
         if (r->init) {
-            if ((*r->var)->klass == (Behavior *)ClassClass) {
-                SpkClass_addMethodsFromTemplate((Class *)*r->var, r->init);
+            Class *c;
+            if ((c = Spk_CAST(Class, *r->var))) {
+                SpkClass_addMethodsFromTemplate(c, r->init);
             } else {
-                assert((*r->var)->klass == (Behavior *)ClassMetaclass);
+                assert((*r->var)->klass == (Behavior *)Spk_ClassMetaclass);
                 SpkBehavior_addMethodsFromTemplate((Behavior *)*r->var, r->init);
             }
         }
@@ -123,7 +125,7 @@ int main(int argc, char **argv) {
     char *arg, *sourceFilename;
     Stmt *tree;
     Module *module;
-    Object *entry, *result;
+    Object *entry, *result; Integer *resultInt;
     unsigned int dataSize;
     StmtList predefList, rootClassList;
     
@@ -206,8 +208,9 @@ int main(int argc, char **argv) {
     if (!result) {
         return 1;
     }
-    if (result->klass == ClassInteger) {
-        return SpkInteger_asLong((Integer *)result);
+    resultInt = Spk_CAST(Integer, result);
+    if (resultInt) {
+        return SpkInteger_asLong(resultInt);
     }
     return 0;
 }

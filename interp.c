@@ -25,7 +25,7 @@ Null *Spk_null;
 Uninit *Spk_uninit;
 Void *Spk_void;
 
-Behavior *ClassMessage, *ClassMethod, *ClassThunk, *ClassContext, *ClassNull, *ClassUninit, *ClassVoid;
+Behavior *Spk_ClassMessage, *Spk_ClassMethod, *Spk_ClassThunk, *Spk_ClassContext, *Spk_ClassNull, *Spk_ClassUninit, *Spk_ClassVoid;
 Interpreter *theInterpreter; /* XXX */
 
 
@@ -37,7 +37,7 @@ static SpkMethodTmpl MessageMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassMessageTmpl = {
+SpkClassTmpl Spk_ClassMessageTmpl = {
     "Message",
     offsetof(MessageSubclass, variables),
     sizeof(Message),
@@ -51,7 +51,7 @@ static SpkMethodTmpl MethodMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassMethodTmpl = {
+SpkClassTmpl Spk_ClassMethodTmpl = {
     "Method",
     offsetof(MethodSubclass, variables),
     sizeof(Method),
@@ -65,7 +65,7 @@ static SpkMethodTmpl ThunkMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassThunkTmpl = {
+SpkClassTmpl Spk_ClassThunkTmpl = {
     "Thunk",
     offsetof(ThunkSubclass, variables),
     sizeof(Thunk),
@@ -79,7 +79,7 @@ static SpkMethodTmpl ContextMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassContextTmpl = {
+SpkClassTmpl Spk_ClassContextTmpl = {
     "Context",
     offsetof(ContextSubclass, variables),
     sizeof(Context),
@@ -93,7 +93,7 @@ static SpkMethodTmpl NullMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassNullTmpl = {
+SpkClassTmpl Spk_ClassNullTmpl = {
     "Null",
     offsetof(ObjectSubclass, variables),
     sizeof(Null),
@@ -107,7 +107,7 @@ static SpkMethodTmpl UninitMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassUninitTmpl = {
+SpkClassTmpl Spk_ClassUninitTmpl = {
     "Uninit",
     offsetof(ObjectSubclass, variables),
     sizeof(Uninit),
@@ -121,7 +121,7 @@ static SpkMethodTmpl VoidMethods[] = {
     { 0, 0, 0}
 };
 
-SpkClassTmpl ClassVoidTmpl = {
+SpkClassTmpl Spk_ClassVoidTmpl = {
     "Void",
     offsetof(ObjectSubclass, variables),
     sizeof(Void),
@@ -144,7 +144,7 @@ Object *SpkInterpreter_start(Object *entry) {
     
     callThunk = SpkMethod_new(1);
     SpkMethod_OPCODES(callThunk)[0] = OPCODE_CALL_THUNK;
-    SpkBehavior_insertMethod(ClassThunk, SpkSymbol_get("__apply__"), callThunk);
+    SpkBehavior_insertMethod(Spk_ClassThunk, SpkSymbol_get("__apply__"), callThunk);
     
     trampolineSize = 5;
     trampoline = SpkMethod_new(trampolineSize);
@@ -207,7 +207,7 @@ Message *SpkMessage_new() {
     Message *newMessage;
     
     newMessage = (Message *)malloc(sizeof(Message));
-    newMessage->base.klass = ClassMessage;
+    newMessage->base.klass = Spk_ClassMessage;
     return newMessage;
 }
 
@@ -215,7 +215,7 @@ Method *SpkMethod_new(size_t size) {
     Method *newMethod;
     
     newMethod = (Method *)malloc(sizeof(Method) + size*sizeof(opcode_t));
-    newMethod->base.base.klass = ClassMethod;
+    newMethod->base.base.klass = Spk_ClassMethod;
     newMethod->base.size = size;
     newMethod->nativeCode = 0;
     return newMethod;
@@ -229,7 +229,7 @@ Context *SpkContext_new(size_t size) {
     Context *newContext;
     
     newContext = (Context *)malloc(sizeof(Context) + size*sizeof(Object *));
-    newContext->base.base.klass = ClassContext;
+    newContext->base.base.klass = Spk_ClassContext;
     newContext->base.size = size;
     return newContext;
 }
@@ -492,14 +492,14 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
 /*** send opcodes -- operators ***/
         case OPCODE_OPER:
             operator = (unsigned int)(*instructionPointer++);
-            argumentCount = operSelectors[operator].argumentCount;
+            argumentCount = Spk_operSelectors[operator].argumentCount;
             varArg = 0;
             receiver = stackPointer[argumentCount];
             methodClass = receiver->klass;
             goto oper;
         case OPCODE_OPER_SUPER:
             operator = (unsigned int)(*instructionPointer++);
-            argumentCount = operSelectors[operator].argumentCount;
+            argumentCount = Spk_operSelectors[operator].argumentCount;
             varArg = 0;
             methodClass = methodClass->superclass;
  oper:
@@ -509,7 +509,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 goto callNewMethod;
             }
             instructionPointer -= 2;
-            TRAP(self->selectorDoesNotUnderstand, (Object *)operSelectors[operator].messageSelector);
+            TRAP(self->selectorDoesNotUnderstand, (Object *)Spk_operSelectors[operator].messageSelector);
             break;
         case OPCODE_CALL:
             oldIP = instructionPointer - 1;
@@ -540,7 +540,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 goto callNewMethod;
             }
             instructionPointer = oldIP;
-            TRAP(self->selectorDoesNotUnderstand, (Object *)operCallSelectors[operator].messageSelector);
+            TRAP(self->selectorDoesNotUnderstand, (Object *)Spk_operCallSelectors[operator].messageSelector);
             break;
         case OPCODE_CALL_SUPER_VAR:
             oldIP = instructionPointer - 1;
@@ -585,8 +585,8 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 Array *varArgArray;
                 
                 if (varArg) {
-                    varArgArray = (Array *)stackPointer[0];
-                    if (varArgArray->base.klass != ClassArray) {
+                    varArgArray = Spk_CAST(Array, stackPointer[0]);
+                    if (!varArgArray) {
                         TRAP(self->selectorMustBeArray, 0);
                     }
                 } else {
@@ -606,11 +606,12 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             receiver = stackPointer[1];
             methodClass = receiver->klass;
  perform:
-            if (stackPointer[0]->klass != ClassSymbol) {
+            messageSelector = Spk_CAST(Symbol, stackPointer[0]);
+            if (!messageSelector) {
                 --instructionPointer;
                 TRAP(self->selectorMustBeSymbol, 0);
             }
-            messageSelector = (Symbol *)POP_OBJECT();
+            POP(1);
             oldIP = instructionPointer - 1;
             goto attr;
         case OPCODE_ATTR_VAR_SUPER:
@@ -622,11 +623,11 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             receiver = stackPointer[2];
             methodClass = receiver->klass;
  send:
-            if (stackPointer[1]->klass != ClassSymbol) {
+            messageSelector = Spk_CAST(Symbol, stackPointer[1]);
+            if (!messageSelector) {
                 --instructionPointer;
                 TRAP(self->selectorMustBeSymbol, 0);
             }
-            messageSelector = (Symbol *)stackPointer[1];
             stackPointer[1] = stackPointer[0];
             POP(1);
             oldIP = instructionPointer - 1;
@@ -670,8 +671,8 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 Array *varArgArray;
                 size_t i;
                 
-                varArgArray = (Array *)stackPointer[0];
-                if (varArgArray->base.klass != ClassArray) {
+                varArgArray = Spk_CAST(Array, stackPointer[0]);
+                if (!varArgArray) {
                     TRAP(self->selectorMustBeArray, 0);
                 }
                 argumentCount += varArgArray->size;
@@ -760,8 +761,8 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             
             /* process arguments */
             if (varArg) {
-                varArgArray = (Array *)stackPointer[0];
-                if (varArgArray->base.klass != ClassArray) {
+                varArgArray = Spk_CAST(Array, stackPointer[0]);
+                if (!varArgArray) {
                     TRAP(self->selectorMustBeArray, 0);
                 }
                 varArgArraySize = varArgArray->size;
@@ -874,8 +875,8 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 TRAP(self->selectorWrongNumberOfArguments, 0);
             }
             if (varArg) {
-                Array *varArgArray = (Array *)stackPointer[0];
-                if (varArgArray->base.klass != ClassArray) {
+                Array *varArgArray = Spk_CAST(Array, stackPointer[0]);
+                if (!varArgArray) {
                     TRAP(self->selectorMustBeArray, 0);
                 }
                 if (varArgArray->size != 0) {
@@ -884,7 +885,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 POP(1);
             }
             thunk = (Thunk *)malloc(sizeof(Thunk));
-            thunk->base.klass = ClassThunk;
+            thunk->base.klass = Spk_ClassThunk;
             thunk->receiver = receiver;
             thunk->method = method;
             thunk->methodClass = methodClass;
@@ -1036,10 +1037,13 @@ void SpkInterpreter_unknownOpcode(Interpreter *self) {
 
 void SpkInterpreter_halt(Interpreter *self, Symbol *selector, Object *argument) {
     if (argument) {
-        if (argument->klass == ClassSymbol) {
-            printf("\n%s '%s'", selector->str, ((Symbol *)argument)->str);
-        } else if (argument->klass == ClassMessage) {
-            printf("\n%s '%s'", selector->str, ((Message *)argument)->messageSelector->str);
+        Symbol *symbol; Message *message;
+        symbol = Spk_CAST(Symbol, argument);
+        message = Spk_CAST(Message, argument);
+        if (symbol) {
+            printf("\n%s '%s'", selector->str, symbol->str);
+        } else if (message) {
+            printf("\n%s '%s'", selector->str, message->messageSelector->str);
         } else {
             printf("\n%s", selector->str);
         }

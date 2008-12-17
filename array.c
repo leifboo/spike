@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 
-Behavior *ClassArray;
+Behavior *Spk_ClassArray;
 
 
 #define ARRAY(op) ((Object **)SpkVariableObject_ITEM_BASE(op))
@@ -20,13 +20,13 @@ Behavior *ClassArray;
 
 /* OPER_GET_ITEM */
 static Object *Array_item(Object *_self, Object *arg0, Object *arg1) {
-    Array *self;
+    Array *self; Integer *arg;
     long index;
     Object *item;
     
     self = (Array *)_self;
-    assert(arg0->klass == ClassInteger); /* XXX */
-    index = SpkInteger_asLong((Integer *)arg0);
+    assert(arg = Spk_CAST(Integer, arg0)); /* XXX */
+    index = SpkInteger_asLong(arg);
     assert(0 <= index && index < self->size); /* XXX */
     item = ARRAY(self)[index];
     if (!item)
@@ -36,12 +36,12 @@ static Object *Array_item(Object *_self, Object *arg0, Object *arg1) {
 
 /* OPER_SET_ITEM */
 static Object *Array_setItem(Object *_self, Object *arg0, Object *arg1) {
-    Array *self;
+    Array *self; Integer *arg;
     long index;
     
     self = (Array *)_self;
-    assert(arg0->klass == ClassInteger); /* XXX */
-    index = SpkInteger_asLong((Integer *)arg0);
+    assert(arg = Spk_CAST(Integer, arg0)); /* XXX */
+    index = SpkInteger_asLong(arg);
     assert(0 <= index && index < self->size); /* XXX */
     ARRAY(self)[index] = arg1;
     if (0) {
@@ -131,7 +131,7 @@ static traverse_t traverse = {
     &Array_traverse_next,
 };
 
-SpkClassTmpl ClassArrayTmpl = {
+SpkClassTmpl Spk_ClassArrayTmpl = {
     "Array",
     offsetof(ArraySubclass, variables),
     sizeof(Array),
@@ -150,7 +150,7 @@ Array *SpkArray_new(size_t size) {
     size_t i;
     
     newArray = (Array *)malloc(sizeof(Array) + size*sizeof(Object **));
-    newArray->base.klass = ClassArray;
+    newArray->base.klass = Spk_ClassArray;
     newArray->size = size;
     for (i = 0; i < size; ++i) {
         ARRAY(newArray)[i] = Spk_uninit;
@@ -187,7 +187,7 @@ Array *SpkArray_fromVAList(va_list ap) {
     
     size = 2;
     newArray = (Array *)malloc(sizeof(Array) + size*sizeof(Object **));
-    newArray->base.klass = ClassArray;
+    newArray->base.klass = Spk_ClassArray;
     for (i = 0,  obj = va_arg(ap, Object *);
                  obj;
          ++i,    obj = va_arg(ap, Object *)) {

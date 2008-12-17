@@ -337,8 +337,9 @@ int SpkStaticChecker_Check(Stmt *tree, BootRec *bootRec,
     SpkSymbolTable_EnterScope(checker.st, 1); /* global scope */
     predefList->first = predefList->last = 0;
     for ( ; bootRec->var; ++bootRec) {
-        if ((*bootRec->var)->klass == (Behavior *)ClassClass) {
-            Stmt *classDef = predefinedClassDef((Class *)*bootRec->var);
+        Class *c;
+        if ((c = Spk_CAST(Class, *bootRec->var))) {
+            Stmt *classDef = predefinedClassDef(c);
             SpkSymbolTable_Insert(checker.st, classDef->expr);
             classDef->expr->u.def.initValue = *bootRec->var;
             if (!predefList->first) {

@@ -126,7 +126,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         case OPCODE_OPER_SUPER: mnemonic = "soper"; goto oper;
  oper:
             operator = (unsigned int)(*instructionPointer++);
-            selector = operSelectors[operator].messageSelectorStr;
+            selector = Spk_operSelectors[operator].messageSelectorStr;
             break;
             
         case OPCODE_CALL:           mnemonic = "call";   goto call;
@@ -135,7 +135,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         case OPCODE_CALL_SUPER_VAR: mnemonic = "scallv"; goto call;
  call:
             operator = (unsigned int)(*instructionPointer++);
-            selector = operCallSelectors[operator].messageSelectorStr;
+            selector = Spk_operCallSelectors[operator].messageSelectorStr;
             DECODE_UINT(argumentCount);
             pArgumentCount = &argumentCount;
             break;

@@ -17,8 +17,8 @@ typedef struct SpecialSelector {
     struct Symbol *messageSelector;
 } SpecialSelector;
 
-extern SpecialSelector operSelectors[NUM_OPER];
-extern SpecialSelector operCallSelectors[NUM_CALL_OPER];
+extern SpecialSelector Spk_operSelectors[NUM_OPER];
+extern SpecialSelector Spk_operCallSelectors[NUM_CALL_OPER];
 
 
 typedef struct oper_entry_t {
@@ -120,8 +120,8 @@ typedef struct BootRec {
 } BootRec;
 
 
-extern Behavior *ClassBehavior;
-extern struct SpkClassTmpl ClassBehaviorTmpl;
+extern Behavior *Spk_ClassBehavior;
+extern struct SpkClassTmpl Spk_ClassBehaviorTmpl;
 
 
 Behavior *SpkBehavior_new(void);
