@@ -102,8 +102,13 @@ struct Stmt {
             size_t localCount;
         } method;
         struct {
-            Expr *super;
+            Expr *superclassName;
+            Stmt *superclassDef;
+            Stmt *firstSubclassDef, *lastSubclassDef;
+            Stmt *nextSubclassDef;
+            Stmt *nextRootClassDef;
             size_t instVarCount;
+            int predefined;
         } klass;
     } u;
     size_t codeOffset;

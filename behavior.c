@@ -109,6 +109,7 @@ void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size
     self->methodDict = SpkIdentityDictionary_new();
     
     if (superclass) {
+        
         for (i = 0; i < NUM_OPER; ++i) {
             self->operTable[i].method = superclass->operTable[i].method;
             self->operTable[i].methodClass = superclass->operTable[i].methodClass;
@@ -117,7 +118,16 @@ void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size
             self->operCallTable[i].method = superclass->operCallTable[i].method;
             self->operCallTable[i].methodClass = superclass->operCallTable[i].methodClass;
         }
+        
+        /* memory layout of instances */
+        self->traverse = superclass->traverse;
+        self->instVarCount = instVarCount;
+        self->instVarOffset = superclass->instanceSize;
+        self->instanceSize = self->instVarOffset + self->instVarCount*sizeof(Object *);
+        self->itemSize = superclass->itemSize;
+        
     } else {
+        
         for (i = 0; i < NUM_OPER; ++i) {
             self->operTable[i].method = 0;
             self->operTable[i].methodClass = 0;
@@ -126,19 +136,20 @@ void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size
             self->operCallTable[i].method = 0;
             self->operCallTable[i].methodClass = 0;
         }
+        
+        /* memory layout of instances */
+        self->traverse.init = 0;
+        self->traverse.current = 0;
+        self->traverse.next = 0;
+        self->instVarCount = instVarCount;
+        self->instVarOffset = offsetof(ObjectSubclass, variables);
+        self->instanceSize = self->instVarOffset + self->instVarCount*sizeof(Object *);
+        self->itemSize = 0;
+        
     }
     
     /* temporary */
     self->next = 0;
-    
-    /* memory layout of instances */
-    self->traverse.init = 0;
-    self->traverse.current = 0;
-    self->traverse.next = 0;
-    self->instVarCount = (superclass ? superclass->instVarCount : 0) + instVarCount;
-    self->instVarOffset = superclass ? superclass->instVarOffset : offsetof(ObjectSubclass, variables);
-    self->instanceSize = self->instVarOffset + self->instVarCount*sizeof(Object *);
-    self->itemSize = superclass ? superclass->itemSize : 0;
     
     return;
 }

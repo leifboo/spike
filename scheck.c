@@ -15,7 +15,8 @@
 
 typedef struct StaticChecker {
     SymbolTable *st;
-    Stmt *currentClass;
+    Stmt *currentClassDef;
+    StmtList *rootClassList;
 } StaticChecker;
 
 
@@ -46,7 +47,7 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
     case EXPR_NAME:
         switch (pass) {
         case 1:
-            if (!checker->currentClass && stmt->kind == STMT_DEF_METHOD) {
+            if (!checker->currentClassDef && stmt->kind == STMT_DEF_METHOD) {
                 SpkSymbolTable_Insert(checker->st, expr);
             }
             break;
@@ -112,33 +113,46 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
     }
 }
 
-static Stmt *superclassDef(Stmt *aClassDef, StaticChecker *checker) {
-    Expr *expr;
+static void registerSubclass(Stmt *subclassDef, StaticChecker *checker) {
+    Stmt *superclassDef;
     
-    if (!aClassDef->u.klass.super)
-        return 0; /* XXX: Object */
-    expr = SpkSymbolTable_Lookup(checker->st, aClassDef->u.klass.super->sym);
-    if (!expr)
-        return 0; /* undefined */
-    assert(expr->kind == EXPR_NAME && expr->u.def.stmt);
-    return expr->u.def.stmt;
+    /* insert this class onto the superclass's subclass chain */
+    superclassDef = subclassDef->u.klass.superclassDef;
+    if (!superclassDef->u.klass.firstSubclassDef) {
+        superclassDef->u.klass.firstSubclassDef = subclassDef;
+    } else {
+        superclassDef->u.klass.lastSubclassDef->u.klass.nextSubclassDef = subclassDef;
+    }
+    superclassDef->u.klass.lastSubclassDef = subclassDef;
+    
+    if (superclassDef->u.klass.predefined) {
+        /* this is a 'root' class */
+        if (!checker->rootClassList->first) {
+            checker->rootClassList->first = subclassDef;
+        } else {
+            checker->rootClassList->last->u.klass.nextRootClassDef = subclassDef;
+        }
+        checker->rootClassList->last = subclassDef;
+    }
 }
 
 static void checkForSuperclassCycle(Stmt *aClassDef, StaticChecker *checker) {
     /* Floyd's cycle-finding algorithm */
     Stmt *tortoise, *hare;
     
-    tortoise = hare = superclassDef(aClassDef, checker);
+#define SUPERCLASS(stmt) (stmt)->u.klass.superclassDef
+    tortoise = hare = SUPERCLASS(aClassDef);
     if (!tortoise)
         return;
-    hare = superclassDef(hare, checker);
+    hare = SUPERCLASS(hare);
     while (hare && tortoise != hare) {
-        tortoise = superclassDef(tortoise, checker);
-        hare = superclassDef(hare, checker);
+        tortoise = SUPERCLASS(tortoise);
+        hare = SUPERCLASS(hare);
         if (!hare)
             return;
-        hare = superclassDef(hare, checker);
+        hare = SUPERCLASS(hare);
     }
+#undef SUPERCLASS
     
     assert(!hare && "cycle in superclass chain");
 }
@@ -170,7 +184,7 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
                     SpkSymbolTable_Insert(checker->st, arg);
                 }
             }
-            for (innerPass = 1; innerPass < 3; ++innerPass) {
+            for (innerPass = 1; innerPass <= 3; ++innerPass) {
                 for (s = stmt->top; s; s = s->next) {
                     checkStmt(s, stmt, checker, innerPass);
                 }
@@ -203,15 +217,24 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
             SpkSymbolTable_Insert(checker->st, stmt->expr);
             stmt->expr->u.def.stmt = stmt;
         }
-        if (stmt->u.klass.super) {
-            checkExpr(stmt->u.klass.super, stmt, checker, outerPass);
-        }
-        if (outerPass == 2) {
+        checkExpr(stmt->u.klass.superclassName, stmt, checker, outerPass);
+        switch (outerPass) {
+        case 2: {
+            Expr *expr = stmt->u.klass.superclassName->u.ref.def;
+            if (expr) {
+                assert(expr->kind == EXPR_NAME && expr->u.def.stmt);
+                /* for convenience, cache a direct link to the superclass def */
+                stmt->u.klass.superclassDef = expr->u.def.stmt;
+                registerSubclass(stmt, checker);
+            } /* else undefined */
+            break; }
+        case 3:
             checkForSuperclassCycle(stmt, checker);
+            break;
         }
-        checker->currentClass = stmt;
+        checker->currentClassDef = stmt;
         checkStmt(stmt->top, stmt, checker, outerPass);
-        checker->currentClass = 0;
+        checker->currentClassDef = 0;
         break;
     case STMT_DO_WHILE:
         checkExpr(stmt->expr, stmt, checker, outerPass);
@@ -294,11 +317,13 @@ static Stmt *predefinedClassDef(Class *predefClass) {
     newStmt->expr = newNameExpr();
     newStmt->expr->sym = SpkSymbolNode_Get(predefClass->name);
     newStmt->expr->u.def.stmt = newStmt;
+    newStmt->u.klass.predefined = 1;
     return newStmt;
 }
 
 int SpkStaticChecker_Check(Stmt *tree, BootRec *bootRec,
-                           unsigned int *pDataSize, StmtList *predefList) {
+                           unsigned int *pDataSize,
+                           StmtList *predefList, StmtList *rootClassList) {
     Stmt *s;
     StaticChecker checker;
     struct PseudoVariable *pv;
@@ -325,9 +350,11 @@ int SpkStaticChecker_Check(Stmt *tree, BootRec *bootRec,
         }
     }
     
-    checker.currentClass = 0;
+    checker.currentClassDef = 0;
+    checker.rootClassList = rootClassList;
+    rootClassList->first = rootClassList->last = 0;
 
-    for (pass = 1; pass < 3; ++pass) {
+    for (pass = 1; pass <= 3; ++pass) {
         for (s = tree; s; s = s->next) {
             checkStmt(s, 0, &checker, pass);
         }

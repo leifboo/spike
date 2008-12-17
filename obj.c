@@ -110,7 +110,7 @@ Object *Spk_alloc(size_t size) {
 
 void Spk_dealloc(Object *obj) {
     /* cf. "A Space-efficient Reference-counting Collector", pp. 678-681 */
-    Object *prior, *current;
+    Object *prior, *current, *klass;
     Object **var;
     
     prior = 0;
@@ -118,7 +118,6 @@ void Spk_dealloc(Object *obj) {
  dealloc:
     (*current->klass->traverse.init)(current);
     while (1) {
-        /* XXX: visit 'klass' field */
         while ((var = (*current->klass->traverse.current)(current))) {
             if (--(*var)->refCount == 0) {
                 Object *tmp = *var;
@@ -129,7 +128,12 @@ void Spk_dealloc(Object *obj) {
             }
             (*current->klass->traverse.next)(current);
         }
+        klass = (Object *)current->klass;
         free(current);
+        if (--klass->refCount == 0) {
+            current = klass;
+            goto dealloc;
+        }
         current = prior;
         if (!current)
             break;

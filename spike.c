@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
     Module *module;
     Object *entry, *result;
     unsigned int dataSize;
-    StmtList predefList;
+    StmtList predefList, rootClassList;
     
     sourceFilename = 0;
     showHelp = error = disassemble = 0;
@@ -185,10 +185,10 @@ int main(int argc, char **argv) {
         return 1;
     }
     
-    if (SpkStaticChecker_Check(tree, bootRec, &dataSize, &predefList) == -1) {
+    if (SpkStaticChecker_Check(tree, bootRec, &dataSize, &predefList, &rootClassList) == -1) {
         return 1;
     }
-    module = SpkCodeGen_generateCode(tree, dataSize, predefList.first);
+    module = SpkCodeGen_generateCode(tree, dataSize, predefList.first, rootClassList.first);
     
     if (disassemble) {
         SpkDisassembler_disassembleModule(module, stdout);

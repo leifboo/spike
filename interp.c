@@ -276,7 +276,7 @@ void SpkContext_initWithArg(Context *self, Object *argument, Context *activeCont
 #define PUSH(object) (*--stackPointer = (Object *)(object))
 #define STACK_TOP() (*stackPointer)
 
-#define INSTANCE_VARS(op) ((Object **)(((char *)op) + (op)->klass->instVarOffset))
+#define INSTANCE_VARS(op, mc) ((Object **)(((char *)op) + (mc)->instVarOffset))
 
 
 #define DECODE_UINT(result) do { \
@@ -346,7 +346,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
     linkRegister = 0;
     stackPointer = self->activeContext->stackp;
     framePointer = homeContext->u.m.framep;
-    instVarPointer = INSTANCE_VARS(receiver);
+    instVarPointer = INSTANCE_VARS(receiver, methodClass);
     globalPointer = SpkModule_VARIABLES(methodClass->module);
     self->newContext = 0;
 
@@ -575,7 +575,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                     instructionPointer = SpkMethod_OPCODES(method);
  jump:
                     framePointer = stackPointer;
-                    instVarPointer = INSTANCE_VARS(receiver);
+                    instVarPointer = INSTANCE_VARS(receiver, methodClass);
                     globalPointer = SpkModule_VARIABLES(methodClass->module);
                     goto loop;
                 }
@@ -650,7 +650,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             method = homeContext->u.m.method;
             methodClass = homeContext->u.m.methodClass;
             framePointer = homeContext->u.m.framep;
-            instVarPointer = INSTANCE_VARS(receiver);
+            instVarPointer = INSTANCE_VARS(receiver, methodClass);
             globalPointer = SpkModule_VARIABLES(methodClass->module);
             break;
         case OPCODE_RET_TRAMP: {

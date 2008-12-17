@@ -2,6 +2,8 @@
 #include "parser.h"
 
 #include "lexer.h"
+#include "st.h"
+#include "sym.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,10 +23,10 @@ Stmt *SpkParser_NewClassDef(struct SymbolNode *name, struct SymbolNode *super, S
     newStmt->kind = STMT_DEF_CLASS;
     newStmt->top = stmt;
     newStmt->expr = SpkParser_NewExpr(EXPR_NAME, 0, 0, 0, 0); newStmt->expr->sym = name;
-    if (super) {
-        newStmt->u.klass.super = SpkParser_NewExpr(EXPR_NAME, 0, 0, 0, 0);
-        newStmt->u.klass.super->sym = super;
-    }
+    if (!super)
+        super = SpkSymbolNode_Get(SpkSymbol_get("Object"));
+    newStmt->u.klass.superclassName = SpkParser_NewExpr(EXPR_NAME, 0, 0, 0, 0);
+    newStmt->u.klass.superclassName->sym = super;
     return newStmt;
 }
 

@@ -842,13 +842,20 @@ static void initClassVar(Expr *expr, CodeGen *cgen) {
                                 theClass);
 }
 
-static void createClass(Stmt *stmt, CodeGen *cgen) {
+static Behavior *getSuperclass(Stmt *classDef, CodeGen *cgen) {
+    Behavior *superclass;
+    
+    superclass =  (Behavior *)cgen->data[classDef->u.klass.superclassName->u.ref.def->u.def.index];
+    assert(superclass && superclass->base.klass == (Behavior *)ClassClass);
+    return superclass;
+}
+
+static void createClass(Stmt *classDef, CodeGen *cgen) {
     Behavior *theClass;
     Symbol *className;
     
-    theClass = (Behavior *)SpkClass_new(stmt->expr->sym->sym);
-    /* XXX: BUG: operators, etc. are not inherited */
-    SpkBehavior_init(theClass, 0, 0, stmt->u.klass.instVarCount);
+    theClass = (Behavior *)SpkClass_new(classDef->expr->sym->sym);
+    SpkBehavior_init(theClass, getSuperclass(classDef, cgen), 0, classDef->u.klass.instVarCount);
     
     if (!cgen->firstClass) {
         cgen->firstClass = theClass;
@@ -857,18 +864,20 @@ static void createClass(Stmt *stmt, CodeGen *cgen) {
     }
     cgen->lastClass = theClass;
     
-    stmt->expr->u.def.initValue = (Object *)theClass;
-    initClassVar(stmt->expr, cgen);
+    classDef->expr->u.def.initValue = (Object *)theClass;
+    initClassVar(classDef->expr, cgen);
 }
 
-static void setSuperclass(Stmt *stmt, CodeGen *cgen) {
-    Behavior *theClass, *superclass;
+static void createClassTree(Stmt *classDef, CodeGen *cgen) {
+    /* create class with subclasses in preorder */
+    Stmt *subclassDef;
     
-    theClass = (Behavior *)cgen->data[stmt->expr->u.def.index];
-    assert(theClass && theClass->base.klass == (Behavior *)ClassClass);
-    superclass = stmt->u.klass.super ? (Behavior *)cgen->data[stmt->u.klass.super->u.ref.def->u.def.index] : ClassObject;
-    assert(superclass && superclass->base.klass == (Behavior *)ClassClass);
-    theClass->superclass = superclass;
+    createClass(classDef, cgen);
+    for (subclassDef = classDef->u.klass.firstSubclassDef;
+         subclassDef;
+         subclassDef = subclassDef->u.klass.nextSubclassDef) {
+        createClassTree(subclassDef, cgen);
+    }
 }
 
 /****************************************************************************/
@@ -907,7 +916,7 @@ static void createFunction(Stmt *stmt, CodeGen *cgen) {
 /****************************************************************************/
 
 Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize,
-                                Stmt *predefList) {
+                                Stmt *predefList, Stmt *rootClassList) {
     Stmt *s;
     CodeGen cgen;
     Module *module;
@@ -930,19 +939,12 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize,
     }
     
     /* Create all classes. */
-    for (s = tree; s; s = s->next) {
-        switch (s->kind) {
-        case STMT_DEF_CLASS:
-            createClass(s, &cgen);
-            break;
-        case STMT_DEF_METHOD:
-            createFunction(s, &cgen);
-            break;
-        }
+    for (s = rootClassList; s; s = s->u.klass.nextRootClassDef) {
+        createClassTree(s, &cgen);
     }
     for (s = tree; s; s = s->next) {
-        if (s->kind == STMT_DEF_CLASS) {
-            setSuperclass(s, &cgen);
+        if (s->kind == STMT_DEF_METHOD) {
+            createFunction(s, &cgen);
         }
     }
 
