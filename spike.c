@@ -95,9 +95,9 @@ static void bootstrap() {
     }
     for (r = bootRec; r->var; ++r) {
         if (r->init) {
-            Class *c;
-            if ((c = Spk_CAST(Class, *r->var))) {
-                SpkClass_initFromTemplate(c, r->init, *r->superclass, Spk_builtInModule);
+            /* it is too early to use Spk_CAST */
+            if ((*r->var)->klass == (Behavior *)Spk_ClassClass) {
+                SpkClass_initFromTemplate((Class *)*r->var, r->init, *r->superclass, Spk_builtInModule);
             } else {
                 assert((*r->var)->klass == (Behavior *)Spk_ClassMetaclass);
                 SpkBehavior_initFromTemplate((Behavior *)*r->var, r->init, *r->superclass, Spk_builtInModule);

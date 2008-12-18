@@ -208,6 +208,7 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
         checkVarDeclList(stmt->expr, stmt, checker, outerPass);
         break;
     case STMT_DEF_METHOD:
+        assert(stmt->expr->kind == EXPR_CALL);
         checkExpr(stmt->expr, stmt, checker, outerPass);
         checkStmt(stmt->top, stmt, checker, outerPass);
         break;

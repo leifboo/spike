@@ -746,8 +746,8 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     Symbol *messageSelector;
     Object *function = 0;
     size_t stackSize;
-
-    assert(!cgen->currentMethod && "method definition not allowed here");
+    
+    assert(!cgen->currentMethodDef && "method definition not allowed here");
     
     cgen->currentMethodDef = stmt;
 
@@ -824,7 +824,7 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
 static void emitCodeForClass(Stmt *stmt, CodeGen *cgen) {
     Behavior *theClass;
     
-    assert(!cgen->currentClass && !cgen->currentMethod && "class definition not allowed here");
+    assert(!cgen->currentClass && !cgen->currentMethodDef && "class definition not allowed here");
     
     theClass = (Behavior *)cgen->data[stmt->expr->u.def.index];
     cgen->currentClass = theClass;
