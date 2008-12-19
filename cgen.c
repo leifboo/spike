@@ -811,7 +811,7 @@ static int isLeafMethod(Stmt *stmt, CodeGen *cgen) {
 static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     Stmt sentinel;
     Behavior *methodClass;
-    Symbol *messageSelector;
+    Symbol *messageSelector, *apply;
     Object *function = 0;
     size_t stackSize;
     int thunk;
@@ -819,7 +819,9 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     assert(!cgen->currentMethodDef && "method definition not allowed here");
     
     cgen->currentMethodDef = stmt;
-
+    
+    apply = SpkSymbol_get("__apply__");
+    
     if (cgen->currentClass) {
         methodClass = cgen->currentClass;
         messageSelector = stmt->u.method.name->sym;
@@ -830,10 +832,14 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
         assert(stmt->expr->left->kind == EXPR_NAME); /* XXX */
         function = cgen->data[stmt->expr->left->u.def.index];
         methodClass = function->klass;
-        messageSelector = SpkSymbol_get("__apply__");
+        messageSelector = apply;
     }
     
-    thunk = !function && stmt->expr->kind == EXPR_CALL;
+    /* emit a 'thunk' opcode if this is named call-style method --
+       e.g., "class X { foo(...) {} }" */
+    thunk = (messageSelector != apply &&
+             stmt->expr->kind == EXPR_CALL &&
+             stmt->expr->oper == OPER_APPLY);
     
     memset(&sentinel, 0, sizeof(sentinel));
     sentinel.kind = STMT_RETURN;

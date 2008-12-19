@@ -88,16 +88,44 @@ static void checkMethodDeclarator(Expr *expr, Stmt *stmt, StaticChecker *checker
     if (pass == 1) {
         switch (expr->kind) {
         case EXPR_NAME:
+            assert(checker->currentClassDef && "invalid global function definition");
             name = expr->sym;
             break;
         case EXPR_ASSIGN:
-            assert(expr->left->kind == EXPR_NAME && expr->right->kind == EXPR_NAME);
-            name = SpkSymbolNode_Get(SpkBehavior_mangledSetAccessorName(expr->left->sym->sym));
-            stmt->u.method.argList.fixed = expr->right;
+            assert(checker->currentClassDef && "invalid global function definition");
+            assert(expr->right->kind == EXPR_NAME && "invalid method declarator");
+            switch (expr->left->kind) {
+            case EXPR_NAME:
+                name = SpkSymbolNode_Get(SpkBehavior_mangledSetAccessorName(expr->left->sym->sym));
+                stmt->u.method.argList.fixed = expr->right;
+                break;
+            case EXPR_CALL:
+                assert(expr->left->oper == OPER_GET_ITEM &&
+                       expr->left->left->sym->sym == SpkSymbol_get("self") &&
+                       "invalid method declarator");
+                name = SpkSymbolNode_Get(Spk_operCallSelectors[OPER_SET_ITEM].messageSelector);
+                stmt->u.method.argList.fixed = expr->left->right;
+                /* chain-on the new value arg */
+                expr->left->right->nextArg = expr->right;
+                break;
+            default:
+                assert(0 && "invalid method declarator");
+            }
             break;
         case EXPR_CALL:
-            assert(expr->oper == OPER_APPLY && expr->left->kind == EXPR_NAME);
-            name = expr->left->sym;
+            assert(expr->left->kind == EXPR_NAME && "invalid method declarator");
+            if (expr->left->sym->sym == SpkSymbol_get("self")) {
+                name = SpkSymbolNode_Get(Spk_operCallSelectors[expr->oper].messageSelector);
+            } else {
+                /*
+                 * XXX: Should we allow "foo[...] {}" as a method
+                 * declaration?  More generally, could the method
+                 * declarator be seen as the application of an inverse
+                 * thingy?
+                 */
+                assert(expr->oper == OPER_APPLY && "invalid method declarator");
+                name = expr->left->sym;
+            }
             if (!checker->currentClassDef) {
                 /* declare global functions */
                 SpkSymbolTable_Insert(checker->st, expr->left);
