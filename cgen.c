@@ -135,6 +135,10 @@ static void tallyPush(CodeGen *cgen) {
 }
 
 static void dupN(unsigned long n, CodeGen *cgen) {
+    if (n == 1) {
+        EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
+        return;
+    }
     EMIT_OPCODE(OPCODE_DUP_N);
     encodeUnsignedInt(n, cgen);
     cgen->stackPointer += n;
@@ -268,6 +272,8 @@ static unsigned int getLiteralIndex(Object *literal, CodeGen *cgen) {
 static void emitCodeForOneExpr(Expr *, int *, CodeGen *);
 static void emitBranchForExpr(Expr *expr, int, size_t, size_t, int, CodeGen *);
 static void emitBranchForOneExpr(Expr *, int, size_t, size_t, int, CodeGen *);
+static void inPlaceOp(Expr *, size_t, CodeGen *);
+static void inPlaceAttrOp(Expr *, CodeGen *);
 static void inPlaceIndexOp(Expr *, CodeGen *);
 
 static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
@@ -348,7 +354,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
     case EXPR_ATTR:
         emitCodeForExpr(expr->left, &isSuper, cgen);
         ++cgen->nMessageSends;
-        EMIT_OPCODE(isSuper ? OPCODE_ATTR_SUPER : OPCODE_ATTR);
+        EMIT_OPCODE(isSuper ? OPCODE_GET_ATTR_SUPER : OPCODE_GET_ATTR);
         index = LITERAL_INDEX((Object *)expr->sym->sym, cgen);
         encodeUnsignedInt(index, cgen);
         CHECK_STACKP();
@@ -357,38 +363,30 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         emitCodeForExpr(expr->left, &isSuper, cgen);
         emitCodeForExpr(expr->right, 0, cgen);
         ++cgen->nMessageSends;
-        EMIT_OPCODE(isSuper ? OPCODE_ATTR_VAR_SUPER : OPCODE_ATTR_VAR);
+        EMIT_OPCODE(isSuper ? OPCODE_GET_ATTR_VAR_SUPER : OPCODE_GET_ATTR_VAR);
         --cgen->stackPointer;
         CHECK_STACKP();
         break;
     case EXPR_PREOP:
-        switch (expr->left->kind) {
-        case EXPR_NAME:
-            emitCodeForExpr(expr->left, 0, cgen);
-            ++cgen->nMessageSends;
-            EMIT_OPCODE(OPCODE_OPER);
-            encodeUnsignedInt((unsigned int)expr->oper, cgen);
-            store(expr->left, cgen);
-            CHECK_STACKP();
-            break;
-        case EXPR_CALL:
-            inPlaceIndexOp(expr, cgen);
-            break;
-        default:
-            assert(0 && "invalid lvalue");
-        }
-        break;
     case EXPR_POSTOP:
         switch (expr->left->kind) {
         case EXPR_NAME:
             emitCodeForExpr(expr->left, 0, cgen);
-            EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
+            if (expr->kind == EXPR_POSTOP) {
+                EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
+            }
             ++cgen->nMessageSends;
             EMIT_OPCODE(OPCODE_OPER);
             encodeUnsignedInt((unsigned int)expr->oper, cgen);
             store(expr->left, cgen);
-            EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
+            if (expr->kind == EXPR_POSTOP) {
+                EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
+            }
             CHECK_STACKP();
+            break;
+        case EXPR_ATTR:
+        case EXPR_ATTR_VAR:
+            inPlaceAttrOp(expr, cgen);
             break;
         case EXPR_CALL:
             inPlaceIndexOp(expr, cgen);
@@ -460,6 +458,10 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
             store(expr->left, cgen);
             CHECK_STACKP();
             break;
+        case EXPR_ATTR:
+        case EXPR_ATTR_VAR:
+            inPlaceAttrOp(expr, cgen);
+            break;
         case EXPR_CALL:
             inPlaceIndexOp(expr, cgen);
             break;
@@ -471,6 +473,86 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
     SET_END(expr);
     
     return;
+}
+
+static void squirrel(size_t resultDepth, CodeGen *cgen) {
+    /* duplicate the last result */
+    EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
+    /* squirrel it away for later */
+    EMIT_OPCODE(OPCODE_ROT);
+    encodeUnsignedInt(resultDepth + 1, cgen);
+}
+
+static void inPlaceOp(Expr *expr, size_t resultDepth, CodeGen *cgen) {
+    if (expr->right) {
+        emitCodeForExpr(expr->right, 0, cgen);
+    } else if (expr->kind == EXPR_POSTOP) {
+        /* e.g., "a[i]++" -- squirrel away the original value */
+        squirrel(resultDepth, cgen);
+    }
+    
+    ++cgen->nMessageSends;
+    EMIT_OPCODE(OPCODE_OPER);
+    encodeUnsignedInt((unsigned int)expr->oper, cgen);
+    if (expr->right) {
+        --cgen->stackPointer;
+    }
+    
+    if (expr->kind != EXPR_POSTOP) {
+        /* e.g., "++a[i]" -- squirrel away the new value */
+        squirrel(resultDepth, cgen);
+    }
+}
+
+static void inPlaceAttrOp(Expr *expr, CodeGen *cgen) {
+    size_t index, argumentCount;
+    int isSuper;
+    
+    argumentCount = 0;
+    /* get/set common receiver */
+    emitCodeForExpr(expr->left->left, &isSuper, cgen);
+    if (expr->left->kind == EXPR_ATTR_VAR) {
+        /* get/set common attr */
+        emitCodeForExpr(expr->left->right, 0, cgen);
+        ++argumentCount;
+    }
+    /* rhs */
+    if (expr->oper == OPER_EQ) {
+        emitCodeForExpr(expr->right, 0, cgen);
+        squirrel(1 + argumentCount + 1 /* receiver, args, new value */, cgen);
+    } else {
+        dupN(argumentCount + 1, cgen);
+        ++cgen->nMessageSends;
+        switch (expr->left->kind) {
+        case EXPR_ATTR:
+            EMIT_OPCODE(isSuper ? OPCODE_GET_ATTR_SUPER : OPCODE_GET_ATTR);
+            index = LITERAL_INDEX((Object *)expr->left->sym->sym, cgen);
+            encodeUnsignedInt(index, cgen);
+            break;
+        case EXPR_ATTR_VAR:
+            EMIT_OPCODE(isSuper ? OPCODE_GET_ATTR_VAR_SUPER : OPCODE_GET_ATTR_VAR);
+            --cgen->stackPointer;
+            break;
+        }
+        inPlaceOp(expr, 1 + argumentCount + 1 /* receiver, args, result */, cgen);
+    }
+    ++cgen->nMessageSends;
+    switch (expr->left->kind) {
+    case EXPR_ATTR:
+        EMIT_OPCODE(isSuper ? OPCODE_SET_ATTR_SUPER : OPCODE_SET_ATTR);
+        index = LITERAL_INDEX((Object *)SpkBehavior_mangledSetAccessorName(expr->left->sym->sym), cgen);
+        encodeUnsignedInt(index, cgen);
+        cgen->stackPointer -= 2;
+        break;
+    case EXPR_ATTR_VAR:
+        EMIT_OPCODE(isSuper ? OPCODE_SET_ATTR_VAR_SUPER : OPCODE_SET_ATTR_VAR);
+        cgen->stackPointer -= 3;
+        break;
+    }
+    tallyPush(cgen); /* result */
+    /* discard 'set' method result, exposing the value that was squirrelled away */
+    EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
+    CHECK_STACKP();
 }
 
 static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
@@ -490,6 +572,7 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
     /* rhs */
     if (expr->oper == OPER_EQ) {
         emitCodeForExpr(expr->right, 0, cgen);
+        squirrel(1 + argumentCount + 1 /* receiver, args, new value */, cgen);
     } else {
         /* __item__ { */
         dupN(argumentCount + 1, cgen);
@@ -500,21 +583,7 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
         cgen->stackPointer -= argumentCount + 1;
         tallyPush(cgen); /* result */
         /* } __item__ */
-        
-        if (expr->right) {
-            emitCodeForExpr(expr->right, 0, cgen);
-        } else if (expr->kind == EXPR_POSTOP) {
-            EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
-            EMIT_OPCODE(OPCODE_ROT);
-            encodeUnsignedInt(argumentCount + 3, cgen);
-        }
-        
-        ++cgen->nMessageSends;
-        EMIT_OPCODE(OPCODE_OPER);
-        encodeUnsignedInt((unsigned int)expr->oper, cgen);
-        if (expr->right) {
-            --cgen->stackPointer;
-        }
+        inPlaceOp(expr, 1 + argumentCount + 1 /* receiver, args, result */ , cgen);
     }
     ++argumentCount; /* new item value */
     ++cgen->nMessageSends;
@@ -523,10 +592,9 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
     encodeUnsignedInt(argumentCount, cgen);
     cgen->stackPointer -= argumentCount + 1;
     tallyPush(cgen); /* result */
+    /* discard 'set' method result, exposing the value that was squirrelled away */
+    EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
     CHECK_STACKP();
-    if (expr->kind == EXPR_POSTOP) {
-        EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
-    }
 }
 
 static void emitBranchForExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, CodeGen *cgen) {
@@ -746,6 +814,7 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     Symbol *messageSelector;
     Object *function = 0;
     size_t stackSize;
+    int thunk;
     
     assert(!cgen->currentMethodDef && "method definition not allowed here");
     
@@ -764,13 +833,15 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
         messageSelector = SpkSymbol_get("__apply__");
     }
     
+    thunk = !function && stmt->expr->kind == EXPR_CALL;
+    
     memset(&sentinel, 0, sizeof(sentinel));
     sentinel.kind = STMT_RETURN;
     
     rewind(cgen);
     
     /* dry run to compute offsets */
-    if (!function) EMIT_OPCODE(OPCODE_THUNK);
+    if (thunk) EMIT_OPCODE(OPCODE_THUNK);
     save(stmt, cgen); /* XXX: 'stackSize' is zero here */
     
     emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
@@ -782,7 +853,7 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
         /* re-compute offsets w/o save & restore */
         rewind(cgen);
         cgen->inLeaf = 1;
-        if (!function) EMIT_OPCODE(OPCODE_THUNK);
+        if (thunk) EMIT_OPCODE(OPCODE_THUNK);
         leaf(stmt, cgen);
         emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
         emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
@@ -790,7 +861,7 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
         /* now generate code for real */
         cgen->currentMethod = SpkMethod_new(cgen->currentOffset);
         rewind(cgen);
-        if (!function) EMIT_OPCODE(OPCODE_THUNK);
+        if (thunk) EMIT_OPCODE(OPCODE_THUNK);
         leaf(stmt, cgen);
         emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
         emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
@@ -802,7 +873,7 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
         cgen->currentMethod = SpkMethod_new(cgen->currentOffset);
         rewind(cgen);
     
-        if (!function) EMIT_OPCODE(OPCODE_THUNK);
+        if (thunk) EMIT_OPCODE(OPCODE_THUNK);
         cgen->stackSize = stackSize;
         save(stmt, cgen);
         cgen->stackSize = 0;

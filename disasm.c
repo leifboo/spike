@@ -140,15 +140,19 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             pArgumentCount = &argumentCount;
             break;
 
-        case OPCODE_ATTR:       mnemonic = "attr";  goto attr;
-        case OPCODE_ATTR_SUPER: mnemonic = "sattr"; goto attr;
+        case OPCODE_GET_ATTR:       mnemonic = "gattr";  goto attr;
+        case OPCODE_GET_ATTR_SUPER: mnemonic = "gsattr"; goto attr;
+        case OPCODE_SET_ATTR:       mnemonic = "sattr";  goto attr;
+        case OPCODE_SET_ATTR_SUPER: mnemonic = "ssattr"; goto attr;
  attr:
             base = "global";
             DECODE_UINT(index);
             break;
             
-        case OPCODE_ATTR_VAR:        mnemonic = "attrv";   break;
-        case OPCODE_ATTR_VAR_SUPER:  mnemonic = "sattrv";  break;
+        case OPCODE_GET_ATTR_VAR:        mnemonic = "gattrv";   break;
+        case OPCODE_GET_ATTR_VAR_SUPER:  mnemonic = "gsattrv";  break;
+        case OPCODE_SET_ATTR_VAR:        mnemonic = "sattrv";   break;
+        case OPCODE_SET_ATTR_VAR_SUPER:  mnemonic = "ssattrv";  break;
 
         case OPCODE_RET:       mnemonic = "ret";   break;
         case OPCODE_RET_LEAF:  mnemonic = "retl";  break;

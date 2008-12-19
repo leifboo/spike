@@ -45,58 +45,31 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
     
     switch (expr->kind) {
     case EXPR_NAME:
-        switch (pass) {
-        case 1:
-            if (!checker->currentClassDef && stmt->kind == STMT_DEF_METHOD) {
-                SpkSymbolTable_Insert(checker->st, expr);
-            }
-            break;
-        case 2:
-            if (stmt->kind != STMT_DEF_METHOD) {
-                SpkSymbolTable_Bind(checker->st, expr);
-            }
-            break;
+        if (pass == 2) {
+            SpkSymbolTable_Bind(checker->st, expr);
         }
         break;
     case EXPR_CALL:
         checkExpr(expr->left, stmt, checker, pass);
-        if (stmt->kind == STMT_DEF_METHOD) {
-            if (pass == 1) {
-                assert(expr->oper == OPER_APPLY && expr->left->kind == EXPR_NAME);
-                stmt->u.method.name = expr->left->sym;
-                stmt->u.method.argList.fixed = expr->right;
-                stmt->u.method.argList.var = expr->var;
-            }
-        } else {
-            for (arg = expr->right; arg; arg = arg->nextArg) {
-                checkExpr(arg, stmt, checker, pass);
-            }
-            if (expr->var) {
-                checkExpr(expr->var, stmt, checker, pass);
-            }
+        for (arg = expr->right; arg; arg = arg->nextArg) {
+            checkExpr(arg, stmt, checker, pass);
+        }
+        if (expr->var) {
+            checkExpr(expr->var, stmt, checker, pass);
         }
         break;
     case EXPR_ATTR:
-        checkExpr(expr->left, stmt, checker, pass);
-        break;
-    case EXPR_ATTR_VAR:
-        checkExpr(expr->left, stmt, checker, pass);
-        checkExpr(expr->right, stmt, checker, pass);
-        break;
-    case EXPR_PREOP:
     case EXPR_POSTOP:
-        checkExpr(expr->left, stmt, checker, pass);
-        break;
+    case EXPR_PREOP:
     case EXPR_UNARY:
         checkExpr(expr->left, stmt, checker, pass);
         break;
+    case EXPR_AND:
+    case EXPR_ASSIGN:
+    case EXPR_ATTR_VAR:
+    case EXPR_BINARY:
     case EXPR_ID:
     case EXPR_NI:
-    case EXPR_BINARY:
-        checkExpr(expr->left, stmt, checker, pass);
-        checkExpr(expr->right, stmt, checker, pass);
-        break;
-    case EXPR_AND:
     case EXPR_OR:
         checkExpr(expr->left, stmt, checker, pass);
         checkExpr(expr->right, stmt, checker, pass);
@@ -106,10 +79,36 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
         checkExpr(expr->left, stmt, checker, pass);
         checkExpr(expr->right, stmt, checker, pass);
         break;
-    case EXPR_ASSIGN:
-        checkExpr(expr->left, stmt, checker, pass);
-        checkExpr(expr->right, stmt, checker, pass);
-        break;
+    }
+}
+
+static void checkMethodDeclarator(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
+    SymbolNode *name;
+    
+    if (pass == 1) {
+        switch (expr->kind) {
+        case EXPR_NAME:
+            name = expr->sym;
+            break;
+        case EXPR_ASSIGN:
+            assert(expr->left->kind == EXPR_NAME && expr->right->kind == EXPR_NAME);
+            name = SpkSymbolNode_Get(SpkBehavior_mangledSetAccessorName(expr->left->sym->sym));
+            stmt->u.method.argList.fixed = expr->right;
+            break;
+        case EXPR_CALL:
+            assert(expr->oper == OPER_APPLY && expr->left->kind == EXPR_NAME);
+            name = expr->left->sym;
+            if (!checker->currentClassDef) {
+                /* declare global functions */
+                SpkSymbolTable_Insert(checker->st, expr->left);
+            }
+            stmt->u.method.argList.fixed = expr->right;
+            stmt->u.method.argList.var = expr->var;
+            break;
+        default:
+            assert(0 && "invalid method declarator");
+        }
+        stmt->u.method.name = name;
     }
 }
 
@@ -208,8 +207,7 @@ static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned 
         checkVarDeclList(stmt->expr, stmt, checker, outerPass);
         break;
     case STMT_DEF_METHOD:
-        assert(stmt->expr->kind == EXPR_CALL);
-        checkExpr(stmt->expr, stmt, checker, outerPass);
+        checkMethodDeclarator(stmt->expr, stmt, checker, outerPass);
         checkStmt(stmt->top, stmt, checker, outerPass);
         break;
     case STMT_DEF_CLASS:

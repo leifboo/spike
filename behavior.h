@@ -133,6 +133,7 @@ void SpkBehavior_insertMethod(Behavior *, struct Symbol *, Method *);
 Method *SpkBehavior_lookupMethod(Behavior *, struct Symbol *);
 struct Symbol *SpkBehavior_findSelectorOfMethod(Behavior *, Method *);
 char *SpkBehavior_name(Behavior *);
+struct Symbol *SpkBehavior_mangledSetAccessorName(struct Symbol *);
 
 
 #endif /* __behavior_h__ */

@@ -551,20 +551,30 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             goto call;
 
 /*** send opcodes -- "obj.attr" ***/
-        case OPCODE_ATTR:
+        case OPCODE_SET_ATTR:
+            argumentCount = 1;
+            varArg = 0;
+            goto attr;
+        case OPCODE_GET_ATTR:
+            argumentCount = varArg = 0;
+ attr:
             oldIP = instructionPointer - 1;
-            receiver = STACK_TOP();
+            receiver = stackPointer[argumentCount];
             methodClass = receiver->klass;
             DECODE_UINT(index);
             messageSelector = (Symbol *)(globalPointer[index]);
-            goto attr;
-        case OPCODE_ATTR_SUPER:
+            goto lookupMethodInClass;
+        case OPCODE_SET_ATTR_SUPER:
+            argumentCount = 1;
+            varArg = 0;
+            goto superAttr;
+        case OPCODE_GET_ATTR_SUPER:
+            argumentCount = varArg = 0;
+ superAttr:
             oldIP = instructionPointer - 1;
             methodClass = methodClass->superclass;
             DECODE_UINT(index);
             messageSelector = (Symbol *)(globalPointer[index]);
- attr:
-            argumentCount = varArg = 0;
  lookupMethodInClass:
             for ( ; methodClass; methodClass = methodClass->superclass) {
                 method = SpkBehavior_lookupMethod(methodClass, messageSelector);
@@ -602,19 +612,36 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             break;
             
 /*** send opcodes -- "obj.*attr" ***/
-        case OPCODE_ATTR_VAR:
-            receiver = stackPointer[1];
+        case OPCODE_SET_ATTR_VAR:
+            argumentCount = 1;
+            varArg = 0;
+            goto attrVar;
+        case OPCODE_GET_ATTR_VAR:
+            argumentCount = varArg = 0;
+ attrVar:
+            receiver = stackPointer[argumentCount + 1];
             methodClass = receiver->klass;
  perform:
-            messageSelector = Spk_CAST(Symbol, stackPointer[0]);
+            messageSelector = Spk_CAST(Symbol, stackPointer[argumentCount]);
             if (!messageSelector) {
                 --instructionPointer;
                 TRAP(self->selectorMustBeSymbol, 0);
             }
+            if (argumentCount == 1) {
+                /* XXX: Ouch! */
+                messageSelector = SpkBehavior_mangledSetAccessorName(messageSelector);
+                stackPointer[1] = stackPointer[0];
+            }
             POP(1);
             oldIP = instructionPointer - 1;
-            goto attr;
-        case OPCODE_ATTR_VAR_SUPER:
+            goto lookupMethodInClass;
+        case OPCODE_SET_ATTR_VAR_SUPER:
+            argumentCount = 1;
+            varArg = 0;
+            goto superSetAttr;
+        case OPCODE_GET_ATTR_VAR_SUPER:
+            argumentCount = varArg = 0;
+ superSetAttr:
             methodClass = methodClass->superclass;
             goto perform;
 

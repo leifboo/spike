@@ -44,11 +44,7 @@ static Object *Array_setItem(Object *_self, Object *arg0, Object *arg1) {
     index = SpkInteger_asLong(arg);
     assert(0 <= index && index < self->size); /* XXX */
     ARRAY(self)[index] = arg1;
-    if (0) {
-        /* XXX */
-        return Spk_void;
-    }
-    return arg1;
+    return Spk_void;
 }
 
 

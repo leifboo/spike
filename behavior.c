@@ -174,26 +174,18 @@ void SpkBehavior_addMethodsFromTemplate(Behavior *self, SpkClassTmpl *template) 
         SpkAccessorTmpl *accessorTmpl;
         
         for (accessorTmpl = template->accessors; accessorTmpl->name; ++accessorTmpl) {
-            Symbol *messageSelector;
+            Symbol *name, *messageSelector;
             Method *method;
         
+            name = SpkSymbol_get(accessorTmpl->name);
             if (accessorTmpl->flags & SpkAccessor_READ) {
-                messageSelector = SpkSymbol_get(accessorTmpl->name);
+                messageSelector = name;
                 method = Spk_newNativeReadAccessor(accessorTmpl->type, accessorTmpl->offset);
                 SpkBehavior_insertMethod(self, messageSelector, method);
             }
             
             if (accessorTmpl->flags & SpkAccessor_WRITE) {
-                static const char *mangle = "__set__%s";
-                size_t len;
-                char *buffer;
-            
-                len = strlen(mangle) - 2 + strlen(accessorTmpl->name);
-                buffer = (char *)malloc(len + 1);
-                sprintf(buffer, mangle, accessorTmpl->name);
-                messageSelector = SpkSymbol_get(buffer);
-                free(buffer);
-            
+                messageSelector = SpkBehavior_mangledSetAccessorName(name);
                 method = Spk_newNativeWriteAccessor(accessorTmpl->type, accessorTmpl->offset);
                 SpkBehavior_insertMethod(self, messageSelector, method);
             }
@@ -221,7 +213,7 @@ void SpkBehavior_insertMethod(Behavior *self, Symbol *messageSelector, Method *m
     SpkIdentityDictionary_atPut(self->methodDict, (Object *)messageSelector, (Object *)method);
     
     name = messageSelector->str;
-    if (name[0] == '_' && name[1] == '_') {
+    if (name[0] == '_' && name[1] == '_' && strncmp(name, "__set__", 7) != 0) {
         /* special selector */
         for (operator = 0; operator < NUM_CALL_OPER; ++operator) {
             if (messageSelector == Spk_operCallSelectors[operator].messageSelector) {
@@ -259,4 +251,18 @@ char *SpkBehavior_name(Behavior *self) {
         return c->name->str;
     }
     return "<unknown>";
+}
+
+Symbol *SpkBehavior_mangledSetAccessorName(Symbol *orig) {
+    static const char *mangle = "__set__%s";
+    size_t len;
+    char *buffer;
+    Symbol *mangled;
+    
+    len = strlen(mangle) - 2 + strlen(orig->str);
+    buffer = (char *)malloc(len + 1);
+    sprintf(buffer, mangle, orig->str);
+    mangled = SpkSymbol_get(buffer);
+    free(buffer);
+    return mangled;
 }
