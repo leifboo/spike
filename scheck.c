@@ -84,6 +84,7 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
 
 static void checkMethodDeclarator(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
     SymbolNode *name;
+    Oper oper;
     
     if (pass == 1) {
         switch (expr->kind) {
@@ -132,6 +133,34 @@ static void checkMethodDeclarator(Expr *expr, Stmt *stmt, StaticChecker *checker
             }
             stmt->u.method.argList.fixed = expr->right;
             stmt->u.method.argList.var = expr->var;
+            break;
+        case EXPR_UNARY:
+        case EXPR_BINARY:
+            assert(expr->left->kind == EXPR_NAME &&
+                   expr->left->sym->sym == SpkSymbol_get("self") &&
+                   "invalid method declarator");
+            oper = expr->oper;
+            if (expr->right) {
+                switch (expr->right->kind) {
+                case EXPR_NAME:
+                    stmt->u.method.argList.fixed = expr->right;
+                    break;
+                case EXPR_INT:
+                    if (expr->right->lit.intValue == 1) {
+                        if (oper == OPER_ADD) {
+                            oper = OPER_SUCC;
+                            break;
+                        } else if (oper == OPER_SUB) {
+                            oper = OPER_PRED;
+                            break;
+                        }
+                    }
+                    /* fall through */
+                default:
+                    assert(0 && "invalid method declarator");
+                }
+            }
+            name = SpkSymbolNode_Get(Spk_operSelectors[oper].messageSelector);
             break;
         default:
             assert(0 && "invalid method declarator");
