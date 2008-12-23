@@ -345,6 +345,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
                     : (expr->var
                        ? OPCODE_CALL_VAR
                        : OPCODE_CALL));
+        encodeUnsignedInt(METHOD_NAMESPACE_RVALUE, cgen);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
         encodeUnsignedInt(argumentCount, cgen);
         cgen->stackPointer -= (expr->var ? 1 : 0) + argumentCount + 1;
@@ -540,7 +541,7 @@ static void inPlaceAttrOp(Expr *expr, CodeGen *cgen) {
     switch (expr->left->kind) {
     case EXPR_ATTR:
         EMIT_OPCODE(isSuper ? OPCODE_SET_ATTR_SUPER : OPCODE_SET_ATTR);
-        index = LITERAL_INDEX((Object *)SpkBehavior_mangledSetAccessorName(expr->left->sym->sym), cgen);
+        index = LITERAL_INDEX((Object *)expr->left->sym->sym, cgen);
         encodeUnsignedInt(index, cgen);
         cgen->stackPointer -= 2;
         break;
@@ -560,10 +561,10 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
     size_t argumentCount;
     int isSuper;
     
-    assert(expr->left->oper == OPER_GET_ITEM && "invalid lvalue");
-    /* __item__/__setItem__ common receiver */
+    assert(expr->left->oper == OPER_INDEX && "invalid lvalue");
+    /* get/set common receiver */
     emitCodeForExpr(expr->left->left, &isSuper, cgen);
-    /* __item__/__setItem__ common arguments */
+    /* get/set common arguments */
     for (arg = expr->left->right, argumentCount = 0;
          arg;
          arg = arg->nextArg, ++argumentCount) {
@@ -574,21 +575,23 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
         emitCodeForExpr(expr->right, 0, cgen);
         squirrel(1 + argumentCount + 1 /* receiver, args, new value */, cgen);
     } else {
-        /* __item__ { */
+        /* get __index__ { */
         dupN(argumentCount + 1, cgen);
         ++cgen->nMessageSends;
         EMIT_OPCODE(isSuper ? OPCODE_CALL_SUPER : OPCODE_CALL);
+        encodeUnsignedInt(METHOD_NAMESPACE_RVALUE, cgen);
         encodeUnsignedInt((unsigned int)expr->left->oper, cgen);
         encodeUnsignedInt(argumentCount, cgen);
         cgen->stackPointer -= argumentCount + 1;
         tallyPush(cgen); /* result */
-        /* } __item__ */
+        /* } get __index__ */
         inPlaceOp(expr, 1 + argumentCount + 1 /* receiver, args, result */ , cgen);
     }
     ++argumentCount; /* new item value */
     ++cgen->nMessageSends;
     EMIT_OPCODE(isSuper ? OPCODE_CALL_SUPER : OPCODE_CALL);
-    encodeUnsignedInt((unsigned int)OPER_SET_ITEM, cgen);
+    encodeUnsignedInt(METHOD_NAMESPACE_LVALUE, cgen);
+    encodeUnsignedInt((unsigned int)OPER_INDEX, cgen);
     encodeUnsignedInt(argumentCount, cgen);
     cgen->stackPointer -= argumentCount + 1;
     tallyPush(cgen); /* result */
@@ -892,7 +895,7 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
     assert(cgen->currentOffset == cgen->currentMethod->base.size);
     assert(cgen->stackSize == stackSize);
     
-    SpkBehavior_insertMethod(methodClass, messageSelector, cgen->currentMethod);
+    SpkBehavior_insertMethod(methodClass, stmt->u.method.namespace, messageSelector, cgen->currentMethod);
     cgen->currentMethod = 0;
     cgen->currentMethodDef = 0;
     rewind(cgen);

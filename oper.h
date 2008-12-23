@@ -35,8 +35,7 @@ typedef enum Oper {
 
 typedef enum CallOper {
     OPER_APPLY,
-    OPER_GET_ITEM,
-    OPER_SET_ITEM,
+    OPER_INDEX,
     
     NUM_CALL_OPER
 } CallOper;

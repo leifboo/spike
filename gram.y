@@ -137,7 +137,7 @@ unary_expr(r) ::= LNEG  unary_expr(expr).                                       
 
 %type postfix_expr {Expr *}
 postfix_expr(r) ::= primary_expr(expr).                                         { r = expr; }
-postfix_expr(r) ::= postfix_expr(func) LBRACK argument_list(args) RBRACK.       { r = SpkParser_NewExpr(EXPR_CALL, OPER_GET_ITEM, 0, func, args.fixed); r->var = args.var; }
+postfix_expr(r) ::= postfix_expr(func) LBRACK argument_list(args) RBRACK.       { r = SpkParser_NewExpr(EXPR_CALL, OPER_INDEX, 0, func, args.fixed); r->var = args.var; }
 postfix_expr(r) ::= postfix_expr(func) LPAREN RPAREN.                           { r = SpkParser_NewExpr(EXPR_CALL, OPER_APPLY, 0, func, 0); }
 postfix_expr(r) ::= postfix_expr(func) LPAREN argument_list(args) RPAREN.       { r = SpkParser_NewExpr(EXPR_CALL, OPER_APPLY, 0, func, args.fixed); r->var = args.var; }
 postfix_expr(r) ::= postfix_expr(obj) DOT IDENTIFIER(attr).                     { r = SpkParser_NewExpr(EXPR_ATTR, 0, 0, obj, 0); r->sym = attr.sym; }

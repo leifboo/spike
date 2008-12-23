@@ -79,6 +79,7 @@ SpkClassTmpl Spk_ClassObjectTmpl = {
     0,
     ObjectAccessors,
     ObjectMethods,
+    0,
     &ObjectTraverse
 };
 

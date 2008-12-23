@@ -134,7 +134,7 @@ static SpkMethodTmpl methods[] = {
     { "__eq__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_eq     },
     { "__ne__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_ne     },
     /* call operators */
-    { "__item__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_item },
+    { "__index__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_item },
     /* other */
     { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &String_print },
     { 0, 0, 0}

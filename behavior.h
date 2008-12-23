@@ -29,6 +29,14 @@ typedef struct oper_entry_t {
 typedef oper_entry_t oper_table_t[NUM_OPER];
 typedef oper_entry_t oper_call_table_t[NUM_CALL_OPER];
 
+typedef enum MethodNamespace {
+    METHOD_NAMESPACE_RVALUE,
+    METHOD_NAMESPACE_LVALUE,
+    
+    NUM_METHOD_NAMESPACES
+} MethodNamespace;
+
+
 typedef struct traverse_t {
     void (*init)(Object *);
     Object **(*current)(Object *);
@@ -81,6 +89,7 @@ typedef struct SpkClassTmpl {
     size_t itemSize;
     SpkAccessorTmpl *accessors;
     SpkMethodTmpl *methods;
+    SpkMethodTmpl *lvalueMethods;
     traverse_t *traverse;
 } SpkClassTmpl;
 
@@ -89,9 +98,11 @@ struct Behavior {
     Object base;
     Behavior *superclass;
     struct Module *module;
-    struct IdentityDictionary *methodDict;
-    oper_table_t operTable;
-    oper_call_table_t operCallTable;
+    struct {
+        struct IdentityDictionary *methodDict;
+        oper_table_t operTable;
+        oper_call_table_t operCallTable;
+    } ns[NUM_METHOD_NAMESPACES];
     
     /* temporary */
     Behavior *next;
@@ -129,11 +140,10 @@ Behavior *SpkBehavior_fromTemplate(SpkClassTmpl *template, Behavior *superclass,
 void SpkBehavior_init(Behavior *self, Behavior *superclass, struct Module *module, size_t instVarCount);
 void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavior *superclass, struct Module *module);
 void SpkBehavior_addMethodsFromTemplate(Behavior *self, SpkClassTmpl *template);
-void SpkBehavior_insertMethod(Behavior *, struct Symbol *, Method *);
-Method *SpkBehavior_lookupMethod(Behavior *, struct Symbol *);
+void SpkBehavior_insertMethod(Behavior *, MethodNamespace, struct Symbol *, Method *);
+Method *SpkBehavior_lookupMethod(Behavior *, MethodNamespace, struct Symbol *);
 struct Symbol *SpkBehavior_findSelectorOfMethod(Behavior *, Method *);
 char *SpkBehavior_name(Behavior *);
-struct Symbol *SpkBehavior_mangledSetAccessorName(struct Symbol *);
 
 
 #endif /* __behavior_h__ */

@@ -44,9 +44,8 @@ SpecialSelector Spk_operSelectors[NUM_OPER] = {
 };
 
 SpecialSelector Spk_operCallSelectors[NUM_CALL_OPER] = {
-    { "__apply__",     0, 0 },
-    { "__item__",      0, 0 },
-    { "__setItem__",   0, 0 }
+    { "__apply__",  0, 0 },
+    { "__index__",  0, 0 }
 };
 
 
@@ -103,20 +102,24 @@ Behavior *SpkBehavior_fromTemplate(SpkClassTmpl *template, Behavior *superclass,
 
 void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size_t instVarCount) {
     size_t i;
+    MethodNamespace namespace;
     
     self->superclass = superclass;
     self->module = module;
-    self->methodDict = SpkIdentityDictionary_new();
+    self->ns[METHOD_NAMESPACE_RVALUE].methodDict = SpkIdentityDictionary_new();
+    self->ns[METHOD_NAMESPACE_LVALUE].methodDict = SpkIdentityDictionary_new();
     
     if (superclass) {
         
-        for (i = 0; i < NUM_OPER; ++i) {
-            self->operTable[i].method = superclass->operTable[i].method;
-            self->operTable[i].methodClass = superclass->operTable[i].methodClass;
-        }
-        for (i = 0; i < NUM_CALL_OPER; ++i) {
-            self->operCallTable[i].method = superclass->operCallTable[i].method;
-            self->operCallTable[i].methodClass = superclass->operCallTable[i].methodClass;
+        for (namespace = 0; namespace < NUM_METHOD_NAMESPACES; ++namespace) {
+            for (i = 0; i < NUM_OPER; ++i) {
+                self->ns[namespace].operTable[i].method = superclass->ns[namespace].operTable[i].method;
+                self->ns[namespace].operTable[i].methodClass = superclass->ns[namespace].operTable[i].methodClass;
+            }
+            for (i = 0; i < NUM_CALL_OPER; ++i) {
+                self->ns[namespace].operCallTable[i].method = superclass->ns[namespace].operCallTable[i].method;
+                self->ns[namespace].operCallTable[i].methodClass = superclass->ns[namespace].operCallTable[i].methodClass;
+            }
         }
         
         /* memory layout of instances */
@@ -128,13 +131,15 @@ void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size
         
     } else {
         
-        for (i = 0; i < NUM_OPER; ++i) {
-            self->operTable[i].method = 0;
-            self->operTable[i].methodClass = 0;
-        }
-        for (i = 0; i < NUM_CALL_OPER; ++i) {
-            self->operCallTable[i].method = 0;
-            self->operCallTable[i].methodClass = 0;
+        for (namespace = 0; namespace < NUM_METHOD_NAMESPACES; ++namespace) {
+            for (i = 0; i < NUM_OPER; ++i) {
+                self->ns[namespace].operTable[i].method = 0;
+                self->ns[namespace].operTable[i].methodClass = 0;
+            }
+            for (i = 0; i < NUM_CALL_OPER; ++i) {
+                self->ns[namespace].operCallTable[i].method = 0;
+                self->ns[namespace].operCallTable[i].methodClass = 0;
+            }
         }
         
         /* memory layout of instances */
@@ -174,20 +179,18 @@ void SpkBehavior_addMethodsFromTemplate(Behavior *self, SpkClassTmpl *template) 
         SpkAccessorTmpl *accessorTmpl;
         
         for (accessorTmpl = template->accessors; accessorTmpl->name; ++accessorTmpl) {
-            Symbol *name, *messageSelector;
+            Symbol *messageSelector;
             Method *method;
         
-            name = SpkSymbol_get(accessorTmpl->name);
+            messageSelector = SpkSymbol_get(accessorTmpl->name);
             if (accessorTmpl->flags & SpkAccessor_READ) {
-                messageSelector = name;
                 method = Spk_newNativeReadAccessor(accessorTmpl->type, accessorTmpl->offset);
-                SpkBehavior_insertMethod(self, messageSelector, method);
+                SpkBehavior_insertMethod(self, METHOD_NAMESPACE_RVALUE, messageSelector, method);
             }
             
             if (accessorTmpl->flags & SpkAccessor_WRITE) {
-                messageSelector = SpkBehavior_mangledSetAccessorName(name);
                 method = Spk_newNativeWriteAccessor(accessorTmpl->type, accessorTmpl->offset);
-                SpkBehavior_insertMethod(self, messageSelector, method);
+                SpkBehavior_insertMethod(self, METHOD_NAMESPACE_LVALUE, messageSelector, method);
             }
         }
     }
@@ -201,32 +204,44 @@ void SpkBehavior_addMethodsFromTemplate(Behavior *self, SpkClassTmpl *template) 
             
             messageSelector = SpkSymbol_get(methodTmpl->name);
             method = Spk_newNativeMethod(methodTmpl->flags, methodTmpl->code);
-            SpkBehavior_insertMethod(self, messageSelector, method);
+            SpkBehavior_insertMethod(self, METHOD_NAMESPACE_RVALUE, messageSelector, method);
+        }
+    }
+    if (template->lvalueMethods) {
+        SpkMethodTmpl *methodTmpl;
+        
+        for (methodTmpl = template->lvalueMethods; methodTmpl->name; ++methodTmpl) {
+            Symbol *messageSelector;
+            Method *method;
+            
+            messageSelector = SpkSymbol_get(methodTmpl->name);
+            method = Spk_newNativeMethod(methodTmpl->flags, methodTmpl->code);
+            SpkBehavior_insertMethod(self, METHOD_NAMESPACE_LVALUE, messageSelector, method);
         }
     }
 }
 
-void SpkBehavior_insertMethod(Behavior *self, Symbol *messageSelector, Method *method) {
+void SpkBehavior_insertMethod(Behavior *self, MethodNamespace namespace, Symbol *messageSelector, Method *method) {
     char *name;
     Oper operator;
     
-    SpkIdentityDictionary_atPut(self->methodDict, (Object *)messageSelector, (Object *)method);
+    SpkIdentityDictionary_atPut(self->ns[namespace].methodDict, (Object *)messageSelector, (Object *)method);
     
     name = messageSelector->str;
-    if (name[0] == '_' && name[1] == '_' && strncmp(name, "__set__", 7) != 0) {
+    if (name[0] == '_' && name[1] == '_') {
         /* special selector */
         for (operator = 0; operator < NUM_CALL_OPER; ++operator) {
             if (messageSelector == Spk_operCallSelectors[operator].messageSelector) {
-                self->operCallTable[operator].method = method;
-                self->operCallTable[operator].methodClass = self;
+                self->ns[namespace].operCallTable[operator].method = method;
+                self->ns[namespace].operCallTable[operator].methodClass = self;
                 break;
             }
         }
         if (operator >= NUM_CALL_OPER) {
             for (operator = 0; operator < NUM_OPER; ++operator) {
                 if (messageSelector == Spk_operSelectors[operator].messageSelector) {
-                    self->operTable[operator].method = method;
-                    self->operTable[operator].methodClass = self;
+                    self->ns[namespace].operTable[operator].method = method;
+                    self->ns[namespace].operTable[operator].methodClass = self;
                     break;
                 }
             }
@@ -235,12 +250,20 @@ void SpkBehavior_insertMethod(Behavior *self, Symbol *messageSelector, Method *m
     }
 }
 
-Method *SpkBehavior_lookupMethod(Behavior *self, Symbol *messageSelector) {
-    return (Method *)SpkIdentityDictionary_at(self->methodDict, (Object *)messageSelector);
+Method *SpkBehavior_lookupMethod(Behavior *self, MethodNamespace namespace, Symbol *messageSelector) {
+    return (Method *)SpkIdentityDictionary_at(self->ns[namespace].methodDict, (Object *)messageSelector);
 }
 
 Symbol *SpkBehavior_findSelectorOfMethod(Behavior *self, Method *meth) {
-    return (Symbol *)SpkIdentityDictionary_keyAtValue(self->methodDict, (Object *)meth);
+    MethodNamespace namespace;
+    Symbol *selector;
+    
+    for (namespace = 0; namespace < NUM_METHOD_NAMESPACES; ++namespace) {
+        selector = (Symbol *)SpkIdentityDictionary_keyAtValue(self->ns[namespace].methodDict, (Object *)meth);
+        if (selector)
+            return selector;
+    }
+    return 0;
 }
 
 char *SpkBehavior_name(Behavior *self) {
@@ -251,18 +274,4 @@ char *SpkBehavior_name(Behavior *self) {
         return c->name->str;
     }
     return "<unknown>";
-}
-
-Symbol *SpkBehavior_mangledSetAccessorName(Symbol *orig) {
-    static const char *mangle = "__set__%s";
-    size_t len;
-    char *buffer;
-    Symbol *mangled;
-    
-    len = strlen(mangle) - 2 + strlen(orig->str);
-    buffer = (char *)malloc(len + 1);
-    sprintf(buffer, mangle, orig->str);
-    mangled = SpkSymbol_get(buffer);
-    free(buffer);
-    return mangled;
 }

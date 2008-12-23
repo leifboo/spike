@@ -83,10 +83,12 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
 }
 
 static void checkMethodDeclarator(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
+    MethodNamespace namespace;
     SymbolNode *name;
     Oper oper;
     
     if (pass == 1) {
+        namespace = METHOD_NAMESPACE_RVALUE;
         switch (expr->kind) {
         case EXPR_NAME:
             assert(checker->currentClassDef && "invalid global function definition");
@@ -95,16 +97,17 @@ static void checkMethodDeclarator(Expr *expr, Stmt *stmt, StaticChecker *checker
         case EXPR_ASSIGN:
             assert(checker->currentClassDef && "invalid global function definition");
             assert(expr->right->kind == EXPR_NAME && "invalid method declarator");
+            namespace = METHOD_NAMESPACE_LVALUE;
             switch (expr->left->kind) {
             case EXPR_NAME:
-                name = SpkSymbolNode_Get(SpkBehavior_mangledSetAccessorName(expr->left->sym->sym));
+                name = SpkSymbolNode_Get(expr->left->sym->sym);
                 stmt->u.method.argList.fixed = expr->right;
                 break;
             case EXPR_CALL:
-                assert(expr->left->oper == OPER_GET_ITEM &&
+                assert(expr->left->oper == OPER_INDEX &&
                        expr->left->left->sym->sym == SpkSymbol_get("self") &&
                        "invalid method declarator");
-                name = SpkSymbolNode_Get(Spk_operCallSelectors[OPER_SET_ITEM].messageSelector);
+                name = SpkSymbolNode_Get(Spk_operCallSelectors[OPER_INDEX].messageSelector);
                 stmt->u.method.argList.fixed = expr->left->right;
                 /* chain-on the new value arg */
                 expr->left->right->nextArg = expr->right;
@@ -165,6 +168,7 @@ static void checkMethodDeclarator(Expr *expr, Stmt *stmt, StaticChecker *checker
         default:
             assert(0 && "invalid method declarator");
         }
+        stmt->u.method.namespace = namespace;
         stmt->u.method.name = name;
     }
 }

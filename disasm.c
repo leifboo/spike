@@ -57,7 +57,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         size_t argumentCount = 0, *pArgumentCount = 0;
         size_t variadic = 0, localCount = 0, stackSize = 0;
         size_t count = 0, *pCount = 0;
-        unsigned int operator = 0;
+        unsigned int namespace = 0, operator = 0;
         size_t label = 0, *pLabel = 0;
         int i;
         
@@ -134,6 +134,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         case OPCODE_CALL_SUPER:     mnemonic = "scall";  goto call;
         case OPCODE_CALL_SUPER_VAR: mnemonic = "scallv"; goto call;
  call:
+            namespace = (unsigned int)(*instructionPointer++);
             operator = (unsigned int)(*instructionPointer++);
             selector = Spk_operCallSelectors[operator].messageSelectorStr;
             DECODE_UINT(argumentCount);
@@ -183,7 +184,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             break;
         }
             
-        fprintf(out, "\t\t%04x", ip - begin);
+        fprintf(out, "\t\t\t%04x", ip - begin);
         for (i = 0; i < 3; ++i, ++ip) {
             if (ip < instructionPointer) {
                 fprintf(out, " %02x", *ip);
@@ -200,7 +201,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         } else if (keyword) {
             fprintf(out, "\t%s", keyword);
         } else if (pArgumentCount) {
-            fprintf(out, "\t$%s %u", selector, *pArgumentCount);
+            fprintf(out, "\t[%u].%s %u", namespace, selector, *pArgumentCount);
         } else if (selector) {
             fprintf(out, "\t$%s", selector);
         } else if (pLabel) {
@@ -218,18 +219,22 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
 
 void SpkDisassembler_disassembleClass(Behavior *aClass, FILE *out) {
     size_t i;
+    MethodNamespace namespace;
     IdentityDictionary *methodDict;
     Method *method;
     Symbol *methodName;
     
     fprintf(out, "class %s\n", SpkBehavior_name(aClass));
-    methodDict = aClass->methodDict;
-    for (i = 0; i < methodDict->size; ++i) {
-        method = (Method *)methodDict->valueArray[i];
-        if (method) {
-            methodName = (Symbol *)methodDict->keyArray[i];
-            fprintf(out, "\t%s\n", methodName->str);
-            SpkDisassembler_disassembleMethod(method, out);
+    for (namespace = 0; namespace < NUM_METHOD_NAMESPACES; ++namespace) {
+        fprintf(out, "\tnamespace %d\n", namespace);
+        methodDict = aClass->ns[namespace].methodDict;
+        for (i = 0; i < methodDict->size; ++i) {
+            method = (Method *)methodDict->valueArray[i];
+            if (method) {
+                methodName = (Symbol *)methodDict->keyArray[i];
+                fprintf(out, "\t\t%s\n", methodName->str);
+                SpkDisassembler_disassembleMethod(method, out);
+            }
         }
     }
     return;

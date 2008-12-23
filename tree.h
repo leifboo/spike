@@ -96,6 +96,7 @@ struct Stmt {
     Expr *init, *expr, *incr;
     union {
         struct {
+            unsigned int namespace;
             struct SymbolNode *name;
             struct { Expr *fixed, *var; } argList;
             size_t argumentCount;

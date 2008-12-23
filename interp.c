@@ -144,13 +144,14 @@ Object *SpkInterpreter_start(Object *entry) {
     
     callThunk = SpkMethod_new(1);
     SpkMethod_OPCODES(callThunk)[0] = OPCODE_CALL_THUNK;
-    SpkBehavior_insertMethod(Spk_ClassThunk, SpkSymbol_get("__apply__"), callThunk);
+    SpkBehavior_insertMethod(Spk_ClassThunk, METHOD_NAMESPACE_RVALUE, SpkSymbol_get("__apply__"), callThunk);
     
-    trampolineSize = 5;
+    trampolineSize = 6;
     trampoline = SpkMethod_new(trampolineSize);
     ip = SpkMethod_OPCODES(trampoline);
     *ip++ = OPCODE_PUSH_SELF;
     *ip++ = OPCODE_CALL;
+    *ip++ = (opcode_t)METHOD_NAMESPACE_RVALUE;
     *ip++ = (opcode_t)OPER_APPLY;
     *ip++ = (opcode_t)0;
     *ip++ = OPCODE_RET_TRAMP;
@@ -332,6 +333,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
     size_t index;
 
     /* message sending */
+    MethodNamespace namespace;
     Symbol *messageSelector = 0;
     size_t argumentCount = 0, varArg = 0, variadic = 0;
     unsigned int operator;
@@ -503,9 +505,9 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             varArg = 0;
             methodClass = methodClass->superclass;
  oper:
-            method = methodClass->operTable[operator].method;
+            method = methodClass->ns[METHOD_NAMESPACE_RVALUE].operTable[operator].method;
             if (method) {
-                methodClass = methodClass->operTable[operator].methodClass;
+                methodClass = methodClass->ns[METHOD_NAMESPACE_RVALUE].operTable[operator].methodClass;
                 goto callNewMethod;
             }
             instructionPointer -= 2;
@@ -513,6 +515,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             break;
         case OPCODE_CALL:
             oldIP = instructionPointer - 1;
+            namespace = (unsigned int)(*instructionPointer++);
             operator = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
             varArg = 0;
@@ -521,6 +524,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             goto call;
         case OPCODE_CALL_VAR:
             oldIP = instructionPointer - 1;
+            namespace = (unsigned int)(*instructionPointer++);
             operator = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
             varArg = 1;
@@ -529,33 +533,37 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             goto call;
         case OPCODE_CALL_SUPER:
             oldIP = instructionPointer - 1;
+            namespace = (unsigned int)(*instructionPointer++);
             operator = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
             varArg = 0;
             methodClass = methodClass->superclass;
+            goto call;
+        case OPCODE_CALL_SUPER_VAR:
+            oldIP = instructionPointer - 1;
+            operator = (unsigned int)(*instructionPointer++);
+            namespace = (unsigned int)(*instructionPointer++);
+            DECODE_UINT(argumentCount);
+            varArg = 1;
+            methodClass = methodClass->superclass;
  call:
-            method = methodClass->operCallTable[operator].method;
+            method = methodClass->ns[namespace].operCallTable[operator].method;
             if (method) {
-                methodClass = methodClass->operCallTable[operator].methodClass;
+                methodClass = methodClass->ns[namespace].operCallTable[operator].methodClass;
                 goto callNewMethod;
             }
             instructionPointer = oldIP;
             TRAP(self->selectorDoesNotUnderstand, (Object *)Spk_operCallSelectors[operator].messageSelector);
             break;
-        case OPCODE_CALL_SUPER_VAR:
-            oldIP = instructionPointer - 1;
-            operator = (unsigned int)(*instructionPointer++);
-            DECODE_UINT(argumentCount);
-            varArg = 1;
-            methodClass = methodClass->superclass;
-            goto call;
 
 /*** send opcodes -- "obj.attr" ***/
         case OPCODE_SET_ATTR:
+            namespace = METHOD_NAMESPACE_LVALUE;
             argumentCount = 1;
             varArg = 0;
             goto attr;
         case OPCODE_GET_ATTR:
+            namespace = METHOD_NAMESPACE_RVALUE;
             argumentCount = varArg = 0;
  attr:
             oldIP = instructionPointer - 1;
@@ -565,10 +573,12 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             messageSelector = (Symbol *)(globalPointer[index]);
             goto lookupMethodInClass;
         case OPCODE_SET_ATTR_SUPER:
+            namespace = METHOD_NAMESPACE_LVALUE;
             argumentCount = 1;
             varArg = 0;
             goto superAttr;
         case OPCODE_GET_ATTR_SUPER:
+            namespace = METHOD_NAMESPACE_RVALUE;
             argumentCount = varArg = 0;
  superAttr:
             oldIP = instructionPointer - 1;
@@ -577,7 +587,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             messageSelector = (Symbol *)(globalPointer[index]);
  lookupMethodInClass:
             for ( ; methodClass; methodClass = methodClass->superclass) {
-                method = SpkBehavior_lookupMethod(methodClass, messageSelector);
+                method = SpkBehavior_lookupMethod(methodClass, namespace, messageSelector);
                 if (method) {
  callNewMethod:
                     /* call (jmpl -- jump and link) */
@@ -613,10 +623,12 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             
 /*** send opcodes -- "obj.*attr" ***/
         case OPCODE_SET_ATTR_VAR:
+            namespace = METHOD_NAMESPACE_LVALUE;
             argumentCount = 1;
             varArg = 0;
             goto attrVar;
         case OPCODE_GET_ATTR_VAR:
+            namespace = METHOD_NAMESPACE_RVALUE;
             argumentCount = varArg = 0;
  attrVar:
             receiver = stackPointer[argumentCount + 1];
@@ -628,18 +640,18 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 TRAP(self->selectorMustBeSymbol, 0);
             }
             if (argumentCount == 1) {
-                /* XXX: Ouch! */
-                messageSelector = SpkBehavior_mangledSetAccessorName(messageSelector);
                 stackPointer[1] = stackPointer[0];
             }
             POP(1);
             oldIP = instructionPointer - 1;
             goto lookupMethodInClass;
         case OPCODE_SET_ATTR_VAR_SUPER:
+            namespace = METHOD_NAMESPACE_LVALUE;
             argumentCount = 1;
             varArg = 0;
             goto superSetAttr;
         case OPCODE_GET_ATTR_VAR_SUPER:
+            namespace = METHOD_NAMESPACE_RVALUE;
             argumentCount = varArg = 0;
  superSetAttr:
             methodClass = methodClass->superclass;
@@ -650,6 +662,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             receiver = stackPointer[2];
             methodClass = receiver->klass;
  send:
+            namespace = METHOD_NAMESPACE_RVALUE; /* XXX */
             messageSelector = Spk_CAST(Symbol, stackPointer[1]);
             if (!messageSelector) {
                 --instructionPointer;
