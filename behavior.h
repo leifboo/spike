@@ -104,8 +104,17 @@ struct Behavior {
         oper_call_table_t operCallTable;
     } ns[NUM_METHOD_NAMESPACES];
     
+    /* static chain */
+    Object *outer;
+    Behavior *outerClass;
+    
     /* temporary */
     Behavior *next;
+    Behavior *nextInScope;
+    struct {
+        struct Behavior *first;
+        struct Behavior *last;
+    } nestedClassList;
     
     /* memory layout of instances */
     traverse_t traverse;

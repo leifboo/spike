@@ -45,7 +45,7 @@ static Method *newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
     if (flags & SpkNativeCode_LEAF) {
         size += 2; /* leaf */
     } else {
-        size += 11; /* save, ... restore */
+        size += 12; /* save, ... restore */
     }
     size += 1; /* ret/retl */
     
@@ -76,6 +76,7 @@ static Method *newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
         *ip++ = (opcode_t)argumentCount;
     } else {
         *ip++ = variadic ? OPCODE_SAVE_VAR : OPCODE_SAVE;
+        *ip++ = 2; /* displaySize */
         *ip++ = (opcode_t)argumentCount;
         *ip++ = (opcode_t)variadic; /* localCount */
         *ip++ = (opcode_t)3 + LEAF_STACK_SPACE; /* stackSize */

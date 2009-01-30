@@ -10,8 +10,8 @@ struct Symbol;
 
 
 typedef struct Module {
-    VariableObject base;
-    struct IdentityDictionary *globals;
+    Object base;
+    Object **literals;
     struct Behavior *firstClass;
 } Module;
 
@@ -20,7 +20,8 @@ typedef struct ModuleSubclass {
     Object *variables[1]; /* stretchy */
 } ModuleSubclass;
 
-#define SpkModule_VARIABLES(op) ((Object **)SpkVariableObject_ITEM_BASE(op))
+#define SpkModule_VARIABLES(op) ((Object **)(((char *)op) + (op)->klass->instVarOffset))
+#define SpkModule_LITERALS(mp) ((mp)->literals)
 
 
 extern struct Behavior *Spk_ClassModule;
@@ -28,8 +29,7 @@ extern struct SpkClassTmpl Spk_ClassModuleTmpl;
 extern Module *Spk_builtInModule;
 
 
-Module *SpkModule_new(unsigned int, struct IdentityDictionary *);
-Object *SpkModule_lookupSymbol(Module *, struct Symbol *);
+Module *SpkModule_new(struct Behavior *);
 
 
 #endif /* __module_h__ */

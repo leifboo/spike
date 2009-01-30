@@ -10,8 +10,9 @@ struct Method;
 struct Module;
 
 
-void SpkDisassembler_disassembleMethod(struct Method *, FILE *);
-void SpkDisassembler_disassembleClass(struct Behavior *, FILE *);
+void SpkDisassembler_disassembleMethodOpcodes(struct Method *, unsigned int, FILE *);
+void SpkDisassembler_disassembleMethod(struct Method *, unsigned int, FILE *);
+void SpkDisassembler_disassembleClass(struct Behavior *, unsigned int, FILE *);
 void SpkDisassembler_disassembleModule(struct Module *, FILE *);
 
 

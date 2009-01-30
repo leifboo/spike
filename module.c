@@ -32,7 +32,7 @@ SpkClassTmpl Spk_ClassModuleTmpl = {
     "Module",
     offsetof(ModuleSubclass, variables),
     sizeof(Module),
-    sizeof(Object *),
+    0,
     0,
     methods
 };
@@ -41,20 +41,12 @@ SpkClassTmpl Spk_ClassModuleTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-Module *SpkModule_new(unsigned int nGlobals, IdentityDictionary *globals) {
+Module *SpkModule_new(Behavior *moduleSubclass) {
     Module *newModule;
     
-    newModule = (Module *)malloc(Spk_ClassModule->instVarOffset + nGlobals*sizeof(Object *));
-    newModule->base.base.klass = Spk_ClassModule;
-    newModule->base.size = nGlobals;
-    if (!globals) {
-        globals = SpkIdentityDictionary_new();
-    }
-    newModule->globals = globals;
+    newModule = (Module *)malloc(moduleSubclass->instanceSize);
+    newModule->base.klass = moduleSubclass;
+    newModule->literals = 0;
     newModule->firstClass = 0;
     return newModule;
-}
-
-Object *SpkModule_lookupSymbol(Module *self, struct Symbol *messageSelector) {
-    return SpkIdentityDictionary_at(self->globals, (Object *)messageSelector);
 }

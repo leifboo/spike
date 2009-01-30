@@ -61,7 +61,7 @@ closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) COLON TYPE_IDENTIFIER(super)
 
 %type compound_statement {Stmt *}
 compound_statement(r) ::= LCURLY                          RCURLY.               { r = SpkParser_NewStmt(STMT_COMPOUND, 0, 0, 0); }
-compound_statement(r) ::= LCURLY statement_list(stmtList) RCURLY.               { r = SpkParser_NewStmt(STMT_COMPOUND, 0, stmtList.first, stmtList.last); }
+compound_statement(r) ::= LCURLY statement_list(stmtList) RCURLY.               { r = SpkParser_NewStmt(STMT_COMPOUND, 0, stmtList.first, 0); }
 
 %type expr {ExprList}
 expr(r) ::= assignment_expr(expr).                                              { r.first = expr; r.last = expr; }

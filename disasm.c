@@ -39,7 +39,12 @@
 } while (0)
 
 
-void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
+static void tab(unsigned int indent, FILE *out) {
+    while (indent--)
+        fprintf(out, "\t");
+}
+
+void SpkDisassembler_disassembleMethodOpcodes(Method *method, unsigned int indent, FILE *out) {
     opcode_t *begin, *ip, *instructionPointer, *end;
     
     begin = SpkMethod_OPCODES(method);
@@ -52,10 +57,10 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         char *keyword = 0;
         char *selector = 0;
         const char *mnemonic = "unk", *base = 0;
-        size_t index = 0;
+        size_t activation = 0, index = 0;
         ptrdiff_t displacement = 0;
         size_t argumentCount = 0, *pArgumentCount = 0;
-        size_t variadic = 0, localCount = 0, stackSize = 0;
+        size_t displaySize = 0, variadic = 0, localCount = 0, stackSize = 0;
         size_t count = 0, *pCount = 0;
         unsigned int namespace = 0, operator = 0;
         size_t label = 0, *pLabel = 0;
@@ -70,8 +75,13 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             
         case OPCODE_PUSH_LOCAL:    mnemonic = "push"; base = "local";    goto push;
         case OPCODE_PUSH_INST_VAR: mnemonic = "push"; base = "receiver"; goto push;
-        case OPCODE_PUSH_GLOBAL:   mnemonic = "push"; base = "global";   goto push;
+        case OPCODE_PUSH_LITERAL:  mnemonic = "push"; base = "literal";  goto push;
  push:
+            DECODE_UINT(index);
+            break;
+        case OPCODE_PUSH:
+            mnemonic = "push";
+            DECODE_UINT(activation);
             DECODE_UINT(index);
             break;
             
@@ -98,8 +108,12 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             
         case OPCODE_STORE_LOCAL:    mnemonic = "store"; base = "local";    goto store;
         case OPCODE_STORE_INST_VAR: mnemonic = "store"; base = "receiver"; goto store;
-        case OPCODE_STORE_GLOBAL:   mnemonic = "store"; base = "global";   goto store;
  store:
+            DECODE_UINT(index);
+            break;
+        case OPCODE_STORE:
+            mnemonic = "store";
+            DECODE_UINT(activation);
             DECODE_UINT(index);
             break;
             
@@ -146,7 +160,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         case OPCODE_SET_ATTR:       mnemonic = "sattr";  goto attr;
         case OPCODE_SET_ATTR_SUPER: mnemonic = "ssattr"; goto attr;
  attr:
-            base = "global";
+            base = "literal";
             DECODE_UINT(index);
             break;
             
@@ -167,6 +181,7 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
         case OPCODE_SAVE:     mnemonic = "save";  goto save;
         case OPCODE_SAVE_VAR: mnemonic = "savev"; goto save;
  save:
+            DECODE_UINT(displaySize);
             DECODE_UINT(argumentCount);
             DECODE_UINT(localCount);
             DECODE_UINT(stackSize);
@@ -183,8 +198,9 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             DECODE_UINT(index);
             break;
         }
-            
-        fprintf(out, "\t\t\t%04x", ip - begin);
+        
+        tab(indent, out);
+        fprintf(out, "%04x", ip - begin);
         for (i = 0; i < 3; ++i, ++ip) {
             if (ip < instructionPointer) {
                 fprintf(out, " %02x", *ip);
@@ -208,43 +224,89 @@ void SpkDisassembler_disassembleMethod(Method *method, FILE *out) {
             fprintf(out, "\t%04x", *pLabel);
         } else if (base) {
             fprintf(out, "\t%s[%u]", base, index);
-        } else if (opcode == OPCODE_LEAF) {
-            fprintf(out, "\t%lu", argumentCount);
-        } else if (opcode == OPCODE_SAVE || opcode == OPCODE_SAVE_VAR) {
-            fprintf(out, "\t%lu,%lu,%lu", argumentCount, localCount, stackSize);
+        } else {
+            switch (opcode) {
+            case OPCODE_PUSH:
+            case OPCODE_STORE:
+                fprintf(out, "\t%u[%u]", activation, index);
+                break;
+            case OPCODE_LEAF:
+                fprintf(out, "\t%lu", argumentCount);
+                break;
+            case OPCODE_SAVE:
+            case OPCODE_SAVE_VAR:
+                fprintf(out, "\t%lu,%lu,%lu,%lu", displaySize, argumentCount, localCount, stackSize);
+                break;
+            }
         }
         fprintf(out, "\n");
     }
 }
 
-void SpkDisassembler_disassembleClass(Behavior *aClass, FILE *out) {
-    size_t i;
-    MethodNamespace namespace;
-    IdentityDictionary *methodDict;
+void SpkDisassembler_disassembleMethod(Method *method, unsigned int indent, FILE *out) {
+    Behavior *nestedClass;
+    Method *nestedMethod;
+    
+    for (nestedClass = method->nestedClassList.first; nestedClass; nestedClass = nestedClass->nextInScope) {
+        SpkDisassembler_disassembleClass(nestedClass, indent + 1, out);
+        fprintf(out, "\n");
+    }
+    for (nestedMethod = method->nestedMethodList.first; nestedMethod; nestedMethod = nestedMethod->nextInScope) {
+        tab(indent + 1, out);
+        fprintf(out, "method\n");
+        SpkDisassembler_disassembleMethod(nestedMethod, indent + 1, out);
+        fprintf(out, "\n");
+    }
+    SpkDisassembler_disassembleMethodOpcodes(method, indent + 1, out);
+}
+
+static void disassembleMethodDict(IdentityDictionary *methodDict,
+                                  MethodNamespace namespace,
+                                  unsigned int indent,
+                                  FILE *out)
+{
     Method *method;
     Symbol *methodName;
+    size_t i;
     
-    fprintf(out, "class %s\n", SpkBehavior_name(aClass));
-    for (namespace = 0; namespace < NUM_METHOD_NAMESPACES; ++namespace) {
-        fprintf(out, "\tnamespace %d\n", namespace);
-        methodDict = aClass->ns[namespace].methodDict;
-        for (i = 0; i < methodDict->size; ++i) {
-            method = (Method *)methodDict->valueArray[i];
-            if (method) {
-                methodName = (Symbol *)methodDict->keyArray[i];
-                fprintf(out, "\t\t%s\n", methodName->str);
-                SpkDisassembler_disassembleMethod(method, out);
-            }
+    for (i = 0; i < methodDict->size; ++i) {
+        method = (Method *)methodDict->valueArray[i];
+        if (method) {
+            methodName = (Symbol *)methodDict->keyArray[i];
+            tab(indent, out);
+            fprintf(out, "%d.%s\n", namespace, methodName->str);
+            SpkDisassembler_disassembleMethod(method, indent, out);
+            fprintf(out, "\n");
         }
+    }
+}
+
+void SpkDisassembler_disassembleClass(Behavior *aClass, unsigned int indent, FILE *out) {
+    Behavior *nestedClass;
+    MethodNamespace namespace;
+    IdentityDictionary *methodDict;
+    
+    tab(indent, out);
+    fprintf(out, "class %s\n", SpkBehavior_name(aClass));
+    for (nestedClass = aClass->nestedClassList.first; nestedClass; nestedClass = nestedClass->nextInScope) {
+        SpkDisassembler_disassembleClass(nestedClass, indent + 1, out);
+        fprintf(out, "\n");
+    }
+    for (namespace = 0; namespace < NUM_METHOD_NAMESPACES; ++namespace) {
+        disassembleMethodDict(aClass->ns[namespace].methodDict, namespace, indent + 1, out);
     }
     return;
 }
 
 void SpkDisassembler_disassembleModule(Module *module, FILE *out) {
-    Behavior *aClass;
+    Behavior *nestedClass;
+    MethodNamespace namespace;
     
-    for (aClass = module->firstClass; aClass; aClass = aClass->next) {
-        SpkDisassembler_disassembleClass(aClass, out);
+    for (nestedClass = module->base.klass->nestedClassList.first; nestedClass; nestedClass = nestedClass->nextInScope) {
+        SpkDisassembler_disassembleClass(nestedClass, 0, out);
         fprintf(out, "\n");
+    }
+    for (namespace = 0; namespace < NUM_METHOD_NAMESPACES; ++namespace) {
+        disassembleMethodDict(module->base.klass->ns[namespace].methodDict, namespace, 0, out);
     }
 }

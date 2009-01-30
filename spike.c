@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 static Behavior *Spk_ClassNULL_CLASS;
@@ -120,12 +121,31 @@ static void bootstrap() {
 }
 
 
+static Stmt *wrap(Stmt *stmtList) {
+    /* Wrap the top-level statement list in a module (class)
+       definition.  XXX: Where does this code really belong? */
+    Stmt *compoundStmt, *moduleDef;
+    
+    compoundStmt = (Stmt *)malloc(sizeof(Stmt));
+    memset(compoundStmt, 0, sizeof(Stmt));
+    compoundStmt->kind = STMT_COMPOUND;
+    compoundStmt->top = stmtList;
+
+    moduleDef = (Stmt *)malloc(sizeof(Stmt));
+    memset(moduleDef, 0, sizeof(Stmt));
+    moduleDef->kind = STMT_DEF_CLASS;
+    moduleDef->top = compoundStmt;
+    
+    return moduleDef;
+}
+
+
 int main(int argc, char **argv) {
     int i, showHelp, error, disassemble;
     char *arg, *sourceFilename;
     Stmt *tree;
     Module *module;
-    Object *entry, *result; Integer *resultInt;
+    Object *result; Integer *resultInt;
     unsigned int dataSize;
     StmtList predefList, rootClassList;
     
@@ -190,6 +210,7 @@ int main(int argc, char **argv) {
     if (SpkStaticChecker_Check(tree, bootRec, &dataSize, &predefList, &rootClassList) == -1) {
         return 1;
     }
+    tree = wrap(tree);
     module = SpkCodeGen_generateCode(tree, dataSize, predefList.first, rootClassList.first);
     
     if (disassemble) {
@@ -197,13 +218,7 @@ int main(int argc, char **argv) {
         return 0;
     }
     
-    entry = SpkModule_lookupSymbol(module, SpkSymbol_get("main"));
-    if (!entry) {
-        fprintf(stderr, "unresolved symbol 'main'\n");
-        return 1;
-    }
-    
-    result = SpkInterpreter_start(entry);
+    result = SpkInterpreter_start((Object *)module, SpkSymbol_get("main"), SpkArray_new(0));
     
     if (!result) {
         return 1;

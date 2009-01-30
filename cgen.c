@@ -27,21 +27,50 @@
 #endif
 
 
-typedef struct CodeGen {
-    Behavior *firstClass, *lastClass, *currentClass;
-    Method *currentMethod;
-    Stmt *currentMethodDef;
+typedef enum CodeGenKind {
+    CODE_GEN_METHOD,
+    CODE_GEN_CLASS,
+    CODE_GEN_MODULE
+} CodeGenKind;
+
+typedef struct MethodCodeGen {
+    struct CodeGen *generic;
+    Stmt *methodDef;
+    Method *methodInstance;
+    
     size_t currentOffset;
     opcode_t *opcodesBegin, *opcodesEnd;
     size_t stackPointer, stackSize;
     unsigned int nMessageSends;
     unsigned int nContextRefs;
     int inLeaf;
-    Object **data;
-    unsigned int dataSize;
+} MethodCodeGen;
+
+typedef struct ClassCodeGen {
+    struct CodeGen *generic;
+    Stmt *classDef;
+    Behavior *classInstance;
+} ClassCodeGen;
+
+typedef struct ModuleCodeGen {
+    struct CodeGen *generic;
+    Behavior *moduleClassInstance;
+    
+    Behavior *firstClass, *lastClass;
     Object **rodata;
     unsigned int rodataSize, rodataAllocSize;
-    IdentityDictionary *globals;
+} ModuleCodeGen;
+
+typedef struct CodeGen {
+    CodeGenKind kind;
+    struct CodeGen *outer;
+    struct ModuleCodeGen *module;
+    unsigned int level;
+    union {
+        MethodCodeGen method;
+        ClassCodeGen klass;
+        ModuleCodeGen module;
+    } u;
 } CodeGen;
 
 
@@ -60,7 +89,7 @@ else (n)->codeOffset = cgen->currentOffset; } while (0)
 do { if (cgen->opcodesEnd) assert((n)->endLabel == cgen->currentOffset); \
 else (n)->endLabel = cgen->currentOffset; } while (0)
 
-static void encodeUnsignedInt(unsigned long value, CodeGen *cgen) {
+static void encodeUnsignedInt(unsigned long value, MethodCodeGen *cgen) {
     opcode_t byte;
     
     do {
@@ -73,7 +102,7 @@ static void encodeUnsignedInt(unsigned long value, CodeGen *cgen) {
     } while (value);
 }
 
-static void encodeSignedInt(long value, CodeGen *cgen) {
+static void encodeSignedInt(long value, MethodCodeGen *cgen) {
     int more, negative;
     opcode_t byte;
     
@@ -96,7 +125,7 @@ static void encodeSignedInt(long value, CodeGen *cgen) {
     } while (more);
 }
 
-static void fixUpBranch(size_t target, CodeGen *cgen) {
+static void fixUpBranch(size_t target, MethodCodeGen *cgen) {
     ptrdiff_t base, displacement, filler;
     
     /* offset of branch instruction */
@@ -113,7 +142,7 @@ static void fixUpBranch(size_t target, CodeGen *cgen) {
     }
 }
 
-static void emitBranch(opcode_t opcode, size_t target, CodeGen *cgen) {
+static void emitBranch(opcode_t opcode, size_t target, MethodCodeGen *cgen) {
     EMIT_OPCODE(opcode);
     if (cgen->opcodesEnd) {
         fixUpBranch(target, cgen);
@@ -126,7 +155,7 @@ static void emitBranch(opcode_t opcode, size_t target, CodeGen *cgen) {
     }
 }
 
-static void tallyPush(CodeGen *cgen) {
+static void tallyPush(MethodCodeGen *cgen) {
     ++cgen->stackPointer;
     if (cgen->stackPointer > cgen->stackSize) {
         cgen->stackSize = cgen->stackPointer;
@@ -134,7 +163,7 @@ static void tallyPush(CodeGen *cgen) {
     CHECK_STACKP();
 }
 
-static void dupN(unsigned long n, CodeGen *cgen) {
+static void dupN(unsigned long n, MethodCodeGen *cgen) {
     if (n == 1) {
         EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
         return;
@@ -148,18 +177,19 @@ static void dupN(unsigned long n, CodeGen *cgen) {
     CHECK_STACKP();
 }
 
-static unsigned int indexOfVar(Expr *def, opcode_t opcode, CodeGen *cgen) {
+static unsigned int indexOfVar(Expr *def, opcode_t opcode, MethodCodeGen *cgen) {
     /* In leaf methods, the arguments are reversed. */
     return
         (cgen->inLeaf &&
          (opcode == OPCODE_PUSH_LOCAL || opcode == OPCODE_STORE_LOCAL))
-        ? cgen->currentMethodDef->u.method.argumentCount - def->u.def.index - 1
+        ? cgen->methodDef->u.method.argumentCount - def->u.def.index - 1
         : def->u.def.index;
 }
 
-static void push(Expr *expr, int *super, CodeGen *cgen) {
+static void push(Expr *expr, int *super, MethodCodeGen *cgen) {
     opcode_t opcode;
     Expr *def;
+    size_t activation;
     
     def = expr->u.ref.def;
     assert(def);
@@ -181,59 +211,52 @@ static void push(Expr *expr, int *super, CodeGen *cgen) {
         return;
     }
     
-    if (cgen->currentClass) {
-        switch (def->u.def.level) {
-        case 1: opcode = OPCODE_PUSH_GLOBAL;   break;
-        case 2: opcode = OPCODE_PUSH_INST_VAR; break;
-        case 3: opcode = OPCODE_PUSH_LOCAL;    break;
-        default: assert(0);
-        }
-    } else {
-        /* global function */
-        switch (def->u.def.level) {
-        case 1: opcode = OPCODE_PUSH_GLOBAL;   break;
-        case 2: opcode = OPCODE_PUSH_LOCAL;    break;
-        default: assert(0);
-        }
+    assert(cgen->generic->level >= def->u.def.level);
+    activation = cgen->generic->level - def->u.def.level;
+    switch (activation) {
+    case 0:  opcode = OPCODE_PUSH_LOCAL;    break;
+    case 1:  opcode = OPCODE_PUSH_INST_VAR; break;
+    default: opcode = OPCODE_PUSH;          break;
     }
     EMIT_OPCODE(opcode);
+    if (opcode == OPCODE_PUSH) {
+        encodeUnsignedInt(activation, cgen);
+    }
     encodeUnsignedInt(indexOfVar(def, opcode, cgen), cgen);
     tallyPush(cgen);
 }
 
-static void store(Expr *var, CodeGen *cgen) {
+static void store(Expr *var, MethodCodeGen *cgen) {
     opcode_t opcode;
     Expr *def;
+    size_t activation;
     
     def = var->u.ref.def;
     assert(def);
-    if (cgen->currentClass) {
-        switch (def->u.def.level) {
-        case 1: opcode = OPCODE_STORE_GLOBAL;   break;
-        case 2: opcode = OPCODE_STORE_INST_VAR; break;
-        case 3: opcode = OPCODE_STORE_LOCAL;    break;
-        default: assert(0);
-        }
-    } else {
-        /* global function */
-        switch (def->u.def.level) {
-        case 1: opcode = OPCODE_STORE_GLOBAL;   break;
-        case 2: opcode = OPCODE_STORE_LOCAL;    break;
-        default: assert(0);
-        }
+    
+    assert(cgen->generic->level >= def->u.def.level);
+    activation = cgen->generic->level - def->u.def.level;
+    switch (activation) {
+    case 0:  opcode = OPCODE_STORE_LOCAL;    break;
+    case 1:  opcode = OPCODE_STORE_INST_VAR; break;
+    default: opcode = OPCODE_STORE;          break;
     }
     EMIT_OPCODE(opcode);
+    if (opcode == OPCODE_STORE) {
+        encodeUnsignedInt(activation, cgen);
+    }
     encodeUnsignedInt(indexOfVar(def, opcode, cgen), cgen);
 }
 
-static void save(Stmt *stmt, CodeGen *cgen) {
+static void save(Stmt *stmt, MethodCodeGen *cgen) {
     EMIT_OPCODE(stmt->u.method.argList.var ? OPCODE_SAVE_VAR : OPCODE_SAVE);
+    encodeUnsignedInt(cgen->generic->level, cgen);
     encodeUnsignedInt(stmt->u.method.argumentCount, cgen);
     encodeUnsignedInt(stmt->u.method.localCount, cgen);
     encodeUnsignedInt(cgen->stackSize, cgen);
 }
 
-static void leaf(Stmt *stmt, CodeGen *cgen) {
+static void leaf(Stmt *stmt, MethodCodeGen *cgen) {
     EMIT_OPCODE(OPCODE_LEAF);
     encodeUnsignedInt(stmt->u.method.argumentCount, cgen);
 }
@@ -242,25 +265,25 @@ static void leaf(Stmt *stmt, CodeGen *cgen) {
 /****************************************************************************/
 /* rodata */
 
-static unsigned int getLiteralIndex(Object *literal, CodeGen *cgen) {
+static unsigned int getLiteralIndex(Object *literal, MethodCodeGen *cgen) {
     unsigned int index;
     
-    for (index = 0; index < cgen->rodataSize; ++index) {
+    for (index = 0; index < cgen->generic->module->rodataSize; ++index) {
         /* XXX: This only works properly for Symbols. */
-        if (cgen->rodata[index] == literal) {
-            return cgen->dataSize + index;
+        if (cgen->generic->module->rodata[index] == literal) {
+            return index;
         }
     }
     
-    index = cgen->rodataSize++;
+    index = cgen->generic->module->rodataSize++;
     
-    if (cgen->rodataSize > cgen->rodataAllocSize) {
-        cgen->rodataAllocSize = cgen->rodataAllocSize ? cgen->rodataAllocSize * 2 : 2;
-        cgen->rodata = (Object **)realloc(cgen->rodata, cgen->rodataAllocSize * sizeof(Object *));
+    if (cgen->generic->module->rodataSize > cgen->generic->module->rodataAllocSize) {
+        cgen->generic->module->rodataAllocSize = cgen->generic->module->rodataAllocSize ? cgen->generic->module->rodataAllocSize * 2 : 2;
+        cgen->generic->module->rodata = (Object **)realloc(cgen->generic->module->rodata, cgen->generic->module->rodataAllocSize * sizeof(Object *));
     }
     
-    cgen->rodata[index] = literal;
-    return cgen->dataSize + index;
+    cgen->generic->module->rodata[index] = literal;
+    return index;
 }
 
 #define LITERAL_INDEX(literal, cgen) ((cgen)->opcodesEnd ? getLiteralIndex(literal, cgen) : 0)
@@ -269,14 +292,14 @@ static unsigned int getLiteralIndex(Object *literal, CodeGen *cgen) {
 /****************************************************************************/
 /* expressions */
 
-static void emitCodeForOneExpr(Expr *, int *, CodeGen *);
-static void emitBranchForExpr(Expr *expr, int, size_t, size_t, int, CodeGen *);
-static void emitBranchForOneExpr(Expr *, int, size_t, size_t, int, CodeGen *);
-static void inPlaceOp(Expr *, size_t, CodeGen *);
-static void inPlaceAttrOp(Expr *, CodeGen *);
-static void inPlaceIndexOp(Expr *, CodeGen *);
+static void emitCodeForOneExpr(Expr *, int *, MethodCodeGen *);
+static void emitBranchForExpr(Expr *expr, int, size_t, size_t, int, MethodCodeGen *);
+static void emitBranchForOneExpr(Expr *, int, size_t, size_t, int, MethodCodeGen *);
+static void inPlaceOp(Expr *, size_t, MethodCodeGen *);
+static void inPlaceAttrOp(Expr *, MethodCodeGen *);
+static void inPlaceIndexOp(Expr *, MethodCodeGen *);
 
-static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
+static void emitCodeForExpr(Expr *expr, int *super, MethodCodeGen *cgen) {
     for ( ; expr->next; expr = expr->next) {
         emitCodeForOneExpr(expr, super, cgen);
         EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
@@ -284,7 +307,7 @@ static void emitCodeForExpr(Expr *expr, int *super, CodeGen *cgen) {
     emitCodeForOneExpr(expr, super, cgen);
 }
 
-static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
+static void emitCodeForOneExpr(Expr *expr, int *super, MethodCodeGen *cgen) {
     Expr *arg;
     size_t index, argumentCount;
     int isSuper;
@@ -301,19 +324,19 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         tallyPush(cgen);
         break;
     case EXPR_FLOAT:
-        EMIT_OPCODE(OPCODE_PUSH_GLOBAL);
+        EMIT_OPCODE(OPCODE_PUSH_LITERAL);
         index = LITERAL_INDEX((Object *)expr->lit.floatValue, cgen);
         encodeUnsignedInt(index, cgen);
         tallyPush(cgen);
         break;
     case EXPR_CHAR:
-        EMIT_OPCODE(OPCODE_PUSH_GLOBAL);
+        EMIT_OPCODE(OPCODE_PUSH_LITERAL);
         index = LITERAL_INDEX((Object *)expr->lit.charValue, cgen);
         encodeUnsignedInt(index, cgen);
         tallyPush(cgen);
         break;
     case EXPR_STR:
-        EMIT_OPCODE(OPCODE_PUSH_GLOBAL);
+        EMIT_OPCODE(OPCODE_PUSH_LITERAL);
         index = LITERAL_INDEX((Object *)expr->lit.strValue, cgen);
         encodeUnsignedInt(index, cgen);
         tallyPush(cgen);
@@ -322,7 +345,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
         push(expr, super, cgen);
         break;
     case EXPR_SYMBOL:
-        EMIT_OPCODE(OPCODE_PUSH_GLOBAL);
+        EMIT_OPCODE(OPCODE_PUSH_LITERAL);
         index = LITERAL_INDEX((Object *)expr->sym->sym, cgen);
         encodeUnsignedInt(index, cgen);
         tallyPush(cgen);
@@ -476,7 +499,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, CodeGen *cgen) {
     return;
 }
 
-static void squirrel(size_t resultDepth, CodeGen *cgen) {
+static void squirrel(size_t resultDepth, MethodCodeGen *cgen) {
     /* duplicate the last result */
     EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
     /* squirrel it away for later */
@@ -484,7 +507,7 @@ static void squirrel(size_t resultDepth, CodeGen *cgen) {
     encodeUnsignedInt(resultDepth + 1, cgen);
 }
 
-static void inPlaceOp(Expr *expr, size_t resultDepth, CodeGen *cgen) {
+static void inPlaceOp(Expr *expr, size_t resultDepth, MethodCodeGen *cgen) {
     if (expr->right) {
         emitCodeForExpr(expr->right, 0, cgen);
     } else if (expr->kind == EXPR_POSTOP) {
@@ -505,7 +528,7 @@ static void inPlaceOp(Expr *expr, size_t resultDepth, CodeGen *cgen) {
     }
 }
 
-static void inPlaceAttrOp(Expr *expr, CodeGen *cgen) {
+static void inPlaceAttrOp(Expr *expr, MethodCodeGen *cgen) {
     size_t index, argumentCount;
     int isSuper;
     
@@ -556,7 +579,7 @@ static void inPlaceAttrOp(Expr *expr, CodeGen *cgen) {
     CHECK_STACKP();
 }
 
-static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
+static void inPlaceIndexOp(Expr *expr, MethodCodeGen *cgen) {
     Expr *arg;
     size_t argumentCount;
     int isSuper;
@@ -600,7 +623,7 @@ static void inPlaceIndexOp(Expr *expr, CodeGen *cgen) {
     CHECK_STACKP();
 }
 
-static void emitBranchForExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, CodeGen *cgen) {
+static void emitBranchForExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, MethodCodeGen *cgen) {
     for ( ; expr->next; expr = expr->next) {
         emitCodeForOneExpr(expr, 0, cgen);
         /* XXX: We could elide this 'pop' if 'expr' is a conditional expr. */
@@ -609,7 +632,7 @@ static void emitBranchForExpr(Expr *expr, int cond, size_t label, size_t fallThr
     emitBranchForOneExpr(expr, cond, label, fallThroughLabel, dup, cgen);
 }
 
-static void emitBranchForOneExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, CodeGen *cgen) {
+static void emitBranchForOneExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, MethodCodeGen *cgen) {
     opcode_t pushOpcode;
     
     switch (expr->kind) {
@@ -687,7 +710,7 @@ static void emitBranchForOneExpr(Expr *expr, int cond, size_t label, size_t fall
 static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen);
 static void emitCodeForClass(Stmt *stmt, CodeGen *cgen);
 
-static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabel, size_t continueLabel, CodeGen *cgen) {
+static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabel, size_t continueLabel, MethodCodeGen *cgen) {
     Stmt *s;
     size_t nextLabel, childNextLabel, elseLabel;
     
@@ -711,12 +734,8 @@ static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabe
         emitBranch(OPCODE_BRANCH_ALWAYS, continueLabel, cgen);
         break;
     case STMT_DEF_VAR:
-        break;
     case STMT_DEF_METHOD:
-        emitCodeForMethod(stmt, cgen);
-        break;
     case STMT_DEF_CLASS:
-        emitCodeForClass(stmt, cgen);
         break;
     case STMT_DO_WHILE:
         childNextLabel = stmt->expr->codeOffset;
@@ -784,9 +803,9 @@ static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabe
     CHECK_STACKP();
 }
 
-static void rewind(CodeGen *cgen) {
-    if (cgen->currentMethod) {
-        cgen->opcodesBegin = SpkMethod_OPCODES(cgen->currentMethod);
+static void rewind(MethodCodeGen *cgen) {
+    if (cgen->methodInstance) {
+        cgen->opcodesBegin = SpkMethod_OPCODES(cgen->methodInstance);
         cgen->opcodesEnd = cgen->opcodesBegin;
         cgen->currentOffset = 0;
         cgen->stackPointer = cgen->stackSize = 0;
@@ -802,7 +821,7 @@ static void rewind(CodeGen *cgen) {
     }
 }
 
-static int isLeafMethod(Stmt *stmt, CodeGen *cgen) {
+static int isLeafMethod(Stmt *stmt, MethodCodeGen *cgen) {
     return
         cgen->nMessageSends == 0 &&
         cgen->nContextRefs == 0 &&
@@ -811,32 +830,34 @@ static int isLeafMethod(Stmt *stmt, CodeGen *cgen) {
         !stmt->u.method.argList.var;
 }
 
-static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
+static void emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
+    CodeGen gcgen;
+    MethodCodeGen *cgen;
+    Stmt *body, *s;
     Stmt sentinel;
-    Behavior *methodClass;
     Symbol *messageSelector, *apply;
-    Object *function = 0;
     size_t stackSize;
     int thunk;
-    
-    assert(!cgen->currentMethodDef && "method definition not allowed here");
-    
-    cgen->currentMethodDef = stmt;
+    Method *enclosingMethod;
     
     apply = SpkSymbol_get("__apply__");
+    messageSelector = stmt->u.method.name->sym;
+    memset(&sentinel, 0, sizeof(sentinel));
+    sentinel.kind = STMT_RETURN;
     
-    if (cgen->currentClass) {
-        methodClass = cgen->currentClass;
-        messageSelector = stmt->u.method.name->sym;
-    } else {
-        /* global function */
-        assert(stmt->expr->kind == EXPR_CALL &&
-               stmt->expr->oper == OPER_APPLY); /* XXX */
-        assert(stmt->expr->left->kind == EXPR_NAME); /* XXX */
-        function = cgen->data[stmt->expr->left->u.def.index];
-        methodClass = function->klass;
-        messageSelector = apply;
-    }
+    /* push method code generator */
+    cgen = &gcgen.u.method;
+    cgen->generic = &gcgen;
+    cgen->generic->kind = CODE_GEN_METHOD;
+    cgen->generic->outer = outer;
+    cgen->generic->module = outer->module;
+    cgen->methodDef = stmt;
+    cgen->methodInstance = 0;
+    cgen->generic->level = outer->level + 1;
+    rewind(cgen);
+    
+    body = stmt->top;
+    assert(body->kind == STMT_COMPOUND);
     
     /* emit a 'thunk' opcode if this is named call-style method --
        e.g., "class X { foo(...) {} }" */
@@ -844,16 +865,11 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
              stmt->expr->kind == EXPR_CALL &&
              stmt->expr->oper == OPER_APPLY);
     
-    memset(&sentinel, 0, sizeof(sentinel));
-    sentinel.kind = STMT_RETURN;
-    
-    rewind(cgen);
-    
     /* dry run to compute offsets */
     if (thunk) EMIT_OPCODE(OPCODE_THUNK);
     save(stmt, cgen); /* XXX: 'stackSize' is zero here */
     
-    emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
+    emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen);
     emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
     
     if (isLeafMethod(stmt, cgen)) {
@@ -864,22 +880,22 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
         cgen->inLeaf = 1;
         if (thunk) EMIT_OPCODE(OPCODE_THUNK);
         leaf(stmt, cgen);
-        emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
+        emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen);
         emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
         
         /* now generate code for real */
-        cgen->currentMethod = SpkMethod_new(cgen->currentOffset);
+        cgen->methodInstance = SpkMethod_new(cgen->currentOffset);
         rewind(cgen);
         if (thunk) EMIT_OPCODE(OPCODE_THUNK);
         leaf(stmt, cgen);
-        emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
+        emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen);
         emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
 
     } else {
         stackSize = cgen->stackSize + LEAF_STACK_SPACE;
 
         /* now generate code for real */
-        cgen->currentMethod = SpkMethod_new(cgen->currentOffset);
+        cgen->methodInstance = SpkMethod_new(cgen->currentOffset);
         rewind(cgen);
     
         if (thunk) EMIT_OPCODE(OPCODE_THUNK);
@@ -887,51 +903,140 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen) {
         save(stmt, cgen);
         cgen->stackSize = 0;
         
-        emitCodeForStmt(stmt->top, sentinel.codeOffset, 0, 0, cgen);
+        emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen);
         emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
         cgen->stackSize += LEAF_STACK_SPACE;
     }
 
-    assert(cgen->currentOffset == cgen->currentMethod->base.size);
+    assert(cgen->currentOffset == cgen->methodInstance->base.size);
     assert(cgen->stackSize == stackSize);
     
-    SpkBehavior_insertMethod(methodClass, stmt->u.method.namespace, messageSelector, cgen->currentMethod);
-    cgen->currentMethod = 0;
-    cgen->currentMethodDef = 0;
-    rewind(cgen);
+    for (s = body->top; s; s = s->next) {
+        switch (s->kind) {
+        case STMT_DEF_CLASS:
+            emitCodeForClass(s, cgen->generic);
+            break;
+        case STMT_DEF_METHOD:
+            emitCodeForMethod(s, cgen->generic);
+            break;
+        default:
+            break;
+        }
+    }
+    
+    switch (outer->kind) {
+    case CODE_GEN_METHOD:
+        enclosingMethod = outer->u.method.methodInstance;
+        if (!enclosingMethod->nestedMethodList.first) {
+            enclosingMethod->nestedMethodList.first = cgen->methodInstance;
+        } else {
+            enclosingMethod->nestedMethodList.last->nextInScope = cgen->methodInstance;
+        }
+        enclosingMethod->nestedMethodList.last = cgen->methodInstance;
+        break;
+    case CODE_GEN_CLASS:
+        SpkBehavior_insertMethod(outer->u.klass.classInstance,
+                                 stmt->u.method.namespace,
+                                 messageSelector,
+                                 cgen->methodInstance);
+        break;
+    default:
+        assert(0);
+    }
 }
 
-static void emitCodeForClass(Stmt *stmt, CodeGen *cgen) {
-    Behavior *theClass;
+static void emitCodeForClassBody(Stmt *body, CodeGen *cgen) {
+    Stmt *s;
     
-    assert(!cgen->currentClass && !cgen->currentMethodDef && "class definition not allowed here");
+    assert(body->kind == STMT_COMPOUND);
+    for (s = body->top; s; s = s->next) {
+        switch (s->kind) {
+        case STMT_DEF_METHOD:
+            emitCodeForMethod(s, cgen);
+            break;
+        case STMT_DEF_VAR:
+            break;
+        case STMT_DEF_CLASS:
+            emitCodeForClass(s, cgen);
+            break;
+        default:
+            assert(0 && "executable code not allowed here");
+        }
+    }
+}
+
+static void emitCodeForClass(Stmt *stmt, CodeGen *outer) {
+    CodeGen gcgen;
+    ClassCodeGen *cgen;
+    Method *enclosingMethod;
+    Behavior *enclosingClass;
     
-    theClass = (Behavior *)cgen->data[stmt->expr->u.def.index];
-    cgen->currentClass = theClass;
-    emitCodeForStmt(stmt->top, 0, 0, 0, cgen);
-    cgen->currentClass = 0;
+    /* push class code generator */
+    cgen = &gcgen.u.klass;
+    cgen->generic = &gcgen;
+    cgen->generic->kind = CODE_GEN_CLASS;
+    cgen->generic->outer = outer;
+    cgen->generic->module = outer->module;
+    cgen->classDef = stmt;
+    cgen->classInstance = (Behavior *)stmt->expr->u.def.initValue;
+    assert(cgen->classInstance);
+    cgen->generic->level = outer->level + 1;
+    
+    emitCodeForClassBody(stmt->top, cgen->generic);
+
+    switch (outer->kind) {
+    case CODE_GEN_METHOD:
+        enclosingMethod = outer->u.method.methodInstance;
+        if (!enclosingMethod->nestedClassList.first) {
+            enclosingMethod->nestedClassList.first = cgen->classInstance;
+        } else {
+            enclosingMethod->nestedClassList.last->nextInScope = cgen->classInstance;
+        }
+        enclosingMethod->nestedClassList.last = cgen->classInstance;
+        break;
+    case CODE_GEN_CLASS:
+        enclosingClass = outer->u.klass.classInstance;
+        if (!enclosingClass->nestedClassList.first) {
+            enclosingClass->nestedClassList.first = cgen->classInstance;
+        } else {
+            enclosingClass->nestedClassList.last->nextInScope = cgen->classInstance;
+        }
+        enclosingClass->nestedClassList.last = cgen->classInstance;
+        break;
+    default:
+        assert(0);
+    }
+}
+
+static void emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
+    CodeGen gcgen;
+    ClassCodeGen *cgen;
+    
+    /* push class code generator */
+    cgen = &gcgen.u.klass;
+    cgen->generic = &gcgen;
+    cgen->generic->kind = CODE_GEN_CLASS;
+    cgen->generic->outer = 0;
+    cgen->generic->module = moduleCodeGen;
+    cgen->classDef = stmt;
+    cgen->classInstance = moduleCodeGen->moduleClassInstance;
+    cgen->generic->level = 1;
+    
+    emitCodeForClassBody(stmt->top, cgen->generic);
 }
 
 /****************************************************************************/
 
-static void initClassVar(Expr *expr, CodeGen *cgen) {
-    Object *theClass = expr->u.def.initValue;
-    cgen->data[expr->u.def.index] = theClass;
-    SpkIdentityDictionary_atPut(cgen->globals,
-                                (Object *)expr->sym->sym,
-                                theClass);
-}
-
-static Behavior *getSuperclass(Stmt *classDef, CodeGen *cgen) {
-    Object *data;
+static Behavior *getSuperclass(Stmt *classDef, ModuleCodeGen *cgen) {
+    Object *initValue;
     Behavior *superclass;
     
-    data = cgen->data[classDef->u.klass.superclassName->u.ref.def->u.def.index];
-    assert(data && (superclass = (Behavior *)Spk_CAST(Class, data)));
+    initValue = classDef->u.klass.superclassName->u.ref.def->u.def.initValue;
+    assert(initValue && (superclass = (Behavior *)Spk_CAST(Class, initValue)));
     return superclass;
 }
 
-static void createClass(Stmt *classDef, CodeGen *cgen) {
+static void createClass(Stmt *classDef, ModuleCodeGen *cgen) {
     Behavior *theClass;
     Symbol *className;
     
@@ -946,10 +1051,9 @@ static void createClass(Stmt *classDef, CodeGen *cgen) {
     cgen->lastClass = theClass;
     
     classDef->expr->u.def.initValue = (Object *)theClass;
-    initClassVar(classDef->expr, cgen);
 }
 
-static void createClassTree(Stmt *classDef, CodeGen *cgen) {
+static void createClassTree(Stmt *classDef, ModuleCodeGen *cgen) {
     /* create class with subclasses in preorder */
     Stmt *subclassDef;
     
@@ -963,92 +1067,92 @@ static void createClassTree(Stmt *classDef, CodeGen *cgen) {
 
 /****************************************************************************/
 
-static void createFunction(Stmt *stmt, CodeGen *cgen) {
-    Behavior *theClass;
-    Object *theFunction;
-    Symbol *functionName;
+static void initClassVars(Object **globals, Stmt *stmtList) {
+    Stmt *s;
     
-    functionName = stmt->u.method.name->sym;
-    /* XXX: This creates a class with an ordinary identifier as a class name. */
-    theClass = (Behavior *)SpkClass_new(functionName);
-    theClass->base.klass = (Behavior *)Spk_ClassClass;
-    SpkBehavior_init(theClass, 0, 0, 0);
-    
-    if (!cgen->firstClass) {
-        cgen->firstClass = theClass;
-    } else {
-        cgen->lastClass->next = theClass;
+    for (s = stmtList; s; s = s->next) {
+        if (s->kind == STMT_DEF_CLASS) {
+            globals[s->expr->u.def.index] = s->expr->u.def.initValue;
+        }
     }
-    cgen->lastClass = theClass;
-    
-    theFunction = (Object *)malloc(theClass->instanceSize);
-    theFunction->klass = theClass;
-
-    /* initialize global variable */
-    assert(stmt->expr->kind == EXPR_CALL &&
-           stmt->expr->oper == OPER_APPLY); /* XXX */
-    assert(stmt->expr->left->kind == EXPR_NAME); /* XXX */
-    cgen->data[stmt->expr->left->u.def.index] = theFunction;
-    SpkIdentityDictionary_atPut(cgen->globals,
-                                (Object *)functionName,
-                                theFunction);
 }
 
-/****************************************************************************/
+static void initThunks(Object **globals, Module *module, Stmt *stmtList) {
+    /* Create a thunk for each global function. */
+    Stmt *s;
+    Thunk *thunk;
+    Method *method;
+    Behavior *methodClass;
+    
+    methodClass = module->base.klass;
+    
+    for (s = stmtList; s; s = s->next) {
+        if (s->kind == STMT_DEF_METHOD) {
+            method = SpkBehavior_lookupMethod(
+                methodClass,
+                METHOD_NAMESPACE_RVALUE,
+                s->u.method.name->sym
+                );
+            
+            thunk = (Thunk *)malloc(sizeof(Thunk));
+            thunk->base.klass = Spk_ClassThunk;
+            thunk->receiver = (Object *)module;
+            thunk->method = method;
+            thunk->methodClass = methodClass;
+            thunk->pc = SpkMethod_OPCODES(method) + 1; /* skip 'thunk' opcode */
+            
+            globals[s->expr->left->u.def.index] = (Object *)thunk;
+        }
+    }
+}
 
 Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize,
                                 Stmt *predefList, Stmt *rootClassList) {
     Stmt *s;
-    CodeGen cgen;
+    CodeGen gcgen;
+    ModuleCodeGen *cgen;
     Module *module;
-    Object **globals;
+    Object **globals, **literals;
     unsigned int index;
     Behavior *aClass;
     
-    memset(&cgen, 0, sizeof(cgen));
-    cgen.data = (Object **)malloc(dataSize * sizeof(Object *));
-    for (index = 0; index < dataSize; ++index) {
-        cgen.data[index] = Spk_uninit; /* XXX: null? */
-    }
-    cgen.dataSize = dataSize;
-    cgen.globals = SpkIdentityDictionary_new();
-    for (s = predefList; s; s = s->next) {
-        switch (s->kind) {
-        case STMT_DEF_CLASS: initClassVar(s->expr, &cgen); break;
-        default: assert(0);
-        }
-    }
+    memset(&gcgen, 0, sizeof(gcgen));
+    cgen = &gcgen.u.module;
+    cgen->generic = &gcgen;
+    cgen->generic->kind = CODE_GEN_MODULE;
+    
+    /* Create a 'Module' subclass to represent this module. */
+    cgen->moduleClassInstance = (Behavior *)SpkBehavior_new();
+    SpkBehavior_init(cgen->moduleClassInstance, Spk_ClassModule, 0, dataSize);
     
     /* Create all classes. */
     for (s = rootClassList; s; s = s->u.klass.nextRootClassDef) {
-        createClassTree(s, &cgen);
-    }
-    for (s = tree; s; s = s->next) {
-        if (s->kind == STMT_DEF_METHOD) {
-            createFunction(s, &cgen);
-        }
+        createClassTree(s, cgen);
     }
 
     /* Generate code. */
-    for (s = tree; s; s = s->next) {
-        emitCodeForStmt(s, 0, 0, 0, &cgen);
-    }
+    emitCodeForModule(tree, cgen);
     
     /* Create and initialize the module. */
-    module = SpkModule_new(dataSize + cgen.rodataSize, cgen.globals);
-    module->firstClass = cgen.firstClass;
+    module = SpkModule_new(cgen->moduleClassInstance);
+    module->firstClass = cgen->firstClass;
+    module->literals = cgen->rodata;
     globals = SpkModule_VARIABLES((Object *)module);
     for (index = 0; index < dataSize; ++index) {
-        globals[index] = cgen.data[index];
+        globals[index] = Spk_uninit; /* XXX: null? */
     }
-    for (index = 0; index < cgen.rodataSize; ++index) {
-        globals[dataSize + index] = cgen.rodata[index];
-    }
-    
-    /* Patch 'module' attribute of classes. */
-    for (aClass = cgen.firstClass; aClass; aClass = aClass->next) {
+    /* XXX: This stuff should happen at runtime, with binding! */
+    initClassVars(globals, predefList);
+    initClassVars(globals, tree->top->top);
+    initThunks(globals, module, tree->top->top);
+
+    /* Patch 'module', 'outer' attributes of classes. */
+    for (aClass = cgen->firstClass; aClass; aClass = aClass->next) {
         aClass->module = module;
+        aClass->outer = (Object *)module;
+        aClass->outerClass = cgen->moduleClassInstance;
     }
+    module->base.klass->module = module;
     
     return module;
 }

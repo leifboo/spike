@@ -25,7 +25,8 @@ enum Opcode {
     OPCODE_NOP,
     OPCODE_PUSH_LOCAL,
     OPCODE_PUSH_INST_VAR,
-    OPCODE_PUSH_GLOBAL,
+    OPCODE_PUSH,
+    OPCODE_PUSH_LITERAL,
     OPCODE_PUSH_SELF,
     OPCODE_PUSH_SUPER,
     OPCODE_PUSH_FALSE,
@@ -38,7 +39,7 @@ enum Opcode {
     OPCODE_PUSH_INT,
     OPCODE_STORE_LOCAL,
     OPCODE_STORE_INST_VAR,
-    OPCODE_STORE_GLOBAL,
+    OPCODE_STORE,
     OPCODE_POP,
     OPCODE_ROT,
     OPCODE_BRANCH_IF_FALSE,
@@ -91,7 +92,6 @@ struct Context {
             Method *method;
             struct Behavior *methodClass;
             Object *receiver;
-            Object **framep;
         } m;
         struct /* BlockContext */ {
             size_t nargs;
@@ -134,6 +134,15 @@ typedef struct ProcessorScheduler {
 
 struct Method {
     VariableObject base;
+    Method *nextInScope;
+    struct {
+        struct Behavior *first;
+        struct Behavior *last;
+    } nestedClassList;
+    struct {
+        struct Method *first;
+        struct Method *last;
+    } nestedMethodList;
     SpkNativeCode nativeCode;
 };
 
@@ -221,7 +230,7 @@ int SpkSemaphore_isEmpty(Semaphore *);
 void SpkSemaphore_addLast(Semaphore *, Fiber *);
 Fiber *SpkSemaphore_removeFirst(Semaphore *);
 
-Object *SpkInterpreter_start(Object *);
+Object *SpkInterpreter_start(Object *, struct Symbol *, struct VariableObject *);
 void SpkInterpreter_init(Interpreter *, ProcessorScheduler *);
 Object *SpkInterpreter_interpret(Interpreter *);
 void SpkInterpreter_synchronousSignal(Interpreter *, Semaphore *);

@@ -153,8 +153,15 @@ void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size
         
     }
     
+    /* static chain */
+    self->outer = 0;
+    self->outerClass = 0;
+        
     /* temporary */
     self->next = 0;
+    self->nextInScope = 0;
+    self->nestedClassList.first = 0;
+    self->nestedClassList.last = 0;
     
     return;
 }

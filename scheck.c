@@ -15,20 +15,19 @@
 
 typedef struct StaticChecker {
     SymbolTable *st;
-    Stmt *currentClassDef;
     StmtList *rootClassList;
 } StaticChecker;
 
 
-static void checkVarDeclList(Expr *declList, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
-    Expr *decl;
+static void checkVarDefList(Expr *defList, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
+    Expr *def;
     
     if (pass != 1) {
         return;
     }
-    for (decl = declList; decl; decl = decl->next) {
-        assert(decl->kind == EXPR_NAME);
-        SpkSymbolTable_Insert(checker->st, decl);
+    for (def = defList; def; def = def->next) {
+        assert(def->kind == EXPR_NAME);
+        SpkSymbolTable_Insert(checker->st, def);
     }
 }
 
@@ -82,20 +81,30 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
     }
 }
 
-static void checkMethodDeclarator(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
+static void checkStmt(Stmt *, Stmt *, StaticChecker *, unsigned int);
+
+static void checkMethodDef(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned int outerPass) {
+    Stmt *body, *s;
+    Expr *expr, *arg;
     MethodNamespace namespace;
     SymbolNode *name;
     Oper oper;
+    unsigned int innerPass;
     
-    if (pass == 1) {
+    expr = stmt->expr;
+    body = stmt->top;
+    assert(body->kind == STMT_COMPOUND);
+    
+    switch (outerPass) {
+    case 1:
         namespace = METHOD_NAMESPACE_RVALUE;
         switch (expr->kind) {
         case EXPR_NAME:
-            assert(checker->currentClassDef && "invalid global function definition");
+            assert(outer && outer->kind == STMT_DEF_CLASS && "invalid function definition");
             name = expr->sym;
             break;
         case EXPR_ASSIGN:
-            assert(checker->currentClassDef && "invalid global function definition");
+            assert(outer && outer->kind == STMT_DEF_CLASS && "invalid function definition");
             assert(expr->right->kind == EXPR_NAME && "invalid method declarator");
             namespace = METHOD_NAMESPACE_LVALUE;
             switch (expr->left->kind) {
@@ -130,8 +139,8 @@ static void checkMethodDeclarator(Expr *expr, Stmt *stmt, StaticChecker *checker
                 assert(expr->oper == OPER_APPLY && "invalid method declarator");
                 name = expr->left->sym;
             }
-            if (!checker->currentClassDef) {
-                /* declare global functions */
+            if (!outer || outer->kind != STMT_DEF_CLASS) {
+                /* declare naked functions */
                 SpkSymbolTable_Insert(checker->st, expr->left);
             }
             stmt->u.method.argList.fixed = expr->right;
@@ -170,6 +179,36 @@ static void checkMethodDeclarator(Expr *expr, Stmt *stmt, StaticChecker *checker
         }
         stmt->u.method.namespace = namespace;
         stmt->u.method.name = name;
+        break;
+    
+    case 2:
+        SpkSymbolTable_EnterScope(checker->st, 1);
+        
+        /* declare function arguments */
+        for (arg = stmt->u.method.argList.fixed; arg; arg = arg->nextArg) {
+            assert(arg->kind == EXPR_NAME);
+            SpkSymbolTable_Insert(checker->st, arg);
+            ++stmt->u.method.argumentCount;
+        }
+        arg = stmt->u.method.argList.var;
+        if (arg) {
+            assert(arg->kind == EXPR_NAME);
+            SpkSymbolTable_Insert(checker->st, arg);
+        }
+
+        for (innerPass = 1; innerPass <= 3; ++innerPass) {
+            for (s = body->top; s; s = s->next) {
+                checkStmt(s, stmt, checker, innerPass);
+            }
+        }
+        
+        stmt->u.method.localCount = checker->st->currentScope->context->nDefs -
+                                    stmt->u.method.argumentCount -
+                                    (stmt->u.method.argList.var ? 1 : 0);
+        
+        SpkSymbolTable_ExitScope(checker->st);
+        
+        break;
     }
 }
 
@@ -217,84 +256,75 @@ static void checkForSuperclassCycle(Stmt *aClassDef, StaticChecker *checker) {
     assert(!hare && "cycle in superclass chain");
 }
 
-static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned int outerPass) {
-    Stmt *s;
-    SymbolNode *sym;
-    Expr *arg;
+static void checkClassDef(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned int outerPass) {
+    Stmt *body, *s;
+    Expr *expr;
     unsigned int innerPass;
-    int enterNewContext;
-    
+        
+    switch (outerPass) {
+    case 1:
+        assert(stmt->expr->kind == EXPR_NAME);
+        SpkSymbolTable_Insert(checker->st, stmt->expr);
+        stmt->expr->u.def.stmt = stmt;
+        
+        checkExpr(stmt->u.klass.superclassName, stmt, checker, outerPass);
+        
+        break;
+        
+    case 2:
+        checkExpr(stmt->u.klass.superclassName, stmt, checker, outerPass);
+        
+        expr = stmt->u.klass.superclassName->u.ref.def;
+        if (expr) {
+            assert(expr->kind == EXPR_NAME && expr->u.def.stmt);
+            /* for convenience, cache a direct link to the superclass def */
+            stmt->u.klass.superclassDef = expr->u.def.stmt;
+            registerSubclass(stmt, checker);
+        } /* else undefined */
+        
+        body = stmt->top;
+        assert(body->kind == STMT_COMPOUND);
+        SpkSymbolTable_EnterScope(checker->st, 1);
+        for (innerPass = 1; innerPass <= 3; ++innerPass) {
+            for (s = body->top; s; s = s->next) {
+                checkStmt(s, stmt, checker, innerPass);
+            }
+        }
+        stmt->u.klass.instVarCount = checker->st->currentScope->context->nDefs;
+        SpkSymbolTable_ExitScope(checker->st);
+        break;
+        
+    case 3:
+        checkExpr(stmt->u.klass.superclassName, stmt, checker, outerPass);
+        checkForSuperclassCycle(stmt, checker);
+        break;
+    }
+}
+
+static void checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned int outerPass) {
     switch (stmt->kind) {
     case STMT_COMPOUND:
         if (outerPass == 2) {
-            enterNewContext = outer &&
-                              (outer->kind == STMT_DEF_METHOD ||
-                               outer->kind == STMT_DEF_CLASS);
-            SpkSymbolTable_EnterScope(checker->st, enterNewContext);
-            if (outer && outer->kind == STMT_DEF_METHOD) {
-                /* declare function arguments */
-                for (arg = outer->u.method.argList.fixed; arg; arg = arg->nextArg) {
-                    assert(arg->kind == EXPR_NAME);
-                    SpkSymbolTable_Insert(checker->st, arg);
-                    ++outer->u.method.argumentCount;
-                }
-                arg = outer->u.method.argList.var;
-                if (arg) {
-                    assert(arg->kind == EXPR_NAME);
-                    SpkSymbolTable_Insert(checker->st, arg);
-                }
-            }
+            Stmt *s;
+            unsigned int innerPass;
+            
+            SpkSymbolTable_EnterScope(checker->st, 0);
             for (innerPass = 1; innerPass <= 3; ++innerPass) {
                 for (s = stmt->top; s; s = s->next) {
                     checkStmt(s, stmt, checker, innerPass);
-                }
-            }
-            if (outer) {
-                switch (outer->kind) {
-                case STMT_DEF_METHOD:
-                    outer->u.method.localCount = checker->st->currentScope->context->nDefs -
-                                                 outer->u.method.argumentCount -
-                                                 (outer->u.method.argList.var ? 1 : 0);
-                    break;
-                case STMT_DEF_CLASS:
-                    outer->u.klass.instVarCount = checker->st->currentScope->context->nDefs;
-                    break;
                 }
             }
             SpkSymbolTable_ExitScope(checker->st);
         }
         break;
     case STMT_DEF_VAR:
-        checkVarDeclList(stmt->expr, stmt, checker, outerPass);
+        checkVarDefList(stmt->expr, stmt, checker, outerPass);
         break;
     case STMT_DEF_METHOD:
-        checkMethodDeclarator(stmt->expr, stmt, checker, outerPass);
-        checkStmt(stmt->top, stmt, checker, outerPass);
+        checkMethodDef(stmt, outer, checker, outerPass);
         break;
     case STMT_DEF_CLASS:
-        if (outerPass == 1) {
-            assert(stmt->expr->kind == EXPR_NAME);
-            SpkSymbolTable_Insert(checker->st, stmt->expr);
-            stmt->expr->u.def.stmt = stmt;
-        }
-        checkExpr(stmt->u.klass.superclassName, stmt, checker, outerPass);
-        switch (outerPass) {
-        case 2: {
-            Expr *expr = stmt->u.klass.superclassName->u.ref.def;
-            if (expr) {
-                assert(expr->kind == EXPR_NAME && expr->u.def.stmt);
-                /* for convenience, cache a direct link to the superclass def */
-                stmt->u.klass.superclassDef = expr->u.def.stmt;
-                registerSubclass(stmt, checker);
-            } /* else undefined */
-            break; }
-        case 3:
-            checkForSuperclassCycle(stmt, checker);
-            break;
-        }
-        checker->currentClassDef = stmt;
-        checkStmt(stmt->top, stmt, checker, outerPass);
-        checker->currentClassDef = 0;
+        checkClassDef(stmt, outer, checker, outerPass);
         break;
     case STMT_DO_WHILE:
         checkExpr(stmt->expr, stmt, checker, outerPass);
@@ -411,7 +441,6 @@ int SpkStaticChecker_Check(Stmt *tree, BootRec *bootRec,
         }
     }
     
-    checker.currentClassDef = 0;
     checker.rootClassList = rootClassList;
     rootClassList->first = rootClassList->last = 0;
 
