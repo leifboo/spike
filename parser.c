@@ -79,6 +79,18 @@ Expr *SpkParser_NewExpr(ExprKind kind, Oper oper, Expr *cond,
     return newExpr;
 }
 
+Expr *SpkParser_NewBlock(Expr *argList, Stmt *stmtList, Expr *expr) {
+    Expr *newExpr;
+    
+    newExpr = (Expr *)malloc(sizeof(Expr));
+    memset(newExpr, 0, sizeof(Expr));
+    newExpr->kind = EXPR_BLOCK;
+    newExpr->left = argList;
+    newExpr->right = expr;
+    newExpr->aux.block.stmtList = stmtList;
+    return newExpr;
+}
+
 /****************************************************************************/
 
 Stmt *SpkParser_ParseFile(const char *filename) {

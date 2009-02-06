@@ -75,6 +75,7 @@ void SpkDisassembler_disassembleMethodOpcodes(Method *method, unsigned int inden
             
         case OPCODE_PUSH_LOCAL:    mnemonic = "push"; base = "local";    goto push;
         case OPCODE_PUSH_INST_VAR: mnemonic = "push"; base = "receiver"; goto push;
+        case OPCODE_PUSH_GLOBAL:   mnemonic = "push"; base = "global";   goto push;
         case OPCODE_PUSH_LITERAL:  mnemonic = "push"; base = "literal";  goto push;
  push:
             DECODE_UINT(index);
@@ -108,6 +109,7 @@ void SpkDisassembler_disassembleMethodOpcodes(Method *method, unsigned int inden
             
         case OPCODE_STORE_LOCAL:    mnemonic = "store"; base = "local";    goto store;
         case OPCODE_STORE_INST_VAR: mnemonic = "store"; base = "receiver"; goto store;
+        case OPCODE_STORE_GLOBAL:   mnemonic = "store"; base = "global";   goto store;
  store:
             DECODE_UINT(index);
             break;
@@ -191,6 +193,7 @@ void SpkDisassembler_disassembleMethodOpcodes(Method *method, unsigned int inden
         case OPCODE_RESTORE_CALLER: mnemonic = "restore"; keyword = "caller"; break;
         case OPCODE_THUNK:          mnemonic = "thunk"; break;
         case OPCODE_CALL_THUNK:     mnemonic = "ct";    break;
+        case OPCODE_CALL_BLOCK:     mnemonic = "cb";    break;
             
         case OPCODE_CHECK_STACKP:
             mnemonic = "check";

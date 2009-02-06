@@ -1,0 +1,24 @@
+#!/usr/bin/env spike
+
+// see http://paulgraham.com/accgen.html
+
+// XXX
+xxx(n) {
+    acc(i) { return n += i; }
+    return acc;
+}
+
+foo(n) {
+    return [i: n += i];
+}
+
+main() {
+    var acc, sum;
+    
+    acc = foo(10);
+    sum = acc(10);
+    sum = acc(20);
+    sum = acc(2);
+    sum.print(); '\n'.print();
+    return 0;
+}

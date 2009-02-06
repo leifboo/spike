@@ -33,6 +33,7 @@ struct STEntry {
 struct ContextClass {
     Scope *scope;
     unsigned int level;
+    /*opcode_t*/ unsigned int pushOpcode, storeOpcode;
     unsigned int nDefs;
 };
 

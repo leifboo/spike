@@ -1,0 +1,44 @@
+#!/usr/bin/env spike
+
+class Main {
+    main() {
+        ifTrue(2 < 3, [: "correct-1\n".print()]);
+        (ifTrue(2 < 3, [: "correct-2\n"])).print();
+        ([x: x.print()])("correct-3\n");
+        ifTrue(2 < 3 || 3 < 4, [: "correct-4\n".print()]);
+        ifTrue(2 > 3 || 3 < 4, [: "correct-5\n".print()]);
+        ifTrue(2 < 3 && 3 < 4, [: "correct-6\n".print()]);
+        ifFalse(2 > 3 && 3 < 4, [: "correct-7\n".print()]);
+        self.test1().print();
+    }
+
+    test1() {
+        self.test2([: return "correct-8\n";]);
+        "should not print\n".print();
+    }
+    
+    test2(aBlock) {
+        self.test3(aBlock);
+        "should not print\n".print();
+    }
+    
+    test3(bBlock) {
+        bBlock();
+        "should not print\n".print();
+    }
+}
+
+ifTrue(c, b) {
+    if (c) return b();
+}
+
+ifFalse(c, b) {
+    if (!c) return b();
+}
+
+main() {
+    var m;
+    m = Main.new();
+    m.main();
+    return 0;
+}

@@ -17,6 +17,7 @@
 
 /*** TODO ***/
 #define XXX 0
+#define NESTING XXX
 #define HIGHEST_PRIORITY XXX
 
 
@@ -28,7 +29,8 @@ Null *Spk_null;
 Uninit *Spk_uninit;
 Void *Spk_void;
 
-Behavior *Spk_ClassMessage, *Spk_ClassMethod, *Spk_ClassThunk, *Spk_ClassContext, *Spk_ClassNull, *Spk_ClassUninit, *Spk_ClassVoid;
+Behavior *Spk_ClassMessage, *Spk_ClassMethod, *Spk_ClassThunk, *Spk_ClassContext, *Spk_ClassMethodContext, *Spk_ClassBlockContext;
+Behavior *Spk_ClassNull, *Spk_ClassUninit, *Spk_ClassVoid;
 Interpreter *theInterpreter; /* XXX */
 
 
@@ -78,7 +80,10 @@ SpkClassTmpl Spk_ClassThunkTmpl = {
 };
 
 
+static Object *Context_blockCopy(Object *_self, Object *arg0, Object *arg1);
+
 static SpkMethodTmpl ContextMethods[] = {
+    { "blockCopy", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Context_blockCopy },
     { 0, 0, 0}
 };
 
@@ -89,6 +94,34 @@ SpkClassTmpl Spk_ClassContextTmpl = {
     sizeof(Object *),
     0,
     ContextMethods
+};
+
+
+static SpkMethodTmpl MethodContextMethods[] = {
+    { 0, 0, 0}
+};
+
+SpkClassTmpl Spk_ClassMethodContextTmpl = {
+    "MethodContext",
+    offsetof(ContextSubclass, variables),
+    sizeof(Context),
+    sizeof(Object *),
+    0,
+    MethodContextMethods
+};
+
+
+static SpkMethodTmpl BlockContextMethods[] = {
+    { 0, 0, 0}
+};
+
+SpkClassTmpl Spk_ClassBlockContextTmpl = {
+    "BlockContext",
+    offsetof(ContextSubclass, variables),
+    sizeof(Context),
+    sizeof(Object *),
+    0,
+    BlockContextMethods
 };
 
 
@@ -138,7 +171,7 @@ SpkClassTmpl Spk_ClassVoidTmpl = {
 /* initialization */
 
 Object *SpkInterpreter_start(Object *obj, Symbol *selector, Array *argumentArray) {
-    Method *callThunk, *trampoline;
+    Method *callThunk, *callBlock, *trampoline;
     Context *context;
     Fiber fiber;
     ProcessorScheduler scheduler;
@@ -148,6 +181,10 @@ Object *SpkInterpreter_start(Object *obj, Symbol *selector, Array *argumentArray
     callThunk = SpkMethod_new(1);
     SpkMethod_OPCODES(callThunk)[0] = OPCODE_CALL_THUNK;
     SpkBehavior_insertMethod(Spk_ClassThunk, METHOD_NAMESPACE_RVALUE, SpkSymbol_get("__apply__"), callThunk);
+    
+    callBlock = SpkMethod_new(1);
+    SpkMethod_OPCODES(callBlock)[0] = OPCODE_CALL_BLOCK;
+    SpkBehavior_insertMethod(Spk_ClassBlockContext, METHOD_NAMESPACE_RVALUE, SpkSymbol_get("__apply__"), callBlock);
     
     trampolineSize = 6;
     trampoline = SpkMethod_new(trampolineSize);
@@ -168,6 +205,7 @@ Object *SpkInterpreter_start(Object *obj, Symbol *selector, Array *argumentArray
     context->u.m.method = trampoline;
     context->u.m.methodClass = obj->klass;
     context->u.m.receiver = obj;
+    context->u.m.framep = context->stackp;
     
     /* push arguments on the stack */
     *--context->stackp = obj;
@@ -199,6 +237,7 @@ void SpkInterpreter_init(Interpreter *self, ProcessorScheduler *aScheduler) {
     self->newContext = 0;
 
     /* special objects */
+    self->selectorCannotReenterBlock     = SpkSymbol_get("cannotReenterBlock");
     self->selectorCannotReturn           = SpkSymbol_get("cannotReturn");
     self->selectorDoesNotUnderstand      = SpkSymbol_get("doesNotUnderstand");
     self->selectorMustBeArray            = SpkSymbol_get("mustBeArray");
@@ -243,21 +282,45 @@ Context *SpkContext_new(size_t size) {
     Context *newContext;
     
     newContext = (Context *)malloc(sizeof(Context) + size*sizeof(Object *));
-    newContext->base.base.klass = Spk_ClassContext;
+    newContext->base.base.klass = Spk_ClassMethodContext;
     newContext->base.size = size;
     return newContext;
 }
 
-Context *SpkContext_blockCopy(Context *self, size_t numArgs, opcode_t *instructionPointer) {
-    Context *home = self->homeContext;
-    Context *newContext = SpkContext_new(home->base.size);
-    newContext->sender = 0;
-    newContext->pc = instructionPointer;
+static Object *Context_blockCopy(Object *_self, Object *arg0, Object *arg1) {
+    Context *self; Integer *arg;
+    size_t index, numArgs;
+    size_t size, count;
+    Context *newContext;
+    Object **p;
+    
+    self = (Context *)_self;
+    assert(arg = Spk_CAST(Integer, arg0)); /* XXX */
+    index = (size_t)SpkInteger_asLong(arg);
+    assert(arg = Spk_CAST(Integer, arg1)); /* XXX */
+    numArgs = (size_t)SpkInteger_asLong(arg);
+    
+    /* The compiler guarantees that the home context is at least as
+       big as the biggest child block context needs to be. */
+    size = self->homeContext->base.size;
+    
+    newContext = SpkContext_new(size);
+    newContext->base.base.klass = Spk_ClassBlockContext;
+    newContext->caller = 0;
+    newContext->pc = 0;
     newContext->stackp = 0;
-    newContext->homeContext = home;
+    newContext->homeContext = self->homeContext;
+    newContext->u.b.index = index;
     newContext->u.b.nargs = numArgs;
-    newContext->u.b.startpc = instructionPointer;
-    return newContext;
+    newContext->u.b.startpc = self->pc + 3; /* skip branch */
+    
+    /* initialize the stack */
+    count = size;
+    for (p = SpkContext_VARIABLES(newContext); count > 0; ++p, --count) {
+        *p = Spk_uninit;
+    }
+    
+    return (Object *)newContext;
 }
 
 void SpkContext_init(Context *self, Context *activeContext) {
@@ -341,6 +404,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
     register Object **stackPointer;
     register Object **framePointer;
     register Object **instVarPointer;
+    register Object **globalPointer;
     register Object **literalPointer;
     Object ***display;
 
@@ -361,9 +425,10 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
     instructionPointer = self->activeContext->pc;
     linkRegister = 0;
     display = (Object ***)SpkContext_VARIABLES(self->activeContext);
-    framePointer = display[0];
-    instVarPointer = display[1];
     stackPointer = self->activeContext->stackp;
+    framePointer = homeContext->u.m.framep;
+    instVarPointer = INSTANCE_VARS(receiver, methodClass);
+    globalPointer = SpkModule_VARIABLES(methodClass->module);
     literalPointer = SpkModule_LITERALS(methodClass->module);
     self->newContext = 0;
 
@@ -398,6 +463,10 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_PUSH_INST_VAR:
             DECODE_UINT(index);
             PUSH(instVarPointer[index]);
+            break;
+        case OPCODE_PUSH_GLOBAL:
+            DECODE_UINT(index);
+            PUSH(globalPointer[index]);
             break;
         case OPCODE_PUSH:
             DECODE_UINT(activation);
@@ -447,6 +516,10 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_STORE_INST_VAR:
             DECODE_UINT(index);
             instVarPointer[index] = STACK_TOP();
+            break;
+        case OPCODE_STORE_GLOBAL:
+            DECODE_UINT(index);
+            globalPointer[index] = STACK_TOP();
             break;
         case OPCODE_STORE:
             DECODE_UINT(activation);
@@ -617,6 +690,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
  jump:
                     framePointer = stackPointer;
                     instVarPointer = INSTANCE_VARS(receiver, methodClass);
+                    globalPointer = SpkModule_VARIABLES(methodClass->module);
                     literalPointer = SpkModule_LITERALS(methodClass->module);
                     goto loop;
                 }
@@ -712,8 +786,9 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             method = homeContext->u.m.method;
             methodClass = homeContext->u.m.methodClass;
             display = (Object ***)SpkContext_VARIABLES(self->activeContext);
-            framePointer = display[0];
-            instVarPointer = display[1];
+            framePointer = homeContext->u.m.framep;
+            instVarPointer = INSTANCE_VARS(receiver, methodClass);
+            globalPointer = SpkModule_VARIABLES(methodClass->module);
             literalPointer = SpkModule_LITERALS(methodClass->module);
             break;
         case OPCODE_RET_TRAMP: {
@@ -805,7 +880,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             DECODE_UINT(localCount);
             DECODE_UINT(stackSize);
             
-            contextSize = displaySize + stackSize + fixedArgumentCount + variadic + localCount;
+            contextSize = /*displaySize +*/ stackSize + fixedArgumentCount + variadic + localCount;
             newContext = SpkContext_new(contextSize);
 
             newContext->sender = self->activeContext;
@@ -815,41 +890,43 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             newContext->u.m.methodClass = methodClass;
             newContext->u.m.receiver = receiver;
             
-            /* build the display */
-            i = 0;
-            display = (Object ***)SpkContext_VARIABLES(newContext);
-            display[i++] = (Object **)(display + displaySize) + stackSize; /* frame pointer */
-            display[i++] = INSTANCE_VARS(receiver, methodClass);
+            if (NESTING) {
+                /* build the display */
+                i = 0;
+                display = (Object ***)SpkContext_VARIABLES(newContext);
+                display[i++] = (Object **)(display + displaySize) + stackSize; /* frame pointer */
+                display[i++] = INSTANCE_VARS(receiver, methodClass);
             
-            if (i < displaySize) {
-                Object *outer;
-                Behavior *outerClass;
-                
-                outerClass = receiver->klass->outerClass;
-                outer = receiver->klass->outer;
-                while (outerClass) {
-                    assert(i < displaySize);
-                    display[i++] = INSTANCE_VARS(outer, outerClass);
-                    outerClass = outer->klass->outerClass;
-                    outer = outer->klass->outer;
-                }
-                
                 if (i < displaySize) {
-                    /* copy the rest from the outer context */
-                    Context *outerContext = Spk_CAST(Context, outer);
-                    Object ***outerDisplay = (Object ***)SpkContext_VARIABLES(outerContext);
-                    for (j = 0; i < displaySize; ++i, ++j) {
-                        display[i] = outerDisplay[j];
+                    Object *outer;
+                    Behavior *outerClass;
+                
+                    outerClass = receiver->klass->outerClass;
+                    outer = receiver->klass->outer;
+                    while (outerClass) {
+                        assert(i < displaySize);
+                        display[i++] = INSTANCE_VARS(outer, outerClass);
+                        outerClass = outer->klass->outerClass;
+                        outer = outer->klass->outer;
+                    }
+                
+                    if (i < displaySize) {
+                        /* copy the rest from the outer context */
+                        Context *outerContext = Spk_CAST(Context, outer);
+                        Object ***outerDisplay = (Object ***)SpkContext_VARIABLES(outerContext);
+                        for (j = 0; i < displaySize; ++i, ++j) {
+                            display[i] = outerDisplay[j];
+                        }
                     }
                 }
             }
             
             /* initialize the stack */
             count = stackSize;
-            for (p = (Object **)&display[i]; count > 0; ++p, --count) {
+            for (p = SpkContext_VARIABLES(newContext) /*(Object **)&display[i]*/; count > 0; ++p, --count) {
                 *p = Spk_uninit;
             }
-            newContext->stackp = p;
+            newContext->stackp = newContext->u.m.framep = p;
             
             /* process arguments */
             if (varArg) {
@@ -906,8 +983,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             self->activeContext->stackp = stackPointer;
             
             stackPointer = newContext->stackp;
-            framePointer = display[0];
-            
+            framePointer = newContext->u.m.framep;
             self->activeContext = homeContext = newContext;
             
             if (method->nativeCode) {
@@ -944,9 +1020,9 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_RESTORE_CALLER: {
             Object *result;
             /* restore caller */
-            self->activeContext->sender = 0;
-            self->activeContext->pc = 0;
             self->newContext = self->activeContext->caller;
+            self->activeContext->caller = 0;
+            self->activeContext->pc = 0;
  restore:
             result = POP_OBJECT();
 
@@ -993,13 +1069,49 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             methodClass = thunk->methodClass;
             instructionPointer = thunk->pc;
             goto jump; }
+        
+/*** block context opcodes ***/
+        case OPCODE_CALL_BLOCK: {
+            Context *blockContext;
+            Object **p;
+            size_t i;
+            
+            blockContext = (Context *)(receiver);
+            
+            if (blockContext->pc) {
+                TRAP(self->selectorCannotReenterBlock, 0);
+            }
+            assert(!varArg); /* XXX */
+            if (argumentCount != blockContext->u.b.nargs) {
+                TRAP(self->selectorWrongNumberOfArguments, 0);
+            }
+            
+            /* copy & reverse arguments from stack */
+            p = &blockContext->homeContext->u.m.framep[blockContext->u.b.index];
+            for (i = 0; i < argumentCount; ++p, ++i) {
+                *p = stackPointer[argumentCount - i - 1];
+            }
+            
+            /* clean up the caller's stack */
+            POP(argumentCount + 1);
+            
+            /* suspend the caller */
+            self->activeContext->pc = linkRegister;
+            self->activeContext->stackp = stackPointer;
+            
+            blockContext->caller = self->activeContext;
+            blockContext->pc = blockContext->u.b.startpc;
+            blockContext->stackp = &SpkContext_VARIABLES(blockContext)[blockContext->base.size];
+            self->activeContext = blockContext;
+            goto fetchContextRegisters; }
             
 /*** debugging ***/
         case OPCODE_CHECK_STACKP: {
             size_t offset;
             DECODE_UINT(offset);
             assert(method != self->activeContext->u.m.method || /* in leaf routine */
-                   stackPointer == framePointer - offset);
+                   /* XXX: What about BlockContexts? */
+                   stackPointer == homeContext->u.m.framep - offset);
             break; }
         }
     }
@@ -1103,7 +1215,7 @@ void SpkInterpreter_printCallStack(Interpreter *self) {
         methodClass = home->u.m.methodClass;
         methodSel = SpkBehavior_findSelectorOfMethod(methodClass, method);
         printf("%04x %p%s",
-               ctxt->pc - SpkMethod_OPCODES(method), ctxt, (ctxt == home ? " " : " {} in "));
+               ctxt->pc - SpkMethod_OPCODES(method), ctxt, (ctxt == home ? " " : " [] in "));
         if (methodSel == call) {
             printf("%s\n", SpkBehavior_name(methodClass));
         } else {

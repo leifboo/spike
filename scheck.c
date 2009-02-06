@@ -19,6 +19,10 @@ typedef struct StaticChecker {
 } StaticChecker;
 
 
+static void checkStmt(Stmt *, Stmt *, StaticChecker *, unsigned int);
+static void checkOneExpr(Expr *, Stmt *, StaticChecker *, unsigned int);
+
+
 static void checkVarDefList(Expr *defList, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
     Expr *def;
     
@@ -31,12 +35,52 @@ static void checkVarDefList(Expr *defList, Stmt *stmt, StaticChecker *checker, u
     }
 }
 
-static void checkOneExpr(Expr *, Stmt *, StaticChecker *, unsigned int);
-
 static void checkExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
     for ( ; expr; expr = expr->next) {
         checkOneExpr(expr, stmt, checker, pass);
     }
+}
+
+static void checkBlock(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned int outerPass) {
+    Expr *arg;
+    Stmt *s;
+    unsigned int innerPass;
+    
+    if (outerPass != 2) {
+        return;
+    }
+    
+    SpkSymbolTable_EnterScope(checker->st, 0);
+    
+    /* declare block arguments */
+    for (arg = expr->left; arg; arg = arg->nextArg) {
+        assert(arg->kind == EXPR_NAME);
+        SpkSymbolTable_Insert(checker->st, arg);
+        ++expr->aux.block.argumentCount;
+    }
+    
+    /* The 'index' of the block itself is the index of the first
+     * argument.  The interpreter uses this index to find the
+     * destination the block arguments; see OPCODE_CALL_BLOCK.
+     */
+    expr->u.def.index = expr->left ? expr->left->u.def.index : 0;
+    
+    for (innerPass = 1; innerPass <= 3; ++innerPass) {
+        if (expr->aux.block.stmtList) {
+            for (s = expr->aux.block.stmtList; s; s = s->next) {
+                checkStmt(s, stmt, checker, innerPass);
+            }
+        }
+        if (expr->right) {
+            checkExpr(expr->right, stmt, checker, innerPass);
+        }
+    }
+    
+    /* XXX: this is only needed for arbitrary nesting */
+    expr->aux.block.localCount = checker->st->currentScope->context->nDefs -
+                                 expr->aux.block.argumentCount;
+    
+    SpkSymbolTable_ExitScope(checker->st);
 }
 
 static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigned int pass) {
@@ -47,6 +91,9 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
         if (pass == 2) {
             SpkSymbolTable_Bind(checker->st, expr);
         }
+        break;
+    case EXPR_BLOCK:
+        checkBlock(expr, stmt, checker, pass);
         break;
     case EXPR_CALL:
         checkExpr(expr->left, stmt, checker, pass);
@@ -80,8 +127,6 @@ static void checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker, unsigne
         break;
     }
 }
-
-static void checkStmt(Stmt *, Stmt *, StaticChecker *, unsigned int);
 
 static void checkMethodDef(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsigned int outerPass) {
     Stmt *body, *s;
@@ -158,7 +203,7 @@ static void checkMethodDef(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsi
                     stmt->u.method.argList.fixed = expr->right;
                     break;
                 case EXPR_INT:
-                    if (expr->right->lit.intValue == 1) {
+                    if (expr->right->aux.lit.intValue == 1) {
                         if (oper == OPER_ADD) {
                             oper = OPER_SUCC;
                             break;
@@ -182,6 +227,10 @@ static void checkMethodDef(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsi
         break;
     
     case 2:
+        if (!outer || outer->kind != STMT_DEF_CLASS) {
+            /* naked (global) function -- enter module instance context */
+            SpkSymbolTable_EnterScope(checker->st, 1);
+        }
         SpkSymbolTable_EnterScope(checker->st, 1);
         
         /* declare function arguments */
@@ -207,6 +256,9 @@ static void checkMethodDef(Stmt *stmt, Stmt *outer, StaticChecker *checker, unsi
                                     (stmt->u.method.argList.var ? 1 : 0);
         
         SpkSymbolTable_ExitScope(checker->st);
+        if (!outer || outer->kind != STMT_DEF_CLASS) {
+            SpkSymbolTable_ExitScope(checker->st);
+        }
         
         break;
     }

@@ -47,6 +47,8 @@ static BootRec bootRec[] = {
     /******/CLASS(Method,  VariableObject),
     /**********/CLASS(NativeAccessor,  Method),
     /******/CLASS(Context, VariableObject),
+    /**********/CLASS(MethodContext, Context),
+    /**********/CLASS(BlockContext,  Context),
     /******/CLASS(Module,  VariableObject),
     /******/CLASS(String,  VariableObject),
     /******/CLASS(Array,   VariableObject),

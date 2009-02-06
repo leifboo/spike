@@ -26,25 +26,45 @@
 #define CHECK_STACKP()
 #endif
 
+#define NESTING 0
+
 
 typedef enum CodeGenKind {
+    CODE_GEN_BLOCK,
     CODE_GEN_METHOD,
     CODE_GEN_CLASS,
     CODE_GEN_MODULE
 } CodeGenKind;
 
+typedef struct BlockCodeGen {
+    struct CodeGen *generic;
+    struct OpcodeGen *opcodeGen;
+} BlockCodeGen;
+
 typedef struct MethodCodeGen {
     struct CodeGen *generic;
-    Stmt *methodDef;
+    struct OpcodeGen *opcodeGen;
     Method *methodInstance;
+} MethodCodeGen;
+
+typedef struct OpcodeGen {
+    struct CodeGen *generic;
     
+    size_t argumentCount; int varArgList;
+    size_t localCount;
+
     size_t currentOffset;
     opcode_t *opcodesBegin, *opcodesEnd;
     size_t stackPointer, stackSize;
     unsigned int nMessageSends;
     unsigned int nContextRefs;
     int inLeaf;
-} MethodCodeGen;
+    
+    union {
+        BlockCodeGen block;
+        MethodCodeGen method;
+    } u;
+} OpcodeGen;
 
 typedef struct ClassCodeGen {
     struct CodeGen *generic;
@@ -67,7 +87,7 @@ typedef struct CodeGen {
     struct ModuleCodeGen *module;
     unsigned int level;
     union {
-        MethodCodeGen method;
+        OpcodeGen o;
         ClassCodeGen klass;
         ModuleCodeGen module;
     } u;
@@ -89,7 +109,7 @@ else (n)->codeOffset = cgen->currentOffset; } while (0)
 do { if (cgen->opcodesEnd) assert((n)->endLabel == cgen->currentOffset); \
 else (n)->endLabel = cgen->currentOffset; } while (0)
 
-static void encodeUnsignedInt(unsigned long value, MethodCodeGen *cgen) {
+static void encodeUnsignedInt(unsigned long value, OpcodeGen *cgen) {
     opcode_t byte;
     
     do {
@@ -102,7 +122,7 @@ static void encodeUnsignedInt(unsigned long value, MethodCodeGen *cgen) {
     } while (value);
 }
 
-static void encodeSignedInt(long value, MethodCodeGen *cgen) {
+static void encodeSignedInt(long value, OpcodeGen *cgen) {
     int more, negative;
     opcode_t byte;
     
@@ -125,7 +145,7 @@ static void encodeSignedInt(long value, MethodCodeGen *cgen) {
     } while (more);
 }
 
-static void fixUpBranch(size_t target, MethodCodeGen *cgen) {
+static void fixUpBranch(size_t target, OpcodeGen *cgen) {
     ptrdiff_t base, displacement, filler;
     
     /* offset of branch instruction */
@@ -142,7 +162,7 @@ static void fixUpBranch(size_t target, MethodCodeGen *cgen) {
     }
 }
 
-static void emitBranch(opcode_t opcode, size_t target, MethodCodeGen *cgen) {
+static void emitBranch(opcode_t opcode, size_t target, OpcodeGen *cgen) {
     EMIT_OPCODE(opcode);
     if (cgen->opcodesEnd) {
         fixUpBranch(target, cgen);
@@ -155,7 +175,7 @@ static void emitBranch(opcode_t opcode, size_t target, MethodCodeGen *cgen) {
     }
 }
 
-static void tallyPush(MethodCodeGen *cgen) {
+static void tallyPush(OpcodeGen *cgen) {
     ++cgen->stackPointer;
     if (cgen->stackPointer > cgen->stackSize) {
         cgen->stackSize = cgen->stackPointer;
@@ -163,7 +183,7 @@ static void tallyPush(MethodCodeGen *cgen) {
     CHECK_STACKP();
 }
 
-static void dupN(unsigned long n, MethodCodeGen *cgen) {
+static void dupN(unsigned long n, OpcodeGen *cgen) {
     if (n == 1) {
         EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
         return;
@@ -177,19 +197,17 @@ static void dupN(unsigned long n, MethodCodeGen *cgen) {
     CHECK_STACKP();
 }
 
-static unsigned int indexOfVar(Expr *def, opcode_t opcode, MethodCodeGen *cgen) {
+static unsigned int indexOfVar(Expr *def, opcode_t opcode, OpcodeGen *cgen) {
     /* In leaf methods, the arguments are reversed. */
     return
         (cgen->inLeaf &&
          (opcode == OPCODE_PUSH_LOCAL || opcode == OPCODE_STORE_LOCAL))
-        ? cgen->methodDef->u.method.argumentCount - def->u.def.index - 1
+        ? cgen->argumentCount - def->u.def.index - 1
         : def->u.def.index;
 }
 
-static void push(Expr *expr, int *super, MethodCodeGen *cgen) {
-    opcode_t opcode;
+static void push(Expr *expr, int *super, OpcodeGen *cgen) {
     Expr *def;
-    size_t activation;
     
     def = expr->u.ref.def;
     assert(def);
@@ -211,61 +229,84 @@ static void push(Expr *expr, int *super, MethodCodeGen *cgen) {
         return;
     }
     
-    assert(cgen->generic->level >= def->u.def.level);
-    activation = cgen->generic->level - def->u.def.level;
-    switch (activation) {
-    case 0:  opcode = OPCODE_PUSH_LOCAL;    break;
-    case 1:  opcode = OPCODE_PUSH_INST_VAR; break;
-    default: opcode = OPCODE_PUSH;          break;
-    }
-    EMIT_OPCODE(opcode);
-    if (opcode == OPCODE_PUSH) {
+    if (NESTING) {
+        /* arbitrary nesting version */
+        size_t activation;
+        
+        assert(cgen->generic->level >= def->u.def.level);
+        activation = cgen->generic->level - def->u.def.level;
+        EMIT_OPCODE(OPCODE_PUSH);
         encodeUnsignedInt(activation, cgen);
+        encodeUnsignedInt(indexOfVar(def, OPCODE_PUSH, cgen), cgen);
+        tallyPush(cgen);
+        return;
     }
-    encodeUnsignedInt(indexOfVar(def, opcode, cgen), cgen);
+    
+    EMIT_OPCODE(def->u.def.pushOpcode);
+    encodeUnsignedInt(indexOfVar(def, def->u.def.pushOpcode, cgen), cgen);
     tallyPush(cgen);
 }
 
-static void store(Expr *var, MethodCodeGen *cgen) {
-    opcode_t opcode;
+static void store(Expr *var, OpcodeGen *cgen) {
     Expr *def;
-    size_t activation;
     
     def = var->u.ref.def;
     assert(def);
     
-    assert(cgen->generic->level >= def->u.def.level);
-    activation = cgen->generic->level - def->u.def.level;
-    switch (activation) {
-    case 0:  opcode = OPCODE_STORE_LOCAL;    break;
-    case 1:  opcode = OPCODE_STORE_INST_VAR; break;
-    default: opcode = OPCODE_STORE;          break;
-    }
-    EMIT_OPCODE(opcode);
-    if (opcode == OPCODE_STORE) {
+    if (NESTING) {
+        /* arbitrary nesting version */
+        size_t activation;
+        
+        assert(cgen->generic->level >= def->u.def.level);
+        activation = cgen->generic->level - def->u.def.level;
+        EMIT_OPCODE(OPCODE_STORE);
         encodeUnsignedInt(activation, cgen);
+        encodeUnsignedInt(indexOfVar(def, OPCODE_STORE, cgen), cgen);
+        return;
     }
-    encodeUnsignedInt(indexOfVar(def, opcode, cgen), cgen);
+    
+    EMIT_OPCODE(def->u.def.storeOpcode);
+    encodeUnsignedInt(indexOfVar(def, def->u.def.storeOpcode, cgen), cgen);
 }
 
-static void save(Stmt *stmt, MethodCodeGen *cgen) {
-    EMIT_OPCODE(stmt->u.method.argList.var ? OPCODE_SAVE_VAR : OPCODE_SAVE);
+static void save(OpcodeGen *cgen) {
+    EMIT_OPCODE(cgen->varArgList ? OPCODE_SAVE_VAR : OPCODE_SAVE);
     encodeUnsignedInt(cgen->generic->level, cgen);
-    encodeUnsignedInt(stmt->u.method.argumentCount, cgen);
-    encodeUnsignedInt(stmt->u.method.localCount, cgen);
+    encodeUnsignedInt(cgen->argumentCount, cgen);
+    encodeUnsignedInt(cgen->localCount, cgen);
     encodeUnsignedInt(cgen->stackSize, cgen);
 }
 
-static void leaf(Stmt *stmt, MethodCodeGen *cgen) {
+static void leaf(OpcodeGen *cgen) {
     EMIT_OPCODE(OPCODE_LEAF);
-    encodeUnsignedInt(stmt->u.method.argumentCount, cgen);
+    encodeUnsignedInt(cgen->argumentCount, cgen);
+}
+
+static int inLeaf(OpcodeGen *cgen) {
+    return
+        cgen->nMessageSends == 0 &&
+        cgen->nContextRefs == 0 &&
+        cgen->stackSize <= LEAF_STACK_SPACE &&
+        cgen->localCount == 0 &&
+        !cgen->varArgList;
+}
+
+static void rewind(OpcodeGen *cgen, opcode_t *opcodes) {
+    cgen->currentOffset = 0;
+    cgen->opcodesBegin = cgen->opcodesEnd = opcodes;
+    cgen->stackPointer = cgen->stackSize = 0;
+    cgen->nMessageSends = 0;
+    cgen->nContextRefs = 0;
+    if (!opcodes) {
+        cgen->inLeaf = 0;
+    }
 }
 
 
 /****************************************************************************/
 /* rodata */
 
-static unsigned int getLiteralIndex(Object *literal, MethodCodeGen *cgen) {
+static unsigned int getLiteralIndex(Object *literal, OpcodeGen *cgen) {
     unsigned int index;
     
     for (index = 0; index < cgen->generic->module->rodataSize; ++index) {
@@ -292,14 +333,16 @@ static unsigned int getLiteralIndex(Object *literal, MethodCodeGen *cgen) {
 /****************************************************************************/
 /* expressions */
 
-static void emitCodeForOneExpr(Expr *, int *, MethodCodeGen *);
-static void emitBranchForExpr(Expr *expr, int, size_t, size_t, int, MethodCodeGen *);
-static void emitBranchForOneExpr(Expr *, int, size_t, size_t, int, MethodCodeGen *);
-static void inPlaceOp(Expr *, size_t, MethodCodeGen *);
-static void inPlaceAttrOp(Expr *, MethodCodeGen *);
-static void inPlaceIndexOp(Expr *, MethodCodeGen *);
+static void emitCodeForOneExpr(Expr *, int *, OpcodeGen *);
+static void emitBranchForExpr(Expr *expr, int, size_t, size_t, int, OpcodeGen *);
+static void emitBranchForOneExpr(Expr *, int, size_t, size_t, int, OpcodeGen *);
+static void inPlaceOp(Expr *, size_t, OpcodeGen *);
+static void inPlaceAttrOp(Expr *, OpcodeGen *);
+static void inPlaceIndexOp(Expr *, OpcodeGen *);
+static void emitCodeForBlock(Expr *, CodeGen *);
+static void emitCodeForStmt(Stmt *, size_t, size_t, size_t, OpcodeGen *);
 
-static void emitCodeForExpr(Expr *expr, int *super, MethodCodeGen *cgen) {
+static void emitCodeForExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     for ( ; expr->next; expr = expr->next) {
         emitCodeForOneExpr(expr, super, cgen);
         EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
@@ -307,7 +350,7 @@ static void emitCodeForExpr(Expr *expr, int *super, MethodCodeGen *cgen) {
     emitCodeForOneExpr(expr, super, cgen);
 }
 
-static void emitCodeForOneExpr(Expr *expr, int *super, MethodCodeGen *cgen) {
+static void emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     Expr *arg;
     size_t index, argumentCount;
     int isSuper;
@@ -320,24 +363,24 @@ static void emitCodeForOneExpr(Expr *expr, int *super, MethodCodeGen *cgen) {
     switch (expr->kind) {
     case EXPR_INT:
         EMIT_OPCODE(OPCODE_PUSH_INT);
-        encodeSignedInt(expr->lit.intValue, cgen);
+        encodeSignedInt(expr->aux.lit.intValue, cgen);
         tallyPush(cgen);
         break;
     case EXPR_FLOAT:
         EMIT_OPCODE(OPCODE_PUSH_LITERAL);
-        index = LITERAL_INDEX((Object *)expr->lit.floatValue, cgen);
+        index = LITERAL_INDEX((Object *)expr->aux.lit.floatValue, cgen);
         encodeUnsignedInt(index, cgen);
         tallyPush(cgen);
         break;
     case EXPR_CHAR:
         EMIT_OPCODE(OPCODE_PUSH_LITERAL);
-        index = LITERAL_INDEX((Object *)expr->lit.charValue, cgen);
+        index = LITERAL_INDEX((Object *)expr->aux.lit.charValue, cgen);
         encodeUnsignedInt(index, cgen);
         tallyPush(cgen);
         break;
     case EXPR_STR:
         EMIT_OPCODE(OPCODE_PUSH_LITERAL);
-        index = LITERAL_INDEX((Object *)expr->lit.strValue, cgen);
+        index = LITERAL_INDEX((Object *)expr->aux.lit.strValue, cgen);
         encodeUnsignedInt(index, cgen);
         tallyPush(cgen);
         break;
@@ -349,6 +392,30 @@ static void emitCodeForOneExpr(Expr *expr, int *super, MethodCodeGen *cgen) {
         index = LITERAL_INDEX((Object *)expr->sym->sym, cgen);
         encodeUnsignedInt(index, cgen);
         tallyPush(cgen);
+        break;
+    case EXPR_BLOCK:
+        ++cgen->nMessageSends;
+        /* thisContext.blockCopy(index, argumentCount) { */
+        EMIT_OPCODE(OPCODE_PUSH_CONTEXT);
+        tallyPush(cgen);
+        EMIT_OPCODE(OPCODE_GET_ATTR);
+        index = LITERAL_INDEX((Object *)SpkSymbol_get("blockCopy"), cgen);
+        encodeUnsignedInt(index, cgen);
+        EMIT_OPCODE(OPCODE_PUSH_INT);
+        encodeSignedInt(expr->u.def.index, cgen);
+        tallyPush(cgen);
+        EMIT_OPCODE(OPCODE_PUSH_INT);
+        encodeSignedInt(expr->aux.block.argumentCount, cgen);
+        tallyPush(cgen);
+        EMIT_OPCODE(OPCODE_CALL);
+        encodeUnsignedInt(METHOD_NAMESPACE_RVALUE, cgen);
+        encodeUnsignedInt(OPER_APPLY, cgen);
+        encodeUnsignedInt(2, cgen);
+        cgen->stackPointer -= 2;
+        /* } */
+        emitBranch(OPCODE_BRANCH_ALWAYS, expr->endLabel, cgen);
+        emitCodeForBlock(expr, cgen->generic);
+        CHECK_STACKP();
         break;
     case EXPR_CALL:
         emitCodeForExpr(expr->left, &isSuper, cgen);
@@ -499,7 +566,7 @@ static void emitCodeForOneExpr(Expr *expr, int *super, MethodCodeGen *cgen) {
     return;
 }
 
-static void squirrel(size_t resultDepth, MethodCodeGen *cgen) {
+static void squirrel(size_t resultDepth, OpcodeGen *cgen) {
     /* duplicate the last result */
     EMIT_OPCODE(OPCODE_DUP); tallyPush(cgen);
     /* squirrel it away for later */
@@ -507,7 +574,7 @@ static void squirrel(size_t resultDepth, MethodCodeGen *cgen) {
     encodeUnsignedInt(resultDepth + 1, cgen);
 }
 
-static void inPlaceOp(Expr *expr, size_t resultDepth, MethodCodeGen *cgen) {
+static void inPlaceOp(Expr *expr, size_t resultDepth, OpcodeGen *cgen) {
     if (expr->right) {
         emitCodeForExpr(expr->right, 0, cgen);
     } else if (expr->kind == EXPR_POSTOP) {
@@ -528,7 +595,7 @@ static void inPlaceOp(Expr *expr, size_t resultDepth, MethodCodeGen *cgen) {
     }
 }
 
-static void inPlaceAttrOp(Expr *expr, MethodCodeGen *cgen) {
+static void inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
     size_t index, argumentCount;
     int isSuper;
     
@@ -579,7 +646,7 @@ static void inPlaceAttrOp(Expr *expr, MethodCodeGen *cgen) {
     CHECK_STACKP();
 }
 
-static void inPlaceIndexOp(Expr *expr, MethodCodeGen *cgen) {
+static void inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
     Expr *arg;
     size_t argumentCount;
     int isSuper;
@@ -623,7 +690,7 @@ static void inPlaceIndexOp(Expr *expr, MethodCodeGen *cgen) {
     CHECK_STACKP();
 }
 
-static void emitBranchForExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, MethodCodeGen *cgen) {
+static void emitBranchForExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, OpcodeGen *cgen) {
     for ( ; expr->next; expr = expr->next) {
         emitCodeForOneExpr(expr, 0, cgen);
         /* XXX: We could elide this 'pop' if 'expr' is a conditional expr. */
@@ -632,7 +699,7 @@ static void emitBranchForExpr(Expr *expr, int cond, size_t label, size_t fallThr
     emitBranchForOneExpr(expr, cond, label, fallThroughLabel, dup, cgen);
 }
 
-static void emitBranchForOneExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, MethodCodeGen *cgen) {
+static void emitBranchForOneExpr(Expr *expr, int cond, size_t label, size_t fallThroughLabel, int dup, OpcodeGen *cgen) {
     opcode_t pushOpcode;
     
     switch (expr->kind) {
@@ -704,13 +771,115 @@ static void emitBranchForOneExpr(Expr *expr, int cond, size_t label, size_t fall
     }
 }
 
+static void emitCodeForBlockBody(Stmt *body, Expr *valueExpr, OpcodeGen *cgen) {
+    Stmt *s;
+    
+    for (s = body; s; s = s->next) {
+        emitCodeForStmt(s, valueExpr->codeOffset, 0, 0, cgen);
+    }
+    emitCodeForExpr(valueExpr, 0, cgen);
+}
+
+static void emitCodeForBlock(Expr *expr, CodeGen *outer) {
+    CodeGen gcgen;
+    OpcodeGen *cgen; BlockCodeGen *bcg;
+    Stmt *body, *s;
+    Expr *valueExpr, voidDef, voidExpr;
+    size_t codeSize, stackSize;
+    opcode_t *opcodesBegin;
+    CodeGen *home;
+    
+    memset(&voidDef, 0, sizeof(voidDef));
+    memset(&voidExpr, 0, sizeof(voidExpr));
+    voidDef.kind = EXPR_NAME;
+    voidDef.sym = SpkSymbolNode_Get(SpkSymbol_get("void"));
+    voidDef.u.def.pushOpcode = OPCODE_PUSH_VOID;
+    voidExpr.kind = EXPR_NAME;
+    voidExpr.sym = voidDef.sym;
+    voidExpr.u.ref.def = &voidDef;
+    
+    valueExpr = expr->right ? expr->right : &voidExpr;
+    
+    /* push block code generator */
+    cgen = &gcgen.u.o;
+    cgen->generic = &gcgen;
+    cgen->generic->kind = CODE_GEN_BLOCK;
+    cgen->generic->outer = outer;
+    cgen->generic->module = outer->module;
+    cgen->generic->level = outer->level + 1;
+    bcg = &gcgen.u.o.u.block;
+    bcg->opcodeGen = &cgen->generic->u.o;
+    bcg->opcodeGen->generic = cgen->generic;
+    cgen->argumentCount = expr->aux.block.argumentCount;
+    cgen->varArgList = 0;
+    cgen->localCount = expr->aux.block.localCount;
+    
+    rewind(cgen, 0);
+    opcodesBegin = 0;
+    switch (outer->kind) {
+    case CODE_GEN_BLOCK:
+    case CODE_GEN_METHOD:
+        opcodesBegin = outer->u.o.opcodesBegin ? outer->u.o.opcodesBegin + outer->u.o.currentOffset : 0;
+        break;
+    default:
+        assert(0);
+    }
+    
+    body = expr->aux.block.stmtList;
+
+    /* dry run to compute offsets */
+    if (NESTING) {
+        save(cgen); /* XXX: 'stackSize' is zero here */
+    }
+    
+    emitCodeForBlockBody(body, valueExpr, cgen);
+    EMIT_OPCODE(OPCODE_RESTORE_CALLER);
+    EMIT_OPCODE(OPCODE_RET);
+    
+    if (opcodesBegin) {
+        /* now generate code for real */
+        
+        codeSize = cgen->currentOffset;
+        stackSize = cgen->stackSize + LEAF_STACK_SPACE;
+        
+        rewind(cgen, opcodesBegin);
+        
+        cgen->stackSize = stackSize;
+        if (NESTING) {
+            save(cgen);
+        }
+        cgen->stackSize = 0;
+        
+        emitCodeForBlockBody(body, valueExpr, cgen);
+        EMIT_OPCODE(OPCODE_RESTORE_CALLER);
+        EMIT_OPCODE(OPCODE_RET);
+        cgen->stackSize += LEAF_STACK_SPACE;
+        
+        assert(cgen->currentOffset == codeSize);
+        assert(cgen->stackSize == stackSize);
+    }
+    
+    outer->u.o.currentOffset += cgen->currentOffset;
+    outer->u.o.opcodesEnd = cgen->opcodesEnd;
+    
+    /* Guarantee that the home context is at least as big as the
+     * biggest child block context needs to be.  See
+     * Context_blockCopy().
+     */
+    for (home = outer; home->kind != CODE_GEN_METHOD; home = home->outer)
+        ;
+    if (cgen->stackPointer > home->u.o.stackSize) {
+        home->u.o.stackSize = cgen->stackPointer;
+    }
+}
+
 /****************************************************************************/
 /* statements */
 
 static void emitCodeForMethod(Stmt *stmt, CodeGen *cgen);
 static void emitCodeForClass(Stmt *stmt, CodeGen *cgen);
 
-static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabel, size_t continueLabel, MethodCodeGen *cgen) {
+static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabel, size_t continueLabel, OpcodeGen *cgen) {
     Stmt *s;
     size_t nextLabel, childNextLabel, elseLabel;
     
@@ -803,36 +972,9 @@ static void emitCodeForStmt(Stmt *stmt, size_t parentNextLabel, size_t breakLabe
     CHECK_STACKP();
 }
 
-static void rewind(MethodCodeGen *cgen) {
-    if (cgen->methodInstance) {
-        cgen->opcodesBegin = SpkMethod_OPCODES(cgen->methodInstance);
-        cgen->opcodesEnd = cgen->opcodesBegin;
-        cgen->currentOffset = 0;
-        cgen->stackPointer = cgen->stackSize = 0;
-        cgen->nMessageSends = 0;
-        cgen->nContextRefs = 0;
-    } else {
-        cgen->currentOffset = 0;
-        cgen->opcodesBegin = cgen->opcodesEnd = 0;
-        cgen->stackPointer = cgen->stackSize = 0;
-        cgen->nMessageSends = 0;
-        cgen->nContextRefs = 0;
-        cgen->inLeaf = 0;
-    }
-}
-
-static int isLeafMethod(Stmt *stmt, MethodCodeGen *cgen) {
-    return
-        cgen->nMessageSends == 0 &&
-        cgen->nContextRefs == 0 &&
-        cgen->stackSize <= LEAF_STACK_SPACE &&
-        stmt->u.method.localCount == 0 &&
-        !stmt->u.method.argList.var;
-}
-
 static void emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     CodeGen gcgen;
-    MethodCodeGen *cgen;
+    OpcodeGen *cgen; MethodCodeGen *mcg;
     Stmt *body, *s;
     Stmt sentinel;
     Symbol *messageSelector, *apply;
@@ -846,15 +988,20 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     sentinel.kind = STMT_RETURN;
     
     /* push method code generator */
-    cgen = &gcgen.u.method;
+    cgen = &gcgen.u.o;
     cgen->generic = &gcgen;
     cgen->generic->kind = CODE_GEN_METHOD;
     cgen->generic->outer = outer;
     cgen->generic->module = outer->module;
-    cgen->methodDef = stmt;
-    cgen->methodInstance = 0;
     cgen->generic->level = outer->level + 1;
-    rewind(cgen);
+    mcg = &gcgen.u.o.u.method;
+    mcg->opcodeGen = &cgen->generic->u.o;
+    mcg->opcodeGen->generic = cgen->generic;
+    mcg->methodInstance = 0;
+    cgen->argumentCount = stmt->u.method.argumentCount;
+    cgen->varArgList = stmt->u.method.argList.var ? 1 : 0;
+    cgen->localCount = stmt->u.method.localCount;
+    rewind(cgen, 0);
     
     body = stmt->top;
     assert(body->kind == STMT_COMPOUND);
@@ -867,27 +1014,27 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     
     /* dry run to compute offsets */
     if (thunk) EMIT_OPCODE(OPCODE_THUNK);
-    save(stmt, cgen); /* XXX: 'stackSize' is zero here */
+    save(cgen); /* XXX: 'stackSize' is zero here */
     
     emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen);
     emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
     
-    if (isLeafMethod(stmt, cgen)) {
+    if (inLeaf(cgen)) {
         stackSize = cgen->stackSize;
         
         /* re-compute offsets w/o save & restore */
-        rewind(cgen);
+        rewind(cgen, 0);
         cgen->inLeaf = 1;
         if (thunk) EMIT_OPCODE(OPCODE_THUNK);
-        leaf(stmt, cgen);
+        leaf(cgen);
         emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen);
         emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
         
         /* now generate code for real */
-        cgen->methodInstance = SpkMethod_new(cgen->currentOffset);
-        rewind(cgen);
+        mcg->methodInstance = SpkMethod_new(cgen->currentOffset);
+        rewind(cgen, SpkMethod_OPCODES(mcg->methodInstance));
         if (thunk) EMIT_OPCODE(OPCODE_THUNK);
-        leaf(stmt, cgen);
+        leaf(cgen);
         emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen);
         emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
 
@@ -895,12 +1042,12 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         stackSize = cgen->stackSize + LEAF_STACK_SPACE;
 
         /* now generate code for real */
-        cgen->methodInstance = SpkMethod_new(cgen->currentOffset);
-        rewind(cgen);
+        mcg->methodInstance = SpkMethod_new(cgen->currentOffset);
+        rewind(cgen, SpkMethod_OPCODES(mcg->methodInstance));
     
         if (thunk) EMIT_OPCODE(OPCODE_THUNK);
         cgen->stackSize = stackSize;
-        save(stmt, cgen);
+        save(cgen);
         cgen->stackSize = 0;
         
         emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen);
@@ -908,7 +1055,7 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         cgen->stackSize += LEAF_STACK_SPACE;
     }
 
-    assert(cgen->currentOffset == cgen->methodInstance->base.size);
+    assert(cgen->currentOffset == mcg->methodInstance->base.size);
     assert(cgen->stackSize == stackSize);
     
     for (s = body->top; s; s = s->next) {
@@ -926,19 +1073,19 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     
     switch (outer->kind) {
     case CODE_GEN_METHOD:
-        enclosingMethod = outer->u.method.methodInstance;
+        enclosingMethod = outer->u.o.u.method.methodInstance;
         if (!enclosingMethod->nestedMethodList.first) {
-            enclosingMethod->nestedMethodList.first = cgen->methodInstance;
+            enclosingMethod->nestedMethodList.first = mcg->methodInstance;
         } else {
-            enclosingMethod->nestedMethodList.last->nextInScope = cgen->methodInstance;
+            enclosingMethod->nestedMethodList.last->nextInScope = mcg->methodInstance;
         }
-        enclosingMethod->nestedMethodList.last = cgen->methodInstance;
+        enclosingMethod->nestedMethodList.last = mcg->methodInstance;
         break;
     case CODE_GEN_CLASS:
         SpkBehavior_insertMethod(outer->u.klass.classInstance,
                                  stmt->u.method.namespace,
                                  messageSelector,
-                                 cgen->methodInstance);
+                                 mcg->methodInstance);
         break;
     default:
         assert(0);
@@ -986,7 +1133,7 @@ static void emitCodeForClass(Stmt *stmt, CodeGen *outer) {
 
     switch (outer->kind) {
     case CODE_GEN_METHOD:
-        enclosingMethod = outer->u.method.methodInstance;
+        enclosingMethod = outer->u.o.u.method.methodInstance;
         if (!enclosingMethod->nestedClassList.first) {
             enclosingMethod->nestedClassList.first = cgen->classInstance;
         } else {
@@ -1137,7 +1284,7 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize,
     module = SpkModule_new(cgen->moduleClassInstance);
     module->firstClass = cgen->firstClass;
     module->literals = cgen->rodata;
-    globals = SpkModule_VARIABLES((Object *)module);
+    globals = SpkModule_VARIABLES(module);
     for (index = 0; index < dataSize; ++index) {
         globals[index] = Spk_uninit; /* XXX: null? */
     }

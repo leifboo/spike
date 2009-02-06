@@ -150,11 +150,22 @@ postfix_expr(r) ::= postfix_expr(expr) DEC.                                     
 %type primary_expr {Expr *}
 primary_expr(r) ::= IDENTIFIER(token).                                          { r = SpkParser_NewExpr(EXPR_NAME, 0, 0, 0, 0); r->sym = token.sym; }
 primary_expr(r) ::= SYMBOL(token).                                              { r = SpkParser_NewExpr(EXPR_SYMBOL, 0, 0, 0, 0); r->sym = token.sym; }
-primary_expr(r) ::= INT(token).                                                 { r = SpkParser_NewExpr(EXPR_INT, 0, 0, 0, 0); r->lit.intValue = token.lit.intValue; }
-primary_expr(r) ::= FLOAT(token).                                               { r = SpkParser_NewExpr(EXPR_FLOAT, 0, 0, 0, 0); r->lit.floatValue = token.lit.floatValue; }
-primary_expr(r) ::= CHAR(token).                                                { r = SpkParser_NewExpr(EXPR_CHAR, 0, 0, 0, 0); r->lit.charValue = token.lit.charValue; }
-primary_expr(r) ::= STR(token).                                                 { r = SpkParser_NewExpr(EXPR_STR, 0, 0, 0, 0); r->lit.strValue = token.lit.strValue; }
+primary_expr(r) ::= INT(token).                                                 { r = SpkParser_NewExpr(EXPR_INT, 0, 0, 0, 0); r->aux.lit.intValue = token.lit.intValue; }
+primary_expr(r) ::= FLOAT(token).                                               { r = SpkParser_NewExpr(EXPR_FLOAT, 0, 0, 0, 0); r->aux.lit.floatValue = token.lit.floatValue; }
+primary_expr(r) ::= CHAR(token).                                                { r = SpkParser_NewExpr(EXPR_CHAR, 0, 0, 0, 0); r->aux.lit.charValue = token.lit.charValue; }
+primary_expr(r) ::= STR(token).                                                 { r = SpkParser_NewExpr(EXPR_STR, 0, 0, 0, 0); r->aux.lit.strValue = token.lit.strValue; }
 primary_expr(r) ::= LPAREN expr(expr) RPAREN.                                   { r = expr.first; }
+primary_expr(r) ::= block(expr).                                                { r = expr; }
+
+%type block {Expr *}
+block(r) ::= LBRACK block_argument_list(args) statement_list(stmtList) expr(expr) RBRACK.
+                                                                                { r = SpkParser_NewBlock(args, stmtList.first, expr.first); } 
+block(r) ::= LBRACK block_argument_list(args) statement_list(stmtList) RBRACK.  { r = SpkParser_NewBlock(args, stmtList.first, 0); } 
+block(r) ::= LBRACK block_argument_list(args) expr(expr) RBRACK.                { r = SpkParser_NewBlock(args, 0, expr.first); } 
+
+%type block_argument_list {Expr *}
+block_argument_list(r) ::= expr_list(args) COLON.                               { r = args.first; }
+block_argument_list(r) ::= COLON.                                               { r = 0; }
 
 %type argument_list {ArgList}
 argument_list(r) ::= expr_list(f).                                              { r.fixed = f.first; r.var = 0; }

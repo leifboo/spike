@@ -25,6 +25,7 @@ enum Opcode {
     OPCODE_NOP,
     OPCODE_PUSH_LOCAL,
     OPCODE_PUSH_INST_VAR,
+    OPCODE_PUSH_GLOBAL,
     OPCODE_PUSH,
     OPCODE_PUSH_LITERAL,
     OPCODE_PUSH_SELF,
@@ -39,6 +40,7 @@ enum Opcode {
     OPCODE_PUSH_INT,
     OPCODE_STORE_LOCAL,
     OPCODE_STORE_INST_VAR,
+    OPCODE_STORE_GLOBAL,
     OPCODE_STORE,
     OPCODE_POP,
     OPCODE_ROT,
@@ -72,6 +74,7 @@ enum Opcode {
     OPCODE_RESTORE_CALLER,
     OPCODE_THUNK,
     OPCODE_CALL_THUNK,
+    OPCODE_CALL_BLOCK,
     OPCODE_CHECK_STACKP,
     
     NUM_OPCODES
@@ -92,8 +95,10 @@ struct Context {
             Method *method;
             struct Behavior *methodClass;
             Object *receiver;
+            Object **framep;
         } m;
         struct /* BlockContext */ {
+            size_t index;
             size_t nargs;
             opcode_t *startpc;
         } b;
@@ -193,6 +198,7 @@ typedef struct Interpreter {
     Context *newContext;
 
     /* special objects */
+    struct Symbol *selectorCannotReenterBlock;
     struct Symbol *selectorCannotReturn;
     struct Symbol *selectorDoesNotUnderstand;
     struct Symbol *selectorMustBeArray;
@@ -212,8 +218,10 @@ extern Null *Spk_null;
 extern Uninit *Spk_uninit;
 extern Void *Spk_void;
 
-extern struct Behavior *Spk_ClassMessage,*Spk_ClassMethod, *Spk_ClassThunk, *Spk_ClassContext, *Spk_ClassNull, *Spk_ClassUninit, *Spk_ClassVoid;
-extern struct SpkClassTmpl Spk_ClassMessageTmpl, Spk_ClassMethodTmpl, Spk_ClassThunkTmpl, Spk_ClassContextTmpl, Spk_ClassNullTmpl, Spk_ClassUninitTmpl, Spk_ClassVoidTmpl;
+extern struct Behavior *Spk_ClassMessage,*Spk_ClassMethod, *Spk_ClassThunk, *Spk_ClassContext, *Spk_ClassMethodContext, *Spk_ClassBlockContext;
+extern struct Behavior *Spk_ClassNull, *Spk_ClassUninit, *Spk_ClassVoid;
+extern struct SpkClassTmpl Spk_ClassMessageTmpl, Spk_ClassMethodTmpl, Spk_ClassThunkTmpl, Spk_ClassContextTmpl, Spk_ClassMethodContextTmpl, Spk_ClassBlockContextTmpl;
+extern struct SpkClassTmpl Spk_ClassNullTmpl, Spk_ClassUninitTmpl, Spk_ClassVoidTmpl;
 extern Interpreter *theInterpreter; /* XXX */
 
 
@@ -221,7 +229,6 @@ Message *SpkMessage_new(void);
 Method *SpkMethod_new(size_t);
 
 Context *SpkContext_new(size_t);
-Context *SpkContext_blockCopy(Context *, size_t, opcode_t *);
 void SpkContext_init(Context *, Context *);
 void SpkContext_initWithArg(Context *, Object *, Context *);
 

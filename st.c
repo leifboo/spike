@@ -69,7 +69,28 @@ void SpkSymbolTable_EnterScope(SymbolTable *st, int enterNewContext) {
     if (enterNewContext) {
         newContext = (ContextClass *)malloc(sizeof(ContextClass));
         newContext->scope = newScope;
-        newContext->level = outerScope ? outerScope->context->level + 1 : 0;
+        if (outerScope) {
+            newContext->level = outerScope->context->level + 1;
+            switch (outerScope->context->pushOpcode) {
+            case OPCODE_NOP:
+                newContext->pushOpcode = OPCODE_PUSH_GLOBAL;
+                newContext->storeOpcode = OPCODE_STORE_GLOBAL;
+                break;
+            case OPCODE_PUSH_GLOBAL:
+                newContext->pushOpcode = OPCODE_PUSH_INST_VAR;
+                newContext->storeOpcode = OPCODE_STORE_INST_VAR;
+                break;
+            case OPCODE_PUSH_INST_VAR:
+            case OPCODE_PUSH_LOCAL: /* nested block */
+                newContext->pushOpcode = OPCODE_PUSH_LOCAL;
+                newContext->storeOpcode = OPCODE_STORE_LOCAL;
+                break;
+            }
+        } else { /* built-in scope */
+            newContext->level = 0;
+            newContext->pushOpcode = OPCODE_NOP;
+            newContext->storeOpcode = OPCODE_NOP;
+        }
         newContext->nDefs = 0;
         newScope->context = newContext;
     } else {
@@ -133,6 +154,10 @@ void SpkSymbolTable_Insert(SymbolTable *st, Expr *def) {
     sym->entry = newEntry;
     
     def->u.def.level = cs->context->level;
+    if (cs->context->pushOpcode != OPCODE_NOP) { /* not built-in scope */
+        def->u.def.pushOpcode = cs->context->pushOpcode;
+        def->u.def.storeOpcode = cs->context->storeOpcode;
+    }
     /* XXX: We could overlap scopes with the addition of a 'clear'
        opcode. */
     def->u.def.index = cs->context->nDefs++;

@@ -14,6 +14,7 @@ typedef enum ExprKind {
     EXPR_ATTR,
     EXPR_ATTR_VAR,
     EXPR_BINARY,
+    EXPR_BLOCK,
     EXPR_CALL,
     EXPR_CHAR,
     EXPR_COND,
@@ -58,11 +59,18 @@ struct Expr {
     Expr *next, *nextArg, *cond, *left, *right, *var;
     struct SymbolNode *sym;
     union {
-        long intValue;
-        struct Float *floatValue;
-        struct Char *charValue;
-        struct VariableObject *strValue;
-    } lit;
+        union {
+            long intValue;
+            struct Float *floatValue;
+            struct Char *charValue;
+            struct VariableObject *strValue;
+        } lit;
+        struct {
+            Stmt *stmtList;
+            size_t argumentCount;
+            size_t localCount;
+        } block;
+    } aux;
     union {
         struct {
             Expr *def;
@@ -70,12 +78,12 @@ struct Expr {
             unsigned int level;
         } ref;
         struct {
-            unsigned int level;
+            /* XXX: These three should be shared. */
+            unsigned int level, /*opcode_t*/ pushOpcode, storeOpcode;
             unsigned int index;
             Expr *nextMultipleDef;
             Stmt *stmt;
             struct Object *initValue; /* XXX: Ugly? */
-            /*opcode_t*/ unsigned int pushOpcode;
         } def;
     } u;
     size_t codeOffset;

@@ -1,0 +1,78 @@
+#!/usr/bin/env spike
+
+
+// from chapter 2 of blue book
+
+page33() {
+    var incrementBlock, sumBlock;
+    var sum, index;
+    
+    incrementBlock = [: index += 1 ];
+    sumBlock = [: sum + index * index ];
+    sum = 0;
+    index = 1;
+    sum = sumBlock();
+    incrementBlock();
+    sum = sumBlock();
+    
+    "The sum is ".print(); sum.print(); ".\n".print();
+    "The index is ".print(); index.print(); ".\n".print();
+    
+    var amount;
+    amount = 1;
+    timesRepeat(4, [: amount += amount]);
+    "The amount is ".print(); amount.print(); ".\n".print();
+}
+
+timesRepeat(count, aBlock) {
+    while (count-- > 0)
+        aBlock();
+}
+
+
+// from "Classic Smalltalk Bugs" by Ralph Johnson
+// ftp://st.cs.uiuc.edu/pub/Smalltalk/st-docs/classic-bugs.txt
+
+amusingProblem() {
+    var anotherArray, aBlockArray;
+    
+    aBlockArray = Array.new(4);
+    anotherArray = Array.new(4);
+    anotherArray[0] = 1;
+    anotherArray[1] = 2;
+    anotherArray[2] = 4;
+    anotherArray[3] = 8;
+    
+    var range;
+    range = Range.new().init(0, aBlockArray.size);
+    range.eachItemDo(
+        [anIndex:
+         aBlockArray[anIndex] = [: anotherArray[anIndex] * 2]
+            ]);
+    
+    var i, result;
+    for (i = 0; i < aBlockArray.size; ++i) {
+        result = (aBlockArray[i])();
+        result.print(); '\n'.print();
+    }
+}
+
+class Range {
+    var begin, end;
+    
+    init(i, j) { begin = i; end = j; return self; }
+    
+    eachItemDo(block) {
+        var i;
+        for (i = begin; i < end; ++i) {
+            block(i);
+        }
+    }
+}
+
+
+main() {
+    page33();
+    amusingProblem();
+    return 0;
+}
