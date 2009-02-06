@@ -196,11 +196,11 @@ Object *SpkInterpreter_start(Object *obj, Symbol *selector, Array *argumentArray
     *ip++ = (opcode_t)0;
     *ip++ = OPCODE_RET_TRAMP;
     
-    context = SpkContext_new(LEAF_STACK_SPACE + 4);
+    context = SpkContext_new(4);
 
     context->caller = 0;
     context->pc = SpkMethod_OPCODES(trampoline);
-    context->stackp = &SpkContext_VARIABLES(context)[LEAF_STACK_SPACE + 4];
+    context->stackp = &SpkContext_VARIABLES(context)[4];
     context->homeContext = context;
     context->u.m.method = trampoline;
     context->u.m.methodClass = obj->klass;
@@ -211,7 +211,7 @@ Object *SpkInterpreter_start(Object *obj, Symbol *selector, Array *argumentArray
     *--context->stackp = obj;
     *--context->stackp = (Object *)selector;
     *--context->stackp = (Object *)argumentArray;
-    assert(context->stackp >= &SpkContext_VARIABLES(context)[LEAF_STACK_SPACE]);
+    assert(context->stackp >= &SpkContext_VARIABLES(context)[0]);
     
     fiber.nextLink = 0;
     fiber.suspendedContext = context;
@@ -280,17 +280,33 @@ Method *SpkMethod_new(size_t size) {
 
 Context *SpkContext_new(size_t size) {
     Context *newContext;
+    Object **p;
+    size_t count;
     
     newContext = (Context *)malloc(sizeof(Context) + size*sizeof(Object *));
     newContext->base.base.klass = Spk_ClassMethodContext;
     newContext->base.size = size;
+    
+    for (p = &newContext->leaf.arguments[0];
+         p < &newContext->leaf.arguments[LEAF_MAX_ARGUMENT_COUNT];
+         ++p)
+        *p = Spk_uninit;
+    for (p = &newContext->leaf.stack[0];
+         p < &newContext->leaf.stack[LEAF_MAX_STACK_SIZE];
+         ++p)
+        *p = Spk_uninit;
+    
+    count = size;
+    for (p = SpkContext_VARIABLES(newContext); count > 0; ++p, --count)
+        *p = Spk_uninit;
+    
     return newContext;
 }
 
 static Object *Context_blockCopy(Object *_self, Object *arg0, Object *arg1) {
     Context *self; Integer *arg;
     size_t index, numArgs;
-    size_t size, count;
+    size_t size;
     Context *newContext;
     Object **p;
     
@@ -313,12 +329,6 @@ static Object *Context_blockCopy(Object *_self, Object *arg0, Object *arg1) {
     newContext->u.b.index = index;
     newContext->u.b.nargs = numArgs;
     newContext->u.b.startpc = self->pc + 3; /* skip branch */
-    
-    /* initialize the stack */
-    count = size;
-    for (p = SpkContext_VARIABLES(newContext); count > 0; ++p, --count) {
-        *p = Spk_uninit;
-    }
     
     return (Object *)newContext;
 }
@@ -774,11 +784,12 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             goto send;
 
 /*** save/restore/return opcodes ***/
-        case OPCODE_RET_LEAF:
+        case OPCODE_RET_LEAF: {
             /* return from leaf method */
-            assert(!varArg); /* cleared by OPCODE_LEAF */
-            stackPointer[argumentCount + 1] = STACK_TOP();
-            POP(argumentCount + 1);
+            Object *result = POP_OBJECT();
+            stackPointer = self->activeContext->stackp;
+            POP(varArg + argumentCount + 1);
+            PUSH(result); }
         case OPCODE_RET:
  ret:       /* ret/retl (blr) */
             instructionPointer = linkRegister;
@@ -800,58 +811,68 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             
         case OPCODE_LEAF: {
             size_t fixedArgumentCount;
+            Object **p;
+            size_t i;
             
             DECODE_UINT(fixedArgumentCount);
             
             /* process arguments */
             if (varArg) {
                 Array *varArgArray;
-                size_t i;
                 
                 varArgArray = Spk_CAST(Array, stackPointer[0]);
                 if (!varArgArray) {
                     TRAP(self->selectorMustBeArray, 0);
                 }
-                argumentCount += varArgArray->size;
                 varArg = 0;
+                if (argumentCount + varArgArray->size != fixedArgumentCount) {
+                    TRAP(self->selectorWrongNumberOfArguments, 0);
+                }
+                
+                /* copy & reverse arguments from stack */
+                p = &self->activeContext->leaf.arguments[0];
+                framePointer = p;
+                for (i = 0; i < argumentCount; ++p, ++i) {
+                    *p = stackPointer[1 + argumentCount - i - 1];
+                }
+                
+                /* copy arguments from array */
+                for (i = 0; i < varArgArray->size; ++p, ++i) {
+                    *p = SpkArray_item(varArgArray, (long)i);
+                }
+                
+            } else {
                 if (argumentCount != fixedArgumentCount) {
                     TRAP(self->selectorWrongNumberOfArguments, 0);
                 }
                 
-                if (varArgArray->size > 0) {
-                    /* There must be enough stack space for all the
-                     * arguments; otherwise, this wouldn't be a leaf
-                     * method.
-                     */
-                    for (i = 1; i < varArgArray->size; ++i) {
-                        PUSH(SpkArray_item(varArgArray, (long)i));
-                    }
-                    /* replace array with 1st array arg */
-                    stackPointer[varArgArray->size - 1] = SpkArray_item(varArgArray, 0);
-                } else {
-                    POP(1); /* empty argument array */
+                /* copy & reverse arguments from stack */
+                p = &self->activeContext->leaf.arguments[0];
+                framePointer = p;
+                for (i = 0; i < fixedArgumentCount; ++p, ++i) {
+                    *p = stackPointer[argumentCount - i - 1];
                 }
-                
-                framePointer = stackPointer;
-                
-            } else if (argumentCount != fixedArgumentCount) {
-                TRAP(self->selectorWrongNumberOfArguments, 0);
             }
+            
+            for ( ; i < LEAF_MAX_ARGUMENT_COUNT; ++p, ++i) {
+                *p = Spk_uninit;
+            }
+            
+            /* initialize the stack */
+            p = &self->activeContext->leaf.stack[0];
+            for (i = 0; i < LEAF_MAX_STACK_SIZE; ++p, ++i) {
+                *p = Spk_uninit;
+            }
+            self->activeContext->stackp = stackPointer;
+            stackPointer = p;
             
             if (method->nativeCode) {
                 Object *result, *arg1 = 0, *arg2 = 0;
                 switch (argumentCount) {
-                case 0:
-                    break;
-                case 1:
-                    arg1 = stackPointer[0];
-                    break;
-                case 2:
-                    arg1 = stackPointer[1];
-                    arg2 = stackPointer[0];
-                    break;
-                default:
-                    assert(XXX);
+                case 2: arg2 = framePointer[1];
+                case 1: arg1 = framePointer[0];
+                case 0: break;
+                default: assert(XXX);
                 }
                 result = (*method->nativeCode)(receiver, arg1, arg2);
                 PUSH(result);
@@ -864,7 +885,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_SAVE: {
             /* save */
             size_t displaySize, fixedArgumentCount, localCount, stackSize;
-            size_t contextSize, i, j, count, varArgArraySize;
+            size_t contextSize, i, j, varArgArraySize;
             size_t excessStackArgCount, consumedArrayArgCount;
             Context *newContext;
             Array *varArgArray;
@@ -921,11 +942,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 }
             }
             
-            /* initialize the stack */
-            count = stackSize;
-            for (p = SpkContext_VARIABLES(newContext) /*(Object **)&display[i]*/; count > 0; ++p, --count) {
-                *p = Spk_uninit;
-            }
+            p = SpkContext_VARIABLES(newContext) + stackSize;
             newContext->stackp = newContext->u.m.framep = p;
             
             /* process arguments */
@@ -972,12 +989,6 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             
             /* clean up the caller's stack */
             POP(varArg + argumentCount + 1);
-            
-            /* initialize locals */
-            count = localCount;
-            for ( ; count > 0; ++p, --count) {
-                *p = Spk_uninit;
-            }
             
             self->activeContext->pc = linkRegister;
             self->activeContext->stackp = stackPointer;

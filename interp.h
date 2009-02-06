@@ -10,10 +10,6 @@
 #include <stddef.h>
 
 
-/* XXX: This is arbitrary. */
-#define LEAF_STACK_SPACE (4)
-
-
 typedef struct Method Method;
 typedef struct Context Context;
 typedef struct Fiber Fiber;
@@ -84,6 +80,12 @@ enum Opcode {
 typedef Object Null, Uninit, Void;
 
 
+enum {
+    /* These values are arbitrary. */
+    LEAF_MAX_ARGUMENT_COUNT = 3,
+    LEAF_MAX_STACK_SIZE = 5
+};
+
 struct Context {
     VariableObject base;
     Context *caller; /* a.k.a. "sender" */
@@ -103,6 +105,10 @@ struct Context {
             opcode_t *startpc;
         } b;
     } u;
+    struct { /* space reserved for leaf methods */
+        Object *arguments[LEAF_MAX_ARGUMENT_COUNT];
+        Object *stack[LEAF_MAX_STACK_SIZE];
+    } leaf;
 };
 
 typedef struct ContextSubclass {

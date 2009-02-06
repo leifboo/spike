@@ -79,7 +79,7 @@ static Method *newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
         *ip++ = 2; /* displaySize */
         *ip++ = (opcode_t)argumentCount;
         *ip++ = (opcode_t)variadic; /* localCount */
-        *ip++ = (opcode_t)3 + LEAF_STACK_SPACE; /* stackSize */
+        *ip++ = (opcode_t)3; /* stackSize */
         
         /* skip trampoline code */
         *ip++ = OPCODE_BRANCH_ALWAYS;
@@ -165,7 +165,7 @@ static Object *sendMessage(Interpreter *interpreter,
     *--thisContext->stackp = obj ? obj : thisContext->u.m.receiver;
     *--thisContext->stackp = (Object *)selector;
     *--thisContext->stackp = (Object *)argumentArray;
-    assert(thisContext->stackp >= &SpkContext_VARIABLES(thisContext)[LEAF_STACK_SPACE]);
+    assert(thisContext->stackp >= &SpkContext_VARIABLES(thisContext)[0]);
     
     /* interpret */
     result = SpkInterpreter_interpret(interpreter);

@@ -197,15 +197,6 @@ static void dupN(unsigned long n, OpcodeGen *cgen) {
     CHECK_STACKP();
 }
 
-static unsigned int indexOfVar(Expr *def, opcode_t opcode, OpcodeGen *cgen) {
-    /* In leaf methods, the arguments are reversed. */
-    return
-        (cgen->inLeaf &&
-         (opcode == OPCODE_PUSH_LOCAL || opcode == OPCODE_STORE_LOCAL))
-        ? cgen->argumentCount - def->u.def.index - 1
-        : def->u.def.index;
-}
-
 static void push(Expr *expr, int *super, OpcodeGen *cgen) {
     Expr *def;
     
@@ -237,13 +228,13 @@ static void push(Expr *expr, int *super, OpcodeGen *cgen) {
         activation = cgen->generic->level - def->u.def.level;
         EMIT_OPCODE(OPCODE_PUSH);
         encodeUnsignedInt(activation, cgen);
-        encodeUnsignedInt(indexOfVar(def, OPCODE_PUSH, cgen), cgen);
+        encodeUnsignedInt(def->u.def.index, cgen);
         tallyPush(cgen);
         return;
     }
     
     EMIT_OPCODE(def->u.def.pushOpcode);
-    encodeUnsignedInt(indexOfVar(def, def->u.def.pushOpcode, cgen), cgen);
+    encodeUnsignedInt(def->u.def.index, cgen);
     tallyPush(cgen);
 }
 
@@ -261,12 +252,12 @@ static void store(Expr *var, OpcodeGen *cgen) {
         activation = cgen->generic->level - def->u.def.level;
         EMIT_OPCODE(OPCODE_STORE);
         encodeUnsignedInt(activation, cgen);
-        encodeUnsignedInt(indexOfVar(def, OPCODE_STORE, cgen), cgen);
+        encodeUnsignedInt(def->u.def.index, cgen);
         return;
     }
     
     EMIT_OPCODE(def->u.def.storeOpcode);
-    encodeUnsignedInt(indexOfVar(def, def->u.def.storeOpcode, cgen), cgen);
+    encodeUnsignedInt(def->u.def.index, cgen);
 }
 
 static void save(OpcodeGen *cgen) {
@@ -286,7 +277,8 @@ static int inLeaf(OpcodeGen *cgen) {
     return
         cgen->nMessageSends == 0 &&
         cgen->nContextRefs == 0 &&
-        cgen->stackSize <= LEAF_STACK_SPACE &&
+        cgen->argumentCount <= LEAF_MAX_ARGUMENT_COUNT &&
+        cgen->stackSize <= LEAF_MAX_STACK_SIZE &&
         cgen->localCount == 0 &&
         !cgen->varArgList;
 }
@@ -840,7 +832,7 @@ static void emitCodeForBlock(Expr *expr, CodeGen *outer) {
         /* now generate code for real */
         
         codeSize = cgen->currentOffset;
-        stackSize = cgen->stackSize + LEAF_STACK_SPACE;
+        stackSize = cgen->stackSize;
         
         rewind(cgen, opcodesBegin);
         
@@ -853,7 +845,6 @@ static void emitCodeForBlock(Expr *expr, CodeGen *outer) {
         emitCodeForBlockBody(body, valueExpr, cgen);
         EMIT_OPCODE(OPCODE_RESTORE_CALLER);
         EMIT_OPCODE(OPCODE_RET);
-        cgen->stackSize += LEAF_STACK_SPACE;
         
         assert(cgen->currentOffset == codeSize);
         assert(cgen->stackSize == stackSize);
@@ -1039,7 +1030,7 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
 
     } else {
-        stackSize = cgen->stackSize + LEAF_STACK_SPACE;
+        stackSize = cgen->stackSize;
 
         /* now generate code for real */
         mcg->methodInstance = SpkMethod_new(cgen->currentOffset);
@@ -1052,7 +1043,6 @@ static void emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         
         emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen);
         emitCodeForStmt(&sentinel, 0, 0, 0, cgen);
-        cgen->stackSize += LEAF_STACK_SPACE;
     }
 
     assert(cgen->currentOffset == mcg->methodInstance->base.size);
