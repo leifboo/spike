@@ -65,6 +65,27 @@ Stmt *SpkParser_NewForStmt(Expr *expr1, Expr *expr2, Expr *expr3, Stmt *body) {
     return newStmt;
 }
 
+Stmt *SpkParser_NewForEachStmt(Expr *argList, Expr *expr, Stmt *body) {
+    Stmt *stmtList;
+    Expr *func;
+    
+    /*
+     * Rewrite "foreach (i: s) stmt" as "s.enumerate([i: stmt]);".
+     * This is our first macro of sorts.
+     */
+    
+    func = SpkParser_NewExpr(EXPR_ATTR, 0, 0, expr, 0);
+    func->sym = SpkSymbolNode_Get(SpkSymbol_get("enumerate"));
+    
+    stmtList = body->kind == STMT_COMPOUND ? body->top : body;
+    
+    return SpkParser_NewStmt(STMT_EXPR,
+                             SpkParser_NewExpr(EXPR_CALL, OPER_APPLY, 0,
+                                               func,
+                                               SpkParser_NewBlock(argList, stmtList, 0)),
+                             0, 0);
+}
+
 Expr *SpkParser_NewExpr(ExprKind kind, Oper oper, Expr *cond,
                         Expr *left, Expr *right) {
     Expr *newExpr;

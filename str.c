@@ -106,6 +106,32 @@ static Object *String_item(Object *_self, Object *arg0, Object *arg1) {
 
 
 /*------------------------------------------------------------------------*/
+/* methods -- attributes */
+
+static Object *String_size(Object *self, Object *arg0, Object *arg1) {
+    return (Object *)SpkInteger_fromLong(LEN((String *)self));
+}
+
+
+/*------------------------------------------------------------------------*/
+/* methods -- enumerating */
+
+static Object *String_enumerate(Object *_self, Object *arg0, Object *arg1) {
+    String *self;
+    size_t i;
+    Object *result;
+    
+    self = (String *)_self;
+    for (i = 0; i < LEN(self); ++i) {
+        result = Spk_call(theInterpreter, arg0, OPER_APPLY, SpkChar_fromChar(STR(self)[i]), 0);
+        if (!result)
+            return 0; /* unwind */
+    }
+    return Spk_void;
+}
+
+
+/*------------------------------------------------------------------------*/
 /* methods -- other */
 
 static Object *String_print(Object *_self, Object *arg0, Object *arg1) {
@@ -135,6 +161,11 @@ static SpkMethodTmpl methods[] = {
     { "__ne__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_ne     },
     /* call operators */
     { "__index__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_item },
+    /* attributes */
+    { "len", SpkNativeCode_ARGS_0, &String_size },
+    { "size", SpkNativeCode_ARGS_0, &String_size },
+    /* enumerating */
+    { "enumerate", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &String_enumerate },
     /* other */
     { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &String_print },
     { 0, 0, 0}

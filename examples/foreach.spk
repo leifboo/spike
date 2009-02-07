@@ -1,0 +1,17 @@
+#!/usr/bin/env spike
+
+abc() {
+    var alphabet;
+    
+    alphabet = "abcdefghijklmnopqrstuvwxyz";
+    foreach (letter: alphabet) {
+        letter.print();
+        ' '.print();
+    }
+    '\n'.print();
+}
+
+main() {
+    abc();
+    return 0;
+}

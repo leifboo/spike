@@ -109,6 +109,7 @@ struct Context {
         Object *arguments[LEAF_MAX_ARGUMENT_COUNT];
         Object *stack[LEAF_MAX_STACK_SIZE];
     } leaf;
+    int *mark;
 };
 
 typedef struct ContextSubclass {

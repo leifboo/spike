@@ -169,6 +169,8 @@ static Object *sendMessage(Interpreter *interpreter,
     
     /* interpret */
     result = SpkInterpreter_interpret(interpreter);
+    if (!result)
+        return 0; /* unwind */
     
     thisContext->pc = oldPC;
     assert(thisContext->stackp == oldSP);

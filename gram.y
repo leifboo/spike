@@ -41,6 +41,8 @@ open_statement(r) ::= FOR LPAREN expr(expr1) SEMI expr(expr2) SEMI             R
                                                                                 { r = SpkParser_NewForStmt(expr1.first, expr2.first,           0, body); }
 open_statement(r) ::= FOR LPAREN expr(expr1) SEMI expr(expr2) SEMI expr(expr3) RPAREN statement(body).
                                                                                 { r = SpkParser_NewForStmt(expr1.first, expr2.first, expr3.first, body); }
+open_statement(r) ::= FOREACH LPAREN block_argument_list(args) expr(expr) RPAREN statement(body).
+                                                                                { r = SpkParser_NewForEachStmt(args, expr.first, body); }
 
 %type closed_statement {Stmt *}
 closed_statement(r) ::= IF LPAREN expr(expr) RPAREN closed_statement(ifTrue)

@@ -300,6 +300,8 @@ Context *SpkContext_new(size_t size) {
     for (p = SpkContext_VARIABLES(newContext); count > 0; ++p, --count)
         *p = Spk_uninit;
     
+    newContext->mark = 0;
+
     return newContext;
 }
 
@@ -426,6 +428,12 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
     size_t argumentCount = 0, varArg = 0, variadic = 0;
     unsigned int operator;
     opcode_t *oldIP;
+    
+    /* unwinding */
+    int mark = 666;
+    
+    self->activeContext->mark = &mark;
+    assert(!self->activeContext->sender || self->activeContext->sender->mark); /* XXX */
     
  fetchContextRegisters:
     homeContext = self->activeContext->homeContext;
@@ -801,6 +809,12 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             instVarPointer = INSTANCE_VARS(receiver, methodClass);
             globalPointer = SpkModule_VARIABLES(methodClass->module);
             literalPointer = SpkModule_LITERALS(methodClass->module);
+            if (self->activeContext->mark != &mark) {
+                /* suspend */
+                self->activeContext->pc = linkRegister;
+                self->activeContext->stackp = stackPointer;
+                return 0; /* unwind */
+            }
             break;
         case OPCODE_RET_TRAMP: {
             /* return from trampoline */
@@ -824,7 +838,6 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 if (!varArgArray) {
                     TRAP(self->selectorMustBeArray, 0);
                 }
-                varArg = 0;
                 if (argumentCount + varArgArray->size != fixedArgumentCount) {
                     TRAP(self->selectorWrongNumberOfArguments, 0);
                 }
@@ -875,6 +888,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 default: assert(XXX);
                 }
                 result = (*method->nativeCode)(receiver, arg1, arg2);
+                assert(result);
                 PUSH(result);
             }
             break; }
@@ -910,6 +924,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             newContext->u.m.method = method;
             newContext->u.m.methodClass = methodClass;
             newContext->u.m.receiver = receiver;
+            newContext->mark = &mark;
             
             if (NESTING) {
                 /* build the display */
@@ -1008,7 +1023,13 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 default: assert(XXX);
                 }
                 result = (*method->nativeCode)(receiver, arg1, arg2);
-                PUSH(result);
+                if (result)
+                    PUSH(result);
+                else if (self->activeContext->mark != &mark)
+                    return 0; /* unwind */
+                else /* unwinding is done, and the result is already
+                        on the stack */
+                    goto fetchContextRegisters;
             }
             break; }
             
@@ -1092,19 +1113,45 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             if (blockContext->pc) {
                 TRAP(self->selectorCannotReenterBlock, 0);
             }
-            assert(!varArg); /* XXX */
-            if (argumentCount != blockContext->u.b.nargs) {
-                TRAP(self->selectorWrongNumberOfArguments, 0);
-            }
             
-            /* copy & reverse arguments from stack */
-            p = &blockContext->homeContext->u.m.framep[blockContext->u.b.index];
-            for (i = 0; i < argumentCount; ++p, ++i) {
-                *p = stackPointer[argumentCount - i - 1];
+            /* process arguments */
+            if (varArg) {
+                Array *varArgArray;
+                
+                varArgArray = Spk_CAST(Array, stackPointer[0]);
+                if (!varArgArray) {
+                    TRAP(self->selectorMustBeArray, 0);
+                }
+                if (argumentCount + varArgArray->size != blockContext->u.b.nargs) {
+                    TRAP(self->selectorWrongNumberOfArguments, 0);
+                }
+                
+                /* copy & reverse arguments from stack */
+                p = &blockContext->homeContext->u.m.framep[blockContext->u.b.index];
+                for (i = 0; i < argumentCount; ++p, ++i) {
+                    *p = stackPointer[1 + argumentCount - i - 1];
+                }
+                
+                /* copy arguments from array */
+                for (i = 0; i < varArgArray->size; ++p, ++i) {
+                    *p = SpkArray_item(varArgArray, (long)i);
+                }
+                
+            } else {
+                if (argumentCount != blockContext->u.b.nargs) {
+                    TRAP(self->selectorWrongNumberOfArguments, 0);
+                }
+                
+                /* copy & reverse arguments from stack */
+                p = &blockContext->homeContext->u.m.framep[blockContext->u.b.index];
+                for (i = 0; i < argumentCount; ++p, ++i) {
+                    *p = stackPointer[argumentCount - i - 1];
+                }
+                
             }
             
             /* clean up the caller's stack */
-            POP(argumentCount + 1);
+            POP(varArg + argumentCount + 1);
             
             /* suspend the caller */
             self->activeContext->pc = linkRegister;
@@ -1113,6 +1160,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             blockContext->caller = self->activeContext;
             blockContext->pc = blockContext->u.b.startpc;
             blockContext->stackp = &SpkContext_VARIABLES(blockContext)[blockContext->base.size];
+            blockContext->mark = &mark;
             self->activeContext = blockContext;
             goto fetchContextRegisters; }
             

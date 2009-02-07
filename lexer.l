@@ -38,6 +38,7 @@ static void lcomment(yyscan_t yyscanner);
 "do"			{ count(yyscanner); return TOKEN_DO; }
 "else"			{ count(yyscanner); return TOKEN_ELSE; }
 "for"			{ count(yyscanner); return TOKEN_FOR; }
+"foreach"		{ count(yyscanner); return TOKEN_FOREACH; }
 "if"			{ count(yyscanner); return TOKEN_IF; }
 "return"		{ count(yyscanner); return TOKEN_RETURN; }
 "var"			{ count(yyscanner); return TOKEN_VAR; }

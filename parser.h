@@ -18,6 +18,7 @@ Expr *SpkParser_NewExpr(ExprKind, Oper, Expr *, Expr *, Expr *);
 Expr *SpkParser_NewBlock(Expr *, Stmt *, Expr *);
 Stmt *SpkParser_NewStmt(StmtKind, Expr *, Stmt *, Stmt *);
 Stmt *SpkParser_NewForStmt(Expr *, Expr *, Expr *, Stmt *);
+Stmt *SpkParser_NewForEachStmt(Expr *, Expr *, Stmt *);
 Stmt *SpkParser_ParseFile(const char *filename);
 
 

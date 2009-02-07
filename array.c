@@ -49,6 +49,24 @@ static Object *Array_setItem(Object *_self, Object *arg0, Object *arg1) {
 
 
 /*------------------------------------------------------------------------*/
+/* methods -- enumerating */
+
+static Object *Array_enumerate(Object *_self, Object *arg0, Object *arg1) {
+    Array *self;
+    size_t i;
+    Object *result;
+    
+    self = (Array *)_self;
+    for (i = 0; i < self->size; ++i) {
+        result = Spk_call(theInterpreter, arg0, OPER_APPLY, ARRAY(self)[i], 0);
+        if (!result)
+            return 0; /* unwind */
+    }
+    return Spk_void;
+}
+
+
+/*------------------------------------------------------------------------*/
 /* methods -- other */
 
 static Object *Array_print(Object *_self, Object *arg0, Object *arg1) {
@@ -115,6 +133,8 @@ static SpkMethodTmpl methods[] = {
 #endif
     /* call operators */
     { "__index__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_item },
+    /* enumerating */
+    { "enumerate", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &Array_enumerate },
     /* other */
     { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Array_print },
     { 0, 0, 0}
