@@ -12,6 +12,7 @@
 #include "float.h"
 #include "int.h"
 #include "interp.h"
+#include "io.h"
 #include "metaclass.h"
 #include "module.h"
 #include "native.h"
@@ -31,11 +32,12 @@ static Behavior *Spk_ClassNULL_CLASS;
 #define CLASS_VAR(c) Spk_Class ## c
 #define CLASS_TMPL(c) Spk_Class ## c ## Tmpl
 
-#define BOOT_REC(c, v, s, i) {(Behavior **)&CLASS_VAR(c), &CLASS_TMPL(c), (Object **)&v, s, i}
+#define BOOT_REC(c, v, vn, s, i) {(Behavior **)&CLASS_VAR(c), &CLASS_TMPL(c), (Object **)&v, vn, s, i}
 
-#define METACLASS(c) BOOT_REC(Metaclass, CLASS_VAR(c), (Behavior **)&CLASS_VAR(Behavior), &CLASS_TMPL(c))
-#define CLASS(c, s) BOOT_REC(Class, CLASS_VAR(c), (Behavior **)&CLASS_VAR(s), &CLASS_TMPL(c))
-#define OBJECT(c, v) BOOT_REC(c, v, 0, 0)
+#define METACLASS(c) BOOT_REC(Metaclass, CLASS_VAR(c), 0, (Behavior **)&CLASS_VAR(Behavior), &CLASS_TMPL(c))
+#define CLASS(c, s) BOOT_REC(Class, CLASS_VAR(c), 0, (Behavior **)&CLASS_VAR(s), &CLASS_TMPL(c))
+#define OBJECT(c, v) BOOT_REC(c, v, 0, 0, 0)
+#define GLOBAL_VAR(c, v, vn) BOOT_REC(c, v, vn, 0, 0)
 
 
 static BootRec bootRec[] = {
@@ -65,12 +67,16 @@ static BootRec bootRec[] = {
     /**/CLASS(Integer, Object),
     /**/CLASS(Float,   Object),
     /**/CLASS(Char,    Object),
+    /**/CLASS(FileStream, Object),
     OBJECT(False,  Spk_false),
     OBJECT(True,   Spk_true),
     OBJECT(Module, Spk_builtInModule),
     OBJECT(Null,   Spk_null),
     OBJECT(Uninit, Spk_uninit),
     OBJECT(Void,   Spk_void),
+    GLOBAL_VAR(FileStream, Spk_stdin,  "stdin"),
+    GLOBAL_VAR(FileStream, Spk_stdout, "stdout"),
+    GLOBAL_VAR(FileStream, Spk_stderr, "stderr"),
     {0, 0}
 };
 
@@ -107,19 +113,22 @@ static void bootstrap() {
             }
         }
     }
-    
-    /* init methods */
     for (r = bootRec; r->var; ++r) {
         if (r->init) {
-            Class *c;
-            if ((c = Spk_CAST(Class, *r->var))) {
-                SpkClass_addMethodsFromTemplate(c, r->init);
+            SpkBehavior_inheritOperators((Behavior *)*r->var);
+            if ((*r->var)->klass == (Behavior *)Spk_ClassClass) {
+                SpkClass_addMethodsFromTemplate((Class *)*r->var, r->init);
             } else {
                 assert((*r->var)->klass == (Behavior *)Spk_ClassMetaclass);
                 SpkBehavior_addMethodsFromTemplate((Behavior *)*r->var, r->init);
             }
         }
     }
+    
+    /* init I/O */
+    Spk_stdin->stream = stdin;
+    Spk_stdout->stream = stdout;
+    Spk_stderr->stream = stderr;
 }
 
 

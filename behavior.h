@@ -90,6 +90,8 @@ typedef struct SpkClassTmpl {
     SpkAccessorTmpl *accessors;
     SpkMethodTmpl *methods;
     SpkMethodTmpl *lvalueMethods;
+    void (*zero)(Object *);
+    void (*dealloc)(Object *);
     traverse_t *traverse;
 } SpkClassTmpl;
 
@@ -103,6 +105,10 @@ struct Behavior {
         oper_table_t operTable;
         oper_call_table_t operCallTable;
     } ns[NUM_METHOD_NAMESPACES];
+    
+    /* low-level hooks */
+    void (*zero)(Object *);
+    void (*dealloc)(Object *);
     
     /* static chain */
     Object *outer;
@@ -134,7 +140,7 @@ typedef struct BehaviorSubclass {
 typedef struct BootRec {
     Behavior **klass;
     SpkClassTmpl *klassTmpl;
-    Object **var;
+    Object **var; const char *varName;
     Behavior **superclass;
     SpkClassTmpl *init;
 } BootRec;
@@ -148,6 +154,7 @@ Behavior *SpkBehavior_new(void);
 Behavior *SpkBehavior_fromTemplate(SpkClassTmpl *template, Behavior *superclass, struct Module *module);
 void SpkBehavior_init(Behavior *self, Behavior *superclass, struct Module *module, size_t instVarCount);
 void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavior *superclass, struct Module *module);
+void SpkBehavior_inheritOperators(Behavior *self);
 void SpkBehavior_addMethodsFromTemplate(Behavior *self, SpkClassTmpl *template);
 void SpkBehavior_insertMethod(Behavior *, MethodNamespace, struct Symbol *, Method *);
 Method *SpkBehavior_lookupMethod(Behavior *, MethodNamespace, struct Symbol *);

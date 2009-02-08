@@ -4,6 +4,7 @@
 
 
 #include "obj.h"
+#include <stdio.h>
 
 
 typedef VariableObject String;
@@ -15,6 +16,7 @@ extern struct SpkClassTmpl Spk_ClassStringTmpl;
 
 
 String *SpkString_fromLiteral(char *, size_t);
+String *SpkString_fromStream(FILE *, size_t);
 char *SpkString_asString(String *);
 
 

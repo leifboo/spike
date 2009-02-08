@@ -7,6 +7,7 @@
 #include "native.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 Behavior *Spk_ClassObject, *Spk_ClassVariableObject;
@@ -30,6 +31,30 @@ static Object *Object_ne(Object *self, Object *arg0, Object *arg1) {
 static Object *Object_print(Object *self, Object *arg0, Object *arg1) {
     printf("<%s instance at %p>", SpkBehavior_name(self->klass), self);
     return Spk_void;
+}
+
+
+/*------------------------------------------------------------------------*/
+/* low-level hooks */
+
+static void Object_zero(Object *_self) {
+    ObjectSubclass *self;
+    size_t i;
+    
+    self = (ObjectSubclass *)_self;
+    for (i = 0; i < self->base.klass->instVarCount; ++i) {
+        self->variables[i] = Spk_uninit;
+    }
+}
+
+static void Object_dealloc(Object *self) {
+}
+
+static void VariableObject_zero(Object *_self) {
+    VariableObject *self = (VariableObject *)_self;
+    (*self->base.klass->superclass->zero)(_self);
+    memset(SpkVariableObject_ITEM_BASE(self), 0,
+           self->size * self->base.klass->itemSize);
 }
 
 
@@ -80,6 +105,8 @@ SpkClassTmpl Spk_ClassObjectTmpl = {
     ObjectAccessors,
     ObjectMethods,
     0,
+    &Object_zero,
+    &Object_dealloc,
     &ObjectTraverse
 };
 
@@ -94,7 +121,9 @@ SpkClassTmpl Spk_ClassVariableObjectTmpl = {
     sizeof(VariableObject),
     0,
     0,
-    VariableObjectMethods
+    VariableObjectMethods,
+    0,
+    &VariableObject_zero
 };
 
 
@@ -144,6 +173,7 @@ void Spk_dealloc(Object *obj) {
             }
             (*current->klass->traverse.next)(current);
         }
+        (*current->klass->dealloc)(current);
         klass = (Object *)current->klass;
         free(current);
         if (--klass->refCount == 0) {

@@ -824,7 +824,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             return result; }
             
         case OPCODE_LEAF: {
-            size_t fixedArgumentCount;
+            size_t fixedArgumentCount, varArgArraySize;
             Object **p;
             size_t i;
             
@@ -835,10 +835,11 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 Array *varArgArray;
                 
                 varArgArray = Spk_CAST(Array, stackPointer[0]);
+                varArgArraySize = varArgArray->size;
                 if (!varArgArray) {
                     TRAP(self->selectorMustBeArray, 0);
                 }
-                if (argumentCount + varArgArray->size != fixedArgumentCount) {
+                if (argumentCount + varArgArraySize != fixedArgumentCount) {
                     TRAP(self->selectorWrongNumberOfArguments, 0);
                 }
                 
@@ -850,11 +851,12 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
                 }
                 
                 /* copy arguments from array */
-                for (i = 0; i < varArgArray->size; ++p, ++i) {
+                for (i = 0; i < varArgArraySize; ++p, ++i) {
                     *p = SpkArray_item(varArgArray, (long)i);
                 }
                 
             } else {
+                varArgArraySize = 0;
                 if (argumentCount != fixedArgumentCount) {
                     TRAP(self->selectorWrongNumberOfArguments, 0);
                 }
@@ -881,7 +883,7 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             
             if (method->nativeCode) {
                 Object *result, *arg1 = 0, *arg2 = 0;
-                switch (argumentCount) {
+                switch (argumentCount + varArgArraySize) {
                 case 2: arg2 = framePointer[1];
                 case 1: arg1 = framePointer[0];
                 case 0: break;

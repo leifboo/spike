@@ -55,7 +55,13 @@ static Object *Float_binaryLogicalOper(Float *self, Object *arg0, Oper oper) {
     Float *arg;
     Boolean *result;
     
-    assert(arg = Spk_CAST(Float, arg0)); /* XXX */
+    arg = Spk_CAST(Float, arg0);
+    if (!arg) switch (oper) {
+    case OPER_EQ: return Spk_false;
+    case OPER_NE: return Spk_true;
+    default: assert(0); /* XXX */
+    }
+    
     switch (oper) {
     case OPER_LT: result = BOOL(self->value < arg->value);  break;
     case OPER_GT: result = BOOL(self->value > arg->value);  break;

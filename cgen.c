@@ -1202,13 +1202,27 @@ static void createClassTree(Stmt *classDef, ModuleCodeGen *cgen) {
     }
 }
 
+static void initClassTreeOperTables(Stmt *classDef, ModuleCodeGen *cgen) {
+    /* create class with subclasses in preorder */
+    Behavior *theClass;
+    Stmt *subclassDef;
+    
+    theClass = Spk_CAST(Behavior, classDef->expr->u.def.initValue);
+    SpkBehavior_inheritOperators(theClass);
+    for (subclassDef = classDef->u.klass.firstSubclassDef;
+         subclassDef;
+         subclassDef = subclassDef->u.klass.nextSubclassDef) {
+        initClassTreeOperTables(subclassDef, cgen);
+    }
+}
+
 /****************************************************************************/
 
-static void initClassVars(Object **globals, Stmt *stmtList) {
+static void initGlobalVars(Object **globals, Stmt *stmtList) {
     Stmt *s;
     
     for (s = stmtList; s; s = s->next) {
-        if (s->kind == STMT_DEF_CLASS) {
+        if (s->kind == STMT_DEF_CLASS || s->kind == STMT_DEF_VAR) {
             globals[s->expr->u.def.index] = s->expr->u.def.initValue;
         }
     }
@@ -1270,6 +1284,11 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize,
     /* Generate code. */
     emitCodeForModule(tree, cgen);
     
+    /* Finish initializing classes. XXX: Do class init right! */
+    for (s = rootClassList; s; s = s->u.klass.nextRootClassDef) {
+        initClassTreeOperTables(s, cgen);
+    }
+    
     /* Create and initialize the module. */
     module = SpkModule_new(cgen->moduleClassInstance);
     module->firstClass = cgen->firstClass;
@@ -1279,8 +1298,8 @@ Module *SpkCodeGen_generateCode(Stmt *tree, unsigned int dataSize,
         globals[index] = Spk_uninit; /* XXX: null? */
     }
     /* XXX: This stuff should happen at runtime, with binding! */
-    initClassVars(globals, predefList);
-    initClassVars(globals, tree->top->top);
+    initGlobalVars(globals, predefList);
+    initGlobalVars(globals, tree->top->top);
     initThunks(globals, module, tree->top->top);
 
     /* Patch 'module', 'outer' attributes of classes. */

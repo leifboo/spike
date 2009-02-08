@@ -1,5 +1,6 @@
 #!/usr/bin/env spike
 
 main() {
-    "Hello, world.\n".print();
+    stdout.puts("Hello, world.\n");
+    return 0;
 }

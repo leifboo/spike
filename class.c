@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 
 struct Behavior *Spk_ClassClass;
@@ -53,13 +52,10 @@ static Object *Class_new(Object *_self, Object *arg0, Object *arg1) {
     newObject = (ObjectSubclass *)malloc(self->base.instanceSize + itemArraySize);
     newObject->base.refCount = 1;
     newObject->base.klass = (Behavior *)self;
-    for (i = 0; i < self->base.instVarCount; ++i) {
-        newObject->variables[i] = Spk_uninit;
-    }
     if (poly == Spk_ClassVariableObject) {
         ((VariableObject *)newObject)->size = (size_t)nItems;
-        memset(SpkVariableObject_ITEM_BASE(newObject), 0, itemArraySize);
     }
+    (*self->base.zero)((Object *)newObject);
     return (Object *)newObject;
 }
 

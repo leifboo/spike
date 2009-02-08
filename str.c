@@ -29,7 +29,13 @@ static Object *String_binaryLogicalOper(String *self, Object *arg0, Oper oper) {
     String *arg;
     Boolean *result;
     
-    assert(arg = Spk_CAST(String, arg0)); /* XXX */
+    arg = Spk_CAST(String, arg0);
+    if (!arg) switch (oper) {
+    case OPER_EQ: return Spk_false;
+    case OPER_NE: return Spk_true;
+    default: assert(0); /* XXX */
+    }
+    
     switch (oper) {
     case OPER_LT: result = BOOL(strcmp(STR(self), STR(arg)) < 0);  break;
     case OPER_GT: result = BOOL(strcmp(STR(self), STR(arg)) > 0);  break;
@@ -231,6 +237,21 @@ String *SpkString_fromLiteral(char *str, size_t len) {
     
     *d++ = '\0';
     result->size = d - STR(result);
+    return result;
+}
+
+String *SpkString_fromStream(FILE *stream, size_t size) {
+    String *result;
+    char *buffer;
+    
+    result = (String *)malloc(sizeof(String) + size);
+    result->base.klass = Spk_ClassString;
+    buffer = STR(result);
+    if (!fgets(buffer, size, stream)) {
+        free(result);
+        return 0;
+    }
+    result->size = strlen(buffer) + 1;
     return result;
 }
 

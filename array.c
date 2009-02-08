@@ -159,6 +159,8 @@ SpkClassTmpl Spk_ClassArrayTmpl = {
     accessors,
     methods,
     lvalueMethods,
+    0,
+    0,
     &traverse
 };
 

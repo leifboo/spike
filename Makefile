@@ -14,6 +14,7 @@ obj = \
 	gram.o \
 	int.o \
 	interp.o \
+	io.o \
 	lexer.o \
 	metaclass.o \
 	module.o \

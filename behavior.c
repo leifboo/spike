@@ -111,16 +111,11 @@ void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size
     
     if (superclass) {
         
-        for (namespace = 0; namespace < NUM_METHOD_NAMESPACES; ++namespace) {
-            for (i = 0; i < NUM_OPER; ++i) {
-                self->ns[namespace].operTable[i].method = superclass->ns[namespace].operTable[i].method;
-                self->ns[namespace].operTable[i].methodClass = superclass->ns[namespace].operTable[i].methodClass;
-            }
-            for (i = 0; i < NUM_CALL_OPER; ++i) {
-                self->ns[namespace].operCallTable[i].method = superclass->ns[namespace].operCallTable[i].method;
-                self->ns[namespace].operCallTable[i].methodClass = superclass->ns[namespace].operCallTable[i].methodClass;
-            }
-        }
+        SpkBehavior_inheritOperators(self);
+        
+        /* low-level hooks */
+        self->zero = superclass->zero;
+        self->dealloc = superclass->dealloc;
         
         /* memory layout of instances */
         self->traverse = superclass->traverse;
@@ -141,6 +136,10 @@ void SpkBehavior_init(Behavior *self, Behavior *superclass, Module *module, size
                 self->ns[namespace].operCallTable[i].methodClass = 0;
             }
         }
+        
+        /* low-level hooks */
+        self->zero = 0;
+        self->dealloc = 0;
         
         /* memory layout of instances */
         self->traverse.init = 0;
@@ -172,6 +171,8 @@ void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavi
     
     SpkBehavior_init(self, superclass, module, 0);
     
+    self->zero = template->zero;
+    self->dealloc = template->dealloc;
     if (template->traverse) {
         self->traverse = *template->traverse;
     }
@@ -228,11 +229,9 @@ void SpkBehavior_addMethodsFromTemplate(Behavior *self, SpkClassTmpl *template) 
     }
 }
 
-void SpkBehavior_insertMethod(Behavior *self, MethodNamespace namespace, Symbol *messageSelector, Method *method) {
+static void maybeAccelerateMethod(Behavior *self, MethodNamespace namespace, Symbol *messageSelector, Method *method) {    
     char *name;
     Oper operator;
-    
-    SpkIdentityDictionary_atPut(self->ns[namespace].methodDict, (Object *)messageSelector, (Object *)method);
     
     name = messageSelector->str;
     if (name[0] == '_' && name[1] == '_') {
@@ -255,6 +254,44 @@ void SpkBehavior_insertMethod(Behavior *self, MethodNamespace namespace, Symbol 
             assert(operator < NUM_OPER);
         }
     }
+}
+
+void SpkBehavior_inheritOperators(Behavior *self) {
+    size_t i;
+    MethodNamespace namespace;
+    Behavior *superclass;
+    
+    superclass = self->superclass;
+    if (!superclass)
+        return;
+    
+    for (namespace = 0; namespace < NUM_METHOD_NAMESPACES; ++namespace) {
+        for (i = 0; i < NUM_OPER; ++i) {
+            self->ns[namespace].operTable[i].method = superclass->ns[namespace].operTable[i].method;
+            self->ns[namespace].operTable[i].methodClass = superclass->ns[namespace].operTable[i].methodClass;
+        }
+        for (i = 0; i < NUM_CALL_OPER; ++i) {
+            self->ns[namespace].operCallTable[i].method = superclass->ns[namespace].operCallTable[i].method;
+            self->ns[namespace].operCallTable[i].methodClass = superclass->ns[namespace].operCallTable[i].methodClass;
+        }
+    }
+    
+    /* re-insert our own methods */
+    for (namespace = 0; namespace < NUM_METHOD_NAMESPACES; ++namespace) {
+        IdentityDictionary *methodDict = self->ns[namespace].methodDict;
+        for (i = 0; i < methodDict->size; ++i) {
+            Method *method = (Method *)methodDict->valueArray[i];;
+            if (method) {
+                Symbol *messageSelector = (Symbol *)methodDict->keyArray[i];
+                maybeAccelerateMethod(self, namespace, messageSelector, method);
+            }
+        }
+    }
+}
+
+void SpkBehavior_insertMethod(Behavior *self, MethodNamespace namespace, Symbol *messageSelector, Method *method) {
+    SpkIdentityDictionary_atPut(self->ns[namespace].methodDict, (Object *)messageSelector, (Object *)method);
+    maybeAccelerateMethod(self, namespace, messageSelector, method);
 }
 
 Method *SpkBehavior_lookupMethod(Behavior *self, MethodNamespace namespace, Symbol *messageSelector) {

@@ -62,7 +62,13 @@ static Object *Integer_binaryLogicalOper(Integer *self, Object *arg0, Oper oper)
     Integer *arg;
     Boolean *result;
     
-    assert(arg = Spk_CAST(Integer, arg0)); /* XXX */
+    arg = Spk_CAST(Integer, arg0);
+    if (!arg) switch (oper) {
+    case OPER_EQ: return Spk_false;
+    case OPER_NE: return Spk_true;
+    default: assert(0); /* XXX */
+    }
+    
     switch (oper) {
     case OPER_LT: result = BOOL(self->value < arg->value);  break;
     case OPER_GT: result = BOOL(self->value > arg->value);  break;

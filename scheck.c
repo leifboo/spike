@@ -463,6 +463,27 @@ static Stmt *predefinedClassDef(Class *predefClass) {
     return newStmt;
 }
 
+static Stmt *globalVarDef(const char *name) {
+    Stmt *newStmt;
+    
+    newStmt = (Stmt *)malloc(sizeof(Stmt));
+    memset(newStmt, 0, sizeof(Stmt));
+    newStmt->kind = STMT_DEF_VAR;
+    newStmt->expr = newNameExpr();
+    newStmt->expr->sym = SpkSymbolNode_Get(SpkSymbol_get(name));
+    newStmt->expr->u.def.stmt = newStmt;
+    return newStmt;
+}
+
+static void addPredef(StmtList *predefList, Stmt *def) {
+    if (!predefList->first) {
+        predefList->first = def;
+    } else {
+        predefList->last->next = def;
+    }
+    predefList->last = def;
+}
+
 int SpkStaticChecker_Check(Stmt *tree, BootRec *bootRec,
                            unsigned int *pDataSize,
                            StmtList *predefList, StmtList *rootClassList) {
@@ -484,12 +505,12 @@ int SpkStaticChecker_Check(Stmt *tree, BootRec *bootRec,
             Stmt *classDef = predefinedClassDef(c);
             SpkSymbolTable_Insert(checker.st, classDef->expr);
             classDef->expr->u.def.initValue = *bootRec->var;
-            if (!predefList->first) {
-                predefList->first = classDef;
-            } else {
-                predefList->last->next = classDef;
-            }
-            predefList->last = classDef;
+            addPredef(predefList, classDef);
+        } else if (bootRec->varName) {
+            Stmt *varDef = globalVarDef(bootRec->varName);
+            SpkSymbolTable_Insert(checker.st, varDef->expr);
+            varDef->expr->u.def.initValue = *bootRec->var;
+            addPredef(predefList, varDef);
         }
     }
     
