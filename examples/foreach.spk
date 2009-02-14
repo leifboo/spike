@@ -5,10 +5,9 @@ abc() {
     
     alphabet = "abcdefghijklmnopqrstuvwxyz";
     foreach (letter: alphabet) {
-        letter.print();
-        ' '.print();
+        stdout.printf("%c ", letter);
     }
-    '\n'.print();
+    stdout.putc('\n');
 }
 
 main() {

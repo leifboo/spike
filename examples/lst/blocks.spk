@@ -2,29 +2,29 @@
 
 class Main {
     main() {
-        ifTrue(2 < 3, [: "correct-1\n".print()]);
-        (ifTrue(2 < 3, [: "correct-2\n"])).print();
-        ([x: x.print()])("correct-3\n");
-        ifTrue(2 < 3 || 3 < 4, [: "correct-4\n".print()]);
-        ifTrue(2 > 3 || 3 < 4, [: "correct-5\n".print()]);
-        ifTrue(2 < 3 && 3 < 4, [: "correct-6\n".print()]);
-        ifFalse(2 > 3 && 3 < 4, [: "correct-7\n".print()]);
-        self.test1().print();
+        ifTrue(2 < 3, [: stdout.puts("correct-1\n")]);
+        stdout.puts(ifTrue(2 < 3, [: "correct-2\n"]));
+        ([x: stdout.puts(x)])("correct-3\n");
+        ifTrue(2 < 3 || 3 < 4, [: stdout.puts("correct-4\n")]);
+        ifTrue(2 > 3 || 3 < 4, [: stdout.puts("correct-5\n")]);
+        ifTrue(2 < 3 && 3 < 4, [: stdout.puts("correct-6\n")]);
+        ifFalse(2 > 3 && 3 < 4, [: stdout.puts("correct-7\n")]);
+        stdout.puts(self.test1());
     }
 
     test1() {
         self.test2([: return "correct-8\n";]);
-        "should not print\n".print();
+        stdout.puts("should not print\n");
     }
     
     test2(aBlock) {
         self.test3(aBlock);
-        "should not print\n".print();
+        stdout.puts("should not print\n");
     }
     
     test3(bBlock) {
         bBlock();
-        "should not print\n".print();
+        stdout.puts("should not print\n");
     }
 }
 

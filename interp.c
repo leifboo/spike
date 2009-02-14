@@ -507,19 +507,6 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
         case OPCODE_PUSH_NULL:     PUSH(Spk_null);             break;
         case OPCODE_PUSH_VOID:     PUSH(Spk_void);             break;
         case OPCODE_PUSH_CONTEXT:  PUSH(self->activeContext);  break;
-        case OPCODE_DUP: {
-            Object *temp;
-            temp = STACK_TOP();
-            PUSH(temp);
-            break; }
-        case OPCODE_DUP_N: {
-            Object **s;
-            size_t n;
-            DECODE_UINT(n);
-            s = stackPointer + n;
-            while (n--)
-                *--stackPointer = *--s;
-            break; }
         case OPCODE_PUSH_INT: {
             long value;
             DECODE_SINT(value);
@@ -546,6 +533,19 @@ Object *SpkInterpreter_interpret(Interpreter *self) {
             break;
             
 /*** additional stack opcodes ***/
+        case OPCODE_DUP: {
+            Object *temp;
+            temp = STACK_TOP();
+            PUSH(temp);
+            break; }
+        case OPCODE_DUP_N: {
+            Object **s;
+            size_t n;
+            DECODE_UINT(n);
+            s = stackPointer + n;
+            while (n--)
+                *--stackPointer = *--s;
+            break; }
         case OPCODE_POP:
             POP(1);
             break;

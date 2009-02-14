@@ -55,11 +55,7 @@ class Queen {
     printBoard() {
         if (neighbor !== null)
             neighbor.printBoard();
-        "Col ".print();
-        column.print();
-        " Row ".print();
-        row.print();
-        "\n".print();
+        stdout.printf("Col %d Row %d\n", column, row);
     }
 }
 

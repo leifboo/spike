@@ -5,8 +5,7 @@ main() {
     
     i = 1;
     while (i < 3) {
-        i.print();
-        '\n'.print();
+        stdout.printf("%d\n", i);
         i = i + 1;
     }
     return 0;

@@ -212,3 +212,7 @@ Float *SpkFloat_fromLiteral(char *str, size_t len) {
     result->value = strtod(str, 0);
     return result;
 }
+
+double SpkFloat_asDouble(Float *self) {
+    return self->value;
+}

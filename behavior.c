@@ -171,11 +171,12 @@ void SpkBehavior_initFromTemplate(Behavior *self, SpkClassTmpl *template, Behavi
     
     SpkBehavior_init(self, superclass, module, 0);
     
-    self->zero = template->zero;
-    self->dealloc = template->dealloc;
-    if (template->traverse) {
+    if (template->zero)
+        self->zero = template->zero;
+    if (template->dealloc)
+        self->dealloc = template->dealloc;
+    if (template->traverse)
         self->traverse = *template->traverse;
-    }
     self->instVarOffset = template->instVarOffset;
     self->instanceSize = template->instanceSize;
     self->itemSize = template->itemSize;

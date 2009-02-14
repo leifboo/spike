@@ -15,9 +15,9 @@ main() {
     vy = 0.0;
     y = 10.0;
     
-    "t\ty\tvy\n".print();
+    stdout.printf("t\ty\tvy\n");
     for ( ; t < totalTime; t += dt) {
-        t.print(); '\t'.print(); y.print(); '\t'.print(); vy.print(); '\n'.print();
+        stdout.printf("%e\t%e\t%e\n", t, y, vy);
         
         vy += dvy; // compute change in velocity
         y += vy * dt; // compute change in position

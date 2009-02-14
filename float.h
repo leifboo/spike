@@ -22,6 +22,7 @@ extern struct SpkClassTmpl Spk_ClassFloatTmpl;
 
 
 Float *SpkFloat_fromLiteral(char *, size_t);
+double SpkFloat_asDouble(Float *);
 
 
 #endif /* __float_h__ */

@@ -52,7 +52,7 @@ static void Object_dealloc(Object *self) {
 
 static void VariableObject_zero(Object *_self) {
     VariableObject *self = (VariableObject *)_self;
-    (*self->base.klass->superclass->zero)(_self);
+    (*Spk_ClassVariableObject->superclass->zero)(_self);
     memset(SpkVariableObject_ITEM_BASE(self), 0,
            self->size * self->base.klass->itemSize);
 }

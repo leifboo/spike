@@ -19,6 +19,6 @@ main() {
     sum = acc(10);
     sum = acc(20);
     sum = acc(2);
-    sum.print(); '\n'.print();
+    stdout.printf("%d\n", sum);
     return 0;
 }

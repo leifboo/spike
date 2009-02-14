@@ -37,15 +37,18 @@ main() {
     example2 = Two.new();
     example3 = Three.new();
     example4 = Four.new();
-    example1.test().print(); '\n'.print();
-    example1.result1().print(); '\n'.print();
-    example2.test().print(); '\n'.print();
-    example2.result1().print(); '\n'.print();
-    example3.test().print(); '\n'.print();
-    example4.result1().print(); '\n'.print();
-    example3.result2().print(); '\n'.print();
-    example4.result2().print(); '\n'.print();
-    example3.result3().print(); '\n'.print();
-    example4.result3().print(); '\n'.print();
+    
+    stdout.printf("%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
+                  example1.test(),
+                  example1.result1(),
+                  example2.test(),
+                  example2.result1(),
+                  example3.test(),
+                  example4.result1(),
+                  example3.result2(),
+                  example4.result2(),
+                  example3.result3(),
+                  example4.result3()
+        );
     return 0;
 }

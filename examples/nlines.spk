@@ -9,7 +9,7 @@ main() {
         return 1;
     }
     for (i = 1; (line = stream.gets(160)) != null; ++i) {
-        i.print(); ": ".print(); line.print();
+        stdout.printf("%04d: %s", i, line);
     }
     stream.close();
     return 0;

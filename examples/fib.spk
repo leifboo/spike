@@ -6,9 +6,6 @@ fib(x) {
 }
 
 main() {
-    var result;
-    result = fib(10);
-    result.print();
-    "\n".print();
+    stdout.printf("%d\n", fib(10));
     return 0;
 }

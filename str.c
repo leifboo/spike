@@ -258,3 +258,7 @@ String *SpkString_fromStream(FILE *stream, size_t size) {
 char *SpkString_asString(String *self) {
     return STR(self);
 }
+
+size_t SpkString_size(String *self) {
+    return self->size;
+}
