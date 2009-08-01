@@ -2704,7 +2704,10 @@ char *suffix;
     fprintf(stderr,"Can't allocate space for a filename.\n");
     exit(1);
   }
-  strcpy(name,lemp->filename);
+  /* 2009-07-16 lcs: Put output files in working directory. */
+  cp = strrchr(lemp->filename, '/');
+  cp = cp ? cp + 1 : lemp->filename;
+  strcpy(name,cp);
   cp = strrchr(name,'.');
   if( cp ) *cp = 0;
   strcat(name,suffix);
@@ -3063,6 +3066,15 @@ struct lemon *lemp;
     tpltname = templatename;
   }else{
     tpltname = pathsearch(lemp->argv0,templatename,0);
+    if (access(tpltname,004)!=0)
+      tpltname=0;
+  }
+  if (!tpltname && (cp = strrchr(lemp->filename,'/'))) {
+    /* 2009-07-16 lcs */
+    sprintf(buf,"%.*s/%s",(int)(cp-lemp->filename),lemp->filename,templatename);
+    if( access(buf,004)==0 ){
+      tpltname = buf;
+    }
   }
   if( tpltname==0 ){
     fprintf(stderr,"Can't find the parser driver template file \"%s\".\n",

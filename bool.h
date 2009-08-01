@@ -1,17 +1,23 @@
 
-#ifndef __bool_h__
-#define __bool_h__
+#ifndef __spk_bool_h__
+#define __spk_bool_h__
 
 
 #include "obj.h"
 
 
-typedef Object Boolean;
+#ifndef MALTIPY
+
+typedef SpkObject SpkBoolean;
 
 
-extern struct Behavior *Spk_ClassBoolean, *Spk_ClassFalse, *Spk_ClassTrue;
+extern struct SpkBehavior *Spk_ClassBoolean, *Spk_ClassFalse, *Spk_ClassTrue;
 extern struct SpkClassTmpl Spk_ClassBooleanTmpl, Spk_ClassFalseTmpl, Spk_ClassTrueTmpl;
-extern Boolean *Spk_false, *Spk_true;
+
+#endif /* !MALTIPY */
 
 
-#endif /* __bool_h__ */
+extern SpkUnknown *Spk_false, *Spk_true;
+
+
+#endif /* __spk_bool_h__ */

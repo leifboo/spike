@@ -1,168 +1,169 @@
 
 #include "float.h"
 
-#include "behavior.h"
 #include "bool.h"
-#include "interp.h"
-#include "module.h"
-#include <assert.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "class.h"
+#include "native.h"
 
 
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
 
 
-Behavior *Spk_ClassFloat;
+SpkBehavior *Spk_ClassFloat;
 
 
 /*------------------------------------------------------------------------*/
 /* method helpers */
 
-static Object *Float_unaryOper(Float *self, Oper oper) {
-    Float *result;
+static SpkUnknown *Float_unaryOper(SpkFloat *self, SpkOper oper) {
+    SpkFloat *result;
     
-    result = (Float *)malloc(sizeof(Float));
-    result->base.klass = Spk_ClassFloat;
+    result = (SpkFloat *)SpkObject_New(Spk_ClassFloat);
     switch (oper) {
-    case OPER_SUCC: result->value = self->value + 1; break;
-    case OPER_PRED: result->value = self->value - 1; break;
-    case OPER_POS:  result->value = +self->value;    break;
-    case OPER_NEG:  result->value = -self->value;    break;
-    default: assert(0);
+    case Spk_OPER_SUCC: result->value = self->value + 1; break;
+    case Spk_OPER_PRED: result->value = self->value - 1; break;
+    case Spk_OPER_POS:  result->value = +self->value;    break;
+    case Spk_OPER_NEG:  result->value = -self->value;    break;
+    default:
+        Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+        return 0;
     }
-    return (Object *)result;
+    return (SpkUnknown *)result;
 }
 
-static Object *Float_binaryOper(Float *self, Object *arg0, Oper oper) {
-    Float *arg, *result;
+static SpkUnknown *Float_binaryOper(SpkFloat *self, SpkUnknown *arg0, SpkOper oper) {
+    SpkFloat *arg, *result;
     
-    assert(arg = Spk_CAST(Float, arg0)); /* XXX */
-    result = (Float *)malloc(sizeof(Float));
-    result->base.klass = Spk_ClassFloat;
-    switch (oper) {
-    case OPER_MUL:    result->value = self->value * arg->value;  break;
-    case OPER_DIV:    result->value = self->value / arg->value;  break;
-    case OPER_ADD:    result->value = self->value + arg->value;  break;
-    case OPER_SUB:    result->value = self->value - arg->value;  break;
-    default: assert(0);
+    arg = Spk_CAST(Float, arg0);
+    if (!arg) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a float is required");
+        return 0;
     }
-    return (Object *)result;
+    result = (SpkFloat *)SpkObject_New(Spk_ClassFloat);
+    switch (oper) {
+    case Spk_OPER_MUL: result->value = self->value * arg->value;  break;
+    case Spk_OPER_DIV: result->value = self->value / arg->value;  break;
+    case Spk_OPER_ADD: result->value = self->value + arg->value;  break;
+    case Spk_OPER_SUB: result->value = self->value - arg->value;  break;
+    default:
+        Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+        return 0;
+    }
+    return (SpkUnknown *)result;
 }
 
-static Object *Float_binaryLogicalOper(Float *self, Object *arg0, Oper oper) {
-    Float *arg;
-    Boolean *result;
+static SpkUnknown *Float_binaryLogicalOper(SpkFloat *self, SpkUnknown *arg0, SpkOper oper) {
+    SpkFloat *arg;
+    SpkUnknown *result;
     
     arg = Spk_CAST(Float, arg0);
     if (!arg) switch (oper) {
-    case OPER_EQ: return Spk_false;
-    case OPER_NE: return Spk_true;
-    default: assert(0); /* XXX */
+    case Spk_OPER_EQ:
+        /* XXX: 0.0 == 0 */
+        Spk_INCREF(Spk_false);
+        return Spk_false;
+    case Spk_OPER_NE:
+        Spk_INCREF(Spk_true);
+        return Spk_true;
+    default:
+        Spk_Halt(Spk_HALT_ASSERTION_ERROR, "XXX");
+        return 0;
     }
     
     switch (oper) {
-    case OPER_LT: result = BOOL(self->value < arg->value);  break;
-    case OPER_GT: result = BOOL(self->value > arg->value);  break;
-    case OPER_LE: result = BOOL(self->value <= arg->value); break;
-    case OPER_GE: result = BOOL(self->value >= arg->value); break;
-    case OPER_EQ: result = BOOL(self->value == arg->value); break;
-    case OPER_NE: result = BOOL(self->value != arg->value); break;
-    default: assert(0);
+    case Spk_OPER_LT: result = BOOL(self->value < arg->value);  break;
+    case Spk_OPER_GT: result = BOOL(self->value > arg->value);  break;
+    case Spk_OPER_LE: result = BOOL(self->value <= arg->value); break;
+    case Spk_OPER_GE: result = BOOL(self->value >= arg->value); break;
+    case Spk_OPER_EQ: result = BOOL(self->value == arg->value); break;
+    case Spk_OPER_NE: result = BOOL(self->value != arg->value); break;
+    default:
+        Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+        return 0;
     }
-    return (Object *)result;
+    Spk_INCREF(result);
+    return result;
 }
 
 
 /*------------------------------------------------------------------------*/
 /* methods -- operators */
 
-/* OPER_SUCC */
-static Object *Float_succ(Object *self, Object *arg0, Object *arg1) {
-    return Float_unaryOper((Float *)self, OPER_SUCC);
+/* Spk_OPER_SUCC */
+static SpkUnknown *Float_succ(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_unaryOper((SpkFloat *)self, Spk_OPER_SUCC);
 }
 
-/* OPER_PRED */
-static Object *Float_pred(Object *self, Object *arg0, Object *arg1) {
-    return Float_unaryOper((Float *)self, OPER_PRED);
+/* Spk_OPER_PRED */
+static SpkUnknown *Float_pred(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_unaryOper((SpkFloat *)self, Spk_OPER_PRED);
 }
 
-/* OPER_POS */
-static Object *Float_pos(Object *self, Object *arg0, Object *arg1) {
-    return Float_unaryOper((Float *)self, OPER_POS);
+/* Spk_OPER_POS */
+static SpkUnknown *Float_pos(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_unaryOper((SpkFloat *)self, Spk_OPER_POS);
 }
 
-/* OPER_NEG */
-static Object *Float_neg(Object *self, Object *arg0, Object *arg1) {
-    return Float_unaryOper((Float *)self, OPER_NEG);
+/* Spk_OPER_NEG */
+static SpkUnknown *Float_neg(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_unaryOper((SpkFloat *)self, Spk_OPER_NEG);
 }
 
-/* OPER_LNEG */
-static Object *Float_lneg(Object *self, Object *arg0, Object *arg1) {
-    return BOOL(!((Float *)self)->value);
+/* Spk_OPER_LNEG */
+static SpkUnknown *Float_lneg(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkUnknown *result = BOOL(!((SpkFloat *)self)->value);
+    Spk_INCREF(result);
+    return result;
 }
 
-/* OPER_MUL */
-static Object *Float_mul(Object *self, Object *arg0, Object *arg1) {
-    return Float_binaryOper((Float *)self, arg0, OPER_MUL);
+/* Spk_OPER_MUL */
+static SpkUnknown *Float_mul(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_binaryOper((SpkFloat *)self, arg0, Spk_OPER_MUL);
 }
 
-/* OPER_DIV */
-static Object *Float_div(Object *self, Object *arg0, Object *arg1) {
-    return Float_binaryOper((Float *)self, arg0, OPER_DIV);
+/* Spk_OPER_DIV */
+static SpkUnknown *Float_div(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_binaryOper((SpkFloat *)self, arg0, Spk_OPER_DIV);
 }
 
-/* OPER_ADD */
-static Object *Float_add(Object *self, Object *arg0, Object *arg1) {
-    return Float_binaryOper((Float *)self, arg0, OPER_ADD);
+/* Spk_OPER_ADD */
+static SpkUnknown *Float_add(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_binaryOper((SpkFloat *)self, arg0, Spk_OPER_ADD);
 }
 
-/* OPER_SUB */
-static Object *Float_sub(Object *self, Object *arg0, Object *arg1) {
-    return Float_binaryOper((Float *)self, arg0, OPER_SUB);
+/* Spk_OPER_SUB */
+static SpkUnknown *Float_sub(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_binaryOper((SpkFloat *)self, arg0, Spk_OPER_SUB);
 }
 
-/* OPER_LT */
-static Object *Float_lt(Object *self, Object *arg0, Object *arg1) {
-    return Float_binaryLogicalOper((Float *)self, arg0, OPER_LT);
+/* Spk_OPER_LT */
+static SpkUnknown *Float_lt(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_binaryLogicalOper((SpkFloat *)self, arg0, Spk_OPER_LT);
 }
 
-/* OPER_GT */
-static Object *Float_gt(Object *self, Object *arg0, Object *arg1) {
-    return Float_binaryLogicalOper((Float *)self, arg0, OPER_GT);
+/* Spk_OPER_GT */
+static SpkUnknown *Float_gt(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_binaryLogicalOper((SpkFloat *)self, arg0, Spk_OPER_GT);
 }
 
-/* OPER_LE */
-static Object *Float_le(Object *self, Object *arg0, Object *arg1) {
-    return Float_binaryLogicalOper((Float *)self, arg0, OPER_LE);
+/* Spk_OPER_LE */
+static SpkUnknown *Float_le(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_binaryLogicalOper((SpkFloat *)self, arg0, Spk_OPER_LE);
 }
 
-/* OPER_GE */
-static Object *Float_ge(Object *self, Object *arg0, Object *arg1) {
-    return Float_binaryLogicalOper((Float *)self, arg0, OPER_GE);
+/* Spk_OPER_GE */
+static SpkUnknown *Float_ge(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_binaryLogicalOper((SpkFloat *)self, arg0, Spk_OPER_GE);
 }
 
-/* OPER_EQ */
-static Object *Float_eq(Object *self, Object *arg0, Object *arg1) {
-    return Float_binaryLogicalOper((Float *)self, arg0, OPER_EQ);
+/* Spk_OPER_EQ */
+static SpkUnknown *Float_eq(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_binaryLogicalOper((SpkFloat *)self, arg0, Spk_OPER_EQ);
 }
 
-/* OPER_NE */
-static Object *Float_ne(Object *self, Object *arg0, Object *arg1) {
-    return Float_binaryLogicalOper((Float *)self, arg0, OPER_NE);
-}
-
-
-/*------------------------------------------------------------------------*/
-/* methods -- other */
-
-static Object *Float_print(Object *_self, Object *arg0, Object *arg1) {
-    Float *self;
-    
-    self = (Float *)_self;
-    printf("%e", self->value);
-    return Spk_void;
+/* Spk_OPER_NE */
+static SpkUnknown *Float_ne(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Float_binaryLogicalOper((SpkFloat *)self, arg0, Spk_OPER_NE);
 }
 
 
@@ -186,33 +187,31 @@ static SpkMethodTmpl methods[] = {
     { "__ge__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Float_ge     },
     { "__eq__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Float_eq     },
     { "__ne__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Float_ne     },
-    /* other */
-    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Float_print },
     { 0, 0, 0}
 };
 
 SpkClassTmpl Spk_ClassFloatTmpl = {
-    "Float",
-    offsetof(FloatSubclass, variables),
-    sizeof(Float),
-    0,
-    0,
-    methods
+    "Float", {
+        /*accessors*/ 0,
+        methods,
+        /*lvalueMethods*/ 0,
+        offsetof(SpkFloatSubclass, variables)
+    }, /*meta*/ {
+    }
 };
 
 
 /*------------------------------------------------------------------------*/
 /* C API */
 
-Float *SpkFloat_fromLiteral(char *str, size_t len) {
-    Float *result;
+SpkFloat *SpkFloat_fromCDouble(double value) {
+    SpkFloat *result;
     
-    result = (Float *)malloc(sizeof(Float));
-    result->base.klass = Spk_ClassFloat;
-    result->value = strtod(str, 0);
+    result = (SpkFloat *)SpkObject_New(Spk_ClassFloat);
+    result->value = value;
     return result;
 }
 
-double SpkFloat_asDouble(Float *self) {
+double SpkFloat_asDouble(SpkFloat *self) {
     return self->value;
 }

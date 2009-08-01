@@ -1,21 +1,21 @@
 
 #include "dict.h"
 
-#include "behavior.h"
-#include <assert.h>
+#include "class.h"
+#include "native.h"
 #include <stdlib.h>
 
 
-#define HASH(key) (mask & ((size_t)(key) / sizeof(Object *)))
+#define HASH(key) (mask & ((size_t)(key) / sizeof(SpkUnknown *)))
 
 
-struct Behavior *Spk_ClassIdentityDictionary;
+struct SpkBehavior *Spk_ClassIdentityDictionary;
 
 
 /*------------------------------------------------------------------------*/
 /* methods */
 
-Object *SpkIdentityDictionary_at(IdentityDictionary *self, Object *key) {
+SpkUnknown *SpkIdentityDictionary_at(SpkIdentityDictionary *self, SpkUnknown *key) {
     size_t mask, start, i;
     
     mask = self->size - 1;
@@ -23,12 +23,14 @@ Object *SpkIdentityDictionary_at(IdentityDictionary *self, Object *key) {
     
     for (i = start; i < self->size; ++i) {
         if (self->keyArray[i] == key) {
+            Spk_INCREF(self->valueArray[i]);
             return self->valueArray[i];
         }
     }
     
     for (i = 0; i < start; ++i) {
         if (self->keyArray[i] == key) {
+            Spk_INCREF(self->valueArray[i]);
             return self->valueArray[i];
         }
     }
@@ -36,18 +38,19 @@ Object *SpkIdentityDictionary_at(IdentityDictionary *self, Object *key) {
     return 0;
 }
 
-Object *SpkIdentityDictionary_keyAtValue(IdentityDictionary *self, Object *value) {
+SpkUnknown *SpkIdentityDictionary_keyAtValue(SpkIdentityDictionary *self, SpkUnknown *value) {
     size_t i;
     
     for (i = 0; i < self->size; ++i) {
         if (value == self->valueArray[i]) {
+            Spk_INCREF(self->keyArray[i]);
             return self->keyArray[i];
         }
     }
     return 0;
 }
 
-void SpkIdentityDictionary_atPut(IdentityDictionary *self, Object *key, Object *value) {
+void SpkIdentityDictionary_atPut(SpkIdentityDictionary *self, SpkUnknown *key, SpkUnknown *value) {
     size_t mask, start, i, o;
     
     mask = self->size - 1;
@@ -57,6 +60,8 @@ void SpkIdentityDictionary_atPut(IdentityDictionary *self, Object *key, Object *
         if (!self->keyArray[i]) {
             goto insert;
         } else if (self->keyArray[i] == key) {
+            Spk_INCREF(value);
+            Spk_DECREF(self->valueArray[i]);
             self->valueArray[i] = value;
             return;
         }
@@ -66,14 +71,19 @@ void SpkIdentityDictionary_atPut(IdentityDictionary *self, Object *key, Object *
         if (!self->keyArray[i]) {
             goto insert;
         } else if (self->keyArray[i] == key) {
+            Spk_INCREF(value);
+            Spk_DECREF(self->valueArray[i]);
             self->valueArray[i] = value;
             return;
         }
     }
     
-    assert(0 && "not reached");
+    Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+    return;
     
  insert:
+    Spk_INCREF(key);
+    Spk_INCREF(value);
     self->keyArray[i] = key;
     self->valueArray[i] = value;
     ++self->tally;
@@ -81,15 +91,15 @@ void SpkIdentityDictionary_atPut(IdentityDictionary *self, Object *key, Object *
     if (self->size - self->tally < self->size / 4 + 1) {
         /* grow */
         size_t oldSize;
-        Object **oldKeyArray, **oldValueArray;
+        SpkUnknown **oldKeyArray, **oldValueArray;
         
         oldSize = self->size;
         oldKeyArray = self->keyArray;
         oldValueArray = self->valueArray;
         
         self->size <<= 1;
-        self->keyArray = (Object **)calloc(self->size, sizeof(Object *));
-        self->valueArray = (Object **)calloc(self->size, sizeof(Object *));
+        self->keyArray = (SpkUnknown **)calloc(self->size, sizeof(SpkUnknown *));
+        self->valueArray = (SpkUnknown **)calloc(self->size, sizeof(SpkUnknown *));
         
         mask = self->size - 1;
         for (o = 0; o < oldSize; ++o) {
@@ -107,7 +117,8 @@ void SpkIdentityDictionary_atPut(IdentityDictionary *self, Object *key, Object *
                         goto reinsert;
                     }
                 }
-                assert(0 && "not reached");
+                Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+                return;
  reinsert:
                 self->keyArray[i] = key;
                 self->valueArray[i] = value;
@@ -119,15 +130,14 @@ void SpkIdentityDictionary_atPut(IdentityDictionary *self, Object *key, Object *
     }
 }
 
-IdentityDictionary *SpkIdentityDictionary_new(void) {
-    IdentityDictionary *self;
+SpkIdentityDictionary *SpkIdentityDictionary_new(void) {
+    SpkIdentityDictionary *self;
     
-    self = (IdentityDictionary *)malloc(sizeof(IdentityDictionary));
-    self->base.klass = Spk_ClassIdentityDictionary;
+    self = (SpkIdentityDictionary *)SpkObject_New(Spk_ClassIdentityDictionary);
     self->size = 2; /* must be a power of 2 */
     self->tally = 0;
-    self->keyArray = (Object **)calloc(self->size, sizeof(Object *));
-    self->valueArray = (Object **)calloc(self->size, sizeof(Object *));
+    self->keyArray = (SpkUnknown **)calloc(self->size, sizeof(SpkUnknown *));
+    self->valueArray = (SpkUnknown **)calloc(self->size, sizeof(SpkUnknown *));
     return self;
 }
 
@@ -140,10 +150,11 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl Spk_ClassIdentityDictionaryTmpl = {
-    "IdentityDictionary",
-    offsetof(IdentityDictionarySubclass, variables),
-    sizeof(IdentityDictionary),
-    0,
-    0,
-    methods
+    "IdentityDictionary", {
+        /*accessors*/ 0,
+        methods,
+        /*lvalueMethods*/ 0,
+        offsetof(SpkIdentityDictionarySubclass, variables)
+    }, /*meta*/ {
+    }
 };

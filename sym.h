@@ -1,23 +1,24 @@
 
-#ifndef __sym_h__
-#define __sym_h__
+#ifndef __spk_sym_h__
+#define __spk_sym_h__
 
 
 #include "obj.h"
 
 
-typedef struct Symbol {
-    Object base;
+typedef struct SpkSymbol {
+    SpkObject base;
     size_t hash;
     char str[1];
-} Symbol;
+} SpkSymbol;
 
 
-extern struct Behavior *Spk_ClassSymbol;
+extern struct SpkBehavior *Spk_ClassSymbol;
 extern struct SpkClassTmpl Spk_ClassSymbolTmpl;
 
 
-Symbol *SpkSymbol_get(const char *str);
+SpkSymbol *SpkSymbol_get(const char *str);
+SpkSymbol *SpkSymbol_fromCStringAndLength(const char *str, size_t len);
 
 
-#endif /* __sym_h__ */
+#endif /* __spk_sym_h__ */

@@ -1,24 +1,26 @@
 
-#ifndef __str_h__
-#define __str_h__
+#ifndef __spk_str_h__
+#define __spk_str_h__
 
 
 #include "obj.h"
 #include <stdio.h>
 
 
-typedef VariableObject String;
-typedef VariableObjectSubclass StringSubclass;
+typedef SpkVariableObject SpkString;
+typedef SpkVariableObjectSubclass SpkStringSubclass;
 
 
-extern struct Behavior *Spk_ClassString;
+extern struct SpkBehavior *Spk_ClassString;
 extern struct SpkClassTmpl Spk_ClassStringTmpl;
 
 
-String *SpkString_fromLiteral(char *, size_t);
-String *SpkString_fromStream(FILE *, size_t);
-char *SpkString_asString(String *);
-size_t SpkString_size(String *);
+SpkString *SpkString_fromCString(const char *);
+SpkString *SpkString_fromCStringAndLength(const char *, size_t);
+SpkString *SpkString_fromStream(FILE *, size_t);
+SpkString *SpkString_concat(SpkString **, SpkString *);
+char *SpkString_asString(SpkString *);
+size_t SpkString_size(SpkString *);
 
 
-#endif /* __str_h__ */
+#endif /* __spk_str_h__ */

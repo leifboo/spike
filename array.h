@@ -1,6 +1,6 @@
 
-#ifndef __array_h__
-#define __array_h__
+#ifndef __spk_array_h__
+#define __spk_array_h__
 
 
 #include "obj.h"
@@ -8,19 +8,20 @@
 #include <stdarg.h>
 
 
-typedef VariableObject Array;
-typedef VariableObjectSubclass ArraySubclass;
+typedef SpkVariableObject SpkArray;
+typedef SpkVariableObjectSubclass SpkArraySubclass;
 
 
-extern struct Behavior *Spk_ClassArray;
+extern struct SpkBehavior *Spk_ClassArray;
 extern struct SpkClassTmpl Spk_ClassArrayTmpl;
 
 
-Array *SpkArray_new(size_t);
-Array *SpkArray_withArguments(Object **, size_t, Array *, size_t);
-Array *SpkArray_fromVAList(va_list);
-size_t SpkArray_size(Array *);
-Object *SpkArray_item(Array *, long);
+SpkArray *SpkArray_new(size_t);
+SpkArray *SpkArray_withArguments(SpkUnknown **, size_t, SpkArray *, size_t);
+SpkArray *SpkArray_fromVAList(va_list);
+size_t SpkArray_size(SpkArray *);
+SpkUnknown *SpkArray_item(SpkArray *, long);
+SpkUnknown *SpkArray_setItem(SpkArray *, long, SpkUnknown *);
 
 
-#endif /* __array_h__ */
+#endif /* __spk_array_h__ */

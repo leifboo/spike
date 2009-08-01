@@ -2,97 +2,126 @@
 #include "io.h"
 
 #include "array.h"
-#include "behavior.h"
 #include "bool.h"
 #include "char.h"
+#include "class.h"
 #include "float.h"
 #include "int.h"
+#include "native.h"
 #include "str.h"
 
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
 
-Behavior *Spk_ClassFileStream;
-FileStream *Spk_stdin, *Spk_stdout, *Spk_stderr;
+SpkBehavior *Spk_ClassFileStream;
+SpkFileStream *Spk_stdin, *Spk_stdout, *Spk_stderr;
 
 
 /*------------------------------------------------------------------------*/
 /* attributes */
 
-static Object *FileStream_eof(Object *_self, Object *arg0, Object *arg1) {
-    FileStream *self;
+static SpkUnknown *FileStream_eof(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkFileStream *self;
+    SpkUnknown *result;
     
-    self = (FileStream *)_self;
-    return self->stream
-           ? (feof(self->stream) ? Spk_true : Spk_false)
-           : Spk_true;
+    self = (SpkFileStream *)_self;
+    result = self->stream
+             ? (feof(self->stream) ? Spk_true : Spk_false)
+             : Spk_true;
+    Spk_INCREF(result);
+    return result;
 }
 
 
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static Object *FileStream_close(Object *_self, Object *arg0, Object *arg1) {
-    FileStream *self;
+static SpkUnknown *FileStream_close(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkFileStream *self;
     
-    self = (FileStream *)_self;
+    self = (SpkFileStream *)_self;
     if (self->stream) {
         fclose(self->stream);
         self->stream = 0;
     }
+    Spk_INCREF(Spk_void);
     return Spk_void;
 }
 
-static Object *FileStream_flush(Object *_self, Object *arg0, Object *arg1) {
-    FileStream *self;
+static SpkUnknown *FileStream_flush(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkFileStream *self;
     
-    self = (FileStream *)_self;
+    self = (SpkFileStream *)_self;
     if (self->stream)
         fflush(self->stream);
+    Spk_INCREF(Spk_void);
     return Spk_void;
 }
 
-static Object *FileStream_getc(Object *_self, Object *arg0, Object *arg1) {
-    FileStream *self;
+static SpkUnknown *FileStream_getc(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkFileStream *self;
     int c;
     
-    self = (FileStream *)_self;
-    if (!self->stream)
+    self = (SpkFileStream *)_self;
+    if (!self->stream) {
+        Spk_INCREF(Spk_null);
         return Spk_null;
+    }
     c = fgetc(self->stream);
-    if (c == EOF)
+    if (c == EOF) {
+        Spk_INCREF(Spk_null);
         return Spk_null;
-    return (Object *)SpkChar_fromChar((char)c);
+    }
+    return (SpkUnknown *)SpkChar_FromChar((char)c);
 }
 
-static Object *FileStream_gets(Object *_self, Object *arg0, Object *arg1) {
-    FileStream *self;
-    Integer *size;
-    String *s;
+static SpkUnknown *FileStream_gets(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkFileStream *self;
+    SpkInteger *size;
+    SpkString *s;
+    SpkUnknown *result;
     
-    self = (FileStream *)_self;
-    assert(size = Spk_CAST(Integer, arg0)); /* XXX */
-    if (!self->stream)
+    self = (SpkFileStream *)_self;
+    size = Spk_CAST(Integer, arg0);
+    if (!size) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
+        return 0;
+    }
+    if (!self->stream) {
+        Spk_INCREF(Spk_null);
         return Spk_null;
+    }
     s = SpkString_fromStream(self->stream, (size_t)SpkInteger_asLong(size));
-    return s ? (Object *)s : Spk_null;
+    result = s ? (SpkUnknown *)s : Spk_null;
+    Spk_INCREF(result);
+    return result;
 }
 
-static Object *FileStream_printf(Object *_self, Object *arg0, Object *arg1) {
-    FileStream *self;
-    Array *args; size_t nArgs, argIndex;
-    String *formatString; char *format; size_t formatSize;
+static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkFileStream *self;
+    SpkArray *args; size_t nArgs, argIndex;
+    SpkString *formatString; char *format; size_t formatSize;
     char c, convOp, *f, *chunk;
-    Object *arg; Char *charArg; Integer *intArg; Float *floatArg; String *strArg;
+    SpkUnknown *arg; SpkChar *charArg; SpkInteger *intArg; SpkFloat *floatArg; SpkString *strArg;
     static char *convOps = "cdeEfgGinopsuxX%";
     
-    self = (FileStream *)_self;
-    assert(args = Spk_CAST(Array, arg0)); /* XXX */
+    self = (SpkFileStream *)_self;
+    args = Spk_CAST(Array, arg0);
+    if (!args) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "an array is required");
+        return 0;
+    }
     nArgs = SpkArray_size(args);
-    assert(nArgs > 0 && "wrong number of arguments");
-    assert(formatString = Spk_CAST(String, SpkArray_item(args, 0))); /* XXX */
+    if (nArgs == 0) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "wrong number of arguments");
+        return 0;
+    }
+    formatString = Spk_CAST(String, SpkArray_item(args, 0));
+    if (!formatString) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        return 0;
+    }
     formatSize = SpkString_size(formatString);
     format = (char *)malloc(formatSize);
     memcpy(format, SpkString_asString(formatString), formatSize);
@@ -116,12 +145,18 @@ static Object *FileStream_printf(Object *_self, Object *arg0, Object *arg1) {
         do
             c = *++f;
         while (c && !strchr(convOps, c));
-        assert(c && "invalid conversion specification");
+        if (!c) {
+            Spk_Halt(Spk_HALT_VALUE_ERROR, "invalid conversion specification");
+            return 0;
+        }
         
         convOp = c;
         c = *++f;
         if (convOp == '%') {
-            assert(f - chunk == 2 && "invalid conversion specification");
+            if (f - chunk != 2) {
+                Spk_Halt(Spk_HALT_VALUE_ERROR, "invalid conversion specification");
+                return 0;
+            }
             fputc('%', self->stream);
             chunk = f;
             continue;
@@ -129,86 +164,132 @@ static Object *FileStream_printf(Object *_self, Object *arg0, Object *arg1) {
         *f = 0;
         
         /* consume an argument */
-        assert(argIndex < nArgs && "too few arguments");
+        if (argIndex >= nArgs) {
+            Spk_Halt(Spk_HALT_TYPE_ERROR, "too few arguments");
+            return 0;
+        }
         arg = SpkArray_item(args, argIndex++);
         
         switch (convOp) {
         case 'c':
-            assert(charArg = Spk_CAST(Char, arg));
-            fprintf(self->stream, chunk, SpkChar_asChar(charArg));
+            charArg = Spk_CAST(Char, arg);
+            if (!charArg) {
+                Spk_Halt(Spk_HALT_TYPE_ERROR, "character expected");
+                return 0;
+            }
+            fprintf(self->stream, chunk, SpkChar_AsChar(charArg));
             break;
         case 'd': case 'i': case 'o': case 'u': case 'x':
-            assert(intArg = Spk_CAST(Integer, arg));
+            intArg = Spk_CAST(Integer, arg);
+            if (!intArg) {
+                Spk_Halt(Spk_HALT_TYPE_ERROR, "integer expected");
+                return 0;
+            }
             fprintf(self->stream, chunk, SpkInteger_asLong(intArg));
             break;
         case 'e': case 'E': case 'f': case 'g': case 'G':
-            assert(floatArg = Spk_CAST(Float, arg));
+            floatArg = Spk_CAST(Float, arg);
+            if (!floatArg) {
+                Spk_Halt(Spk_HALT_TYPE_ERROR, "float expected");
+                return 0;
+            }
             fprintf(self->stream, chunk, SpkFloat_asDouble(floatArg));
             break;
         case 's':
-            assert(strArg = Spk_CAST(String, arg));
+            strArg = Spk_CAST(String, arg);
+            if (!strArg) {
+                Spk_Halt(Spk_HALT_TYPE_ERROR, "string expected");
+                return 0;
+            }
             fprintf(self->stream, chunk, SpkString_asString(strArg));
             break;
         default:
-            assert(0 && "conversion letter not implemented");
+            Spk_Halt(Spk_HALT_ASSERTION_ERROR, "conversion letter not implemented");
+            return 0;
         }
         
         *f = c;
         chunk = f;
     }
     
-    assert(argIndex == nArgs && "too many arguments");
+    if (argIndex != nArgs) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "too many arguments");
+        return 0;
+    }
     
     free(format);
+    Spk_INCREF(Spk_void);
     return Spk_void;
 }
 
-static Object *FileStream_putc(Object *_self, Object *arg0, Object *arg1) {
-    FileStream *self;
-    Char *c;
+static SpkUnknown *FileStream_putc(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkFileStream *self;
+    SpkChar *c;
     
-    self = (FileStream *)_self;
-    assert(c = Spk_CAST(Char, arg0)); /* XXX */
+    self = (SpkFileStream *)_self;
+    c = Spk_CAST(Char, arg0);
+    if (!c) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a character is required");
+        return 0;
+    }
     if (self->stream)
-        fputc(SpkChar_asChar(c), self->stream);
+        fputc(SpkChar_AsChar(c), self->stream);
+    Spk_INCREF(Spk_void);
     return Spk_void;
 }
 
-static Object *FileStream_puts(Object *_self, Object *arg0, Object *arg1) {
-    FileStream *self;
-    String *s;
+static SpkUnknown *FileStream_puts(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkFileStream *self;
+    SpkString *s;
     
-    self = (FileStream *)_self;
-    assert(s = Spk_CAST(String, arg0)); /* XXX */
+    self = (SpkFileStream *)_self;
+    s = Spk_CAST(String, arg0);
+    if (!s) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        return 0;
+    }
     if (self->stream)
         fputs(SpkString_asString(s), self->stream);
+    Spk_INCREF(Spk_void);
     return Spk_void;
 }
 
-static Object *FileStream_reopen(Object *_self, Object *arg0, Object *arg1) {
+static SpkUnknown *FileStream_reopen(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     /* XXX: "open" should be a class method */
-    FileStream *self;
-    String *pathnameString, *modeString;
+    SpkFileStream *self;
+    SpkString *pathnameString, *modeString;
     char *pathname, *mode;
+    SpkUnknown *result;
     
-    self = (FileStream *)_self;
-    assert(pathnameString = Spk_CAST(String, arg0)); /* XXX */
-    assert(modeString = Spk_CAST(String, arg1)); /* XXX */
+    self = (SpkFileStream *)_self;
+    pathnameString = Spk_CAST(String, arg0);
+    if (!pathnameString) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        return 0;
+    }
+    modeString = Spk_CAST(String, arg1);
+    if (!modeString) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        return 0;
+    }
     pathname = SpkString_asString(pathnameString);
     mode = SpkString_asString(modeString);
     if (self->stream)
         self->stream = freopen(pathname, mode, self->stream);
     else
         self->stream = fopen(pathname, mode);
-    return self->stream ? (Object *)self : Spk_null;
+    result = self->stream ? (SpkUnknown *)self : Spk_null;
+    Spk_INCREF(result);
+    return result;
 }
 
-static Object *FileStream_rewind(Object *_self, Object *arg0, Object *arg1) {
-    FileStream *self;
+static SpkUnknown *FileStream_rewind(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkFileStream *self;
     
-    self = (FileStream *)_self;
+    self = (SpkFileStream *)_self;
     if (self->stream)
         rewind(self->stream);
+    Spk_INCREF(Spk_void);
     return Spk_void;
 }
 
@@ -216,14 +297,14 @@ static Object *FileStream_rewind(Object *_self, Object *arg0, Object *arg1) {
 /*------------------------------------------------------------------------*/
 /* low-level hooks */
 
-static void FileStream_zero(Object *_self) {
-    FileStream *self = (FileStream *)_self;
+static void FileStream_zero(SpkObject *_self) {
+    SpkFileStream *self = (SpkFileStream *)_self;
     (*Spk_ClassFileStream->superclass->zero)(_self);
     self->stream = 0;
 }
 
-static void FileStream_dealloc(Object *_self) {
-    FileStream *self = (FileStream *)_self;
+static void FileStream_dealloc(SpkObject *_self) {
+    SpkFileStream *self = (SpkFileStream *)_self;
     if (self->stream) {
         fclose(self->stream);
         self->stream = 0;
@@ -253,13 +334,14 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl Spk_ClassFileStreamTmpl = {
-    "FileStream",
-    offsetof(FileStreamSubclass, variables),
-    sizeof(FileStream),
-    0,
-    0,
-    methods,
-    0,
-    &FileStream_zero,
-    &FileStream_dealloc
+    "FileStream", {
+        /*accessors*/ 0,
+        methods,
+        /*lvalueMethods*/ 0,
+        offsetof(SpkFileStreamSubclass, variables),
+        0,
+        &FileStream_zero,
+        &FileStream_dealloc
+    }, /*meta*/ {
+    }
 };

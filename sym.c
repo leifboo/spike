@@ -1,55 +1,43 @@
 
 #include "sym.h"
 
-#include "behavior.h"
-#include <assert.h>
-#include <stdio.h>
+#include "class.h"
+#include "native.h"
 #include <stdlib.h>
 #include <string.h>
 
 
-Behavior *Spk_ClassSymbol;
+SpkBehavior *Spk_ClassSymbol;
 
 static struct {
     size_t size, mask, tally;
-    Symbol **array;
+    SpkSymbol **array;
 } hashTable;
-
-
-/*------------------------------------------------------------------------*/
-/* methods */
-
-static Object *Symbol_print(Object *_self, Object *arg0, Object *arg1) {
-    Symbol *self;
-    
-    self = (Symbol *)_self;
-    fprintf(stdout, "$%s", self->str);
-    return Spk_void;
-}
 
 
 /*------------------------------------------------------------------------*/
 /* class template */
 
 static SpkMethodTmpl SymbolMethods[] = {
-    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Symbol_print },
     { 0, 0, 0}
 };
 
 SpkClassTmpl Spk_ClassSymbolTmpl = {
-    "Symbol",
-    0,
-    sizeof(Symbol),
-    sizeof(char),
-    0,
-    SymbolMethods
+    "Symbol", {
+        /*accessors*/ 0,
+        SymbolMethods,
+        /*lvalueMethods*/ 0,
+        /*offsetof(SpkSymbolSubclass, variables)*/ 0,
+        sizeof(char)
+    }, /*meta*/ {
+    }
 };
 
 
 /*------------------------------------------------------------------------*/
 /* C API */
 
-static size_t getHash(unsigned char *str, size_t *len) {
+static size_t getHashAndLength(unsigned char *str, size_t *len) {
     /* djb2 from http://www.cse.yorku.ca/~oz/hash.html */
     unsigned char *p;
     size_t hash = 5381;
@@ -62,17 +50,30 @@ static size_t getHash(unsigned char *str, size_t *len) {
     return hash;
 }
 
-Symbol *SpkSymbol_get(const char *str) {
-    Symbol *sym;
-    size_t hash, start, len, i, o;
+static size_t getHash(unsigned char *str, size_t len) {
+    /* djb2 from http://www.cse.yorku.ca/~oz/hash.html */
+    unsigned char *p;
+    size_t hash = 5381;
+    int c;
+    
+    p = str;
+    while (len--) {
+        c = *p++;
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    }
+    return hash;
+}
+
+static SpkSymbol *newSymbol(const char *str, size_t len, size_t hash) {
+    SpkSymbol *sym;
+    size_t start, i, o;
     
     if (!hashTable.array) {
         hashTable.size = 2; /* must be a power of 2 */
         hashTable.mask = hashTable.size - 1;
-        hashTable.array = (Symbol **)calloc(hashTable.size, sizeof(Symbol *));
+        hashTable.array = (SpkSymbol **)calloc(hashTable.size, sizeof(SpkSymbol *));
     }
     
-    hash = getHash((unsigned char *)str, &len);
     start = hash & hashTable.mask;
     
     for (i = start; i < hashTable.size; ++i) {
@@ -80,6 +81,7 @@ Symbol *SpkSymbol_get(const char *str) {
         if (!sym) {
             goto insert;
         } else if (strcmp(sym->str, str) == 0) {
+            Spk_INCREF(sym);
             return sym;
         }
     }
@@ -89,14 +91,16 @@ Symbol *SpkSymbol_get(const char *str) {
         if (!sym) {
             goto insert;
         } else if (strcmp(sym->str, str) == 0) {
+            Spk_INCREF(sym);
             return sym;
         }
     }
     
-    assert(0 && "not reached");
+    Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+    return 0;
     
  insert:
-    sym = (Symbol *)malloc(sizeof(Symbol) + len);
+    sym = (SpkSymbol *)malloc(sizeof(SpkSymbol) + len);
     sym->base.klass = Spk_ClassSymbol;
     sym->hash = hash;
     memcpy(sym->str, str, len + 1);
@@ -107,15 +111,15 @@ Symbol *SpkSymbol_get(const char *str) {
     if (hashTable.size - hashTable.tally < hashTable.size / 4 + 1) {
         /* grow */
         size_t oldSize;
-        Symbol **oldArray;
-        Symbol *oldSym;
+        SpkSymbol **oldArray;
+        SpkSymbol *oldSym;
         
         oldSize = hashTable.size;
         oldArray = hashTable.array;
         
         hashTable.size <<= 1;
         hashTable.mask = hashTable.size - 1;
-        hashTable.array = (Symbol **)calloc(hashTable.size, sizeof(Symbol *));
+        hashTable.array = (SpkSymbol **)calloc(hashTable.size, sizeof(SpkSymbol *));
         
         for (o = 0; o < oldSize; ++o) {
             oldSym = oldArray[o];
@@ -131,7 +135,8 @@ Symbol *SpkSymbol_get(const char *str) {
                         goto reinsert;
                     }
                 }
-                assert(0 && "not reached");
+                Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+                return 0;
  reinsert:
                 hashTable.array[i] = oldSym;
             }
@@ -140,5 +145,18 @@ Symbol *SpkSymbol_get(const char *str) {
         free(oldArray);
     }
     
+    Spk_INCREF(sym);
     return sym;
+}
+
+SpkSymbol *SpkSymbol_get(const char *str) {
+    size_t hash, len;
+    
+    hash = getHashAndLength((unsigned char *)str, &len);
+    return newSymbol(str, len, hash);
+}
+
+SpkSymbol *SpkSymbol_fromCStringAndLength(const char *str, size_t len) {
+    size_t hash = getHash((unsigned char *)str, len);
+    return newSymbol(str, len, hash);
 }

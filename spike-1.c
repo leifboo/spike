@@ -1,164 +1,32 @@
 
-#include "cgen.h"
-#include "parser.h"
-#include "tree.h"
-
-#include "array.h"
 #include "behavior.h"
-#include "bool.h"
-#include "char.h"
-#include "class.h"
-#include "dict.h"
-#include "float.h"
+#include "boot.h"
+#include "cgen.h"
+#include "host.h"
 #include "int.h"
 #include "interp.h"
-#include "io.h"
-#include "metaclass.h"
 #include "module.h"
 #include "native.h"
-#include "obj.h"
-#include "str.h"
-#include "sym.h"
+#include "parser.h"
+#include "rodata.h"
+#include "st.h"
+#include "tree.h"
 
-#include <assert.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-
-
-static Behavior *Spk_ClassNULL_CLASS;
-
-
-#define CLASS_VAR(c) Spk_Class ## c
-#define CLASS_TMPL(c) Spk_Class ## c ## Tmpl
-
-#define BOOT_REC(c, v, vn, s, i) {(Behavior **)&CLASS_VAR(c), &CLASS_TMPL(c), (Object **)&v, vn, s, i}
-
-#define METACLASS(c) BOOT_REC(Metaclass, CLASS_VAR(c), 0, (Behavior **)&CLASS_VAR(Behavior), &CLASS_TMPL(c))
-#define CLASS(c, s) BOOT_REC(Class, CLASS_VAR(c), 0, (Behavior **)&CLASS_VAR(s), &CLASS_TMPL(c))
-#define OBJECT(c, v) BOOT_REC(c, v, 0, 0, 0)
-#define GLOBAL_VAR(c, v, vn) BOOT_REC(c, v, vn, 0, 0)
-
-
-static BootRec bootRec[] = {
-    CLASS(Object, NULL_CLASS),
-    /**/CLASS(Behavior, Object),
-    /******/METACLASS(Metaclass),
-    /******/METACLASS(Class),
-    /**/CLASS(VariableObject, Object),
-    /******/CLASS(Method,  VariableObject),
-    /**********/CLASS(NativeAccessor,  Method),
-    /******/CLASS(Context, VariableObject),
-    /**********/CLASS(MethodContext, Context),
-    /**********/CLASS(BlockContext,  Context),
-    /******/CLASS(Module,  VariableObject),
-    /******/CLASS(String,  VariableObject),
-    /******/CLASS(Array,   VariableObject),
-    /**/CLASS(Boolean, Object),
-    /******/CLASS(False, Boolean),
-    /******/CLASS(True, Boolean),
-    /**/CLASS(IdentityDictionary, Object),
-    /**/CLASS(Symbol,  Object),
-    /**/CLASS(Message, Object),
-    /**/CLASS(Thunk,   Object),
-    /**/CLASS(Null,    Object),
-    /**/CLASS(Uninit,  Object),
-    /**/CLASS(Void,    Object),
-    /**/CLASS(Integer, Object),
-    /**/CLASS(Float,   Object),
-    /**/CLASS(Char,    Object),
-    /**/CLASS(FileStream, Object),
-    OBJECT(False,  Spk_false),
-    OBJECT(True,   Spk_true),
-    OBJECT(Module, Spk_builtInModule),
-    OBJECT(Null,   Spk_null),
-    OBJECT(Uninit, Spk_uninit),
-    OBJECT(Void,   Spk_void),
-    GLOBAL_VAR(FileStream, Spk_stdin,  "stdin"),
-    GLOBAL_VAR(FileStream, Spk_stdout, "stdout"),
-    GLOBAL_VAR(FileStream, Spk_stderr, "stderr"),
-    {0, 0}
-};
-
-
-static void bootstrap() {
-    BootRec *r;
-    Oper operator;
-    
-    /* alloc */
-    for (r = bootRec; r->var; ++r) {
-        *r->var = (Object *)malloc(r->klassTmpl->instanceSize);
-        (*r->var)->refCount = 0;
-    }
-    /* init 'klass' */
-    for (r = bootRec; r->var; ++r) {
-        (*r->var)->klass = *r->klass;
-    }
-    
-    /* init classes */
-    for (operator = 0; operator < NUM_OPER; ++operator) {
-        Spk_operSelectors[operator].messageSelector = SpkSymbol_get(Spk_operSelectors[operator].messageSelectorStr);
-    }
-    for (operator = 0; operator < NUM_CALL_OPER; ++operator) {
-        Spk_operCallSelectors[operator].messageSelector = SpkSymbol_get(Spk_operCallSelectors[operator].messageSelectorStr);
-    }
-    for (r = bootRec; r->var; ++r) {
-        if (r->init) {
-            /* it is too early to use Spk_CAST */
-            if ((*r->var)->klass == (Behavior *)Spk_ClassClass) {
-                SpkClass_initFromTemplate((Class *)*r->var, r->init, *r->superclass, Spk_builtInModule);
-            } else {
-                assert((*r->var)->klass == (Behavior *)Spk_ClassMetaclass);
-                SpkBehavior_initFromTemplate((Behavior *)*r->var, r->init, *r->superclass, Spk_builtInModule);
-            }
-        }
-    }
-    for (r = bootRec; r->var; ++r) {
-        if (r->init) {
-            SpkBehavior_inheritOperators((Behavior *)*r->var);
-            if ((*r->var)->klass == (Behavior *)Spk_ClassClass) {
-                SpkClass_addMethodsFromTemplate((Class *)*r->var, r->init);
-            } else {
-                assert((*r->var)->klass == (Behavior *)Spk_ClassMetaclass);
-                SpkBehavior_addMethodsFromTemplate((Behavior *)*r->var, r->init);
-            }
-        }
-    }
-    
-    /* init I/O */
-    Spk_stdin->stream = stdin;
-    Spk_stdout->stream = stdout;
-    Spk_stderr->stream = stderr;
-}
-
-
-static Stmt *wrap(Stmt *stmtList) {
-    /* Wrap the top-level statement list in a module (class)
-       definition.  XXX: Where does this code really belong? */
-    Stmt *compoundStmt, *moduleDef;
-    
-    compoundStmt = (Stmt *)malloc(sizeof(Stmt));
-    memset(compoundStmt, 0, sizeof(Stmt));
-    compoundStmt->kind = STMT_COMPOUND;
-    compoundStmt->top = stmtList;
-
-    moduleDef = (Stmt *)malloc(sizeof(Stmt));
-    memset(moduleDef, 0, sizeof(Stmt));
-    moduleDef->kind = STMT_DEF_CLASS;
-    moduleDef->top = compoundStmt;
-    
-    return moduleDef;
-}
 
 
 int main(int argc, char **argv) {
     int i, showHelp, error, disassemble;
     char *arg, *sourceFilename;
-    Stmt *tree;
-    Module *module;
-    Object *result; Integer *resultInt;
+    FILE *stream;
+    SpkSymbolTable *st;
+    SpkStmt *tree;
+    SpkModule *module;
+    SpkUnknown *result; SpkInteger *resultInt;
     unsigned int dataSize;
-    StmtList predefList, rootClassList;
+    SpkStmtList predefList, rootClassList;
+    SpkUnknown *main;
     
     sourceFilename = 0;
     showHelp = error = disassemble = 0;
@@ -211,25 +79,58 @@ int main(int argc, char **argv) {
     
     /* XXX: program arguments */
     
-    bootstrap();
+    /* XXX: order-of-init problem */
+    Spk_Bootstrap();
+    SpkHost_Init();
+    if (Spk_InitReadOnlyData() < 0)
+        return;
+    SpkInterpreter_Boot();
     
-    tree = SpkParser_ParseFile(sourceFilename);
+    stream = fopen(sourceFilename, "r");
+    if (!stream) {
+        fprintf(stderr, "%s: cannot open '%s'\n", argv[0], sourceFilename);
+        return 1;
+    }
+    
+    st = SpkSymbolTable_New();
+    
+    tree = SpkParser_ParseFile(stream, st);
     if (!tree) {
         return 1;
     }
     
-    if (SpkStaticChecker_Check(tree, bootRec, &dataSize, &predefList, &rootClassList) == -1) {
+    fclose(stream);
+    
+    if (SpkStaticChecker_Check(tree, &dataSize, &predefList, &rootClassList) == -1) {
         return 1;
     }
-    tree = wrap(tree);
-    module = SpkCodeGen_generateCode(tree, dataSize, predefList.first, rootClassList.first);
+    tree = SpkParser_NewModuleDef(tree);
+    module = SpkCodeGen_GenerateCode(tree, dataSize, predefList.first, rootClassList.first);
     
     if (disassemble) {
-        SpkDisassembler_disassembleModule(module, stdout);
+        SpkDisassembler_DisassembleModule(module, stdout);
         return 0;
     }
     
-    result = SpkInterpreter_start((Object *)module, SpkSymbol_get("main"), SpkArray_new(0));
+    theInterpreter = SpkInterpreter_New();
+    
+    main = Spk_SendMessage(
+        theInterpreter,
+        (SpkUnknown *)module,
+        Spk_METHOD_NAMESPACE_RVALUE,
+        Spk_main,
+        Spk_emptyArgs
+        );
+    if (!main) {
+        return 1;
+    }
+    result = Spk_SendMessage(
+        theInterpreter,
+        main,
+        Spk_METHOD_NAMESPACE_RVALUE,
+        Spk___apply__,
+        Spk_emptyArgs /*XXX: argv */
+        );
     
     if (!result) {
         return 1;

@@ -1,10 +1,11 @@
 
-CFLAGS = -g -ansi
+CFLAGS = -g -ansi -Iinclude
 
 obj = \
 	array.o \
 	behavior.o \
 	bool.o \
+	boot.o \
 	cgen.o \
 	char.o \
 	class.o \
@@ -12,6 +13,7 @@ obj = \
 	disasm.o \
 	float.o \
 	gram.o \
+	host.o \
 	int.o \
 	interp.o \
 	io.o \
@@ -20,17 +22,20 @@ obj = \
 	module.o \
 	native.o \
 	obj.o \
+	om.o \
 	parser.o \
+	rodata.o \
 	scheck.o \
-	spike.o \
+	spike-1.o \
 	st.o \
 	str.o \
 	sym.o \
+	tree.o \
 	$(empty)
 
-all: spike
+all: spike-1
 
-spike: $(obj)
+spike-1: $(obj)
 	$(CC) -o $@ $(obj)
 
 gram.c: gram.y lemon
@@ -43,4 +48,4 @@ lemon: lemon.c
 	$(CC) -o $@ lemon.c
 
 clean:
-	rm -f spike lemon $(obj) gram.c gram.h gram.out lexer.c
+	rm -f spike-1 lemon $(obj) gram.c gram.h gram.out lexer.c

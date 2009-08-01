@@ -1,35 +1,33 @@
 
-#ifndef __dict_h__
-#define __dict_h__
+#ifndef __spk_dict_h__
+#define __spk_dict_h__
 
 
 #include "obj.h"
 
-#include <stddef.h>
 
-
-typedef struct IdentityDictionary {
-    Object base;
+typedef struct SpkIdentityDictionary {
+    SpkObject base;
     size_t size;
     size_t tally;
-    Object **keyArray;
-    Object **valueArray;
-} IdentityDictionary;
+    SpkUnknown **keyArray;
+    SpkUnknown **valueArray;
+} SpkIdentityDictionary;
 
-typedef struct IdentityDictionarySubclass {
-    IdentityDictionary base;
-    Object *variables[1]; /* stretchy */
-} IdentityDictionarySubclass;
+typedef struct SpkIdentityDictionarySubclass {
+    SpkIdentityDictionary base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkIdentityDictionarySubclass;
 
 
-extern struct Behavior *Spk_ClassIdentityDictionary;
+extern struct SpkBehavior *Spk_ClassIdentityDictionary;
 extern struct SpkClassTmpl Spk_ClassIdentityDictionaryTmpl;
 
 
-Object *SpkIdentityDictionary_at(IdentityDictionary *self, Object *key);
-Object *SpkIdentityDictionary_keyAtValue(IdentityDictionary *self, Object *value);
-void SpkIdentityDictionary_atPut(IdentityDictionary *self, Object *key, Object *value);
-IdentityDictionary *SpkIdentityDictionary_new(void);
+SpkUnknown *SpkIdentityDictionary_at(SpkIdentityDictionary *self, SpkUnknown *key);
+SpkUnknown *SpkIdentityDictionary_keyAtValue(SpkIdentityDictionary *self, SpkUnknown *value);
+void SpkIdentityDictionary_atPut(SpkIdentityDictionary *self, SpkUnknown *key, SpkUnknown *value);
+SpkIdentityDictionary *SpkIdentityDictionary_new(void);
 
 
-#endif /* __dict_h__ */
+#endif /* __spk_dict_h__ */

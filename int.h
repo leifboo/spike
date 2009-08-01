@@ -1,28 +1,28 @@
 
-#ifndef __int_h__
-#define __int_h__
+#ifndef __spk_int_h__
+#define __spk_int_h__
 
 
 #include "obj.h"
 
 
-typedef struct Integer {
-    Object base;
+typedef struct SpkInteger {
+    SpkObject base;
     long int value;
-} Integer;
+} SpkInteger;
 
-typedef struct IntegerSubclass {
-    Integer base;
-    Object *variables[1]; /* stretchy */
-} IntegerSubclass;
+typedef struct SpkIntegerSubclass {
+    SpkInteger base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkIntegerSubclass;
 
 
-extern struct Behavior *Spk_ClassInteger;
+extern struct SpkBehavior *Spk_ClassInteger;
 extern struct SpkClassTmpl Spk_ClassIntegerTmpl;
 
 
-Integer *SpkInteger_fromLong(long);
-long SpkInteger_asLong(Integer *);
+SpkInteger *SpkInteger_fromLong(long);
+long SpkInteger_asLong(SpkInteger *);
 
 
-#endif /* __int_h__ */
+#endif /* __spk_int_h__ */

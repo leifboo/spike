@@ -1,28 +1,28 @@
 
-#ifndef __float_h__
-#define __float_h__
+#ifndef __spk_float_h__
+#define __spk_float_h__
 
 
 #include "obj.h"
 
 
-typedef struct Float {
-    Object base;
+typedef struct SpkFloat {
+    SpkObject base;
     double value;
-} Float;
+} SpkFloat;
 
-typedef struct FloatSubclass {
-    Float base;
-    Object *variables[1]; /* stretchy */
-} FloatSubclass;
+typedef struct SpkFloatSubclass {
+    SpkFloat base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkFloatSubclass;
 
 
-extern struct Behavior *Spk_ClassFloat;
+extern struct SpkBehavior *Spk_ClassFloat;
 extern struct SpkClassTmpl Spk_ClassFloatTmpl;
 
 
-Float *SpkFloat_fromLiteral(char *, size_t);
-double SpkFloat_asDouble(Float *);
+SpkFloat *SpkFloat_fromCDouble(double);
+double SpkFloat_asDouble(SpkFloat *);
 
 
-#endif /* __float_h__ */
+#endif /* __spk_float_h__ */

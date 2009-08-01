@@ -1,49 +1,63 @@
 
 #include "array.h"
 
-#include "behavior.h"
+#include "class.h"
 #include "int.h"
-#include <assert.h>
+#include "native.h"
 #include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 
-Behavior *Spk_ClassArray;
+SpkBehavior *Spk_ClassArray;
 
 
-#define ARRAY(op) ((Object **)SpkVariableObject_ITEM_BASE(op))
+#define ARRAY(op) ((SpkUnknown **)SpkVariableObject_ITEM_BASE(op))
 
 
 /*------------------------------------------------------------------------*/
 /* methods -- operators */
 
-/* OPER_GET_ITEM */
-static Object *Array_item(Object *_self, Object *arg0, Object *arg1) {
-    Array *self; Integer *arg;
+static SpkUnknown *Array_item(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkArray *self; SpkInteger *arg;
     long index;
-    Object *item;
+    SpkUnknown *item;
     
-    self = (Array *)_self;
-    assert(arg = Spk_CAST(Integer, arg0)); /* XXX */
+    self = (SpkArray *)_self;
+    arg = Spk_CAST(Integer, arg0);
+    if (!arg) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
+        return 0;
+    }
     index = SpkInteger_asLong(arg);
-    assert(0 <= index && index < self->size); /* XXX */
+    if (index < 0 || self->size <= index) {
+        Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
+        return 0;
+    }
     item = ARRAY(self)[index];
     if (!item)
         item = Spk_uninit;
-    return item;
+    Spk_INCREF(item);
+    return (SpkUnknown *)item;
 }
 
-/* OPER_SET_ITEM */
-static Object *Array_setItem(Object *_self, Object *arg0, Object *arg1) {
-    Array *self; Integer *arg;
+static SpkUnknown *Array_setItem(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkArray *self; SpkInteger *arg;
     long index;
     
-    self = (Array *)_self;
-    assert(arg = Spk_CAST(Integer, arg0)); /* XXX */
+    self = (SpkArray *)_self;
+    arg = Spk_CAST(Integer, arg0);
+    if (!arg) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
+        return 0;
+    }
     index = SpkInteger_asLong(arg);
-    assert(0 <= index && index < self->size); /* XXX */
+    if (index < 0 || self->size <= index) {
+        Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
+        return 0;
+    }
+    Spk_INCREF(arg1);
+    Spk_DECREF(ARRAY(self)[index]);
     ARRAY(self)[index] = arg1;
+    Spk_INCREF(Spk_void);
     return Spk_void;
 }
 
@@ -51,34 +65,18 @@ static Object *Array_setItem(Object *_self, Object *arg0, Object *arg1) {
 /*------------------------------------------------------------------------*/
 /* methods -- enumerating */
 
-static Object *Array_enumerate(Object *_self, Object *arg0, Object *arg1) {
-    Array *self;
+static SpkUnknown *Array_do(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkArray *self;
     size_t i;
-    Object *result;
+    SpkUnknown *result;
     
-    self = (Array *)_self;
+    self = (SpkArray *)_self;
     for (i = 0; i < self->size; ++i) {
-        result = Spk_call(theInterpreter, arg0, OPER_APPLY, ARRAY(self)[i], 0);
+        result = Spk_Call(theInterpreter, arg0, Spk_OPER_APPLY, ARRAY(self)[i], 0);
         if (!result)
             return 0; /* unwind */
     }
-    return Spk_void;
-}
-
-
-/*------------------------------------------------------------------------*/
-/* methods -- other */
-
-static Object *Array_print(Object *_self, Object *arg0, Object *arg1) {
-    Array *self;
-    int i;
-    
-    self = (Array *)_self;
-    fputc('[', stdout);
-    for (i = 0; i < self->size; ++i) {
-        fputs("XXX, ", stdout);
-    }
-    fputc(']', stdout);
+    Spk_INCREF(Spk_void);
     return Spk_void;
 }
 
@@ -86,23 +84,23 @@ static Object *Array_print(Object *_self, Object *arg0, Object *arg1) {
 /*------------------------------------------------------------------------*/
 /* memory layout of instances */
 
-static void Array_traverse_init(Object *self) {
+static void Array_traverse_init(SpkObject *self) {
     (*self->klass->superclass->traverse.init)(self);
 }
 
-static Object **Array_traverse_current(Object *_self) {
-    Array *self;
+static SpkUnknown **Array_traverse_current(SpkObject *_self) {
+    SpkArray *self;
     
-    self = (Array *)_self;
+    self = (SpkArray *)_self;
     if (self->size > 0)
         return &(ARRAY(self)[self->size - 1]);
     return (*self->base.klass->superclass->traverse.current)(_self);
 }
 
-static void Array_traverse_next(Object *_self) {
-    Array *self;
+static void Array_traverse_next(SpkObject *_self) {
+    SpkArray *self;
     
-    self = (Array *)_self;
+    self = (SpkArray *)_self;
     if (self->size > 0)
         --self->size;
     else
@@ -114,7 +112,7 @@ static void Array_traverse_next(Object *_self) {
 /* class template */
 
 static SpkAccessorTmpl accessors[] = {
-    { "size", Spk_T_SIZE, offsetof(Array, size), SpkAccessor_READ },
+    { "size", Spk_T_SIZE, offsetof(SpkArray, size), SpkAccessor_READ },
     { 0, 0, 0, 0 }
 };
 
@@ -134,9 +132,7 @@ static SpkMethodTmpl methods[] = {
     /* call operators */
     { "__index__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_item },
     /* enumerating */
-    { "enumerate", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &Array_enumerate },
-    /* other */
-    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Array_print },
+    { "do:", SpkNativeCode_ARGS_1, &Array_do },
     { 0, 0, 0}
 };
 
@@ -145,95 +141,127 @@ static SpkMethodTmpl lvalueMethods[] = {
     { 0, 0, 0}
 };
 
-static traverse_t traverse = {
+static SpkTraverse traverse = {
     &Array_traverse_init,
     &Array_traverse_current,
     &Array_traverse_next,
 };
 
 SpkClassTmpl Spk_ClassArrayTmpl = {
-    "Array",
-    offsetof(ArraySubclass, variables),
-    sizeof(Array),
-    sizeof(Object *),
-    accessors,
-    methods,
-    lvalueMethods,
-    0,
-    0,
-    &traverse
+    "Array", {
+        accessors,
+        methods,
+        lvalueMethods,
+        offsetof(SpkArraySubclass, variables),
+        sizeof(SpkUnknown *),
+        /*zero*/ 0,
+        /*dealloc*/ 0,
+        &traverse
+    }, /*meta*/ {
+    }
 };
 
 
 /*------------------------------------------------------------------------*/
 /* C API */
 
-Array *SpkArray_new(size_t size) {
-    Array *newArray;
+SpkArray *SpkArray_new(size_t size) {
+    SpkArray *newArray;
     size_t i;
     
-    newArray = (Array *)malloc(sizeof(Array) + size*sizeof(Object **));
-    newArray->base.klass = Spk_ClassArray;
+    newArray = (SpkArray *)SpkObject_NewVar(Spk_ClassArray, size);
     newArray->size = size;
     for (i = 0; i < size; ++i) {
+        Spk_INCREF(Spk_uninit);
         ARRAY(newArray)[i] = Spk_uninit;
     }
     return newArray;
 }
 
-Array *SpkArray_withArguments(Object **stackPointer, size_t argumentCount,
-                              Array *varArgArray, size_t skip) {
-    Array *argumentArray;
+SpkArray *SpkArray_withArguments(SpkUnknown **stackPointer, size_t argumentCount,
+                                 SpkArray *varArgArray, size_t skip) {
+    SpkArray *argumentArray;
+    SpkUnknown *item;
     size_t i, n, varArgCount;
     
     varArgCount = varArgArray ? varArgArray->size - skip : 0;
     n = argumentCount + varArgCount;
     
-    argumentArray = SpkArray_new(n);
+    argumentArray = (SpkArray *)SpkObject_NewVar(Spk_ClassArray, n);
     
     /* copy & reverse fixed arguments */
     for (i = 0; i < argumentCount; ++i) {
-        ARRAY(argumentArray)[i] = stackPointer[argumentCount - i - 1];
+        item = stackPointer[argumentCount - i - 1];
+        Spk_INCREF(item);
+        ARRAY(argumentArray)[i] = item;
     }
     /* copy variable arguments */
     for ( ; i < n; ++i) {
-        ARRAY(argumentArray)[i] = ARRAY(varArgArray)[skip + i - argumentCount];
+        item = ARRAY(varArgArray)[skip + i - argumentCount];
+        ARRAY(argumentArray)[i] = item;
+        Spk_INCREF(item);
     }
     
     return argumentArray;
 }
 
-Array *SpkArray_fromVAList(va_list ap) {
-    Array *newArray;
-    Object *obj;
+SpkArray *SpkArray_fromVAList(va_list ap) {
+    SpkArray *newArray;
+    SpkUnknown *obj;
     size_t size, i;
     
     size = 2;
-    newArray = (Array *)malloc(sizeof(Array) + size*sizeof(Object **));
+    newArray = (SpkArray *)SpkObject_NewVar(Spk_ClassArray, size);
     newArray->base.klass = Spk_ClassArray;
-    for (i = 0,  obj = va_arg(ap, Object *);
-                 obj;
-         ++i,    obj = va_arg(ap, Object *)) {
+    for (i = 0,  obj = va_arg(ap, SpkUnknown *);
+         /*****/ obj;
+         ++i,    obj = va_arg(ap, SpkUnknown *)) {
         if (i >= size) {
+            SpkArray *tmpArray = newArray;
+            size_t tmpSize = size, j;
             size *= 2;
-            newArray = (Array *)realloc(newArray, sizeof(Array) + size*sizeof(Object **));
+            newArray = (SpkArray *)SpkObject_NewVar(Spk_ClassArray, size);
+            for (j = 0; j < tmpSize; ++j) {
+                ARRAY(newArray)[j] = ARRAY(tmpArray)[j];
+                ARRAY(tmpArray)[j] = 0;
+            }
+            Spk_DECREF(tmpArray);
         }
+        Spk_INCREF(obj);
         ARRAY(newArray)[i] = obj;
     }
     newArray->size = i;
     return newArray;
 }
 
-size_t SpkArray_size(Array *self) {
+size_t SpkArray_size(SpkArray *self) {
     return self->size;
 }
 
-Object *SpkArray_item(Array *self, long index) {
-    Object *item;
+SpkUnknown *SpkArray_item(SpkArray *self, long index) {
+    SpkUnknown *item;
     
-    assert(0 <= index && index < self->size); /* XXX */
+    if (index < 0 || self->size <= index) {
+        Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
+        return 0;
+    }
     item = ARRAY(self)[index];
     if (!item)
         item = Spk_uninit;
+    Spk_INCREF(item);
     return item;
+}
+
+SpkUnknown *SpkArray_setItem(SpkArray *self, long index, SpkUnknown *value) {
+    SpkUnknown *item;
+    
+    if (index < 0 || self->size <= index) {
+        Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
+        return 0;
+    }
+    Spk_INCREF(value);
+    Spk_DECREF(ARRAY(self)[index]);
+    ARRAY(self)[index] = value;
+    Spk_INCREF(Spk_void);
+    return Spk_void;
 }

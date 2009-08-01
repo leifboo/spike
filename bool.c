@@ -1,67 +1,64 @@
 
 #include "bool.h"
 
-#include "behavior.h"
-#include "interp.h"
+#include "class.h"
 #include "native.h"
-#include <stdio.h>
 
 
-Boolean *Spk_false, *Spk_true;
-Behavior *Spk_ClassBoolean, *Spk_ClassFalse, *Spk_ClassTrue;
+SpkUnknown *Spk_false, *Spk_true;
+SpkBehavior *Spk_ClassBoolean, *Spk_ClassFalse, *Spk_ClassTrue;
 
 
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static Object *False_lneg(Object *self, Object *arg0, Object *arg1) {
+static SpkUnknown *False_lneg(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    Spk_INCREF(Spk_true);
     return Spk_true;
 }
 
-static Object *False_bneg(Object *self, Object *arg0, Object *arg1) {
+static SpkUnknown *False_bneg(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    Spk_INCREF(Spk_true);
     return Spk_true;
 }
 
-static Object *False_band(Object *self, Object *arg0, Object *arg1) {
+static SpkUnknown *False_band(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    Spk_INCREF(Spk_false);
     return Spk_false;
 }
 
-static Object *False_bxor(Object *self, Object *arg0, Object *arg1) {
+static SpkUnknown *False_bxor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    Spk_INCREF(arg0);
     return arg0;
 }
 
-static Object *False_bor(Object *self, Object *arg0, Object *arg1) {
+static SpkUnknown *False_bor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    Spk_INCREF(arg0);
     return arg0;
 }
 
-static Object *False_print(Object *self, Object *arg0, Object *arg1) {
-    printf("false");
-    return Spk_void;
-}
-
-static Object *True_lneg(Object *self, Object *arg0, Object *arg1) {
+static SpkUnknown *True_lneg(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    Spk_INCREF(Spk_false);
     return Spk_false;
 }
 
-static Object *True_bneg(Object *self, Object *arg0, Object *arg1) {
+static SpkUnknown *True_bneg(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    Spk_INCREF(Spk_false);
     return Spk_false;
 }
 
-static Object *True_band(Object *self, Object *arg0, Object *arg1) {
+static SpkUnknown *True_band(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    Spk_INCREF(arg0);
     return arg0;
 }
 
-static Object *True_bxor(Object *self, Object *arg0, Object *arg1) {
-    return Spk_oper(theInterpreter, arg0, OPER_BNEG, 0);
+static SpkUnknown *True_bxor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return Spk_Oper(theInterpreter, arg0, Spk_OPER_BNEG, 0);
 }
 
-static Object *True_bor(Object *self, Object *arg0, Object *arg1) {
+static SpkUnknown *True_bor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    Spk_INCREF(Spk_true);
     return Spk_true;
-}
-
-static Object *True_print(Object *self, Object *arg0, Object *arg1) {
-    printf("true");
-    return Spk_void;
 }
 
 
@@ -73,12 +70,13 @@ static SpkMethodTmpl BooleanMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassBooleanTmpl = {
-    "Boolean",
-    offsetof(ObjectSubclass, variables),
-    sizeof(Boolean),
-    0,
-    0,
-    BooleanMethods
+    "Boolean", {
+        /*accessors*/ 0,
+        BooleanMethods,
+        /*lvalueMethods*/ 0,
+        offsetof(SpkObjectSubclass, variables),
+    }, /*meta*/ {
+    }
 };
 
 
@@ -89,18 +87,17 @@ static SpkMethodTmpl FalseMethods[] = {
     { "__band__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &False_band },
     { "__bxor__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &False_bxor },
     { "__bor__",  SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &False_bor  },
-    /* other */
-    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &False_print },
     { 0, 0, 0}
 };
 
 SpkClassTmpl Spk_ClassFalseTmpl = {
-    "False",
-    offsetof(ObjectSubclass, variables),
-    sizeof(Boolean),
-    0,
-    0,
-    FalseMethods
+    "False", {
+        /*accessors*/ 0,
+        FalseMethods,
+        /*lvalueMethods*/ 0,
+        offsetof(SpkObjectSubclass, variables)
+    }, /*meta*/ {
+    }
 };
 
 
@@ -111,16 +108,15 @@ static SpkMethodTmpl TrueMethods[] = {
     { "__band__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &True_band },
     { "__bxor__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &True_bxor },
     { "__bor__",  SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &True_bor  },
-    /* other */
-    { "print", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &True_print },
     { 0, 0, 0}
 };
 
 SpkClassTmpl Spk_ClassTrueTmpl = {
-    "True",
-    offsetof(ObjectSubclass, variables),
-    sizeof(Boolean),
-    0,
-    0,
-    TrueMethods
+    "True", {
+        /*accessors*/ 0,
+        TrueMethods,
+        /*lvalueMethods*/ 0,
+        offsetof(SpkObjectSubclass, variables)
+    }, /*meta*/ {
+    }
 };
