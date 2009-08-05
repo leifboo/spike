@@ -1,12 +1,12 @@
-#!/usr/bin/env spike
+#!/usr/bin/env spike-1
 
 abc() {
     var alphabet;
     
     alphabet = "abcdefghijklmnopqrstuvwxyz";
-    foreach (letter: alphabet) {
+    alphabet do: [arg letter;
         stdout.printf("%c ", letter);
-    }
+        ];
     stdout.putc('\n');
 }
 

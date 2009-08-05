@@ -9,6 +9,7 @@
 #include "native.h"
 #include "parser.h"
 #include "rodata.h"
+#include "scheck.h"
 #include "st.h"
 #include "tree.h"
 
@@ -26,7 +27,7 @@ int main(int argc, char **argv) {
     SpkUnknown *result; SpkInteger *resultInt;
     unsigned int dataSize;
     SpkStmtList predefList, rootClassList;
-    SpkUnknown *main;
+    SpkUnknown *main, *tmp;
     
     sourceFilename = 0;
     showHelp = error = disassemble = 0;
@@ -79,12 +80,7 @@ int main(int argc, char **argv) {
     
     /* XXX: program arguments */
     
-    /* XXX: order-of-init problem */
     Spk_Bootstrap();
-    SpkHost_Init();
-    if (Spk_InitReadOnlyData() < 0)
-        return;
-    SpkInterpreter_Boot();
     
     stream = fopen(sourceFilename, "r");
     if (!stream) {
@@ -101,9 +97,10 @@ int main(int argc, char **argv) {
     
     fclose(stream);
     
-    if (SpkStaticChecker_Check(tree, &dataSize, &predefList, &rootClassList) == -1) {
+    tmp = SpkStaticChecker_Check(tree, st, &dataSize, &predefList, &rootClassList);
+    if (!tmp)
         return 1;
-    }
+    Spk_DECREF(tmp);
     tree = SpkParser_NewModuleDef(tree);
     module = SpkCodeGen_GenerateCode(tree, dataSize, predefList.first, rootClassList.first);
     

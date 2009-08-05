@@ -712,18 +712,21 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             DECODE_UINT(index);
             tmp = STACK_TOP();
             Spk_INCREF(tmp);
+            Spk_DECREF(framePointer[index]);
             framePointer[index] = tmp;
             break;
         case Spk_OPCODE_STORE_INST_VAR:
             DECODE_UINT(index);
             tmp = STACK_TOP();
             Spk_INCREF(tmp);
+            Spk_DECREF(instVarPointer[index]);
             instVarPointer[index] = tmp;
             break;
         case Spk_OPCODE_STORE_GLOBAL:
             DECODE_UINT(index);
             tmp = STACK_TOP();
             Spk_INCREF(tmp);
+            Spk_DECREF(globalPointer[index]);
             globalPointer[index] = tmp;
             break;
             

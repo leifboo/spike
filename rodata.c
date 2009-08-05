@@ -218,9 +218,13 @@ static int initStrings(StringTableEntry *t) {
 }
 
 
-int Spk_InitReadOnlyData(void) {
+int Spk_InitSymbols(void) {
     if (initSymbols(symbolTable) < 0)       { return -1; }
     if (initSelectors(selectorTable) < 0)   { return -1; }
+    return 0;
+}
+
+int Spk_InitReadOnlyData(void) {
     if (initIntegers(integerTable) < 0)     { return -1; }
     if (initStrings(stringTable) < 0)       { return -1; }
     

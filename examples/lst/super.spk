@@ -1,4 +1,4 @@
-#!/usr/bin/env spike
+#!/usr/bin/env spike-1
 
 class One {
     test() {

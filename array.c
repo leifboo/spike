@@ -33,8 +33,6 @@ static SpkUnknown *Array_item(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *a
         return 0;
     }
     item = ARRAY(self)[index];
-    if (!item)
-        item = Spk_uninit;
     Spk_INCREF(item);
     return (SpkUnknown *)item;
 }
@@ -78,6 +76,22 @@ static SpkUnknown *Array_do(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg
     }
     Spk_INCREF(Spk_void);
     return Spk_void;
+}
+
+
+/*------------------------------------------------------------------------*/
+/* low-level hooks */
+
+static void Array_zero(SpkObject *_self) {
+    SpkArray *self;
+    size_t i;
+    
+    self = (SpkArray *)_self;
+    (*Spk_ClassArray->superclass->zero)(_self);
+    for (i = 0; i < self->size; ++i) {
+        Spk_INCREF(Spk_uninit);
+        ARRAY(self)[i] = Spk_uninit;
+    }
 }
 
 
@@ -154,7 +168,7 @@ SpkClassTmpl Spk_ClassArrayTmpl = {
         lvalueMethods,
         offsetof(SpkArraySubclass, variables),
         sizeof(SpkUnknown *),
-        /*zero*/ 0,
+        &Array_zero,
         /*dealloc*/ 0,
         &traverse
     }, /*meta*/ {
@@ -166,16 +180,7 @@ SpkClassTmpl Spk_ClassArrayTmpl = {
 /* C API */
 
 SpkArray *SpkArray_new(size_t size) {
-    SpkArray *newArray;
-    size_t i;
-    
-    newArray = (SpkArray *)SpkObject_NewVar(Spk_ClassArray, size);
-    newArray->size = size;
-    for (i = 0; i < size; ++i) {
-        Spk_INCREF(Spk_uninit);
-        ARRAY(newArray)[i] = Spk_uninit;
-    }
-    return newArray;
+    return (SpkArray *)SpkObject_NewVar(Spk_ClassArray, size);
 }
 
 SpkArray *SpkArray_withArguments(SpkUnknown **stackPointer, size_t argumentCount,
@@ -193,13 +198,15 @@ SpkArray *SpkArray_withArguments(SpkUnknown **stackPointer, size_t argumentCount
     for (i = 0; i < argumentCount; ++i) {
         item = stackPointer[argumentCount - i - 1];
         Spk_INCREF(item);
+        Spk_DECREF(ARRAY(argumentArray)[i]);
         ARRAY(argumentArray)[i] = item;
     }
     /* copy variable arguments */
     for ( ; i < n; ++i) {
         item = ARRAY(varArgArray)[skip + i - argumentCount];
-        ARRAY(argumentArray)[i] = item;
         Spk_INCREF(item);
+        Spk_DECREF(ARRAY(argumentArray)[i]);
+        ARRAY(argumentArray)[i] = item;
     }
     
     return argumentArray;
@@ -212,7 +219,6 @@ SpkArray *SpkArray_fromVAList(va_list ap) {
     
     size = 2;
     newArray = (SpkArray *)SpkObject_NewVar(Spk_ClassArray, size);
-    newArray->base.klass = Spk_ClassArray;
     for (i = 0,  obj = va_arg(ap, SpkUnknown *);
          /*****/ obj;
          ++i,    obj = va_arg(ap, SpkUnknown *)) {
@@ -222,12 +228,14 @@ SpkArray *SpkArray_fromVAList(va_list ap) {
             size *= 2;
             newArray = (SpkArray *)SpkObject_NewVar(Spk_ClassArray, size);
             for (j = 0; j < tmpSize; ++j) {
+                SpkUnknown *tmp = ARRAY(newArray)[j];
                 ARRAY(newArray)[j] = ARRAY(tmpArray)[j];
-                ARRAY(tmpArray)[j] = 0;
+                ARRAY(tmpArray)[j] = tmp;
             }
             Spk_DECREF(tmpArray);
         }
         Spk_INCREF(obj);
+        Spk_DECREF(ARRAY(newArray)[i]);
         ARRAY(newArray)[i] = obj;
     }
     newArray->size = i;
@@ -246,8 +254,6 @@ SpkUnknown *SpkArray_item(SpkArray *self, long index) {
         return 0;
     }
     item = ARRAY(self)[index];
-    if (!item)
-        item = Spk_uninit;
     Spk_INCREF(item);
     return item;
 }

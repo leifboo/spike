@@ -88,6 +88,7 @@ static SpkUnknown *Integer_binaryLogicalOper(SpkInteger *self, SpkUnknown *arg0,
         Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
         return 0;
     }
+    Spk_INCREF(result);
     return result;
 }
 
@@ -235,7 +236,7 @@ static SpkMethodTmpl methods[] = {
     { "__band__",   SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_band   },
     { "__bxor__",   SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_bxor   },
     { "__bor__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_bor    },
-    { 0, 0, 0}
+    { 0, 0, 0 }
 };
 
 SpkClassTmpl Spk_ClassIntegerTmpl = {

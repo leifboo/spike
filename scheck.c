@@ -1,6 +1,9 @@
 
 #include "scheck.h"
 
+#ifndef MALTIPY
+#include "array.h"
+#endif /* !MALTIPY */
 #include "behavior.h"
 #include "boot.h"
 #include "class.h"
@@ -737,6 +740,22 @@ static SpkUnknown *addPredef(StmtList *predefList, Stmt *def) {
     return Spk_void;
 }
 
+static SpkUnknown *declareClass(SpkBehavior *aClass,
+                                StmtList *predefList,
+                                StaticChecker *checker)
+{
+    Stmt *classDef = predefinedClassDef((SpkClass *)aClass, checker);
+    SpkSymbolTable_Insert(checker->st, classDef->expr);
+    classDef->expr->u.def.initValue = (SpkUnknown *)aClass;
+    _(addPredef(predefList, classDef));
+    
+    Spk_INCREF(Spk_void);
+    return Spk_void;
+    
+ unwind:
+    return 0;
+}
+
 SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
                                    SpkSymbolTable *st,
                                    unsigned int *pDataSize,
@@ -758,18 +777,13 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     SpkSymbolTable_EnterScope(checker.st, 1); /* global scope */
     
     predefList->first = predefList->last = 0;
-    do {
-        /* declare 'Object' */
-        Stmt *classDef = predefinedClassDef((SpkClass *)Spk_ClassObject, &checker);
-        SpkSymbolTable_Insert(checker.st, classDef->expr);
-        classDef->expr->u.def.initValue = (SpkUnknown *)Spk_ClassObject;
-        _(addPredef(predefList, classDef));
-    } while (0);
+    /* XXX: What about the other core classes? */
+    _(declareClass(Spk_ClassObject, predefList, &checker));
+#ifndef MALTIPY
+    _(declareClass(Spk_ClassArray, predefList, &checker));
+#endif /* !MALTIPY */
     for (classBootRec = Spk_classBootRec; classBootRec->var; ++classBootRec) {
-        Stmt *classDef = predefinedClassDef((SpkClass *)*classBootRec->var, &checker);
-        SpkSymbolTable_Insert(checker.st, classDef->expr);
-        classDef->expr->u.def.initValue = (SpkUnknown *)*classBootRec->var;
-        _(addPredef(predefList, classDef));
+        _(declareClass(*classBootRec->var, predefList, &checker));
     }
     for (varBootRec = Spk_globalVarBootRec; varBootRec->var; ++varBootRec) {
         Stmt *varDef = globalVarDef(varBootRec->name, &checker);

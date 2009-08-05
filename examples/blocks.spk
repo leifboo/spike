@@ -1,4 +1,4 @@
-#!/usr/bin/env spike
+#!/usr/bin/env spike-1
 
 
 // from chapter 2 of blue book
@@ -7,8 +7,8 @@ page33() {
     var incrementBlock, sumBlock;
     var sum, index;
     
-    incrementBlock = [: index += 1 ];
-    sumBlock = [: sum + index * index ];
+    incrementBlock = [index += 1 ];
+    sumBlock = [sum + index * index ];
     sum = 0;
     index = 1;
     sum = sumBlock();
@@ -20,7 +20,7 @@ page33() {
     
     var amount;
     amount = 1;
-    timesRepeat(4, [: amount += amount]);
+    timesRepeat(4, [amount += amount]);
     stdout.printf("The amount is %d.\n", amount);
 }
 
@@ -45,10 +45,10 @@ amusingProblem() {
     
     var range;
     range = Range.new().init(0, aBlockArray.size);
-    range.eachItemDo(
-        [anIndex:
-         aBlockArray[anIndex] = [: anotherArray[anIndex] * 2]
-            ]);
+    range do:
+        [arg anIndex;
+         aBlockArray[anIndex] = [anotherArray[anIndex] * 2]
+            ];
     
     var i, result;
     for (i = 0; i < aBlockArray.size; ++i) {
@@ -62,7 +62,7 @@ class Range {
     
     init(i, j) { begin = i; end = j; return self; }
     
-    eachItemDo(block) {
+    self do: block {
         var i;
         for (i = begin; i < end; ++i) {
             block(i);

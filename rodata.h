@@ -80,6 +80,7 @@ extern SpkUnknown *Spk_unknownSourcePathname;
 extern SpkUnknown *Spk_emptyArgs;
 
 
+int Spk_InitSymbols(void);
 int Spk_InitReadOnlyData(void);
 SpkUnknown *Spk_ParseSelector(const char *);
 

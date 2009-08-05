@@ -1,4 +1,4 @@
-#!/usr/bin/env spike
+#!/usr/bin/env spike-1
 
 // see http://paulgraham.com/accgen.html
 
@@ -9,7 +9,7 @@ xxx(n) {
 }
 
 foo(n) {
-    return [i: n += i];
+    return [arg i; n += i];
 }
 
 main() {

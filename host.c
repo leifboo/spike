@@ -191,6 +191,7 @@ SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
     }
     
     str = (char *)malloc(len + 1);
+    str[0] = '\0';
     
     if (kw) {
         sym = Spk_CAST(Symbol, kw);
@@ -282,7 +283,7 @@ unsigned int SpkHost_InsertLiteral(SpkUnknown *literalDict, SpkUnknown *literal)
         return SpkInteger_asLong((SpkInteger *)Spk_CAST(Integer, value));
     }
     
-    index = dict->size;
+    index = dict->tally;
     value = (SpkUnknown *)SpkInteger_fromLong(index);
     SpkIdentityDictionary_atPut(dict, literal, value);
     Spk_DECREF(value);
@@ -320,7 +321,7 @@ SpkUnknown *SpkHost_GetArgs(SpkUnknown **stackPointer,
 {
     SpkArray *varArgArray;
     
-    varArgArray = Spk_CAST(Array, varArgs);
+    varArgArray = varArgs ? Spk_CAST(Array, varArgs) : 0;
     return (SpkUnknown *)SpkArray_withArguments(stackPointer,
                                                 argumentCount,
                                                 varArgArray,

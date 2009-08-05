@@ -134,6 +134,8 @@ SpkIdentityDictionary *SpkIdentityDictionary_new(void) {
     SpkIdentityDictionary *self;
     
     self = (SpkIdentityDictionary *)SpkObject_New(Spk_ClassIdentityDictionary);
+    if (!self)
+        return 0;
     self->size = 2; /* must be a power of 2 */
     self->tally = 0;
     self->keyArray = (SpkUnknown **)calloc(self->size, sizeof(SpkUnknown *));

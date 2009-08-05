@@ -101,9 +101,11 @@ static SpkSymbol *newSymbol(const char *str, size_t len, size_t hash) {
     
  insert:
     sym = (SpkSymbol *)malloc(sizeof(SpkSymbol) + len);
+    sym->base.base.refCount = 1;
     sym->base.klass = Spk_ClassSymbol;
     sym->hash = hash;
-    memcpy(sym->str, str, len + 1);
+    memcpy(sym->str, str, len);
+    sym->str[len] = '\0';
     
     hashTable.array[i] = sym;
     ++hashTable.tally;
