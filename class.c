@@ -4,11 +4,33 @@
 #include "host.h"
 #include "interp.h"
 #include "metaclass.h"
+
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 struct SpkBehavior *Spk_ClassClass;
+
+
+/*------------------------------------------------------------------------*/
+/* methods */
+
+static SpkUnknown *Class_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    static const char *format = "<class %s>";
+    const char *name;
+    SpkUnknown *result;
+    size_t len;
+    
+    name = SpkBehavior_Name((SpkBehavior *)self);
+    len = strlen(format) + strlen(name);
+    result = SpkHost_StringFromCStringAndLength(0, len);
+    if (!result)
+        return 0;
+    sprintf(SpkHost_StringAsCString(result), format, name);
+    return result;
+}
 
 
 /*------------------------------------------------------------------------*/
@@ -19,10 +41,15 @@ static SpkAccessorTmpl accessors[] = {
     { 0, 0, 0, 0 }
 };
 
+static SpkMethodTmpl methods[] = {
+    { "printString", SpkNativeCode_ARGS_0, &Class_printString },
+    { 0, 0, 0 }
+};
+
 SpkClassTmpl Spk_ClassClassTmpl = {
     "Class", {
         accessors,
-        /*methods*/ 0,
+        methods,
         /*lvalueMethods*/ 0,
         offsetof(SpkClassSubclass, variables)
     }, /*meta*/ {

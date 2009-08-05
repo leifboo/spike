@@ -104,12 +104,12 @@ int main(int argc, char **argv) {
     tree = SpkParser_NewModuleDef(tree);
     module = SpkCodeGen_GenerateCode(tree, dataSize, predefList.first, rootClassList.first);
     
+    theInterpreter = SpkInterpreter_New();
+    
     if (disassemble) {
         SpkDisassembler_DisassembleModule(module, stdout);
         return 0;
     }
-    
-    theInterpreter = SpkInterpreter_New();
     
     main = Spk_SendMessage(
         theInterpreter,

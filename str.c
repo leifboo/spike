@@ -155,6 +155,49 @@ static SpkUnknown *String_do(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *ar
 
 
 /*------------------------------------------------------------------------*/
+/* methods -- printing */
+
+static SpkUnknown *String_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkString *self;
+    SpkString *result;
+    char *d, *s, *subst;
+    char c;
+    
+    self = (SpkString *)_self;
+    result = SpkString_fromCStringAndLength(0, 2*LEN(self) + 2);
+    d = SpkString_asString(result);
+    s = STR(self);
+    *d++ = '"';
+    while ((c = *s++)) {
+        /* XXX: numeric escape codes */
+        subst = 0;
+        switch (c) {
+        case '\a': subst = "\\a"; break;
+        case '\b': subst = "\\b"; break;
+        case '\f': subst = "\\f"; break;
+        case '\n': subst = "\\n"; break;
+        case '\r': subst = "\\r"; break;
+        case '\t': subst = "\\t"; break;
+        case '\v': subst = "\\v"; break;
+        case '\\': subst = "\\\\"; break;
+        case '"':  subst = "\\\""; break;
+        default:
+            break;
+        }
+        if (subst) {
+            *d++ = *subst++;
+            *d++ = *subst++;
+        } else {
+            *d++ = c;
+        }
+    }
+    *d++ = '"';
+    *d = '\0';
+    return (SpkUnknown *)result;
+}
+
+
+/*------------------------------------------------------------------------*/
 /* class template */
 
 static SpkMethodTmpl methods[] = {
@@ -177,6 +220,8 @@ static SpkMethodTmpl methods[] = {
     { "size", SpkNativeCode_ARGS_0, &String_size },
     /* enumerating */
     { "do:", SpkNativeCode_ARGS_1, &String_do },
+    /* printing */
+    { "printString", SpkNativeCode_ARGS_0, &String_printString },
     { 0, 0, 0}
 };
 

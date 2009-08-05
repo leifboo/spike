@@ -4,6 +4,9 @@
 #include "bool.h"
 #include "class.h"
 #include "native.h"
+#include "str.h"
+
+#include <stdio.h>
 
 
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
@@ -210,6 +213,24 @@ static SpkUnknown *Integer_bor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *a
 
 
 /*------------------------------------------------------------------------*/
+/* methods -- printing */
+
+static SpkUnknown *Integer_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkInteger *self;
+    SpkString *result;
+    char *str;
+    
+    self = (SpkInteger *)_self;
+    result = SpkString_fromCStringAndLength(0, 4*sizeof(self->value));
+    if (!result)
+        return 0;
+    str = SpkString_asString(result);
+    sprintf(str, "%d", self->value);
+    return (SpkUnknown *)result;
+}
+
+
+/*------------------------------------------------------------------------*/
 /* class template */
 
 static SpkMethodTmpl methods[] = {
@@ -236,6 +257,8 @@ static SpkMethodTmpl methods[] = {
     { "__band__",   SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_band   },
     { "__bxor__",   SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_bxor   },
     { "__bor__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_bor    },
+    /* printing */
+    { "printString", SpkNativeCode_ARGS_0, &Integer_printString },
     { 0, 0, 0 }
 };
 

@@ -1,6 +1,7 @@
 
 #include "obj.h"
 
+#include "behavior.h"
 #include "bool.h"
 #ifdef MALTIPY
 #include "bridge.h"
@@ -9,6 +10,8 @@
 #include "host.h"
 #include "interp.h"
 #include "native.h"
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -33,6 +36,21 @@ static SpkUnknown *Object_ne(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg
     temp = Spk_Oper(theInterpreter, self, Spk_OPER_EQ, arg0, 0);
     result = Spk_Oper(theInterpreter, temp, Spk_OPER_LNEG, 0);
     Spk_DECREF(temp);
+    return result;
+}
+
+static SpkUnknown *Object_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    static const char *format = "<%s instance at %p>";
+    const char *className;
+    SpkUnknown *result;
+    size_t len;
+    
+    className = SpkBehavior_Name(((SpkObject *)self)->klass);
+    len = strlen(format) + strlen(className) + 2*sizeof(void*); /* assumes %p is hex */
+    result = SpkHost_StringFromCStringAndLength(0, len);
+    if (!result)
+        return 0;
+    sprintf(SpkHost_StringAsCString(result), format, className, self);
     return result;
 }
 
@@ -182,6 +200,7 @@ static SpkAccessorTmpl ObjectAccessors[] = {
 static SpkMethodTmpl ObjectMethods[] = {
     { "__eq__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Object_eq },
     { "__ne__", SpkNativeCode_BINARY_OPER, &Object_ne },
+    { "printString", SpkNativeCode_ARGS_0, &Object_printString },
     { 0, 0, 0 }
 };
 

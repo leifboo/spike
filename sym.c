@@ -3,6 +3,8 @@
 
 #include "class.h"
 #include "native.h"
+#include "str.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -16,16 +18,38 @@ static struct {
 
 
 /*------------------------------------------------------------------------*/
+/* methods */
+
+static SpkUnknown *Symbol_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkSymbol *self;
+    SpkString *result;
+    size_t len;
+    char *str;
+    
+    self = (SpkSymbol *)_self;
+    len = strlen(self->str);
+    result = SpkString_fromCStringAndLength(0, len + 1);
+    if (!result)
+        return 0;
+    str = SpkString_asString(result);
+    str[0] = '$';
+    memcpy(&str[1], self->str, len);
+    return (SpkUnknown *)result;
+}
+
+
+/*------------------------------------------------------------------------*/
 /* class template */
 
-static SpkMethodTmpl SymbolMethods[] = {
+static SpkMethodTmpl methods[] = {
+    { "printString", SpkNativeCode_ARGS_0, &Symbol_printString },
     { 0, 0, 0}
 };
 
 SpkClassTmpl Spk_ClassSymbolTmpl = {
     "Symbol", {
         /*accessors*/ 0,
-        SymbolMethods,
+        methods,
         /*lvalueMethods*/ 0,
         /*offsetof(SpkSymbolSubclass, variables)*/ 0,
         sizeof(char)

@@ -60,6 +60,7 @@ SpkUnknown *Spk_mustBeSymbol;
 SpkUnknown *Spk_mustBeTuple;
 SpkUnknown *Spk_noRunnableFiber;
 SpkUnknown *Spk_numArgs;
+SpkUnknown *Spk_printString;
 SpkUnknown *Spk_recursiveDoesNotUnderstand;
 SpkUnknown *Spk_unknownOpcode;
 SpkUnknown *Spk_wrongNumberOfArguments;
@@ -158,6 +159,7 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_mustBeTuple,                   "mustBeTuple"                 },
     { &Spk_noRunnableFiber,               "noRunnableFiber"             },
     { &Spk_numArgs,                       "numArgs"                     },
+    { &Spk_printString,                   "printString"                 },
     { &Spk_recursiveDoesNotUnderstand,    "recursiveDoesNotUnderstand:" },
     { &Spk_unknownOpcode,                 "unknownOpcode"               },
     { &Spk_wrongNumberOfArguments,        "wrongNumberOfArguments"      },

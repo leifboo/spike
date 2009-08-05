@@ -2,11 +2,13 @@
 #include "host.h"
 
 #include "array.h"
+#include "behavior.h"
 #include "dict.h"
 #include "float.h"
 #include "int.h"
 #include "interp.h"
 #include "native.h"
+#include "rodata.h"
 #include "str.h"
 #include "sym.h"
 
@@ -42,7 +44,7 @@ static const char *haltDesc(int code) {
 
 
 /****/ void SpkHost_Halt(int code, const char *message) {
-    /* XXX: print call stack */
+    SpkInterpreter_PrintCallStack(theInterpreter);
     fprintf(stderr, "halt: %s: %s\n", haltDesc(code), message);
 }
 
@@ -269,6 +271,10 @@ SpkUnknown *SpkHost_FindSymbol(SpkUnknown *symbolDict, SpkUnknown *method) {
 /* literal dictionaries */
 
 SpkUnknown *SpkHost_NewLiteralDict(void) {
+    /* XXX: IdentityDictionary doesn't really do the job.  It works
+     * for Symbols, but it fails to uniquify strings, integers,
+     * floats...
+     */
     return (SpkUnknown *)SpkIdentityDictionary_new();
 }
 
@@ -333,9 +339,27 @@ SpkUnknown *SpkHost_GetArgs(SpkUnknown **stackPointer,
 /* as yet unclassified */
 
 SpkUnknown *SpkHost_ObjectAsString(SpkUnknown *obj) {
-    return (SpkUnknown *)SpkString_fromCString("XXX");
+    return Spk_SendMessage(
+        theInterpreter,
+        obj,
+        Spk_METHOD_NAMESPACE_RVALUE,
+        Spk_printString,
+        Spk_emptyArgs
+        );
 }
 
 /****/ void SpkHost_PrintObject(SpkUnknown *obj, FILE *stream) {
-    fprintf(stream, "XXX");
+    SpkUnknown *printObj;
+    SpkString *printString;
+    char *str;
+    
+    printObj = SpkHost_ObjectAsString(obj);
+    if (!printObj)
+        return;
+    printString = Spk_CAST(String, printObj);
+    if (printString) {
+        str = SpkString_asString(printString);
+        fputs(str, stream);
+    }
+    Spk_DECREF(printObj);
 }
