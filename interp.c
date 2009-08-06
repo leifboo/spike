@@ -1343,7 +1343,9 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             assert(!self->newContext);
             self->newContext = self->activeContext->caller; /* steal reference */
             self->activeContext->caller = 0;
+            /* suspend */
             self->activeContext->pc = instructionPointer + 1; /* skip 'ret' */
+            self->activeContext->stackp = stackPointer + 1; /* skip result */
             if (self->activeContext->homeContext == self->activeContext) {
                 /* break cycles */
                 Spk_DECREF(self->activeContext->homeContext);
