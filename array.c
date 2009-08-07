@@ -99,7 +99,7 @@ static void Array_zero(SpkObject *_self) {
 /* memory layout of instances */
 
 static void Array_traverse_init(SpkObject *self) {
-    (*self->klass->superclass->traverse.init)(self);
+    (*Spk_ClassArray->superclass->traverse.init)(self);
 }
 
 static SpkUnknown **Array_traverse_current(SpkObject *_self) {
@@ -108,7 +108,7 @@ static SpkUnknown **Array_traverse_current(SpkObject *_self) {
     self = (SpkArray *)_self;
     if (self->size > 0)
         return &(ARRAY(self)[self->size - 1]);
-    return (*self->base.klass->superclass->traverse.current)(_self);
+    return (*Spk_ClassArray->superclass->traverse.current)(_self);
 }
 
 static void Array_traverse_next(SpkObject *_self) {
@@ -118,7 +118,7 @@ static void Array_traverse_next(SpkObject *_self) {
     if (self->size > 0)
         --self->size;
     else
-        (*self->base.klass->superclass->traverse.next)(_self);
+        (*Spk_ClassArray->superclass->traverse.next)(_self);
 }
 
 

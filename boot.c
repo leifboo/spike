@@ -198,6 +198,7 @@ static void initCoreClasses(void) {
     Spk_ClassObject->itemSize = Spk_ClassObjectTmpl.thisClass.itemSize;
 #ifndef MALTIPY
     /* Before continuing, partially initialize IdentityDictionary and Symbol. */
+    Spk_ClassIdentityDictionary->superclass = Spk_ClassObject;
     Spk_ClassIdentityDictionary->zero = Spk_ClassObject->zero;
     Spk_ClassIdentityDictionary->instVarOffset = Spk_ClassIdentityDictionaryTmpl.thisClass.instVarOffset;
     Spk_ClassIdentityDictionary->instVarBaseIndex = Spk_ClassObject->instVarBaseIndex + Spk_ClassObject->instVarCount;

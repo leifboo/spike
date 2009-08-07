@@ -131,16 +131,89 @@ void SpkIdentityDictionary_atPut(SpkIdentityDictionary *self, SpkUnknown *key, S
 }
 
 SpkIdentityDictionary *SpkIdentityDictionary_new(void) {
-    SpkIdentityDictionary *self;
-    
-    self = (SpkIdentityDictionary *)SpkObject_New(Spk_ClassIdentityDictionary);
-    if (!self)
-        return 0;
+    return (SpkIdentityDictionary *)SpkObject_New(Spk_ClassIdentityDictionary);
+}
+
+
+/*------------------------------------------------------------------------*/
+/* low-level hooks */
+
+static void IdentityDictionary_zero(SpkObject *_self) {
+    SpkIdentityDictionary *self = (SpkIdentityDictionary *)_self;
+    (*Spk_ClassIdentityDictionary->superclass->zero)(_self);
     self->size = 2; /* must be a power of 2 */
     self->tally = 0;
     self->keyArray = (SpkUnknown **)calloc(self->size, sizeof(SpkUnknown *));
     self->valueArray = (SpkUnknown **)calloc(self->size, sizeof(SpkUnknown *));
-    return self;
+}
+
+static void IdentityDictionary_dealloc(SpkObject *_self) {
+    SpkIdentityDictionary *self = (SpkIdentityDictionary *)_self;
+    free(self->keyArray);
+    free(self->valueArray);
+    self->keyArray = 0;
+    self->valueArray = 0;
+    (*Spk_ClassIdentityDictionary->superclass->dealloc)(_self);
+}
+
+
+/*------------------------------------------------------------------------*/
+/* memory layout of instances */
+
+static void IdentityDictionary_traverse_init(SpkObject *_self) {
+    SpkIdentityDictionary *self;
+    
+    self = (SpkIdentityDictionary *)_self;
+    (*Spk_ClassIdentityDictionary->superclass->traverse.init)(_self);
+    for ( ; self->size > 0; --self->size) {
+        if (self->keyArray[self->size - 1])
+            break;
+    }
+    self->tally = self->size;
+}
+
+static SpkUnknown **IdentityDictionary_traverse_current(SpkObject *_self) {
+    SpkIdentityDictionary *self;
+    
+    self = (SpkIdentityDictionary *)_self;
+    if (self->size > 0) {
+        return &self->keyArray[self->size - 1];
+    }
+    if (self->tally > 0) {
+        return &self->valueArray[self->tally - 1];
+    }
+    return (*Spk_ClassIdentityDictionary->superclass->traverse.current)(_self);
+}
+
+static void IdentityDictionary_traverse_next(SpkObject *_self) {
+    SpkIdentityDictionary *self;
+    size_t i;
+    
+    self = (SpkIdentityDictionary *)_self;
+    if (self->size > 0) {
+        if (self->size > 1) {
+            for (i = self->size - 1; i > 0; --i) {
+                if (self->keyArray[i - 1]) {
+                    self->size = i;
+                    return;
+                }
+            }
+        }
+        self->size = 0;
+        return; /* next item is from 'valueArray' */
+    }
+    if (self->tally > 0) {
+        if (self->tally > 1) {
+            for (i = self->tally - 1; i > 0; --i) {
+                if (self->valueArray[i - 1]) {
+                    self->tally = i;
+                    return;
+                }
+            }
+        }
+        self->tally = 0;
+    }
+    (*Spk_ClassIdentityDictionary->superclass->traverse.next)(_self);
 }
 
 
@@ -151,12 +224,22 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
+static SpkTraverse traverse = {
+    &IdentityDictionary_traverse_init,
+    &IdentityDictionary_traverse_current,
+    &IdentityDictionary_traverse_next,
+};
+
 SpkClassTmpl Spk_ClassIdentityDictionaryTmpl = {
     "IdentityDictionary", {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkIdentityDictionarySubclass, variables)
+        offsetof(SpkIdentityDictionarySubclass, variables),
+        /*itemSize*/ 0,
+        &IdentityDictionary_zero,
+        &IdentityDictionary_dealloc,
+        &traverse
     }, /*meta*/ {
     }
 };

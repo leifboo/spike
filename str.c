@@ -141,13 +141,17 @@ static SpkUnknown *String_size(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *a
 static SpkUnknown *String_do(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkString *self;
     size_t i;
+    SpkChar *c;
     SpkUnknown *result;
     
     self = (SpkString *)_self;
     for (i = 0; i < LEN(self); ++i) {
-        result = Spk_Call(theInterpreter, arg0, Spk_OPER_APPLY, SpkChar_FromChar(STR(self)[i]), 0);
+        c = SpkChar_FromChar(STR(self)[i]);
+        result = Spk_Call(theInterpreter, arg0, Spk_OPER_APPLY, c, 0);
+        Spk_DECREF(c);
         if (!result)
             return 0; /* unwind */
+        Spk_DECREF(result);
     }
     Spk_INCREF(Spk_void);
     return Spk_void;

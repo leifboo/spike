@@ -84,6 +84,16 @@ SpkClassTmpl Spk_ClassMethodTmpl = {
 };
 
 
+static void Thunk_traverse_init(SpkObject *);
+static SpkUnknown **Thunk_traverse_current(SpkObject *);
+static void Thunk_traverse_next(SpkObject *);
+
+static SpkTraverse Thunk_traverse = {
+    &Thunk_traverse_init,
+    &Thunk_traverse_current,
+    &Thunk_traverse_next,
+};
+
 static SpkMethodTmpl ThunkMethods[] = {
     { 0, 0, 0 }
 };
@@ -93,18 +103,31 @@ SpkClassTmpl Spk_ClassThunkTmpl = {
         /*accessors*/ 0,
         ThunkMethods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkThunkSubclass, variables)
+        offsetof(SpkThunkSubclass, variables),
+        /*itemSize*/ 0,
+        /*zero*/ 0,
+        /*dealloc*/ 0,
+        &Thunk_traverse
     }, /*meta*/ {
     }
 };
 
 
-static SpkUnknown *Context_blockCopy(SpkUnknown *, SpkUnknown *, SpkUnknown *);
+static void Context_traverse_init(SpkObject *);
+static SpkUnknown **Context_traverse_current(SpkObject *);
+static void Context_traverse_next(SpkObject *);
 static void Context_dealloc(SpkObject *);
+static SpkUnknown *Context_blockCopy(SpkUnknown *, SpkUnknown *, SpkUnknown *);
 
 static SpkMethodTmpl ContextMethods[] = {
     { "blockCopy", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Context_blockCopy },
     { 0, 0, 0 }
+};
+
+static SpkTraverse Context_traverse = {
+    &Context_traverse_init,
+    &Context_traverse_current,
+    &Context_traverse_next,
 };
 
 SpkClassTmpl Spk_ClassContextTmpl = {
@@ -114,8 +137,9 @@ SpkClassTmpl Spk_ClassContextTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkContextSubclass, variables),
         sizeof(SpkUnknown *),
-        0,
-        &Context_dealloc
+        /*zero*/ 0,
+        &Context_dealloc,
+        &Context_traverse
     }, /*meta*/ {
     }
 };
@@ -318,6 +342,42 @@ SpkMethod *SpkMethod_New(size_t size) {
 
 
 /*------------------------------------------------------------------------*/
+/* thunks */
+
+static void Thunk_traverse_init(SpkObject *_self) {
+    SpkThunk *self;
+    
+    self = (SpkThunk *)_self;
+    (*Spk_ClassThunk->superclass->traverse.init)(_self);
+    self->pc = (SpkOpcode *)0 + 3;
+}
+
+static SpkUnknown **Thunk_traverse_current(SpkObject *_self) {
+    SpkThunk *self;
+    ptrdiff_t i;
+    
+    self = (SpkThunk *)_self;
+    i = self->pc - (SpkOpcode *)0;
+    switch (i) {
+    case 3: return &self->receiver;
+    case 2: return (SpkUnknown **)&self->method;
+    case 1: return (SpkUnknown **)&self->methodClass;
+    }
+    return (*Spk_ClassThunk->superclass->traverse.current)(_self);
+}
+
+static void Thunk_traverse_next(SpkObject *_self) {
+    SpkThunk *self;
+    
+    self = (SpkThunk *)_self;
+    if (self->pc)
+        --self->pc;
+    else
+        (*Spk_ClassThunk->superclass->traverse.next)(_self);
+}
+
+
+/*------------------------------------------------------------------------*/
 /* contexts */
 
 SpkContext *SpkContext_New(size_t size) {
@@ -352,12 +412,48 @@ SpkContext *SpkContext_New(size_t size) {
     return newContext;
 }
 
+static void Context_traverse_init(SpkObject *self) {
+    (*Spk_ClassContext->superclass->traverse.init)(self);
+}
+
+static SpkUnknown **Context_traverse_current(SpkObject *_self) {
+    SpkContext *self;
+    
+    self = (SpkContext *)_self;
+    if (self->base.size > 0)
+        return &(SpkContext_VARIABLES(self)[self->base.size - 1]);
+    return (*Spk_ClassContext->superclass->traverse.current)(_self);
+}
+
+static void Context_traverse_next(SpkObject *_self) {
+    SpkContext *self;
+    
+    self = (SpkContext *)_self;
+    if (self->base.size > 0)
+        --self->base.size;
+    else
+        (*Spk_ClassContext->superclass->traverse.next)(_self);
+}
+
 static void Context_dealloc(SpkObject *_self) {
     SpkContext *self;
     SpkUnknown **p;
-    size_t count;
     
     self = (SpkContext *)_self;
+    
+    /* XXX: This cleans up extra stuff missed by the 'traverse'
+       routines. */
+    
+    Spk_XDECREF(self->caller);
+    if (self->homeContext) { /* XXX: shady */
+        /* block context */
+        Spk_DECREF(self->homeContext);
+    } else {
+        /* method context */
+        Spk_DECREF(self->u.m.method);
+        Spk_DECREF(self->u.m.methodClass);
+        Spk_DECREF(self->u.m.receiver);
+    }
     
     for (p = &self->leaf.arguments[0];
          p < &self->leaf.arguments[Spk_LEAF_MAX_ARGUMENT_COUNT];
@@ -368,11 +464,6 @@ static void Context_dealloc(SpkObject *_self) {
          p < &self->leaf.stack[Spk_LEAF_MAX_STACK_SIZE];
          ++p) {
         Spk_DECREF(*p);
-    }
-    
-    count = self->base.size;
-    for (p = SpkContext_VARIABLES(self); count > 0; ++p, --count) {
-        Spk_XDECREF(*p);
     }
     
     (*Spk_ClassContext->superclass->dealloc)(_self);
@@ -1107,6 +1198,13 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             
             DECODE_UINT(fixedArgumentCount);
             
+            for (p = &self->activeContext->leaf.arguments[0];
+                 p < &self->activeContext->leaf.arguments[Spk_LEAF_MAX_ARGUMENT_COUNT];
+                 ++p) {
+                Spk_XDECREF(*p); /* XXX */
+                *p = 0;
+            }
+            
             /* process arguments */
             if (varArg) {
                 SpkUnknown *varArgTuple;
@@ -1146,10 +1244,6 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                     *p = stackPointer[argumentCount - i - 1];
                     Spk_INCREF(*p);
                 }
-            }
-            
-            for ( ; p < &self->activeContext->leaf.arguments[Spk_LEAF_MAX_ARGUMENT_COUNT]; ++p) {
-                *p = 0;
             }
             
             /* initialize the stack pointer */
@@ -1330,8 +1424,9 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 thisCntx->pc = 0;
                 if (thisCntx->homeContext == thisCntx) {
                     /* break cycles */
-                    Spk_DECREF(thisCntx->homeContext);
+                    tmp = (SpkUnknown *)thisCntx->homeContext;
                     thisCntx->homeContext = 0;
+                    Spk_DECREF(tmp);
                 }
                 thisCntx = caller;
             }
@@ -1425,13 +1520,17 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 /* copy & reverse arguments from stack */
                 p = &blockContext->homeContext->u.m.framep[blockContext->u.b.index];
                 for (i = 0; i < argumentCount; ++p, ++i) {
+                    tmp = *p;
                     *p = stackPointer[1 + argumentCount - i - 1];
                     Spk_INCREF(*p);
+                    Spk_DECREF(tmp);
                 }
                 
                 /* copy arguments from array */
                 for (i = 0; i < Spk_ArgsSize(varArgTuple); ++p, ++i) {
+                    tmp = *p;
                     *p = Spk_GetArg(varArgTuple, i);
+                    Spk_DECREF(tmp);
                 }
                 
             } else {
@@ -1442,8 +1541,10 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 /* copy & reverse arguments from stack */
                 p = &blockContext->homeContext->u.m.framep[blockContext->u.b.index];
                 for (i = 0; i < argumentCount; ++p, ++i) {
+                    tmp = *p;
                     *p = stackPointer[argumentCount - i - 1];
                     Spk_INCREF(*p);
+                    Spk_DECREF(tmp);
                 }
                 
             }

@@ -101,26 +101,27 @@ static SpkUnknown *FileStream_gets(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkno
 static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkFileStream *self;
     SpkArray *args; size_t nArgs, argIndex;
-    SpkString *formatString; char *format; size_t formatSize;
+    SpkUnknown *formatObj = 0; SpkString *formatString; char *format = 0; size_t formatSize;
     char c, convOp, *f, *chunk;
-    SpkUnknown *arg; SpkChar *charArg; SpkInteger *intArg; SpkFloat *floatArg; SpkString *strArg;
+    SpkUnknown *arg = 0; SpkChar *charArg; SpkInteger *intArg; SpkFloat *floatArg; SpkString *strArg;
     static char *convOps = "cdeEfgGinopsuxX%";
     
     self = (SpkFileStream *)_self;
     args = Spk_CAST(Array, arg0);
     if (!args) {
         Spk_Halt(Spk_HALT_TYPE_ERROR, "an array is required");
-        return 0;
+        goto unwind;
     }
     nArgs = SpkArray_size(args);
     if (nArgs == 0) {
         Spk_Halt(Spk_HALT_TYPE_ERROR, "wrong number of arguments");
-        return 0;
+        goto unwind;
     }
-    formatString = Spk_CAST(String, SpkArray_item(args, 0));
+    formatObj = SpkArray_item(args, 0);
+    formatString = Spk_CAST(String, formatObj);
     if (!formatString) {
         Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
-        return 0;
+        goto unwind;
     }
     formatSize = SpkString_size(formatString);
     format = (char *)malloc(formatSize);
@@ -147,7 +148,7 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
         while (c && !strchr(convOps, c));
         if (!c) {
             Spk_Halt(Spk_HALT_VALUE_ERROR, "invalid conversion specification");
-            return 0;
+            goto unwind;
         }
         
         convOp = c;
@@ -155,7 +156,7 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
         if (convOp == '%') {
             if (f - chunk != 2) {
                 Spk_Halt(Spk_HALT_VALUE_ERROR, "invalid conversion specification");
-                return 0;
+                goto unwind;
             }
             fputc('%', self->stream);
             chunk = f;
@@ -166,8 +167,9 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
         /* consume an argument */
         if (argIndex >= nArgs) {
             Spk_Halt(Spk_HALT_TYPE_ERROR, "too few arguments");
-            return 0;
+            goto unwind;
         }
+        Spk_XDECREF(arg);
         arg = SpkArray_item(args, argIndex++);
         
         switch (convOp) {
@@ -175,15 +177,15 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
             charArg = Spk_CAST(Char, arg);
             if (!charArg) {
                 Spk_Halt(Spk_HALT_TYPE_ERROR, "character expected");
-                return 0;
+                goto unwind;
             }
-            fprintf(self->stream, chunk, SpkChar_AsChar(charArg));
+            fprintf(self->stream, chunk, (int)SpkChar_AsChar(charArg));
             break;
         case 'd': case 'i': case 'o': case 'u': case 'x':
             intArg = Spk_CAST(Integer, arg);
             if (!intArg) {
                 Spk_Halt(Spk_HALT_TYPE_ERROR, "integer expected");
-                return 0;
+                goto unwind;
             }
             fprintf(self->stream, chunk, SpkInteger_asLong(intArg));
             break;
@@ -191,7 +193,7 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
             floatArg = Spk_CAST(Float, arg);
             if (!floatArg) {
                 Spk_Halt(Spk_HALT_TYPE_ERROR, "float expected");
-                return 0;
+                goto unwind;
             }
             fprintf(self->stream, chunk, SpkFloat_asDouble(floatArg));
             break;
@@ -199,13 +201,13 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
             strArg = Spk_CAST(String, arg);
             if (!strArg) {
                 Spk_Halt(Spk_HALT_TYPE_ERROR, "string expected");
-                return 0;
+                goto unwind;
             }
             fprintf(self->stream, chunk, SpkString_asString(strArg));
             break;
         default:
             Spk_Halt(Spk_HALT_ASSERTION_ERROR, "conversion letter not implemented");
-            return 0;
+            goto unwind;
         }
         
         *f = c;
@@ -214,12 +216,20 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
     
     if (argIndex != nArgs) {
         Spk_Halt(Spk_HALT_TYPE_ERROR, "too many arguments");
-        return 0;
+        goto unwind;
     }
     
     free(format);
+    Spk_DECREF(formatObj);
+    Spk_XDECREF(arg);
     Spk_INCREF(Spk_void);
     return Spk_void;
+    
+ unwind:
+    free(format);
+    Spk_XDECREF(formatObj);
+    Spk_XDECREF(arg);
+    return 0;
 }
 
 static SpkUnknown *FileStream_putc(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {

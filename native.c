@@ -187,14 +187,17 @@ SpkUnknown *Spk_SendMessage(SpkInterpreter *interpreter,
     }
     
     /* push arguments on the stack */
-    Spk_DECREF(Spk_uninit);
-    Spk_DECREF(Spk_uninit);
-    Spk_DECREF(Spk_uninit);
-    Spk_DECREF(Spk_uninit);
-    *--thisContext->stackp = obj;            Spk_INCREF(obj);
+    Spk_INCREF(obj);
+    Spk_INCREF(selector);
+    Spk_INCREF(argumentArray);
+    Spk_DECREF(thisContext->stackp[-1]);
+    Spk_DECREF(thisContext->stackp[-2]);
+    Spk_DECREF(thisContext->stackp[-3]);
+    Spk_DECREF(thisContext->stackp[-4]);
+    *--thisContext->stackp = obj;
     *--thisContext->stackp = SpkHost_IntegerFromCLong(namespace);
-    *--thisContext->stackp = selector;       Spk_INCREF(selector);
-    *--thisContext->stackp = argumentArray;  Spk_INCREF(argumentArray);
+    *--thisContext->stackp = selector;
+    *--thisContext->stackp = argumentArray;
     assert(thisContext->stackp >= &SpkContext_VARIABLES(thisContext)[0]);
     
     /* interpret */

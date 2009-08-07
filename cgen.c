@@ -394,7 +394,7 @@ static unsigned int getLiteralIndex(SpkUnknown *literal, OpcodeGen *cgen) {
     }
     
     cgen->generic->module->rodata[index] = literal;
-    
+    Spk_INCREF(literal);
     
     return index;
 }

@@ -140,19 +140,6 @@ static void Object_zero(SpkObject *self) {
 }
 
 static void Object_dealloc(SpkObject *self) {
-    SpkUnknown **variables;
-    SpkBehavior *klass;
-    size_t instVarTotal, i;
-    
-    klass = self->klass;
-    
-    variables = (SpkUnknown **)((char *)self + klass->instVarOffset);
-    instVarTotal = klass->instVarBaseIndex + klass->instVarCount;
-    
-    for (i = 0; i < instVarTotal; ++i) {
-        Spk_DECREF(variables[i]);
-        variables[i] = 0;
-    }
 }
 
 static void VariableObject_zero(SpkObject *_self) {
@@ -176,9 +163,16 @@ static SpkUnknown **Object_traverse_current(SpkObject *self) {
 #ifdef MALTIPY
     return 0;
 #else
-    if (self->base.refCount >= self->klass->instVarCount)
+    SpkUnknown **variables;
+    SpkBehavior *klass;
+    size_t instVarTotal;
+    
+    klass = self->klass;
+    instVarTotal = klass->instVarBaseIndex + klass->instVarCount;
+    if (self->base.refCount >= instVarTotal)
         return 0;
-    return (SpkUnknown **)(self->klass->instVarOffset + self->base.refCount * sizeof(SpkObject *));
+    variables = (SpkUnknown **)((char *)self + klass->instVarOffset);
+    return &variables[self->base.refCount];
 #endif /* !MALTIPY */
 }
 

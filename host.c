@@ -286,12 +286,12 @@ unsigned int SpkHost_InsertLiteral(SpkUnknown *literalDict, SpkUnknown *literal)
     dict = Spk_CAST(IdentityDictionary, literalDict);
     value = SpkIdentityDictionary_at(dict, literal);
     if (value) {
-        return SpkInteger_asLong((SpkInteger *)Spk_CAST(Integer, value));
+        index = SpkInteger_asLong((SpkInteger *)Spk_CAST(Integer, value));
+    } else {
+        index = dict->tally;
+        value = (SpkUnknown *)SpkInteger_fromLong(index);
+        SpkIdentityDictionary_atPut(dict, literal, value);
     }
-    
-    index = dict->tally;
-    value = (SpkUnknown *)SpkInteger_fromLong(index);
-    SpkIdentityDictionary_atPut(dict, literal, value);
     Spk_DECREF(value);
     return index;
 }
