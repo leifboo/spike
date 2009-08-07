@@ -68,7 +68,7 @@ static size_t getHashAndLength(unsigned char *str, size_t *len) {
     int c;
     
     p = str;
-    while (c = *p++)
+    while ((c = *p++))
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
     *len = p - str - 1;
     return hash;

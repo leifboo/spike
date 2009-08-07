@@ -259,8 +259,6 @@ SpkUnknown *SpkArray_item(SpkArray *self, long index) {
 }
 
 SpkUnknown *SpkArray_setItem(SpkArray *self, long index, SpkUnknown *value) {
-    SpkUnknown *item;
-    
     if (index < 0 || self->size <= index) {
         Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
         return 0;

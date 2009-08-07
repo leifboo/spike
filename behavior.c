@@ -211,8 +211,7 @@ SpkMethod *SpkBehavior_LookupMethod(SpkBehavior *self, SpkMethodNamespace namesp
 
 SpkUnknown *SpkBehavior_FindSelectorOfMethod(SpkBehavior *self, SpkMethod *method) {
     SpkMethodNamespace namespace;
-    SpkUnknown *methodDict, *messageSelector, *value;
-    int pos;
+    SpkUnknown *messageSelector;
     
     for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
         messageSelector = SpkHost_FindSymbol(self->ns[namespace].methodDict, (SpkUnknown *)method);

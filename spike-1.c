@@ -2,6 +2,7 @@
 #include "behavior.h"
 #include "boot.h"
 #include "cgen.h"
+#include "disasm.h"
 #include "host.h"
 #include "int.h"
 #include "interp.h"
@@ -27,7 +28,7 @@ int main(int argc, char **argv) {
     SpkUnknown *result; SpkInteger *resultInt;
     unsigned int dataSize;
     SpkStmtList predefList, rootClassList;
-    SpkUnknown *main, *tmp;
+    SpkUnknown *entry, *tmp;
     
     sourceFilename = 0;
     showHelp = error = disassemble = 0;
@@ -111,19 +112,19 @@ int main(int argc, char **argv) {
         return 0;
     }
     
-    main = Spk_SendMessage(
+    entry = Spk_SendMessage(
         theInterpreter,
         (SpkUnknown *)module,
         Spk_METHOD_NAMESPACE_RVALUE,
         Spk_main,
         Spk_emptyArgs
         );
-    if (!main) {
+    if (!entry) {
         return 1;
     }
     result = Spk_SendMessage(
         theInterpreter,
-        main,
+        entry,
         Spk_METHOD_NAMESPACE_RVALUE,
         Spk___apply__,
         Spk_emptyArgs /*XXX: argv */

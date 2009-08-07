@@ -685,7 +685,9 @@ do { --stackPointer; \
 
 
 static SpkFiber *trap(SpkInterpreter *, SpkUnknown *, SpkUnknown *);
+#ifdef MALTIPY
 static void runtimeError(SpkInterpreter *, SpkUnknown *, SpkUnknown *);
+#endif
 static void unknownOpcode(SpkInterpreter *);
 static void halt(SpkInterpreter *, SpkUnknown *, SpkUnknown *);
 

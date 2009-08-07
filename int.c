@@ -225,7 +225,7 @@ static SpkUnknown *Integer_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkU
     if (!result)
         return 0;
     str = SpkString_asString(result);
-    sprintf(str, "%d", self->value);
+    sprintf(str, "%ld", self->value);
     return (SpkUnknown *)result;
 }
 

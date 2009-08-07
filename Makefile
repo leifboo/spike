@@ -1,5 +1,5 @@
 
-CFLAGS = -g -ansi -Iinclude
+CFLAGS = -g -ansi -Iinclude -Wall -Wstrict-prototypes
 
 obj = \
 	array.o \

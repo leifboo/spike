@@ -7,6 +7,7 @@
 #include "behavior.h"
 #include "boot.h"
 #include "class.h"
+#include "host.h"
 #include "interp.h"
 #include "native.h"
 #include "rodata.h"
