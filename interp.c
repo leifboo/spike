@@ -284,13 +284,28 @@ void SpkInterpreter_Boot(void) {
 }
 
 SpkInterpreter *SpkInterpreter_New(void) {
+    size_t contextSize;
+    SpkContext *leafContext;
     SpkFiber *fiber;
     SpkProcessorScheduler *scheduler;
     SpkInterpreter *newInterpreter;
     
+    contextSize = Spk_LEAF_MAX_STACK_SIZE +
+                  Spk_LEAF_MAX_ARGUMENT_COUNT;
+    ++contextSize; /* XXX: doesNotUnderstand overhead */
+    leafContext = SpkContext_New(contextSize);
+    leafContext->pc = 0;
+    leafContext->stackp = 0;
+    leafContext->homeContext = 0;
+    leafContext->u.m.method = 0;
+    leafContext->u.m.methodClass = 0;
+    leafContext->u.m.receiver = 0;
+    leafContext->u.m.framep = 0;
+    
     fiber =(SpkFiber *)SpkObject_New(Spk_ClassFiber);
     fiber->nextLink = 0;
     fiber->suspendedContext = 0;
+    fiber->leafContext = leafContext; /* steal reference */
     fiber->priority = 0;
     fiber->myList = 0;
     
@@ -390,18 +405,6 @@ SpkContext *SpkContext_New(size_t size) {
         return 0;
     }
     
-    for (p = &newContext->leaf.arguments[0];
-         p < &newContext->leaf.arguments[Spk_LEAF_MAX_ARGUMENT_COUNT];
-         ++p) {
-        *p = 0;
-    }
-    for (p = &newContext->leaf.stack[0];
-         p < &newContext->leaf.stack[Spk_LEAF_MAX_STACK_SIZE];
-         ++p) {
-        Spk_INCREF(Spk_uninit);
-        *p = Spk_uninit;
-    }
-    
     for (count = 0, p = SpkContext_VARIABLES(newContext); count < size; ++count, ++p) {
         Spk_INCREF(Spk_uninit);
         *p = Spk_uninit;
@@ -437,7 +440,6 @@ static void Context_traverse_next(SpkObject *_self) {
 
 static void Context_dealloc(SpkObject *_self) {
     SpkContext *self;
-    SpkUnknown **p;
     
     self = (SpkContext *)_self;
     
@@ -453,17 +455,6 @@ static void Context_dealloc(SpkObject *_self) {
         Spk_DECREF(self->u.m.method);
         Spk_DECREF(self->u.m.methodClass);
         Spk_DECREF(self->u.m.receiver);
-    }
-    
-    for (p = &self->leaf.arguments[0];
-         p < &self->leaf.arguments[Spk_LEAF_MAX_ARGUMENT_COUNT];
-         ++p) {
-        Spk_XDECREF(*p);
-    }
-    for (p = &self->leaf.stack[0];
-         p < &self->leaf.stack[Spk_LEAF_MAX_STACK_SIZE];
-         ++p) {
-        Spk_DECREF(*p);
     }
     
     (*Spk_ClassContext->superclass->dealloc)(_self);
@@ -662,14 +653,14 @@ do { --stackPointer; \
 #ifndef MALTIPY
 /* XXX: What about leaf methods? */
 #define TRAP(selector, argument) \
-    self->activeContext->pc = instructionPointer; /* XXX inconsistent: lr??? */ \
+    self->activeContext->pc = instructionPointer; \
     self->activeContext->stackp = stackPointer; \
     trap(self, selector, argument); \
     return 0
 #else
 /* for now */
 #define TRAP(selector, argument) \
-    self->activeContext->pc = instructionPointer; /* XXX inconsistent: lr??? */ \
+    self->activeContext->pc = instructionPointer; \
     self->activeContext->stackp = stackPointer; \
     runtimeError(self, selector, argument); \
     goto exception
@@ -695,12 +686,11 @@ static void halt(SpkInterpreter *, SpkUnknown *, SpkUnknown *);
 SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
 
     /* context registers */
-    SpkContext *homeContext;
+    SpkContext *homeContext, *leafContext;
     SpkUnknown *receiver;
     SpkMethod *method;
     SpkBehavior *methodClass, *mc;
     register SpkOpcode *instructionPointer;
-    SpkOpcode *linkRegister;
     register SpkUnknown **stackPointer;
     register SpkUnknown **framePointer;
     register SpkUnknown **instVarPointer;
@@ -713,7 +703,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
     /* message sending */
     SpkMethodNamespace namespace;
     SpkUnknown *messageSelector = 0; /* ref counted */
-    size_t argumentCount = 0, varArg = 0, variadic = 0;
+    size_t argumentCount = 0, varArg = 0, variadic = 0, fixedArgumentCount = 0;
     unsigned int operator;
     SpkOpcode *oldIP;
     
@@ -729,14 +719,15 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
     method = homeContext->u.m.method;
     methodClass = homeContext->u.m.methodClass;
     instructionPointer = self->activeContext->pc;
-    linkRegister = 0;
     stackPointer = self->activeContext->stackp;
     framePointer = homeContext->u.m.framep;
     instVarPointer = INSTANCE_VARS(receiver, methodClass);
     globalPointer = SpkModule_VARIABLES(methodClass->module);
     literalPointer = SpkModule_LITERALS(methodClass->module);
     assert(self->newContext == 0);
-
+    
+    leafContext = self->scheduler->activeFiber->leafContext;
+    
  checkForInterrupts:
     if (self->interruptPending) {
         self->interruptPending = 0;
@@ -1013,11 +1004,10 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                     Spk_DECREF(messageSelector);
                     messageSelector = 0;
  callNewMethod:
-                    /* call (jmpl -- jump and link) */
-                    linkRegister = instructionPointer;
+                    /* call */
+                    self->activeContext->pc = instructionPointer;
                     instructionPointer = SpkMethod_OPCODES(method);
  jump:
-                    framePointer = stackPointer;
                     instVarPointer = INSTANCE_VARS(receiver, methodClass);
                     globalPointer = SpkModule_VARIABLES(methodClass->module);
                     literalPointer = SpkModule_LITERALS(methodClass->module);
@@ -1163,25 +1153,18 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
 #endif /* MALTIPY */
 
             /*** save/restore/return opcodes ***/
-        case Spk_OPCODE_RET_LEAF: {
-            /* return from leaf method */
-            SpkUnknown *result = POP_OBJECT();
-            stackPointer = self->activeContext->stackp;
-            CLEAN(varArg + argumentCount + 1);
-            PUSH(result); }
         case Spk_OPCODE_RET:
- ret:       /* ret/retl (blr) */
-            instructionPointer = linkRegister;
+ ret:
+            instructionPointer = self->activeContext->pc;
             receiver = homeContext->u.m.receiver;
             method = homeContext->u.m.method;
             methodClass = homeContext->u.m.methodClass;
-            framePointer = homeContext->u.m.framep;
             instVarPointer = INSTANCE_VARS(receiver, methodClass);
             globalPointer = SpkModule_VARIABLES(methodClass->module);
             literalPointer = SpkModule_LITERALS(methodClass->module);
             if (self->activeContext->mark != &mark) {
                 /* suspend */
-                self->activeContext->pc = linkRegister;
+                self->activeContext->pc = instructionPointer;
                 self->activeContext->stackp = stackPointer;
                 return 0; /* unwind */
             }
@@ -1193,112 +1176,68 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             self->activeContext->stackp = stackPointer;
             return result; }
             
-        case Spk_OPCODE_LEAF: {
-            size_t fixedArgumentCount, varArgTupleSize;
-            SpkUnknown **p;
-            size_t i;
+        case Spk_OPCODE_LEAF:
+            leafContext->sender = self->activeContext;   Spk_INCREF(self->activeContext);
+            leafContext->mark = &mark;
             
-            DECODE_UINT(fixedArgumentCount);
+            /* Sometimes this is the only reference.  XXX: Solving it
+               this way doesn't feel quite right. */
+            Spk_INCREF(receiver);
+            Spk_XDECREF(leafContext->u.m.receiver);
+            leafContext->u.m.receiver = receiver;
             
-            for (p = &self->activeContext->leaf.arguments[0];
-                 p < &self->activeContext->leaf.arguments[Spk_LEAF_MAX_ARGUMENT_COUNT];
-                 ++p) {
-                Spk_XDECREF(*p); /* XXX */
-                *p = 0;
-            }
+            Spk_INCREF(leafContext);
+            Spk_DECREF(self->activeContext);
+            self->activeContext = homeContext = leafContext;
+            break;
             
-            /* process arguments */
-            if (varArg) {
-                SpkUnknown *varArgTuple;
-                
-                varArgTuple = stackPointer[0];
-                if (!Spk_IsArgs(varArgTuple)) {
-                    TRAP(Spk_mustBeTuple, 0);
-                }
-                varArgTupleSize = Spk_ArgsSize(varArgTuple);
-                if (argumentCount + varArgTupleSize != fixedArgumentCount) {
-                    TRAP(Spk_wrongNumberOfArguments, 0);
-                }
-                
-                /* copy & reverse arguments from stack */
-                p = &self->activeContext->leaf.arguments[0];
-                framePointer = p;
-                for (i = 0; i < argumentCount; ++p, ++i) {
-                    *p = stackPointer[1 + argumentCount - i - 1];
-                    Spk_INCREF(*p);
-                }
-                
-                /* copy arguments from array */
-                for (i = 0; i < varArgTupleSize; ++p, ++i) {
-                    *p = Spk_GetArg(varArgTuple, i);
-                }
-                
-            } else {
-                varArgTupleSize = 0;
-                if (argumentCount != fixedArgumentCount) {
-                    TRAP(Spk_wrongNumberOfArguments, 0);
-                }
-                
-                /* copy & reverse arguments from stack */
-                p = &self->activeContext->leaf.arguments[0];
-                framePointer = p;
-                for (i = 0; i < fixedArgumentCount; ++p, ++i) {
-                    *p = stackPointer[argumentCount - i - 1];
-                    Spk_INCREF(*p);
-                }
-            }
+        case Spk_OPCODE_SAVE: {
+            size_t contextSize;
+            SpkContext *newContext;
             
-            /* initialize the stack pointer */
-            self->activeContext->stackp = stackPointer;
-            stackPointer = &self->activeContext->leaf.stack[Spk_LEAF_MAX_STACK_SIZE];
+            /* Create a new context for the currently
+             * executing method (cf. activateNewMethod).
+             */
+            DECODE_UINT(contextSize);
             
-            if (method->nativeCode) {
-                SpkUnknown *result, *arg1 = 0, *arg2 = 0;
-                switch (fixedArgumentCount) {
-                case 2: arg2 = framePointer[1];
-                case 1: arg1 = framePointer[0];
-                case 0: break;
-                default: assert(XXX);
-                }
-                result = (*method->nativeCode)(receiver, arg1, arg2);
-                assert(result);
-                PUSH(result);
-            }
+            ++contextSize; /* XXX: doesNotUnderstand overhead */
+            
+            newContext = SpkContext_New(contextSize);
+            
+            newContext->sender = self->activeContext;   Spk_INCREF(self->activeContext);
+            newContext->pc = instructionPointer;
+            newContext->stackp = 0;
+            newContext->homeContext = newContext;       Spk_INCREF(newContext); /* note cycle */
+            newContext->u.m.method = method;            Spk_INCREF(method);
+            newContext->u.m.methodClass = methodClass;  Spk_INCREF(methodClass);
+            newContext->u.m.receiver = receiver;        Spk_INCREF(receiver);
+            newContext->u.m.framep = 0;
+            newContext->mark = &mark;
+            
+            Spk_DECREF(self->activeContext);
+            self->activeContext = homeContext = newContext;
             break; }
             
-        case Spk_OPCODE_SAVE_VAR:
+        case Spk_OPCODE_ARG_VAR:
             variadic = 1;
-            goto save;
-        case Spk_OPCODE_SAVE: {
-            /* save */
-            size_t fixedArgumentCount, localCount, stackSize;
-            size_t contextSize, i, varArgTupleSize;
+            goto args;
+        case Spk_OPCODE_ARG: {
+            size_t localCount, stackSize;
+            size_t i, varArgTupleSize;
             size_t excessStackArgCount, consumedArrayArgCount;
             SpkContext *newContext;
             SpkUnknown *varArgTuple;
             SpkUnknown **p;
             
             variadic = 0;
- save:
-            /* Create a new context for the currently
-             * executing method (cf. activateNewMethod).
-             */
+ args:
             DECODE_UINT(fixedArgumentCount);
             DECODE_UINT(localCount);
             DECODE_UINT(stackSize);
             
             ++stackSize; /* XXX: doesNotUnderstand overhead */
             
-            contextSize = stackSize + fixedArgumentCount + variadic + localCount;
-            newContext = SpkContext_New(contextSize);
-
-            newContext->sender = self->activeContext;   Spk_INCREF(self->activeContext);
-            newContext->pc = instructionPointer;
-            newContext->homeContext = newContext;       Spk_INCREF(newContext); /* note cycle */
-            newContext->u.m.method = method;            Spk_INCREF(method);
-            newContext->u.m.methodClass = methodClass;  Spk_INCREF(methodClass);
-            newContext->u.m.receiver = receiver;        Spk_INCREF(receiver);
-            newContext->mark = &mark;
+            newContext = self->activeContext;
             
             p = SpkContext_VARIABLES(newContext) + stackSize;
             newContext->stackp = newContext->u.m.framep = p;
@@ -1323,81 +1262,85 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             if (fixedArgumentCount > argumentCount) {
                 /* copy & reverse fixed arguments from stack */
                 for (i = 0; i < argumentCount; ++p, ++i) {
+                    tmp = *p;
                     *p = stackPointer[varArg + argumentCount - i - 1];
                     Spk_INCREF(*p);
+                    Spk_DECREF(tmp);
                 }
                 excessStackArgCount = 0;
                 /* copy fixed arguments from array */
                 consumedArrayArgCount = fixedArgumentCount - argumentCount;
                 for (i = 0; i < consumedArrayArgCount; ++p, ++i) {
+                    tmp = *p;
                     *p = Spk_GetArg(varArgTuple, i);
+                    Spk_DECREF(tmp);
                 }
             } else {
                 /* copy & reverse fixed arguments from stack */
                 for (i = 0; i < fixedArgumentCount; ++p, ++i) {
+                    tmp = *p;
                     *p = stackPointer[varArg + argumentCount - i - 1];
                     Spk_INCREF(*p);
+                    Spk_DECREF(tmp);
                 }
                 excessStackArgCount = argumentCount - fixedArgumentCount;
                 consumedArrayArgCount = 0;
             }
             if (variadic) {
+                tmp = *p;
                 /* initialize the argument array variable */
                 *p++ = SpkHost_GetArgs(
                     stackPointer + varArg, excessStackArgCount,
                     varArgTuple, consumedArrayArgCount
                     );
+                Spk_DECREF(tmp);
             }
             
             /* clean up the caller's stack */
             CLEAN(varArg + argumentCount + 1);
-            
-            self->activeContext->pc = linkRegister;
-            self->activeContext->stackp = stackPointer;
+            newContext->caller->stackp = stackPointer;
             
             stackPointer = newContext->stackp;
             framePointer = newContext->u.m.framep;
+            break; }
             
-            Spk_DECREF(self->activeContext);
-            self->activeContext = homeContext = newContext;
-            
-            if (method->nativeCode) {
-                SpkUnknown *result, *arg1 = 0, *arg2 = 0;
-                if (variadic) {
-                    arg1 = framePointer[0];
-                } else switch (fixedArgumentCount) {
-                case 2: arg2 = framePointer[1];
-                case 1: arg1 = framePointer[0];
-                case 0: break;
-                default: assert(XXX);
-                }
-                result = (*method->nativeCode)(receiver, arg1, arg2);
-                if (result) {
-                    PUSH(result);
+        case Spk_OPCODE_NATIVE: {
+            SpkUnknown *result, *arg1 = 0, *arg2 = 0;
+            if (variadic) {
+                arg1 = framePointer[0];
+            } else switch (fixedArgumentCount) {
+            case 2: arg2 = framePointer[1];
+            case 1: arg1 = framePointer[0];
+            case 0: break;
+            default: assert(XXX);
+            }
+            self->activeContext->pc = instructionPointer;
+            result = (*method->nativeCode)(receiver, arg1, arg2);
+            if (result) {
+                PUSH(result);
 #ifdef MALTIPY
-                } else if (PyErr_Occurred()) {
+            } else if (PyErr_Occurred()) {
  exception:
-                    while (self->activeContext && self->activeContext->mark == &mark) {
-                        SpkContext *thisCntx = self->activeContext;
-                        addTraceback(thisCntx);
-                        self->activeContext = thisCntx->caller; /* steal reference */
-                        thisCntx->caller = 0;
-                        thisCntx->pc = 0;
-                        if (thisCntx->homeContext == thisCntx) {
-                            /* break cycles */
-                            Spk_DECREF(thisCntx->homeContext);
-                            thisCntx->homeContext = 0;
-                        }
-                        Spk_DECREF(thisCntx);
+                while (self->activeContext && self->activeContext->mark == &mark) {
+                    SpkContext *thisCntx = self->activeContext;
+                    addTraceback(thisCntx);
+                    self->activeContext = thisCntx->caller; /* steal reference */
+                    thisCntx->caller = 0;
+                    thisCntx->pc = 0;
+                    if (thisCntx->homeContext == thisCntx) {
+                        /* break cycles */
+                        Spk_DECREF(thisCntx->homeContext);
+                        thisCntx->homeContext = 0;
                     }
-                    return 0;
-#endif /* MALTIPY */
-                } else if (self->activeContext->mark != &mark) {
-                    return 0; /* unwind */
-                } else { /* unwinding is done, and the result is already
-                            on the stack */
-                    goto fetchContextRegisters;
+                    Spk_DECREF(thisCntx);
                 }
+                return 0;
+#endif /* MALTIPY */
+            } else if (self->activeContext->mark != &mark) {
+                return 0; /* unwind */
+            } else { /* unwinding is done, and the result is already
+                        on the stack */
+                goto fetchContextRegisters;
             }
             break; }
             
@@ -1454,10 +1397,9 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             Spk_DECREF(self->activeContext);
             self->activeContext = self->newContext; self->newContext = 0;
             homeContext = self->activeContext->homeContext;
-
-            linkRegister = self->activeContext->pc;
+            
             stackPointer = self->activeContext->stackp;
-            framePointer = 0;
+            framePointer = homeContext->u.m.framep;
             
             PUSH(result);
             break; }
@@ -1553,9 +1495,6 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             
             /* clean up the caller's stack */
             CLEAN(varArg + argumentCount + 1);
-            
-            /* suspend the caller */
-            self->activeContext->pc = linkRegister;
             self->activeContext->stackp = stackPointer;
             
             blockContext->caller = self->activeContext;  Spk_INCREF(self->activeContext);

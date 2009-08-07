@@ -61,11 +61,12 @@ enum SpkOpcode {
     Spk_OPCODE_SEND_MESSAGE_SUPER_VAR,
     Spk_OPCODE_RAISE,
     Spk_OPCODE_RET,
-    Spk_OPCODE_RET_LEAF,
     Spk_OPCODE_RET_TRAMP,
     Spk_OPCODE_LEAF,
     Spk_OPCODE_SAVE,
-    Spk_OPCODE_SAVE_VAR,
+    Spk_OPCODE_ARG,
+    Spk_OPCODE_ARG_VAR,
+    Spk_OPCODE_NATIVE,
     Spk_OPCODE_RESTORE_SENDER,
     Spk_OPCODE_RESTORE_CALLER,
     Spk_OPCODE_THUNK,
@@ -102,10 +103,6 @@ struct SpkContext {
             SpkOpcode *startpc;
         } b;
     } u;
-    struct { /* space reserved for leaf methods */
-        SpkUnknown *arguments[Spk_LEAF_MAX_ARGUMENT_COUNT];
-        SpkUnknown *stack[Spk_LEAF_MAX_STACK_SIZE];
-    } leaf;
     int *mark;
 };
 
@@ -129,6 +126,7 @@ struct SpkFiber {
     SpkObject base;
     SpkFiber *nextLink;
     SpkContext *suspendedContext;
+    SpkContext *leafContext;
     int priority;
     SpkSemaphore *myList;
 };

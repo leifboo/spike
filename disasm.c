@@ -58,6 +58,7 @@ void SpkDisassembler_DisassembleMethodOpcodes(SpkMethod *method, SpkUnknown **li
         const char *mnemonic = "unk", *base = 0;
         size_t index = 0;
         ptrdiff_t displacement = 0;
+        size_t contextSize = 0;
         size_t argumentCount = 0, *pArgumentCount = 0;
         size_t localCount = 0, stackSize = 0;
         size_t count = 0, *pCount = 0;
@@ -174,21 +175,26 @@ void SpkDisassembler_DisassembleMethodOpcodes(SpkMethod *method, SpkUnknown **li
         case Spk_OPCODE_RAISE: mnemonic = "raise"; break;
 
         case Spk_OPCODE_RET:       mnemonic = "ret";   break;
-        case Spk_OPCODE_RET_LEAF:  mnemonic = "retl";  break;
         case Spk_OPCODE_RET_TRAMP: mnemonic = "rett";  break;
             
         case Spk_OPCODE_LEAF:
             mnemonic = "leaf";
-            DECODE_UINT(argumentCount);
             break;
             
-        case Spk_OPCODE_SAVE:     mnemonic = "save";  goto save;
-        case Spk_OPCODE_SAVE_VAR: mnemonic = "savev"; goto save;
+        case Spk_OPCODE_SAVE:
+            mnemonic = "save";
+            DECODE_UINT(contextSize);
+            break;
+            
+        case Spk_OPCODE_ARG:     mnemonic = "arg";  goto save;
+        case Spk_OPCODE_ARG_VAR: mnemonic = "argv"; goto save;
  save:
             DECODE_UINT(argumentCount);
             DECODE_UINT(localCount);
             DECODE_UINT(stackSize);
             break;
+            
+        case Spk_OPCODE_NATIVE: mnemonic = "ntv"; break;
             
         case Spk_OPCODE_RESTORE_SENDER: mnemonic = "restore"; keyword = "sender"; break;
         case Spk_OPCODE_RESTORE_CALLER: mnemonic = "restore"; keyword = "caller"; break;
@@ -234,11 +240,11 @@ void SpkDisassembler_DisassembleMethodOpcodes(SpkMethod *method, SpkUnknown **li
             fprintf(out, "\t%s[%u]", base, index);
         } else {
             switch (opcode) {
-            case Spk_OPCODE_LEAF:
-                fprintf(out, "\t%lu", (unsigned long)argumentCount);
-                break;
             case Spk_OPCODE_SAVE:
-            case Spk_OPCODE_SAVE_VAR:
+                fprintf(out, "\t%lu", (unsigned long)contextSize);
+                break;
+            case Spk_OPCODE_ARG:
+            case Spk_OPCODE_ARG_VAR:
                 fprintf(out, "\t%lu,%lu,%lu",
                         (unsigned long)argumentCount,
                         (unsigned long)localCount,

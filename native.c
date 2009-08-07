@@ -43,11 +43,11 @@ static SpkMethod *newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode native
         size += 1; /* thunk */
     }
     if (flags & SpkNativeCode_LEAF) {
-        size += 2; /* leaf */
+        size += 6; /* leaf, arg, native */
     } else {
-        size += 11; /* save, ... restore */
+        size += 13; /* save, ... restore */
     }
-    size += 1; /* ret/retl */
+    size += 2; /* restore, ret */
     
     variadic = 0;
     switch (flags & SpkNativeCode_SIGNATURE_MASK) {
@@ -73,12 +73,24 @@ static SpkMethod *newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode native
     if (flags & SpkNativeCode_LEAF) {
         assert(!variadic && "SpkNativeCode_ARGS_ARRAY cannot be combined with SpkNativeCode_LEAF");
         *ip++ = Spk_OPCODE_LEAF;
+        *ip++ = Spk_OPCODE_ARG;
         *ip++ = (SpkOpcode)argumentCount;
+        *ip++ = (SpkOpcode)0; /* localCount */
+        *ip++ = (SpkOpcode)Spk_LEAF_MAX_STACK_SIZE; /*stackSize*/
+        *ip++ = Spk_OPCODE_NATIVE;
     } else {
-        *ip++ = variadic ? Spk_OPCODE_SAVE_VAR : Spk_OPCODE_SAVE;
+        size_t stackSize = 4;
+        size_t contextSize =
+            stackSize +
+            argumentCount + variadic +
+            0 /*localCount*/ ;
+        *ip++ = Spk_OPCODE_SAVE;
+        *ip++ = (SpkOpcode)contextSize;
+        *ip++ = variadic ? Spk_OPCODE_ARG_VAR : Spk_OPCODE_ARG;
         *ip++ = (SpkOpcode)argumentCount;
-        *ip++ = (SpkOpcode)variadic; /* localCount */
-        *ip++ = (SpkOpcode)4; /* stackSize */
+        *ip++ = (SpkOpcode)0; /* localCount */
+        *ip++ = (SpkOpcode)stackSize;
+        *ip++ = Spk_OPCODE_NATIVE;
         
         /* skip trampoline code */
         *ip++ = Spk_OPCODE_BRANCH_ALWAYS;
@@ -89,15 +101,10 @@ static SpkMethod *newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode native
         *ip++ = Spk_OPCODE_RET_TRAMP;
         *ip++ = Spk_OPCODE_SEND_MESSAGE_SUPER_VAR;
         *ip++ = Spk_OPCODE_RET_TRAMP;
-        
-        *ip++ = Spk_OPCODE_RESTORE_SENDER;
     }
     
-    if (flags & SpkNativeCode_LEAF) {
-        *ip++ = Spk_OPCODE_RET_LEAF;
-    } else {
-        *ip++ = Spk_OPCODE_RET;
-    }
+    *ip++ = Spk_OPCODE_RESTORE_SENDER;
+    *ip++ = Spk_OPCODE_RET;
     
     return newMethod;
 }
@@ -159,7 +166,7 @@ SpkUnknown *Spk_SendMessage(SpkInterpreter *interpreter,
         
         thisContext = SpkContext_New(10); /* XXX */
         thisContext->caller = 0;
-        thisContext->pc = SpkMethod_OPCODES(start) + 4;
+        thisContext->pc = SpkMethod_OPCODES(start) + 7;
         thisContext->stackp = &SpkContext_VARIABLES(thisContext)[10]; /* XXX */
         thisContext->homeContext = thisContext;            Spk_INCREF(thisContext);
         thisContext->u.m.method = start;                   Spk_INCREF(start);

@@ -334,7 +334,14 @@ static void store(Expr *var, OpcodeGen *cgen) {
 }
 
 static void save(OpcodeGen *cgen) {
-    EMIT_OPCODE(cgen->varArgList ? Spk_OPCODE_SAVE_VAR : Spk_OPCODE_SAVE);
+    size_t variadic = cgen->varArgList ? 1 : 0;
+    size_t contextSize =
+        cgen->stackSize +
+        cgen->argumentCount + variadic +
+        cgen->localCount;
+    EMIT_OPCODE(Spk_OPCODE_SAVE);
+    encodeUnsignedInt(contextSize, cgen);
+    EMIT_OPCODE(variadic ? Spk_OPCODE_ARG_VAR : Spk_OPCODE_ARG);
     encodeUnsignedInt(cgen->argumentCount, cgen);
     encodeUnsignedInt(cgen->localCount, cgen);
     encodeUnsignedInt(cgen->stackSize, cgen);
@@ -342,7 +349,10 @@ static void save(OpcodeGen *cgen) {
 
 static void leaf(OpcodeGen *cgen) {
     EMIT_OPCODE(Spk_OPCODE_LEAF);
+    EMIT_OPCODE(Spk_OPCODE_ARG);
     encodeUnsignedInt(cgen->argumentCount, cgen);
+    encodeUnsignedInt(0, cgen);
+    encodeUnsignedInt(Spk_LEAF_MAX_STACK_SIZE, cgen);
 }
 
 static int inLeaf(OpcodeGen *cgen) {
@@ -1160,12 +1170,8 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
             EMIT_OPCODE(Spk_OPCODE_PUSH_VOID);
             tallyPush(cgen);
         }
-        if (cgen->inLeaf) {
-            EMIT_OPCODE(Spk_OPCODE_RET_LEAF);
-        } else {
-            EMIT_OPCODE(Spk_OPCODE_RESTORE_SENDER);
-            EMIT_OPCODE(Spk_OPCODE_RET);
-        }
+        EMIT_OPCODE(Spk_OPCODE_RESTORE_SENDER);
+        EMIT_OPCODE(Spk_OPCODE_RET);
         --cgen->stackPointer;
         break;
     case Spk_STMT_WHILE:
