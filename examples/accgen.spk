@@ -12,7 +12,7 @@ foo(n) {
     return [arg i; n += i];
 }
 
-main() {
+main(argv) {
     var acc, sum;
     
     acc = foo(10);

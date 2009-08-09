@@ -71,7 +71,7 @@ class Range {
 }
 
 
-main() {
+main(argv) {
     page33();
     amusingProblem();
     return 0;

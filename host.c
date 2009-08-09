@@ -46,6 +46,7 @@ static const char *haltDesc(int code) {
 /****/ void SpkHost_Halt(int code, const char *message) {
     SpkInterpreter_PrintCallStack(theInterpreter);
     fprintf(stderr, "halt: %s: %s\n", haltDesc(code), message);
+    abort(); /* XXX: The proper thing to do is unwind. */
 }
 
 /****/ void SpkHost_HaltWithString(int code, SpkUnknown *message) {
@@ -57,6 +58,7 @@ static const char *haltDesc(int code) {
     fprintf(stderr, "halt: %s: ", haltDesc(code));
     vfprintf(stderr, format, args);
     fprintf(stderr, "\n");
+    abort(); /* XXX */
 }
 
 

@@ -36,7 +36,7 @@ ifFalse(c, b) {
     if (!c) return b();
 }
 
-main() {
+main(argv) {
     var m;
     m = Main.new();
     m.main();

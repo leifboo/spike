@@ -59,7 +59,7 @@ class Queen {
     }
 }
 
-main() {
+main(argv) {
     var last, size, x;
 
     size = 8;

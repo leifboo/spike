@@ -2,7 +2,7 @@
 
 // freefall acceleration without air friction or drag
 
-main() {
+main(argv) {
     // constants
     var g, dt, dvy, totalTime;
     g         = -9.8;

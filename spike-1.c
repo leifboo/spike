@@ -1,4 +1,5 @@
 
+#include "array.h"
 #include "behavior.h"
 #include "boot.h"
 #include "cgen.h"
@@ -12,6 +13,7 @@
 #include "rodata.h"
 #include "scheck.h"
 #include "st.h"
+#include "str.h"
 #include "tree.h"
 
 #include <stdio.h>
@@ -29,6 +31,7 @@ int main(int argc, char **argv) {
     unsigned int dataSize;
     SpkStmtList predefList, rootClassList;
     SpkUnknown *entry, *tmp;
+    SpkArray *argvObj, *args;
     
     sourceFilename = 0;
     showHelp = error = disassemble = 0;
@@ -79,8 +82,6 @@ int main(int argc, char **argv) {
         return 1;
     }
     
-    /* XXX: program arguments */
-    
     Spk_Bootstrap();
     
     stream = fopen(sourceFilename, "r");
@@ -112,6 +113,16 @@ int main(int argc, char **argv) {
         return 0;
     }
     
+    argvObj = SpkArray_new(argc - 1);
+    for (i = 1; i < argc; ++i) {
+        tmp = (SpkUnknown *)SpkString_fromCString(argv[i]);
+        SpkArray_setItem(argvObj, i - 1, tmp);
+        Spk_DECREF(tmp);
+    }
+    args = SpkArray_new(1);
+    SpkArray_setItem(args, 0, (SpkUnknown *)argvObj);
+    Spk_DECREF(argvObj);
+    
     entry = Spk_SendMessage(
         theInterpreter,
         (SpkUnknown *)module,
@@ -127,8 +138,10 @@ int main(int argc, char **argv) {
         entry,
         Spk_METHOD_NAMESPACE_RVALUE,
         Spk___apply__,
-        Spk_emptyArgs /*XXX: argv */
+        (SpkUnknown *)args
         );
+    
+    Spk_DECREF(args);
     
     if (!result) {
         return 1;

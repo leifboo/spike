@@ -1,6 +1,6 @@
 #!/usr/bin/env spike-1
 
-main() {
+main(argv) {
     var stream, line, i;
     
     stream = FileStream.new().open("README", "r");

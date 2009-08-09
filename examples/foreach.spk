@@ -10,7 +10,7 @@ abc() {
     stdout.putc('\n');
 }
 
-main() {
+main(argv) {
     abc();
     return 0;
 }

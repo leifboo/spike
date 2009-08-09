@@ -30,7 +30,7 @@ class Four : Three {
     }
 }
 
-main() {
+main(argv) {
     var example1, example2, example3, example4;
     
     example1 = One.new();

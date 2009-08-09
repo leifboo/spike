@@ -1,6 +1,6 @@
 #!/usr/bin/env spike-1
 
-main() {
+main(argv) {
     var i;
     
     stdout.puts(2 < 3 ? "correct\n" : null);

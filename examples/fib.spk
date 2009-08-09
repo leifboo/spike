@@ -5,7 +5,7 @@ fib(x) {
     return fib(x-1) + fib(x-2);
 }
 
-main() {
+main(argv) {
     stdout.printf("%d\n", fib(10));
     return 0;
 }
