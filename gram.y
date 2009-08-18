@@ -104,6 +104,7 @@ keyword_expr(r) ::= conditional_expr(receiver) keyword_message(expr).           
 
 %type keyword_message {SpkExpr *}
 keyword_message(r) ::= keyword_list(expr).                                      { r = SpkParser_FreezeKeywords(expr, 0); }
+keyword_message(r) ::= keyword(kw).                                             { r = SpkParser_FreezeKeywords(0, kw); }
 keyword_message(r) ::= keyword(kw) keyword_list(expr).                          { r = SpkParser_FreezeKeywords(expr, kw); }
 
 %type keyword_list {SpkExpr *}

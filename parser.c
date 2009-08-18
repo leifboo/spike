@@ -123,6 +123,11 @@ Expr *SpkParser_AppendKeyword(Expr *expr, SpkSymbolNode *kw, Expr *arg) {
 Expr *SpkParser_FreezeKeywords(Expr *expr, SpkSymbolNode *kw) {
     SpkUnknown *tmp;
     
+    if (!expr) {
+        expr = (Expr *)SpkObject_New(Spk_ClassExpr);
+        expr->kind = Spk_EXPR_KEYWORD;
+        expr->aux.keywords = SpkHost_NewKeywordSelectorBuilder();
+    }
     tmp = SpkHost_GetKeywordSelector(expr->aux.keywords, kw ? kw->sym : 0);
     Spk_DECREF(expr->aux.keywords);
     expr->aux.keywords = tmp;

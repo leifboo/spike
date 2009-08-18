@@ -44,7 +44,8 @@ static const char *haltDesc(int code) {
 
 
 /****/ void SpkHost_Halt(int code, const char *message) {
-    SpkInterpreter_PrintCallStack(theInterpreter);
+    if (theInterpreter)
+        SpkInterpreter_PrintCallStack(theInterpreter);
     fprintf(stderr, "halt: %s: %s\n", haltDesc(code), message);
     abort(); /* XXX: The proper thing to do is unwind. */
 }
@@ -172,7 +173,7 @@ SpkUnknown *SpkHost_NewKeywordSelectorBuilder(void) {
 SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
     SpkArray *kwArray;
     SpkSymbol *sym, *selector;
-    size_t size, len, i;
+    size_t size, len, i, tally;
     char *str;
     
     kwArray = Spk_CAST(Array, builder);
@@ -181,7 +182,7 @@ SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
     
     if (kw) {
         sym = Spk_CAST(Symbol, kw);
-        len += strlen(sym->str) + 1;
+        len += strlen(sym->str);
     }
     for (i = 0; i < size; ++i) {
         SpkUnknown *item = SpkArray_item(kwArray, i);
@@ -194,13 +195,18 @@ SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
         Spk_DECREF(item);
     }
     
+    tally = i;
+    if (tally > 0)
+        ++len;
+    
     str = (char *)malloc(len + 1);
     str[0] = '\0';
     
     if (kw) {
         sym = Spk_CAST(Symbol, kw);
         strcat(str, sym->str);
-        strcat(str, " ");
+        if (tally > 0)
+            strcat(str, " ");
     }
     for (i = 0; i < size; ++i) {
         SpkUnknown *item = SpkArray_item(kwArray, i);
