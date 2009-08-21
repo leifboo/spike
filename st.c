@@ -4,6 +4,7 @@
 #include "class.h"
 #include "host.h"
 #include "interp.h"
+#include "rodata.h"
 #include "tree.h"
 #include <assert.h>
 #include <string.h>
@@ -12,6 +13,9 @@
 SpkBehavior *Spk_ClassSymbolNode, *Spk_ClassSTEntry,
     *Spk_ClassContextClass, *Spk_ClassScope, *Spk_ClassSymbolTable;
 
+
+/*------------------------------------------------------------------------*/
+/* C API */
 
 SpkSymbolNode *SpkSymbolNode_FromSymbol(SpkSymbolTable *st, SpkUnknown *sym) {
     SpkSymbolNode *s;
@@ -22,14 +26,11 @@ SpkSymbolNode *SpkSymbolNode_FromSymbol(SpkSymbolTable *st, SpkUnknown *sym) {
     }
     
     s = (SpkSymbolNode *)SpkObject_New(Spk_ClassSymbolNode);
-    s->entry = 0;
-    s->nextError = 0;
-    s->multipleDefList = 0;
-    s->undefList = 0;
-    s->sym = sym;  Spk_INCREF(sym);
+    Spk_INCREF(sym);
+    Spk_XDECREF(s->sym);
+    s->sym = sym;
     
     SpkHost_DefineSymbol(st->symbolNodes, sym, (SpkUnknown *)s);
-    Spk_DECREF(s);
     
     return s;
 }
@@ -48,27 +49,19 @@ static void registerError(SpkSymbolTable *st, SpkSymbolNode *sym) {
     /* add 'sym' to the error list, if it isn't already on it */
     
     if (!sym->multipleDefList && !sym->undefList) {
-        sym->nextError = st->errorList;
+        Spk_INCREF(sym);
+        sym->nextError = st->errorList; /* steal reference */
         st->errorList = sym;
     }
 }
 
 SpkSymbolTable *SpkSymbolTable_New() {
-    SpkSymbolTable *newST;
+    SpkSymbolTable *newSymbolTable;
     
-    newST = (SpkSymbolTable *)SpkObject_New(Spk_ClassSymbolTable);
-    newST->currentScope = 0;
-    newST->errorList = 0;
-    newST->symbolNodes = SpkHost_NewSymbolDict();
-    return newST;
-}
-
-void SpkSymbolTable_Destroy(SpkSymbolTable *st) {
-    while (st->currentScope) {
-        SpkSymbolTable_ExitScope(st);
-    }
-    Spk_DECREF(st->symbolNodes);
-    Spk_DECREF(st);
+    newSymbolTable = (SpkSymbolTable *)SpkObject_New(Spk_ClassSymbolTable);
+    Spk_XDECREF(newSymbolTable->symbolNodes);
+    newSymbolTable->symbolNodes = SpkHost_NewSymbolDict();
+    return newSymbolTable;
 }
 
 void SpkSymbolTable_EnterScope(SpkSymbolTable *st, int enterNewContext) {
@@ -78,10 +71,13 @@ void SpkSymbolTable_EnterScope(SpkSymbolTable *st, int enterNewContext) {
     outerScope = st->currentScope;
     
     newScope = (SpkScope *)SpkObject_New(Spk_ClassScope);
+    Spk_XINCREF(outerScope);
+    Spk_XDECREF(newScope->outer);
     newScope->outer = outerScope;
-    newScope->entryList = 0;
     if (enterNewContext) {
         newContext = (SpkContextClass *)SpkObject_New(Spk_ClassContextClass);
+        Spk_INCREF(newScope);
+        Spk_XDECREF(newContext->scope);
         newContext->scope = newScope;
         if (outerScope) {
             newContext->level = outerScope->context->level + 1;
@@ -106,32 +102,54 @@ void SpkSymbolTable_EnterScope(SpkSymbolTable *st, int enterNewContext) {
             newContext->storeOpcode = Spk_OPCODE_NOP;
         }
         newContext->nDefs = 0;
-        newScope->context = newContext;
+        Spk_XDECREF(newScope->context);
+        newScope->context = newContext; /* note cycle */
     } else {
+        Spk_INCREF(outerScope->context);
+        Spk_XDECREF(newScope->context);
         newScope->context = outerScope->context;
     }
     
+    Spk_XDECREF(st->currentScope);
     st->currentScope = newScope;
     
     return;
 }
 
 void SpkSymbolTable_ExitScope(SpkSymbolTable *st) {
+    /* XXX: Clients must match every call to SpkSymbolTable_EnterScope
+       with a call to this function in order to break cycles. */
     SpkScope *oldScope;
-    SpkSTEntry *entry, *nextInScope;
-    SpkSymbolNode *sym;
+    SpkSTEntry *entry;
+    SpkContextClass *tmp;
     
     oldScope = st->currentScope;
-    for (entry = oldScope->entryList; entry; entry = nextInScope) {
+    
+    for (entry = oldScope->entryList; entry; entry = entry->nextInScope) {
+        SpkSymbolNode *sym; SpkSTEntry *tmp;
+        
         sym = entry->sym;
         assert(sym->entry == entry);
+        /* this also breaks a cycle */
+        tmp = sym->entry;
+        Spk_XINCREF(entry->shadow);
         sym->entry = entry->shadow;
-        nextInScope = entry->nextInScope;
-        Spk_DECREF(entry);
+        Spk_DECREF(tmp);
     }
-    if (oldScope->context->scope == oldScope) {
-        Spk_DECREF(oldScope->context);
+    
+    if (oldScope->entryList) {
+        /* break cycle */
+        SpkSTEntry *tmp = oldScope->entryList;
+        oldScope->entryList = 0;
+        Spk_DECREF(tmp);
     }
+    
+    /* break cycle */
+    tmp = oldScope->context;
+    oldScope->context = 0;
+    Spk_DECREF(tmp);
+    
+    Spk_XINCREF(oldScope->outer);
     st->currentScope = oldScope->outer;
     Spk_DECREF(oldScope);
 }
@@ -142,6 +160,7 @@ void SpkSymbolTable_Insert(SpkSymbolTable *st, SpkExpr *def) {
     SpkScope *cs;
     
     assert(def->kind == Spk_EXPR_NAME);
+    def->aux.nameKind = Spk_EXPR_NAME_DEF;
     
     sym = def->sym;
     oldEntry = sym->entry;
@@ -161,20 +180,30 @@ void SpkSymbolTable_Insert(SpkSymbolTable *st, SpkExpr *def) {
             return;
         }
         registerError(st, sym);
-        def->u.def.nextMultipleDef = sym->multipleDefList;
-        sym->multipleDefList = def;
+        def->u.def.nextMultipleDef = sym->multipleDefList; /* steal reference */
+        sym->multipleDefList = def;  /*Spk_INCREF(def);*/
         return;
     }
     
     newEntry = (SpkSTEntry *)SpkObject_New(Spk_ClassSTEntry);
-    newEntry->scope = cs;
-    newEntry->nextInScope = cs->entryList;
+    Spk_XDECREF(newEntry->scope);
+    Spk_XDECREF(newEntry->nextInScope);
+    Spk_XDECREF(newEntry->shadow);
+    Spk_XDECREF(newEntry->sym);
+    Spk_XDECREF(newEntry->def);
+    Spk_INCREF(cs);
+    Spk_XINCREF(oldEntry);
+    Spk_INCREF(sym);
+    Spk_INCREF(def);
+    newEntry->scope = cs; /* note cycle */
+    newEntry->nextInScope = cs->entryList; /* steal reference */
     newEntry->shadow = oldEntry;
     newEntry->sym = sym;
     newEntry->def = def;
     
-    cs->entryList = newEntry;
-    sym->entry = newEntry;
+    cs->entryList = newEntry; /* steal new reference */
+    Spk_INCREF(newEntry);
+    sym->entry = newEntry; /* note cycle */
     
     def->u.def.level = cs->context->level;
     if (cs->context->pushOpcode != Spk_OPCODE_NOP) { /* not built-in scope */
@@ -198,33 +227,337 @@ void SpkSymbolTable_Bind(SpkSymbolTable *st, SpkExpr *expr) {
     SpkSTEntry *entry;
     
     assert(expr->kind == Spk_EXPR_NAME);
+    expr->aux.nameKind = Spk_EXPR_NAME_REF;
     
     sym = expr->sym;
     entry = sym->entry;
     if (entry) {
-        expr->u.ref.def = entry->def;
+        expr->u.ref.def = entry->def;  Spk_INCREF(entry->def);
         expr->u.ref.level = st->currentScope->context->level;
         return;
     }
     
     /* undefined */
     registerError(st, sym);
-    expr->u.ref.nextUndef = sym->undefList;
-    sym->undefList = expr;
+    expr->u.ref.nextUndef = sym->undefList; /* steal reference */
+    sym->undefList = expr;  /*Spk_INCREF(expr);*/
+}
+
+
+/*------------------------------------------------------------------------*/
+/* methods */
+
+static SpkUnknown *SymbolTable_init(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkSymbolTable *self;
+    
+    self = (SpkSymbolTable *)_self;
+    Spk_XDECREF(self->symbolNodes);
+    self->symbolNodes = SpkHost_NewSymbolDict();
+    Spk_INCREF(_self);
+    return _self;
+}
+
+
+/*------------------------------------------------------------------------*/
+/* meta-methods */
+
+static SpkUnknown *ClassSymbolTable_new(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkUnknown *newSymbolTable, *tmp;
+    
+    newSymbolTable = Spk_CallAttr(theInterpreter, Spk_SUPER, Spk_new, 0);
+    if (!newSymbolTable)
+        return 0;
+    tmp = newSymbolTable;
+    newSymbolTable = Spk_CallAttr(theInterpreter, newSymbolTable, Spk_init, 0);
+    Spk_DECREF(tmp);
+    return newSymbolTable;
+}
+
+
+/*------------------------------------------------------------------------*/
+/* low-level hooks */
+
+static void SymbolNode_zero(SpkObject *_self) {
+    SpkSymbolNode *self = (SpkSymbolNode *)_self;
+    (*Spk_ClassSymbolNode->superclass->zero)(_self);
+    self->entry = 0;
+    self->nextError = 0;
+    self->multipleDefList = 0;
+    self->undefList = 0;
+    self->sym = 0;
+}
+
+static void STEntry_zero(SpkObject *_self) {
+    SpkSTEntry *self = (SpkSTEntry *)_self;
+    (*Spk_ClassSTEntry->superclass->zero)(_self);
+    self->scope = 0;
+    self->nextInScope = 0;
+    self->shadow = 0;
+    self->sym = 0;
+    self->def = 0;
+}
+
+static void ContextClass_zero(SpkObject *_self) {
+    SpkContextClass *self = (SpkContextClass *)_self;
+    (*Spk_ClassContextClass->superclass->zero)(_self);
+    self->scope = 0;
+}
+
+static void Scope_zero(SpkObject *_self) {
+    SpkScope *self = (SpkScope *)_self;
+    (*Spk_ClassScope->superclass->zero)(_self);
+    self->outer = 0;
+    self->entryList = 0;
+    self->context = 0;
+}
+
+static void SymbolTable_zero(SpkObject *_self) {
+    SpkSymbolTable *self = (SpkSymbolTable *)_self;
+    (*Spk_ClassSymbolTable->superclass->zero)(_self);
+    self->currentScope = 0;
+    self->errorList = 0;
+    self->symbolNodes = 0;
+}
+
+
+/*------------------------------------------------------------------------*/
+/* memory layout of instances */
+
+/* SymbolNode */
+
+static void SymbolNode_traverse_init(SpkObject *self) {
+    (*Spk_ClassSymbolNode->superclass->traverse.init)(self);
+}
+
+static SpkUnknown **SymbolNode_traverse_current(SpkObject *_self) {
+    SpkSymbolNode *self;
+    
+    self = (SpkSymbolNode *)_self;
+    if (self->entry)
+        return (SpkUnknown **)&self->entry;
+    if (self->nextError)
+        return (SpkUnknown **)&self->nextError;
+    if (0 && self->multipleDefList)
+        return (SpkUnknown **)&self->multipleDefList;
+    if (0 && self->undefList)
+        return (SpkUnknown **)&self->undefList;
+    if (self->sym)
+        return (SpkUnknown **)&self->sym;
+    return (*Spk_ClassSymbolNode->superclass->traverse.current)(_self);
+}
+
+static void SymbolNode_traverse_next(SpkObject *_self) {
+    SpkSymbolNode *self;
+    
+    self = (SpkSymbolNode *)_self;
+    if (self->entry) {
+        self->entry = 0;
+        return;
+    }
+    if (self->nextError) {
+        self->nextError = 0;
+        return;
+    }
+    if (0 && self->multipleDefList) {
+        self->multipleDefList = 0;
+        return;
+    }
+    if (0 && self->undefList) {
+        self->undefList = 0;
+        return;
+    }
+    if (self->sym) {
+        self->sym = 0;
+        return;
+    }
+    (*Spk_ClassSymbolNode->superclass->traverse.next)(_self);
+}
+
+
+/* STEntry */
+
+static void STEntry_traverse_init(SpkObject *self) {
+    (*Spk_ClassSTEntry->superclass->traverse.init)(self);
+}
+
+static SpkUnknown **STEntry_traverse_current(SpkObject *_self) {
+    SpkSTEntry *self;
+    
+    self = (SpkSTEntry *)_self;
+    if (self->scope)
+        return (SpkUnknown **)&self->scope;
+    if (self->nextInScope)
+        return (SpkUnknown **)&self->nextInScope;
+    if (self->shadow)
+        return (SpkUnknown **)&self->shadow;
+    if (self->sym)
+        return (SpkUnknown **)&self->sym;
+    if (self->def)
+        return (SpkUnknown **)&self->def;
+    return (*Spk_ClassSTEntry->superclass->traverse.current)(_self);
+}
+
+static void STEntry_traverse_next(SpkObject *_self) {
+    SpkSTEntry *self;
+    
+    self = (SpkSTEntry *)_self;
+    if (self->scope) {
+        self->scope = 0;
+        return;
+    }
+    if (self->nextInScope) {
+        self->nextInScope = 0;
+        return;
+    }
+    if (self->shadow) {
+        self->shadow = 0;
+        return;
+    }
+    if (self->sym) {
+        self->sym = 0;
+        return;
+    }
+    if (self->def) {
+        self->def = 0;
+        return;
+    }
+    (*Spk_ClassSTEntry->superclass->traverse.next)(_self);
+}
+
+
+/* ContextClass */
+
+static void ContextClass_traverse_init(SpkObject *self) {
+    (*Spk_ClassContextClass->superclass->traverse.init)(self);
+}
+
+static SpkUnknown **ContextClass_traverse_current(SpkObject *_self) {
+    SpkContextClass *self;
+    
+    self = (SpkContextClass *)_self;
+    if (self->scope)
+        return (SpkUnknown **)&self->scope;
+    return (*Spk_ClassContextClass->superclass->traverse.current)(_self);
+}
+
+static void ContextClass_traverse_next(SpkObject *_self) {
+    SpkContextClass *self;
+    
+    self = (SpkContextClass *)_self;
+    if (self->scope) {
+        self->scope = 0;
+        return;
+    }
+    (*Spk_ClassContextClass->superclass->traverse.next)(_self);
+}
+
+
+/* Scope */
+
+static void Scope_traverse_init(SpkObject *self) {
+    (*Spk_ClassScope->superclass->traverse.init)(self);
+}
+
+static SpkUnknown **Scope_traverse_current(SpkObject *_self) {
+    SpkScope *self;
+    
+    self = (SpkScope *)_self;
+    if (self->outer)
+        return (SpkUnknown **)&self->outer;
+    if (self->entryList)
+        return (SpkUnknown **)&self->entryList;
+    if (self->context)
+        return (SpkUnknown **)&self->context;
+    return (*Spk_ClassScope->superclass->traverse.current)(_self);
+}
+
+static void Scope_traverse_next(SpkObject *_self) {
+    SpkScope *self;
+    
+    self = (SpkScope *)_self;
+    if (self->outer) {
+        self->outer = 0;
+        return;
+    }
+    if (self->entryList) {
+        self->entryList = 0;
+        return;
+    }
+    if (self->context) {
+        self->context = 0;
+        return;
+    }
+    (*Spk_ClassScope->superclass->traverse.next)(_self);
+}
+
+
+/* SymbolTable */
+
+static void SymbolTable_traverse_init(SpkObject *self) {
+    (*Spk_ClassSymbolTable->superclass->traverse.init)(self);
+}
+
+static SpkUnknown **SymbolTable_traverse_current(SpkObject *_self) {
+    SpkSymbolTable *self;
+    
+    self = (SpkSymbolTable *)_self;
+    if (self->currentScope)
+        return (SpkUnknown **)&self->currentScope;
+    if (self->errorList)
+        return (SpkUnknown **)&self->errorList;
+    if (self->symbolNodes)
+        return (SpkUnknown **)&self->symbolNodes;
+    return (*Spk_ClassSymbolTable->superclass->traverse.current)(_self);
+}
+
+static void SymbolTable_traverse_next(SpkObject *_self) {
+    SpkSymbolTable *self;
+    
+    self = (SpkSymbolTable *)_self;
+    if (self->currentScope) {
+        self->currentScope = 0;
+        return;
+    }
+    if (self->errorList) {
+        self->errorList = 0;
+        return;
+    }
+    if (self->symbolNodes) {
+        self->symbolNodes = 0;
+        return;
+    }
+    (*Spk_ClassSymbolTable->superclass->traverse.next)(_self);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* class templates */
 
+static SpkTraverse SymbolNode_traverse = {
+    &SymbolNode_traverse_init,
+    &SymbolNode_traverse_current,
+    &SymbolNode_traverse_next,
+};
+
 SpkClassTmpl Spk_ClassSymbolNodeTmpl = {
     "SymbolNode", {
         /*accessors*/ 0,
         /*methods*/ 0,
         /*lvalueMethods*/ 0,
-        offsetof(SpkSymbolNodeSubclass, variables)
+        offsetof(SpkSymbolNodeSubclass, variables),
+        /*itemSize*/ 0,
+        &SymbolNode_zero,
+        /*dealloc*/ 0,
+        &SymbolNode_traverse
     }, /*meta*/ {
     }
+};
+
+
+static SpkTraverse STEntry_traverse = {
+    &STEntry_traverse_init,
+    &STEntry_traverse_current,
+    &STEntry_traverse_next,
 };
 
 SpkClassTmpl Spk_ClassSTEntryTmpl = {
@@ -232,9 +565,20 @@ SpkClassTmpl Spk_ClassSTEntryTmpl = {
         /*accessors*/ 0,
         /*methods*/ 0,
         /*lvalueMethods*/ 0,
-        offsetof(SpkSTEntrySubclass, variables)
+        offsetof(SpkSTEntrySubclass, variables),
+        /*itemSize*/ 0,
+        &STEntry_zero,
+        /*dealloc*/ 0,
+        &STEntry_traverse
     }, /*meta*/ {
     }
+};
+
+
+static SpkTraverse ContextClass_traverse = {
+    &ContextClass_traverse_init,
+    &ContextClass_traverse_current,
+    &ContextClass_traverse_next,
 };
 
 SpkClassTmpl Spk_ClassContextClassTmpl = {
@@ -242,9 +586,20 @@ SpkClassTmpl Spk_ClassContextClassTmpl = {
         /*accessors*/ 0,
         /*methods*/ 0,
         /*lvalueMethods*/ 0,
-        offsetof(SpkContextClassSubclass, variables)
+        offsetof(SpkContextClassSubclass, variables),
+        /*itemSize*/ 0,
+        &ContextClass_zero,
+        /*dealloc*/ 0,
+        &ContextClass_traverse
     }, /*meta*/ {
     }
+};
+
+
+static SpkTraverse Scope_traverse = {
+    &Scope_traverse_init,
+    &Scope_traverse_current,
+    &Scope_traverse_next,
 };
 
 SpkClassTmpl Spk_ClassScopeTmpl = {
@@ -252,17 +607,45 @@ SpkClassTmpl Spk_ClassScopeTmpl = {
         /*accessors*/ 0,
         /*methods*/ 0,
         /*lvalueMethods*/ 0,
-        offsetof(SpkScopeSubclass, variables)
+        offsetof(SpkScopeSubclass, variables),
+        /*itemSize*/ 0,
+        &Scope_zero,
+        /*dealloc*/ 0,
+        &Scope_traverse
     }, /*meta*/ {
     }
+};
+
+
+static SpkMethodTmpl SymbolTableMethods[] = {
+    { "init", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &SymbolTable_init },
+    { 0, 0, 0 }
+};
+
+static SpkMethodTmpl ClassSymbolTableMethods[] = {
+    { "new",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &ClassSymbolTable_new },
+    { 0, 0, 0}
+};
+
+static SpkTraverse SymbolTable_traverse = {
+    &SymbolTable_traverse_init,
+    &SymbolTable_traverse_current,
+    &SymbolTable_traverse_next,
 };
 
 SpkClassTmpl Spk_ClassSymbolTableTmpl = {
     "SymbolTable", {
         /*accessors*/ 0,
-        /*methods*/ 0,
+        SymbolTableMethods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkSymbolTableSubclass, variables)
+        offsetof(SpkSymbolTableSubclass, variables),
+        /*itemSize*/ 0,
+        &SymbolTable_zero,
+        /*dealloc*/ 0,
+        &SymbolTable_traverse
     }, /*meta*/ {
+        /*accessors*/ 0,
+        ClassSymbolTableMethods,
+        /*lvalueMethods*/ 0
     }
 };

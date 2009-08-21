@@ -11,6 +11,7 @@
 #include "module.h"
 #include "native.h"
 #include "obj.h"
+#include "parser.h"
 #include "rodata.h"
 #include "st.h"
 #include "tree.h"
@@ -60,6 +61,7 @@ SpkClassBootRec Spk_classBootRec[] = {
     /**/CLASS(ContextClass, Object),
     /**/CLASS(Scope,        Object),
     /**/CLASS(SymbolTable,  Object),
+    /**/CLASS(Parser,       Object),
 #ifdef MALTIPY
     /**** bridge ****/
     CLASS(PythonObject, Object /*NULL_CLASS*/),

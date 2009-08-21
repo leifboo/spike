@@ -23,8 +23,12 @@ void SpkObjMem_Dealloc(SpkUnknown *op) {
     /* cf. "A Space-efficient Reference-counting Collector", pp. 678-681 */
     SpkObject *prior, *current, *klass;
     SpkObject **var;
+    SpkObject sentinel;
     
-    prior = 0;
+    /* Using a sentinel instead of null makes SpkTraverse hooks easier
+       to write. */
+    sentinel.klass = 0;
+    prior = &sentinel;
     current = (SpkObject *)op;
  dealloc:
     (*current->klass->traverse.init)(current);
@@ -47,7 +51,7 @@ void SpkObjMem_Dealloc(SpkUnknown *op) {
             goto dealloc;
         }
         current = prior;
-        if (!current)
+        if (current == &sentinel)
             break;
         /* resume where we left off */
         var = (SpkObject **)(*current->klass->traverse.current)(current);

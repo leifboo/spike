@@ -2,7 +2,7 @@
 %name SpkParser_Parse
 %token_type {SpkToken}
 %token_prefix Spk_TOKEN_
-%extra_argument { SpkParserState *parserState }
+%extra_argument { SpkParser *parserState }
 
 %include {
     #include <assert.h>
@@ -190,9 +190,9 @@ postfix_expr(r) ::= postfix_expr(func) LPAREN RPAREN.                           
 postfix_expr(r) ::= postfix_expr(func) LPAREN argument_list(args) RPAREN.       { r = SpkParser_NewExpr(Spk_EXPR_CALL, Spk_OPER_APPLY, 0, func, args.fixed); r->var = args.var; }
 postfix_expr(r) ::= postfix_expr(obj) DOT IDENTIFIER(attr).                     { r = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0); r->sym = attr.sym; }
 postfix_expr(r) ::= postfix_expr(obj) DOT TYPE_IDENTIFIER(attr).                { r = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0); r->sym = attr.sym; }
-postfix_expr(r) ::= postfix_expr(obj) DOT CLASS(attr).                          { r = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0); r->sym = attr.sym; }
+postfix_expr(r) ::= postfix_expr(obj) DOT CLASS.                                { r = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0); r->sym = SpkSymbolNode_FromString(parserState->st, "class"); }
 postfix_expr(r) ::= TYPE_IDENTIFIER(name) DOT IDENTIFIER(attr).                 { r = SpkParser_NewClassAttrExpr(name.sym, attr.sym); }
-postfix_expr(r) ::= TYPE_IDENTIFIER(name) DOT CLASS(attr).                      { r = SpkParser_NewClassAttrExpr(name.sym, attr.sym); }
+postfix_expr(r) ::= TYPE_IDENTIFIER(name) DOT CLASS.                            { r = SpkParser_NewClassAttrExpr(name.sym, SpkSymbolNode_FromString(parserState->st, "class")); }
 postfix_expr(r) ::= postfix_expr(expr) INC.                                     { r = SpkParser_NewExpr(Spk_EXPR_POSTOP, Spk_OPER_SUCC, 0, expr, 0); }
 postfix_expr(r) ::= postfix_expr(expr) DEC.                                     { r = SpkParser_NewExpr(Spk_EXPR_POSTOP, Spk_OPER_PRED, 0, expr, 0); }
 

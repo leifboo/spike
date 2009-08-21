@@ -1820,8 +1820,8 @@ static SpkUnknown *initThunks(SpkUnknown **globals, SpkModule *module,
                 goto unwind;
             }
             thunk->receiver = (SpkUnknown *)module;
-            thunk->method = method;
-            thunk->methodClass = methodClass;
+            thunk->method = method; /* steal reference */
+            thunk->methodClass = methodClass;  Spk_INCREF(methodClass);
             /* skip 'thunk' opcode */
             thunk->pc = SpkMethod_OPCODES(method) + 1;
             

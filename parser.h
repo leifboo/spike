@@ -7,11 +7,17 @@
 #include <stdio.h>
 
 
-typedef struct SpkParserState {
+typedef struct SpkParser {
+    SpkObject base;
     SpkStmt *root;
     int error;
     struct SpkSymbolTable *st;
-} SpkParserState;
+} SpkParser;
+
+typedef struct SpkParserSubclass {
+    SpkParser base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkParserSubclass;
 
 
 SpkStmt *SpkParser_NewClassDef(struct SpkSymbolNode *, struct SpkSymbolNode *, SpkStmt *, SpkStmt *,
@@ -26,6 +32,10 @@ SpkStmt *SpkParser_NewStmt(SpkStmtKind, SpkExpr *, SpkStmt *, SpkStmt *);
 SpkStmt *SpkParser_NewForStmt(SpkExpr *, SpkExpr *, SpkExpr *, SpkStmt *);
 SpkStmt *SpkParser_NewModuleDef(SpkStmt *);
 SpkStmt *SpkParser_ParseFile(FILE *, struct SpkSymbolTable *);
+
+
+extern struct SpkBehavior *Spk_ClassParser;
+extern struct SpkClassTmpl Spk_ClassParserTmpl;
 
 
 #endif /* __spk_parser_h__ */

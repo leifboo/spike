@@ -7,6 +7,7 @@
 #include "float.h"
 #include "int.h"
 #include "interp.h"
+#include "io.h"
 #include "native.h"
 #include "rodata.h"
 #include "str.h"
@@ -340,6 +341,19 @@ SpkUnknown *SpkHost_GetArgs(SpkUnknown **stackPointer,
                                                 argumentCount,
                                                 varArgArray,
                                                 skip);
+}
+
+
+/*------------------------------------------------------------------------*/
+/* i/o */
+
+/*****/ int SpkHost_IsFileStream(SpkUnknown *op) {
+    return Spk_CAST(FileStream, op) != (SpkFileStream *)0;
+}
+
+/***/ FILE *SpkHost_FileStreamAsCFileStream(SpkUnknown *op) {
+    SpkFileStream *stream = Spk_CAST(FileStream, op);
+    return stream->stream;
 }
 
 

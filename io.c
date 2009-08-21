@@ -8,6 +8,7 @@
 #include "float.h"
 #include "int.h"
 #include "native.h"
+#include "rodata.h"
 #include "str.h"
 
 #include <stdlib.h>
@@ -265,7 +266,6 @@ static SpkUnknown *FileStream_puts(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkno
 }
 
 static SpkUnknown *FileStream_reopen(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    /* XXX: "open" should be a class method */
     SpkFileStream *self;
     SpkString *pathnameString, *modeString;
     char *pathname, *mode;
@@ -301,6 +301,56 @@ static SpkUnknown *FileStream_rewind(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
         rewind(self->stream);
     Spk_INCREF(Spk_void);
     return Spk_void;
+}
+
+
+/*------------------------------------------------------------------------*/
+/* meta-methods */
+
+static SpkUnknown *ClassFileStream_open(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkString *pathnameString, *modeString;
+    char *pathname, *mode;
+    FILE *stream;
+    SpkUnknown *tmp;
+    SpkFileStream *newStream;
+    
+    pathnameString = Spk_CAST(String, arg0);
+    if (!pathnameString) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        return 0;
+    }
+    modeString = Spk_CAST(String, arg1);
+    if (!modeString) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        return 0;
+    }
+    pathname = SpkString_asString(pathnameString);
+    mode = SpkString_asString(modeString);
+    
+    stream = fopen(pathname, mode);
+    if (!stream) {
+        Spk_INCREF(Spk_null);
+        return Spk_null;
+    }
+    
+    tmp = Spk_CallAttr(theInterpreter, self, Spk_new, 0);
+    if (!tmp)
+        return 0;
+    newStream = Spk_CAST(FileStream, tmp);
+    if (!newStream) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "FileStream expected");
+        Spk_DECREF(tmp);
+        return 0;
+    }
+    
+    /* XXX: Note how this initialization is invisible to subclasses.
+     * The stream should be an argument to 'init', but Spike -- unlike
+     * Objective-C, for example -- doesn't allow C types in method
+     * signatures.
+     */
+    newStream->stream = stream;
+    
+    return (SpkUnknown *)newStream;
 }
 
 
@@ -343,6 +393,11 @@ static SpkMethodTmpl methods[] = {
     { 0, 0, 0}
 };
 
+static SpkMethodTmpl metaMethods[] = {
+    { "open",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &ClassFileStream_open },
+    { 0, 0, 0}
+};
+
 SpkClassTmpl Spk_ClassFileStreamTmpl = {
     "FileStream", {
         /*accessors*/ 0,
@@ -353,5 +408,8 @@ SpkClassTmpl Spk_ClassFileStreamTmpl = {
         &FileStream_zero,
         &FileStream_dealloc
     }, /*meta*/ {
+        /*accessors*/ 0,
+        metaMethods,
+        /*lvalueMethods*/ 0
     }
 };

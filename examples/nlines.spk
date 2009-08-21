@@ -3,7 +3,7 @@
 main(argv) {
     var stream, line, i;
     
-    stream = FileStream.new().open("README", "r");
+    stream = FileStream.open("README", "r");
     if (stream == null) {
         stderr.puts("Cannot open file!\n");
         return 1;

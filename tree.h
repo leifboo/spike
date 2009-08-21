@@ -48,6 +48,12 @@ typedef enum SpkStmtKind {
     Spk_STMT_YIELD
 } SpkStmtKind;
 
+typedef enum SpkExprNameKind {
+    Spk_EXPR_NAME_UNK,
+    Spk_EXPR_NAME_DEF,
+    Spk_EXPR_NAME_REF
+} SpkExprNameKind;
+
 
 typedef struct SpkExpr SpkExpr;
 typedef struct SpkExprList SpkExprList;
@@ -70,6 +76,7 @@ struct SpkExpr {
             size_t localCount;
         } block;
         SpkUnknown *keywords;
+        SpkExprNameKind nameKind;
     } aux;
     union {
         struct {

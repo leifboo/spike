@@ -88,7 +88,6 @@ typedef struct SpkSymbolTableSubclass {
 SpkSymbolNode *SpkSymbolNode_FromSymbol(SpkSymbolTable *st, SpkUnknown *sym);
 SpkSymbolNode *SpkSymbolNode_FromString(SpkSymbolTable *st, const char *str);
 SpkSymbolTable *SpkSymbolTable_New(void);
-void SpkSymbolTable_Destroy(SpkSymbolTable *st);
 void SpkSymbolTable_EnterScope(SpkSymbolTable *st, int enterNewContext);
 void SpkSymbolTable_ExitScope(SpkSymbolTable *st);
 void SpkSymbolTable_Insert(SpkSymbolTable *st, struct SpkExpr *def);

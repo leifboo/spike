@@ -100,11 +100,13 @@ int main(int argc, char **argv) {
     fclose(stream);
     
     tmp = SpkStaticChecker_Check(tree, st, &dataSize, &predefList, &rootClassList);
+    Spk_DECREF(st); st = 0;
     if (!tmp)
         return 1;
     Spk_DECREF(tmp);
     tree = SpkParser_NewModuleDef(tree);
     module = SpkCodeGen_GenerateCode(tree, dataSize, predefList.first, rootClassList.first);
+    Spk_DECREF(tree); tree = 0;
     
     theInterpreter = SpkInterpreter_New();
     

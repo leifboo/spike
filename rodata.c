@@ -54,10 +54,12 @@ SpkUnknown *Spk_cannotReturn;
 SpkUnknown *Spk_doesNotUnderstand;
 SpkUnknown *Spk_importModule;
 SpkUnknown *Spk_importPackage;
+SpkUnknown *Spk_init;
 SpkUnknown *Spk_main;
 SpkUnknown *Spk_mustBeBoolean;
 SpkUnknown *Spk_mustBeSymbol;
 SpkUnknown *Spk_mustBeTuple;
+SpkUnknown *Spk_new;
 SpkUnknown *Spk_noRunnableFiber;
 SpkUnknown *Spk_numArgs;
 SpkUnknown *Spk_printString;
@@ -153,10 +155,12 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_doesNotUnderstand,             "doesNotUnderstand:"          },
     { &Spk_importModule,                  "importModule"                },
     { &Spk_importPackage,                 "importPackage"               },
+    { &Spk_init,                          "init"                        },
     { &Spk_main,                          "main"                        },
     { &Spk_mustBeBoolean,                 "mustBeBoolean"               },
     { &Spk_mustBeSymbol,                  "mustBeSymbol"                },
     { &Spk_mustBeTuple,                   "mustBeTuple"                 },
+    { &Spk_new,                           "new"                         },
     { &Spk_noRunnableFiber,               "noRunnableFiber"             },
     { &Spk_numArgs,                       "numArgs"                     },
     { &Spk_printString,                   "printString"                 },

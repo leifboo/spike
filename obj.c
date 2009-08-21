@@ -58,59 +58,26 @@ static SpkUnknown *Object_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnk
 /*------------------------------------------------------------------------*/
 /* meta-methods */
 
-static SpkUnknown *ClassObject_new(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+static SpkUnknown *ClassObject_new(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
     /* Answer a new instance of the receiver. */
-    SpkClass *self;
-    SpkUnknown *args;
-    
-    self = (SpkClass *)_self;
-    args = arg0;
-    if (!Spk_IsArgs(args)) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "an argument list is required");
-        return 0;
-    }
-    
-    if (Spk_ArgsSize(args) != 0) {
-        Spk_HaltWithFormat(Spk_HALT_TYPE_ERROR,
-                           "method '%s::new' takes 0 arguments (%d given)",
-                           SpkBehavior_Name((SpkBehavior *)self), Spk_ArgsSize(args));
-        return 0;
-    }
-    
     return (SpkUnknown *)SpkObject_New((SpkBehavior *)self);
 }
 
-static SpkUnknown *ClassVariableObject_new(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+static SpkUnknown *ClassVariableObject_new(SpkUnknown *_self, SpkUnknown *nItemsObj, SpkUnknown *arg1) {
     /* Answer a new instance of the receiver. */
     SpkClass *self;
-    SpkUnknown *args;
-    SpkUnknown *nItemsObj; long nItems;
+    long nItems;
     
     self = (SpkClass *)_self;
-    args = arg0;
-    if (!Spk_IsArgs(args)) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "an argument list is required");
-        return 0;
-    }
-    
-    if (Spk_ArgsSize(args) != 1) {
-        Spk_HaltWithFormat(Spk_HALT_TYPE_ERROR,
-                           "method '%s::new' takes 1 argument (%d given)",
-                           SpkBehavior_Name((SpkBehavior *)self), Spk_ArgsSize(args));
-        return 0;
-    }
     if (self->base.itemSize == 0) {
         Spk_Halt(Spk_HALT_VALUE_ERROR, "bad item size in class object");
         return 0;
     }
-    nItemsObj = Spk_GetArg(args, 0);
     if (!SpkHost_IsInteger(nItemsObj)) {
-        Spk_DECREF(nItemsObj);
         Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer object is required");
         return 0;
     }
     nItems = SpkHost_IntegerAsCLong(nItemsObj);
-    Spk_DECREF(nItemsObj);
     if (nItems < 0) {
         Spk_Halt(Spk_HALT_VALUE_ERROR, "number of items cannot be negative");
         return 0;
@@ -199,7 +166,7 @@ static SpkMethodTmpl ObjectMethods[] = {
 };
 
 static SpkMethodTmpl ClassObjectMethods[] = {
-    { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_ARRAY, &ClassObject_new },
+    { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &ClassObject_new },
     { 0, 0, 0}
 };
 
@@ -232,7 +199,7 @@ static SpkMethodTmpl VariableObjectMethods[] = {
 };
 
 static SpkMethodTmpl ClassVariableObjectMethods[] = {
-    { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_ARRAY, &ClassVariableObject_new },
+    { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &ClassVariableObject_new },
     { 0, 0, 0}
 };
 

@@ -330,7 +330,6 @@ int SpkLexer_GetNextToken(SpkToken *token, yyscan_t scanner, SpkSymbolTable *st)
         break;
     case Spk_TOKEN_IDENTIFIER:
     case Spk_TOKEN_TYPE_IDENTIFIER:
-    case Spk_TOKEN_CLASS:
         token->sym = SpkSymbolNode_FromString(st, yyget_text(scanner));
         break;
     case Spk_TOKEN_SYMBOL:

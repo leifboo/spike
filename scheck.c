@@ -225,7 +225,7 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
         namespace = Spk_METHOD_NAMESPACE_RVALUE;
         switch (expr->kind) {
         case Spk_EXPR_NAME:
-            name = expr->sym;
+            name = expr->sym;  Spk_INCREF(name);
             break;
         case Spk_EXPR_ASSIGN:
             ASSERT(expr->right->kind == Spk_EXPR_NAME,
@@ -233,7 +233,7 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
             namespace = Spk_METHOD_NAMESPACE_LVALUE;
             switch (expr->left->kind) {
             case Spk_EXPR_NAME:
-                name = expr->left->sym;
+                name = expr->left->sym;  Spk_INCREF(name);
                 stmt->u.method.argList.fixed = expr->right;
                 break;
             case Spk_EXPR_CALL:
@@ -246,7 +246,7 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
                     );
                 stmt->u.method.argList.fixed = expr->left->right;
                 /* chain-on the new value arg */
-                expr->left->right->nextArg = expr->right;
+                expr->left->right->nextArg = expr->right;  Spk_INCREF(expr->right);
                 break;
             default:
                 ASSERT(0, "invalid method declarator");
@@ -269,7 +269,7 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
                  */
                 ASSERT(expr->oper == Spk_OPER_APPLY,
                        "invalid method declarator");
-                name = expr->left->sym;
+                name = expr->left->sym;  Spk_INCREF(name);
             }
             if (!outer || outer->kind != Spk_STMT_DEF_CLASS) {
                 /* declare naked functions */
@@ -773,7 +773,9 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     checker.st = st;
     SpkSymbolTable_EnterScope(checker.st, 1); /* built-in scope */
     for (pv = pseudoVariables; pv->name; ++pv) {
-        SpkSymbolTable_Insert(checker.st, newPseudoVariable(pv, &checker));
+        Expr *pvDef = newPseudoVariable(pv, &checker);
+        SpkSymbolTable_Insert(checker.st, pvDef);
+        Spk_DECREF(pvDef);
     }
     SpkSymbolTable_EnterScope(checker.st, 1); /* global scope */
     
@@ -826,8 +828,11 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
             }
         }
         Spk_Halt(Spk_HALT_ERROR, "errors");
-        goto unwind;
+        SpkSymbolTable_ExitScope(checker.st); /* built-in */
+        return 0;
     }
+    
+    SpkSymbolTable_ExitScope(checker.st); /* built-in */
     
     Spk_INCREF(Spk_void);
     return Spk_void;

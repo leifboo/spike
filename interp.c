@@ -1000,6 +1000,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             for (mc = methodClass; mc; mc = mc->superclass) {
                 method = SpkBehavior_LookupMethod(mc, namespace, messageSelector);
                 if (method) {
+                    Spk_DECREF(method);
                     methodClass = mc;
                     Spk_DECREF(messageSelector);
                     messageSelector = 0;
@@ -1177,14 +1178,23 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             return result; }
             
         case Spk_OPCODE_LEAF:
-            leafContext->sender = self->activeContext;   Spk_INCREF(self->activeContext);
-            leafContext->mark = &mark;
+            leafContext->sender = self->activeContext;  Spk_INCREF(self->activeContext);
+            leafContext->homeContext = leafContext;     Spk_INCREF(leafContext); /* note cycle */
             
-            /* Sometimes this is the only reference.  XXX: Solving it
-               this way doesn't feel quite right. */
-            Spk_INCREF(receiver);
+            Spk_XDECREF(leafContext->u.m.method);
+            Spk_INCREF(method);
+            leafContext->u.m.method = method;
+            
+            Spk_XDECREF(leafContext->u.m.methodClass);
+            Spk_INCREF(methodClass);
+            leafContext->u.m.methodClass = methodClass;
+            
+            /* Sometimes this is the only reference to the receiver. */
             Spk_XDECREF(leafContext->u.m.receiver);
+            Spk_INCREF(receiver);
             leafContext->u.m.receiver = receiver;
+            
+            leafContext->mark = &mark;
             
             Spk_INCREF(leafContext);
             Spk_DECREF(self->activeContext);
@@ -1329,8 +1339,9 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                     thisCntx->pc = 0;
                     if (thisCntx->homeContext == thisCntx) {
                         /* break cycles */
-                        Spk_DECREF(thisCntx->homeContext);
+                        tmp = (SpkUnknown *)thisCntx->homeContext;
                         thisCntx->homeContext = 0;
+                        Spk_DECREF(tmp);
                     }
                     Spk_DECREF(thisCntx);
                 }
@@ -1388,8 +1399,9 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             self->activeContext->stackp = stackPointer + 1; /* skip result */
             if (self->activeContext->homeContext == self->activeContext) {
                 /* break cycles */
-                Spk_DECREF(self->activeContext->homeContext);
+                tmp = (SpkUnknown *)self->activeContext->homeContext;
                 self->activeContext->homeContext = 0;
+                Spk_DECREF(tmp);
             }
  restore:
             result = POP_OBJECT();

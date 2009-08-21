@@ -64,6 +64,10 @@ SpkUnknown *SpkHost_ArgsFromVAList(va_list);
 SpkUnknown *SpkHost_GetArgs(SpkUnknown **, size_t,
                             SpkUnknown *, size_t);
 
+/* i/o */
+/*****/ int SpkHost_IsFileStream(SpkUnknown *);
+/***/ FILE *SpkHost_FileStreamAsCFileStream(SpkUnknown *);
+
 
 /* as yet unclassified */
 SpkUnknown *SpkHost_ObjectAsString(SpkUnknown *);
