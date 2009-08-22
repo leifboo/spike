@@ -85,6 +85,8 @@ static SpkUnknown **Expr_traverse_current(SpkObject *_self) {
             break;
         }
         break;
+    default:
+        break;
     }
         
     return (*Spk_ClassExpr->superclass->traverse.current)(_self);
@@ -157,6 +159,8 @@ static void Expr_traverse_next(SpkObject *_self) {
             break;
         }
         break;
+    default:
+        break;
     }
     
     (*Spk_ClassExpr->superclass->traverse.next)(_self);
@@ -195,6 +199,11 @@ static SpkUnknown **Stmt_traverse_current(SpkObject *_self) {
     case Spk_STMT_DEF_METHOD:
         if (self->u.method.name)
             return (SpkUnknown **)&self->u.method.name;
+        break;
+    case Spk_STMT_PRAGMA_SOURCE:
+        if (self->u.source)
+            return (SpkUnknown **)&self->u.source;
+    default:
         break;
     }
     
@@ -243,6 +252,14 @@ static void Stmt_traverse_next(SpkObject *_self) {
             self->u.method.name = 0;
             return;
         }
+        break;
+    case Spk_STMT_PRAGMA_SOURCE:
+        if (self->u.source) {
+            self->u.source = 0;
+            return;
+        }
+        break;
+    default:
         break;
     }
     

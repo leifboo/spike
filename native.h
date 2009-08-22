@@ -60,7 +60,10 @@ SpkUnknown *Spk_VOper(struct SpkInterpreter *, SpkUnknown *, SpkOper, va_list);
 SpkUnknown *Spk_Call(struct SpkInterpreter *, SpkUnknown *, SpkCallOper, ...);
 SpkUnknown *Spk_VCall(struct SpkInterpreter *, SpkUnknown *, SpkCallOper, va_list);
 SpkUnknown *Spk_Attr(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *);
+SpkUnknown *Spk_SetAttr(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, SpkUnknown *);
 SpkUnknown *Spk_CallAttr(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, ...);
+SpkUnknown *Spk_Keyword(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, ...);
+SpkUnknown *Spk_VKeyword(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, va_list);
 
 void Spk_Halt(int, const char *);
 void Spk_HaltWithFormat(int, const char *, ...);

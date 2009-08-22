@@ -15,11 +15,7 @@ typedef struct SpkSymbolTable SpkSymbolTable;
 
 struct SpkSymbolNode {
     SpkObject base;
-    
     struct SpkSTEntry *entry;
-    SpkSymbolNode *nextError;
-    struct SpkExpr *multipleDefList, *undefList;
-    
     SpkUnknown *sym;
 };
 
@@ -54,7 +50,6 @@ struct SpkScope {
 struct SpkSymbolTable {
     SpkObject base;
     SpkScope *currentScope;
-    SpkSymbolNode *errorList;
     SpkUnknown *symbolNodes;
 };
 
@@ -90,9 +85,11 @@ SpkSymbolNode *SpkSymbolNode_FromString(SpkSymbolTable *st, const char *str);
 SpkSymbolTable *SpkSymbolTable_New(void);
 void SpkSymbolTable_EnterScope(SpkSymbolTable *st, int enterNewContext);
 void SpkSymbolTable_ExitScope(SpkSymbolTable *st);
-void SpkSymbolTable_Insert(SpkSymbolTable *st, struct SpkExpr *def);
+SpkUnknown *SpkSymbolTable_Insert(SpkSymbolTable *st, struct SpkExpr *def,
+                                  SpkUnknown *requestor);
 struct SpkExpr *SpkSymbolTable_Lookup(SpkSymbolTable *st, SpkSymbolNode *sym);
-void SpkSymbolTable_Bind(SpkSymbolTable *st, struct SpkExpr *expr);
+SpkUnknown *SpkSymbolTable_Bind(SpkSymbolTable *st, struct SpkExpr *expr,
+                                SpkUnknown *requestor);
 
 
 extern struct SpkBehavior *Spk_ClassSymbolNode, *Spk_ClassSTEntry,

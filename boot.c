@@ -10,6 +10,7 @@
 #include "metaclass.h"
 #include "module.h"
 #include "native.h"
+#include "notifier.h"
 #include "obj.h"
 #include "parser.h"
 #include "rodata.h"
@@ -62,6 +63,7 @@ SpkClassBootRec Spk_classBootRec[] = {
     /**/CLASS(Scope,        Object),
     /**/CLASS(SymbolTable,  Object),
     /**/CLASS(Parser,       Object),
+    /**/CLASS(Notifier,     Object),
 #ifdef MALTIPY
     /**** bridge ****/
     CLASS(PythonObject, Object /*NULL_CLASS*/),

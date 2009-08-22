@@ -52,6 +52,7 @@ SpkUnknown *Spk_blockCopy;
 SpkUnknown *Spk_cannotReenterBlock;
 SpkUnknown *Spk_cannotReturn;
 SpkUnknown *Spk_doesNotUnderstand;
+SpkUnknown *Spk_failOnError;
 SpkUnknown *Spk_importModule;
 SpkUnknown *Spk_importPackage;
 SpkUnknown *Spk_init;
@@ -64,6 +65,9 @@ SpkUnknown *Spk_noRunnableFiber;
 SpkUnknown *Spk_numArgs;
 SpkUnknown *Spk_printString;
 SpkUnknown *Spk_recursiveDoesNotUnderstand;
+SpkUnknown *Spk_redefinedSymbol;
+SpkUnknown *Spk_source;
+SpkUnknown *Spk_undefinedSymbol;
 SpkUnknown *Spk_unknownOpcode;
 SpkUnknown *Spk_wrongNumberOfArguments;
 
@@ -153,6 +157,7 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_cannotReenterBlock,            "cannotReenterBlock"          },
     { &Spk_cannotReturn,                  "cannotReturn"                },
     { &Spk_doesNotUnderstand,             "doesNotUnderstand:"          },
+    { &Spk_failOnError,                   "failOnError"                 },
     { &Spk_importModule,                  "importModule"                },
     { &Spk_importPackage,                 "importPackage"               },
     { &Spk_init,                          "init"                        },
@@ -165,6 +170,9 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_numArgs,                       "numArgs"                     },
     { &Spk_printString,                   "printString"                 },
     { &Spk_recursiveDoesNotUnderstand,    "recursiveDoesNotUnderstand:" },
+    { &Spk_redefinedSymbol,               "redefinedSymbol:"            },
+    { &Spk_source,                        "source"                      },
+    { &Spk_undefinedSymbol,               "undefinedSymbol:"            },
     { &Spk_unknownOpcode,                 "unknownOpcode"               },
     { &Spk_wrongNumberOfArguments,        "wrongNumberOfArguments"      },
     { 0, 0 }

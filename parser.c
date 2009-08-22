@@ -2,6 +2,7 @@
 #include "parser.h"
 
 #include "class.h"
+#include "gram.h"
 #include "host.h"
 #include "lexer.h"
 #include "st.h"
@@ -28,10 +29,38 @@ SpkBehavior *Spk_ClassParser;
 SpkClassTmpl Spk_ClassParserTmpl;
 
 
+
+static SpkSymbolNode *symbolNodeForToken(SpkToken *token, SpkSymbolTable *st) {
+    switch (token->id) {
+    case Spk_TOKEN_ARG:      return SpkSymbolNode_FromString(st, "arg");
+    case Spk_TOKEN_CLASS:    return SpkSymbolNode_FromString(st, "class");
+    case Spk_TOKEN_BREAK:    return SpkSymbolNode_FromString(st, "break");
+    case Spk_TOKEN_CONTINUE: return SpkSymbolNode_FromString(st, "continue");
+    case Spk_TOKEN_DO:       return SpkSymbolNode_FromString(st, "do");
+    case Spk_TOKEN_ELSE:     return SpkSymbolNode_FromString(st, "else");
+    case Spk_TOKEN_FOR:      return SpkSymbolNode_FromString(st, "for");
+    case Spk_TOKEN_IF:       return SpkSymbolNode_FromString(st, "if");
+    case Spk_TOKEN_IMPORT:   return SpkSymbolNode_FromString(st, "import");
+    case Spk_TOKEN_META:     return SpkSymbolNode_FromString(st, "meta");
+    case Spk_TOKEN_RAISE:    return SpkSymbolNode_FromString(st, "raise");
+    case Spk_TOKEN_RETURN:   return SpkSymbolNode_FromString(st, "return");
+    case Spk_TOKEN_VAR:      return SpkSymbolNode_FromString(st, "var");
+    case Spk_TOKEN_WHILE:    return SpkSymbolNode_FromString(st, "while");
+    case Spk_TOKEN_YIELD:    return SpkSymbolNode_FromString(st, "yield");
+    
+    case Spk_TOKEN_IDENTIFIER:
+    case Spk_TOKEN_TYPE_IDENTIFIER:
+    case Spk_TOKEN_SYMBOL:
+        return token->sym;
+    }
+    return 0;
+}
+
+
 /****************************************************************************/
 /* grammar actions */
 
-Stmt *SpkParser_NewClassDef(SpkSymbolNode *name, SpkSymbolNode *super,
+Stmt *SpkParser_NewClassDef(SpkToken *name, SpkToken *super,
                             Stmt *body, Stmt *metaBody,
                             SpkSymbolTable *st)
 {
@@ -41,22 +70,35 @@ Stmt *SpkParser_NewClassDef(SpkSymbolNode *name, SpkSymbolNode *super,
     newStmt->kind = Spk_STMT_DEF_CLASS;
     newStmt->top = body;
     newStmt->bottom = metaBody;
-    newStmt->expr = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0);
-    newStmt->expr->sym = name;
-    if (!super)
-        super = SpkSymbolNode_FromString(st, "Object");
-    newStmt->u.klass.superclassName = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0);
-    newStmt->u.klass.superclassName->sym = super;
+    newStmt->expr = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, name);
+    newStmt->expr->sym = name->sym;
+    newStmt->u.klass.superclassName = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, super);
+    newStmt->u.klass.superclassName->sym
+        = super
+        ? super->sym
+        : SpkSymbolNode_FromString(st, "Object");
     return newStmt;
 }
 
-Expr *SpkParser_NewClassAttrExpr(SpkSymbolNode *className, SpkSymbolNode *attrName) {
+Expr *SpkParser_NewAttrExpr(Expr *obj, SpkToken *attrName,
+                            SpkToken *dot, SpkSymbolTable *st)
+{
+    Expr *newExpr;
+    
+    newExpr = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0, dot);
+    newExpr->sym = symbolNodeForToken(attrName, st);
+    return newExpr;
+}
+
+Expr *SpkParser_NewClassAttrExpr(SpkToken *className, SpkToken *attrName,
+                                 SpkToken *dot, SpkSymbolTable *st)
+{
     Expr *obj, *newExpr;
     
-    obj = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0);
-    obj->sym = className;
-    newExpr = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0);
-    newExpr->sym = attrName;
+    obj = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, className);
+    obj->sym = className->sym;
+    newExpr = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0, dot);
+    newExpr->sym = symbolNodeForToken(attrName, st);
     return newExpr;
 }
 
@@ -84,7 +126,9 @@ Stmt *SpkParser_NewForStmt(Expr *expr1, Expr *expr2, Expr *expr3, Stmt *body) {
 }
 
 Expr *SpkParser_NewExpr(ExprKind kind, SpkOper oper, Expr *cond,
-                        Expr *left, Expr *right) {
+                        Expr *left, Expr *right,
+                        SpkToken *token)
+{
     Expr *newExpr;
     
     newExpr = (Expr *)SpkObject_New(Spk_ClassExpr);
@@ -93,54 +137,73 @@ Expr *SpkParser_NewExpr(ExprKind kind, SpkOper oper, Expr *cond,
     newExpr->cond = cond;
     newExpr->left = left;
     newExpr->right = right;
+    if (token)
+        newExpr->lineNo = token->lineNo;
     return newExpr;
 }
 
-Expr *SpkParser_NewBlock(Stmt *stmtList, Expr *expr) {
+Expr *SpkParser_NewBlock(Stmt *stmtList, Expr *expr, SpkToken *token) {
     Expr *newExpr;
     
     newExpr = (Expr *)SpkObject_New(Spk_ClassExpr);
     newExpr->kind = Spk_EXPR_BLOCK;
     newExpr->right = expr;
     newExpr->aux.block.stmtList = stmtList;
+    newExpr->lineNo = token->lineNo;
     return newExpr;
 }
 
-Expr *SpkParser_NewKeywordExpr(SpkSymbolNode *kw, Expr *arg) {
+Expr *SpkParser_NewKeywordExpr(SpkToken *kw, Expr *arg,
+                               SpkSymbolTable *st)
+{
     Expr *newExpr;
+    SpkSymbolNode *kwNode;
     
     newExpr = (Expr *)SpkObject_New(Spk_ClassExpr);
     newExpr->kind = Spk_EXPR_KEYWORD;
     newExpr->right = arg;
+    newExpr->lineNo = kw->lineNo;
     newExpr->aux.keywords = SpkHost_NewKeywordSelectorBuilder();
-    SpkHost_AppendKeyword(&newExpr->aux.keywords, kw->sym);
-    Spk_DECREF(kw);
+    kwNode = symbolNodeForToken(kw, st);
+    SpkHost_AppendKeyword(&newExpr->aux.keywords, kwNode->sym);
+    Spk_DECREF(kwNode);
     return newExpr;
 }
 
-Expr *SpkParser_AppendKeyword(Expr *expr, SpkSymbolNode *kw, Expr *arg) {
+Expr *SpkParser_AppendKeyword(Expr *expr, SpkToken *kw, Expr *arg,
+                              SpkSymbolTable *st)
+{
     Expr *e;
+    SpkSymbolNode *kwNode;
     
-    SpkHost_AppendKeyword(&expr->aux.keywords, kw->sym);
+    kwNode = symbolNodeForToken(kw, st);
+    SpkHost_AppendKeyword(&expr->aux.keywords, kwNode->sym);
     for (e = expr->right; e->nextArg; e = e->nextArg)
         ;
     e->nextArg = arg;
-    Spk_DECREF(kw);
+    Spk_DECREF(kwNode);
     return expr;
 }
 
-Expr *SpkParser_FreezeKeywords(Expr *expr, SpkSymbolNode *kw) {
+Expr *SpkParser_FreezeKeywords(Expr *expr, SpkToken *kw,
+                               SpkSymbolTable *st)
+{
     SpkUnknown *tmp;
+    SpkSymbolNode *kwNode;
     
+    kwNode = kw ? symbolNodeForToken(kw, st) : 0;
     if (!expr) {
         expr = (Expr *)SpkObject_New(Spk_ClassExpr);
         expr->kind = Spk_EXPR_KEYWORD;
+        expr->lineNo = kw->lineNo;
         expr->aux.keywords = SpkHost_NewKeywordSelectorBuilder();
+    } else if (kw) {
+        expr->lineNo = kw->lineNo;
     }
-    tmp = SpkHost_GetKeywordSelector(expr->aux.keywords, kw ? kw->sym : 0);
+    tmp = SpkHost_GetKeywordSelector(expr->aux.keywords, kwNode);
     Spk_DECREF(expr->aux.keywords);
     expr->aux.keywords = tmp;
-    Spk_XDECREF(kw);
+    Spk_XDECREF(kwNode);
     return expr;
 }
 
@@ -203,6 +266,15 @@ Stmt *SpkParser_ParseFile(FILE *yyin, SpkSymbolTable *st) {
     return parserState.root;
 }
 
+void SpkParser_Source(SpkStmt **pStmtList, SpkUnknown *source) {
+    Stmt *pragma;
+    
+    pragma = SpkParser_NewStmt(Spk_STMT_PRAGMA_SOURCE, 0, 0, 0);
+    pragma->u.source = source;  Spk_INCREF(source);
+    pragma->next = *pStmtList;
+    *pStmtList = pragma;
+}
+
 
 /*------------------------------------------------------------------------*/
 /* methods */
@@ -260,7 +332,7 @@ static SpkUnknown *Parser_parseFile(SpkUnknown *_self,
         Spk_INCREF(Spk_null);
         return Spk_null;
     }
-    return self->root;
+    return (SpkUnknown *)self->root;
     
  unwind:
     return 0;

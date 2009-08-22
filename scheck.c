@@ -41,6 +41,7 @@ typedef SpkStmtList StmtList;
 typedef struct StaticChecker {
     SpkSymbolTable *st;
     StmtList *rootClassList;
+    SpkUnknown *notifier;
 } StaticChecker;
 
 
@@ -61,7 +62,7 @@ static SpkUnknown *checkVarDefList(Expr *defList,
     for (def = defList; def; def = def->next) {
         ASSERT(def->kind == Spk_EXPR_NAME,
                "invalid variable declaration");
-        SpkSymbolTable_Insert(checker->st, def);
+        _(SpkSymbolTable_Insert(checker->st, def, checker->notifier));
     }
  leave:
     Spk_INCREF(Spk_void);
@@ -105,7 +106,7 @@ static SpkUnknown *checkBlock(Expr *expr, Stmt *stmt, StaticChecker *checker,
         for (arg = firstStmt->expr; arg; arg = arg->next) {
             ASSERT(arg->kind == Spk_EXPR_NAME,
                    "invalid argument declaration");
-            SpkSymbolTable_Insert(checker->st, arg);
+            _(SpkSymbolTable_Insert(checker->st, arg, checker->notifier));
             ++expr->aux.block.argumentCount;
         }
         
@@ -154,7 +155,7 @@ static SpkUnknown *checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker,
         break;
     case Spk_EXPR_NAME:
         if (pass == 2) {
-            SpkSymbolTable_Bind(checker->st, expr);
+            _(SpkSymbolTable_Bind(checker->st, expr, checker->notifier));
         }
         break;
     case Spk_EXPR_BLOCK:
@@ -273,7 +274,7 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
             }
             if (!outer || outer->kind != Spk_STMT_DEF_CLASS) {
                 /* declare naked functions */
-                SpkSymbolTable_Insert(checker->st, expr->left);
+                _(SpkSymbolTable_Insert(checker->st, expr->left, checker->notifier));
             }
             stmt->u.method.argList.fixed = expr->right;
             stmt->u.method.argList.var = expr->var;
@@ -335,14 +336,14 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
         for (arg = stmt->u.method.argList.fixed; arg; arg = arg->nextArg) {
             ASSERT(arg->kind == Spk_EXPR_NAME,
                    "invalid argument declaration");
-            SpkSymbolTable_Insert(checker->st, arg);
+            _(SpkSymbolTable_Insert(checker->st, arg, checker->notifier));
             ++stmt->u.method.argumentCount;
         }
         arg = stmt->u.method.argList.var;
         if (arg) {
             ASSERT(arg->kind == Spk_EXPR_NAME,
                    "invalid argument declaration");
-            SpkSymbolTable_Insert(checker->st, arg);
+            _(SpkSymbolTable_Insert(checker->st, arg, checker->notifier));
         }
 
         for (innerPass = 1; innerPass <= 3; ++innerPass) {
@@ -462,7 +463,7 @@ static SpkUnknown *checkClassDef(Stmt *stmt, Stmt *outer, StaticChecker *checker
     case 1:
         ASSERT(stmt->expr->kind == Spk_EXPR_NAME,
                "identifier expected");
-        SpkSymbolTable_Insert(checker->st, stmt->expr);
+        _(SpkSymbolTable_Insert(checker->st, stmt->expr, checker->notifier));
         stmt->expr->u.def.stmt = stmt;
         
         _(checkExpr(stmt->u.klass.superclassName, stmt, checker, outerPass));
@@ -518,7 +519,7 @@ static SpkUnknown *checkImport(Stmt *stmt, StaticChecker *checker,
             ASSERT(def->kind == Spk_EXPR_NAME,
                    "invalid import statement");
             def->u.def.weak = 1;
-            SpkSymbolTable_Insert(checker->st, def);
+            _(SpkSymbolTable_Insert(checker->st, def, checker->notifier));
         }
         switch (stmt->expr->kind) {
         case Spk_EXPR_NAME:
@@ -536,7 +537,7 @@ static SpkUnknown *checkImport(Stmt *stmt, StaticChecker *checker,
             /* "import spam;" */
             def = expr;
             def->u.def.weak = 1;
-            SpkSymbolTable_Insert(checker->st, def);
+            _(SpkSymbolTable_Insert(checker->st, def, checker->notifier));
             break;
         case Spk_EXPR_ATTR:
             /* "import spam.ham;" */
@@ -546,7 +547,7 @@ static SpkUnknown *checkImport(Stmt *stmt, StaticChecker *checker,
             }
             ASSERT(def->kind == Spk_EXPR_NAME, "invalid import statement");
             def->u.def.weak = 1;
-            SpkSymbolTable_Insert(checker->st, def);
+            _(SpkSymbolTable_Insert(checker->st, def, checker->notifier));
             break;
         case Spk_EXPR_ASSIGN:
             /* "import ham = spam.ham;" */
@@ -556,7 +557,7 @@ static SpkUnknown *checkImport(Stmt *stmt, StaticChecker *checker,
                 ASSERT(def->kind == Spk_EXPR_NAME,
                        "invalid import statement");
                 def->u.def.weak = 1;
-                SpkSymbolTable_Insert(checker->st, def);
+                _(SpkSymbolTable_Insert(checker->st, def, checker->notifier));
                 e = e->right;
             } while (e->kind == Spk_EXPR_ASSIGN);
             switch (e->kind) {
@@ -657,6 +658,9 @@ static SpkUnknown *checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker,
         ASSERT(0, "'raise' not implemented");
 #endif /* MALTIPY */
         break;
+    case Spk_STMT_PRAGMA_SOURCE:
+        _(Spk_SetAttr(theInterpreter, checker->notifier, Spk_source, stmt->u.source));
+        break;
     case Spk_STMT_RETURN:
     case Spk_STMT_YIELD:
         if (stmt->expr) {
@@ -746,7 +750,7 @@ static SpkUnknown *declareClass(SpkBehavior *aClass,
                                 StaticChecker *checker)
 {
     Stmt *classDef = predefinedClassDef((SpkClass *)aClass, checker);
-    SpkSymbolTable_Insert(checker->st, classDef->expr);
+    _(SpkSymbolTable_Insert(checker->st, classDef->expr, checker->notifier));
     classDef->expr->u.def.initValue = (SpkUnknown *)aClass;
     _(addPredef(predefList, classDef));
     
@@ -759,6 +763,7 @@ static SpkUnknown *declareClass(SpkBehavior *aClass,
 
 SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
                                    SpkSymbolTable *st,
+                                   SpkUnknown *notifier,
                                    unsigned int *pDataSize,
                                    StmtList *predefList,
                                    StmtList *rootClassList)
@@ -771,10 +776,11 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     SpkVarBootRec *varBootRec;
     
     checker.st = st;
+    checker.notifier = notifier;
     SpkSymbolTable_EnterScope(checker.st, 1); /* built-in scope */
     for (pv = pseudoVariables; pv->name; ++pv) {
         Expr *pvDef = newPseudoVariable(pv, &checker);
-        SpkSymbolTable_Insert(checker.st, pvDef);
+        _(SpkSymbolTable_Insert(checker.st, pvDef, checker.notifier));
         Spk_DECREF(pvDef);
     }
     SpkSymbolTable_EnterScope(checker.st, 1); /* global scope */
@@ -790,7 +796,7 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     }
     for (varBootRec = Spk_globalVarBootRec; varBootRec->var; ++varBootRec) {
         Stmt *varDef = globalVarDef(varBootRec->name, &checker);
-        SpkSymbolTable_Insert(checker.st, varDef->expr);
+        _(SpkSymbolTable_Insert(checker.st, varDef->expr, checker.notifier));
         varDef->expr->u.def.initValue = (SpkUnknown *)*varBootRec->var;
         _(addPredef(predefList, varDef));
     }
@@ -806,32 +812,7 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     
     *pDataSize = checker.st->currentScope->context->nDefs;
     
-    SpkSymbolTable_ExitScope(checker.st);
-    
-    if (checker.st->errorList) {
-        SpkSymbolNode *sym;
-        
-        fprintf(stderr, "errors!\n");
-        for (sym = checker.st->errorList; sym; sym = sym->nextError) {
-            if (sym->multipleDefList) {
-                if (sym->entry && sym->entry->scope->context->level == 0) {
-                    fprintf(stderr, "cannot redefine built-in name '%s'\n",
-                            SpkHost_SymbolAsCString(sym->sym));
-                } else {
-                    fprintf(stderr, "symbol '%s' multiply defined\n",
-                            SpkHost_SymbolAsCString(sym->sym));
-                }
-            }
-            if (sym->undefList) {
-                fprintf(stderr, "symbol '%s' undefined\n",
-                        SpkHost_SymbolAsCString(sym->sym));
-            }
-        }
-        Spk_Halt(Spk_HALT_ERROR, "errors");
-        SpkSymbolTable_ExitScope(checker.st); /* built-in */
-        return 0;
-    }
-    
+    SpkSymbolTable_ExitScope(checker.st); /* global */
     SpkSymbolTable_ExitScope(checker.st); /* built-in */
     
     Spk_INCREF(Spk_void);

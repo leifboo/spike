@@ -235,6 +235,18 @@ static SpkUnknown *vSendMessage(SpkInterpreter *interpreter,
     return result;
 }
 
+static SpkUnknown *sendMessage(SpkInterpreter *interpreter,
+                               SpkUnknown *obj, unsigned int namespace, SpkUnknown *selector, ...)
+{
+    SpkUnknown *result;
+    va_list ap;
+    
+    va_start(ap, selector);
+    result = vSendMessage(interpreter, obj, namespace, selector, ap);
+    va_end(ap);
+    return result;
+}
+
 SpkUnknown *Spk_Oper(SpkInterpreter *interpreter, SpkUnknown *obj, SpkOper oper, ...) {
     SpkUnknown *result;
     va_list ap;
@@ -264,13 +276,11 @@ SpkUnknown *Spk_VCall(SpkInterpreter *interpreter, SpkUnknown *obj, SpkCallOper 
 }
 
 SpkUnknown *Spk_Attr(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *name) {
-    SpkUnknown *argumentList, *result;
+    return Spk_SendMessage(interpreter, obj, Spk_METHOD_NAMESPACE_RVALUE, name, Spk_emptyArgs);
+}
 
-    argumentList = Spk_emptyArgs;
-    Spk_INCREF(argumentList);
-    result = Spk_SendMessage(interpreter, obj, Spk_METHOD_NAMESPACE_RVALUE, name, argumentList);
-    Spk_DECREF(argumentList);
-    return result;
+SpkUnknown *Spk_SetAttr(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *name, SpkUnknown *value) {
+    return sendMessage(interpreter, obj, Spk_METHOD_NAMESPACE_LVALUE, name, value, 0);
 }
 
 SpkUnknown *Spk_CallAttr(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *name, ...) {
@@ -286,6 +296,20 @@ SpkUnknown *Spk_CallAttr(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknow
     Spk_DECREF(thunk);
     va_end(ap);
     return result;
+}
+
+SpkUnknown *Spk_Keyword(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *selector, ...) {
+    SpkUnknown *result;
+    va_list ap;
+    
+    va_start(ap, selector);
+    result = Spk_VKeyword(interpreter, obj, selector, ap);
+    va_end(ap);
+    return result;
+}
+
+SpkUnknown *Spk_VKeyword(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *selector, va_list ap) {
+    return vSendMessage(interpreter, obj, Spk_METHOD_NAMESPACE_RVALUE, selector, ap);
 }
 
 
@@ -394,7 +418,7 @@ static SpkUnknown *nativeWriteAccessor(SpkUnknown *self, SpkUnknown *arg0, SpkUn
     switch (accessor->type) {
     case Spk_T_OBJECT:
         Spk_INCREF(arg0);
-        Spk_DECREF(*(SpkUnknown **)addr);
+        Spk_XDECREF(*(SpkUnknown **)addr);
         *(SpkUnknown **)addr = arg0;
         break;
         

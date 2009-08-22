@@ -88,6 +88,10 @@ SpkUnknown *SpkHost_FloatFromCDouble(double value) {
     return SpkString_asString(str);
 }
 
+SpkUnknown *SpkHost_StringFromCString(const char *str) {
+    return (SpkUnknown *)SpkString_fromCString(str);
+}
+
 SpkUnknown *SpkHost_StringFromCStringAndLength(const char *str, size_t len) {
     return (SpkUnknown *)SpkString_fromCStringAndLength(str, len);
 }

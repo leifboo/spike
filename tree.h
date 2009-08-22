@@ -42,6 +42,7 @@ typedef enum SpkStmtKind {
     Spk_STMT_FOR,
     Spk_STMT_IF_ELSE,
     Spk_STMT_IMPORT,
+    Spk_STMT_PRAGMA_SOURCE,
     Spk_STMT_RAISE,
     Spk_STMT_RETURN,
     Spk_STMT_WHILE,
@@ -68,6 +69,7 @@ struct SpkExpr {
     SpkOper oper;
     SpkExpr *next, *nextArg, *cond, *left, *right, *var;
     struct SpkSymbolNode *sym;
+    unsigned int lineNo;
     union {
         SpkUnknown *literalValue;
         struct {
@@ -81,7 +83,6 @@ struct SpkExpr {
     union {
         struct {
             SpkExpr *def;
-            SpkExpr *nextUndef;
             unsigned int level;
         } ref;
         struct {
@@ -89,7 +90,6 @@ struct SpkExpr {
             unsigned int level, /*SpkOpcode*/ pushOpcode, storeOpcode;
             unsigned int index;
             int weak;
-            SpkExpr *nextMultipleDef;
             SpkStmt *stmt;
             SpkUnknown *initValue; /* XXX: Ugly? */
         } def;
@@ -129,6 +129,7 @@ struct SpkStmt {
             size_t classVarCount;
             int predefined;
         } klass;
+        SpkUnknown *source;
     } u;
     size_t codeOffset;
 };

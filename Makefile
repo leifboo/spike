@@ -21,6 +21,7 @@ obj = \
 	metaclass.o \
 	module.o \
 	native.o \
+	notifier.o \
 	obj.o \
 	om.o \
 	parser.o \

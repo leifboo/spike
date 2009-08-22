@@ -23,6 +23,7 @@
 SpkUnknown *SpkHost_IntegerFromCLong(long);
 SpkUnknown *SpkHost_FloatFromCDouble(double);
 /***/ char *SpkHost_StringAsCString(SpkUnknown *);
+SpkUnknown *SpkHost_StringFromCString(const char *);
 SpkUnknown *SpkHost_StringFromCStringAndLength(const char *, size_t);
 SpkUnknown *SpkHost_StringConcat(SpkUnknown **, SpkUnknown *);
 

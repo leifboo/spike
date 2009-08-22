@@ -45,6 +45,7 @@ extern SpkUnknown *Spk_blockCopy;
 extern SpkUnknown *Spk_cannotReenterBlock;
 extern SpkUnknown *Spk_cannotReturn;
 extern SpkUnknown *Spk_doesNotUnderstand;
+extern SpkUnknown *Spk_failOnError;
 extern SpkUnknown *Spk_importModule;
 extern SpkUnknown *Spk_importPackage;
 extern SpkUnknown *Spk_init;
@@ -57,6 +58,9 @@ extern SpkUnknown *Spk_noRunnableFiber;
 extern SpkUnknown *Spk_numArgs;
 extern SpkUnknown *Spk_printString;
 extern SpkUnknown *Spk_recursiveDoesNotUnderstand;
+extern SpkUnknown *Spk_redefinedSymbol;
+extern SpkUnknown *Spk_source;
+extern SpkUnknown *Spk_undefinedSymbol;
 extern SpkUnknown *Spk_unknownOpcode;
 extern SpkUnknown *Spk_wrongNumberOfArguments;
 

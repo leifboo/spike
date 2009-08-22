@@ -1163,6 +1163,8 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
         ASSERT(0, "not implemented");
         break;
 #endif /* !MALTIPY */
+    case Spk_STMT_PRAGMA_SOURCE:
+        break;
     case Spk_STMT_RETURN:
         if (stmt->expr) {
             _(emitCodeForExpr(stmt->expr, 0, cgen));
@@ -1352,6 +1354,8 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, CodeGen *cgen) {
         case Spk_STMT_IMPORT:
             break;
 #endif /* MALTIPY */
+        case Spk_STMT_PRAGMA_SOURCE:
+            break;
         default:
             ASSERT(0, "executable code not allowed here");
         }

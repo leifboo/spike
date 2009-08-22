@@ -7,8 +7,10 @@
 #include "host.h"
 #include "int.h"
 #include "interp.h"
+#include "io.h"
 #include "module.h"
 #include "native.h"
+#include "notifier.h"
 #include "parser.h"
 #include "rodata.h"
 #include "scheck.h"
@@ -24,6 +26,7 @@ int main(int argc, char **argv) {
     int i, showHelp, error, disassemble;
     char *arg, *sourceFilename;
     FILE *stream;
+    SpkUnknown *notifier;
     SpkSymbolTable *st;
     SpkStmt *tree;
     SpkModule *module;
@@ -90,6 +93,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     
+    theInterpreter = SpkInterpreter_New();
+    
+    notifier = Spk_CallAttr(theInterpreter, (SpkUnknown *)Spk_ClassNotifier, Spk_new, Spk_stderr, 0);
     st = SpkSymbolTable_New();
     
     tree = SpkParser_ParseFile(stream, st);
@@ -98,17 +104,25 @@ int main(int argc, char **argv) {
     }
     
     fclose(stream);
+    tmp = SpkHost_StringFromCString(sourceFilename);
+    SpkParser_Source(&tree, tmp);
+    Spk_DECREF(tmp);
     
-    tmp = SpkStaticChecker_Check(tree, st, &dataSize, &predefList, &rootClassList);
+    tmp = SpkStaticChecker_Check(tree, st, notifier, &dataSize, &predefList, &rootClassList);
     Spk_DECREF(st); st = 0;
     if (!tmp)
         return 1;
     Spk_DECREF(tmp);
+    
+    tmp = Spk_Keyword(theInterpreter, notifier, Spk_failOnError, 0);
+    if (!tmp)
+        return 1;
+    Spk_DECREF(tmp);
+    
     tree = SpkParser_NewModuleDef(tree);
     module = SpkCodeGen_GenerateCode(tree, dataSize, predefList.first, rootClassList.first);
     Spk_DECREF(tree); tree = 0;
-    
-    theInterpreter = SpkInterpreter_New();
+    Spk_DECREF(notifier); notifier = 0;
     
     if (disassemble) {
         SpkDisassembler_DisassembleModule(module, stdout);

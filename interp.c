@@ -1069,7 +1069,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             methodClass = GET_CLASS(receiver);
  perform:
             messageSelector = stackPointer[argumentCount]; /* steal reference */
-            if (!SpkHost_IsSymbol(messageSelector)) {
+            if (0 /*!SpkHost_IsSelector(messageSelector)*/ ) {
                 --instructionPointer;
                 TRAP(Spk_mustBeSymbol, 0);
             }
@@ -1124,7 +1124,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             namespace = SpkHost_IntegerAsCLong(namespaceObj);
             assert(0 <= namespace && namespace < Spk_NUM_METHOD_NAMESPACES);
             messageSelector = stackPointer[1]; /* steal reference */
-            if (!SpkHost_IsSymbol(messageSelector)) {
+            if (0 /*!SpkHost_IsSelector(messageSelector)*/ ) {
                 --instructionPointer;
                 TRAP(Spk_mustBeSymbol, 0);
             }

@@ -13,6 +13,7 @@ struct SpkSymbolTable;
 
 SpkUnknown *SpkStaticChecker_Check(struct SpkStmt *tree,
                                    struct SpkSymbolTable *st,
+                                   SpkUnknown *notifier,
                                    unsigned int *pDataSize,
                                    struct SpkStmtList *predefList,
                                    struct SpkStmtList *rootClassList);
