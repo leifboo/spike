@@ -200,7 +200,7 @@ Expr *SpkParser_FreezeKeywords(Expr *expr, SpkToken *kw,
     } else if (kw) {
         expr->lineNo = kw->lineNo;
     }
-    tmp = SpkHost_GetKeywordSelector(expr->aux.keywords, kwNode);
+    tmp = SpkHost_GetKeywordSelector(expr->aux.keywords, kwNode ? kwNode->sym : 0);
     Spk_DECREF(expr->aux.keywords);
     expr->aux.keywords = tmp;
     Spk_XDECREF(kwNode);

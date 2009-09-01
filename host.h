@@ -19,6 +19,7 @@
 
 /* base types */
 /*****/ int SpkHost_IsInteger(SpkUnknown *);
+/*****/ int SpkHost_IsString(SpkUnknown *);
 /****/ long SpkHost_IntegerAsCLong(SpkUnknown *);
 SpkUnknown *SpkHost_IntegerFromCLong(long);
 SpkUnknown *SpkHost_FloatFromCDouble(double);

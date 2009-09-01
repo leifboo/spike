@@ -32,6 +32,34 @@ static SpkUnknown *Notifier_init(SpkUnknown *_self, SpkUnknown *stream, SpkUnkno
     return _self;
 }
 
+static SpkUnknown *Notifier_badExpr(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkNotifier *self;
+    SpkExpr *expr;
+    const char *source, *desc;
+    
+    self = (SpkNotifier *)_self;
+    expr = Spk_CAST(Expr, arg0);
+    if (!expr) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "an expression node is required");
+        return 0;
+    }
+    if (!SpkHost_IsString(arg1)) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        return 0;
+    }
+    desc = SpkHost_StringAsCString(arg1);
+    
+    source = self->source
+             ? SpkHost_StringAsCString(self->source)
+             : "<unknown>";
+    fprintf(stderr, "%s:%u: %s\n",
+            source, expr->lineNo, desc);
+    ++self->errorTally;
+    
+    Spk_INCREF(Spk_void);
+    return Spk_void;
+}
+
 static SpkUnknown *Notifier_redefinedSymbol(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkNotifier *self;
     SpkExpr *expr;
@@ -165,6 +193,7 @@ static SpkAccessorTmpl accessors[] = {
 
 static SpkMethodTmpl methods[] = {
     { "init", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &Notifier_init },
+    { "badExpr:", SpkNativeCode_ARGS_2, &Notifier_badExpr },
     { "redefinedSymbol:", SpkNativeCode_ARGS_1, &Notifier_redefinedSymbol },
     { "undefinedSymbol:", SpkNativeCode_ARGS_1, &Notifier_undefinedSymbol },
     { "failOnError", SpkNativeCode_ARGS_0, &Notifier_failOnError },

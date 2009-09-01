@@ -71,6 +71,10 @@ static const char *haltDesc(int code) {
     return Spk_CAST(Integer, op) != (SpkInteger *)0;
 }
 
+/*****/ int SpkHost_IsString(SpkUnknown *op) {
+    return Spk_CAST(String, op) != (SpkString *)0;
+}
+
 /****/ long SpkHost_IntegerAsCLong(SpkUnknown *op) {
     return SpkInteger_asLong(Spk_CAST(Integer, op));
 }
