@@ -2,21 +2,14 @@
 #include "array.h"
 #include "behavior.h"
 #include "boot.h"
-#include "cgen.h"
+#include "compiler.h"
 #include "disasm.h"
-#include "host.h"
 #include "int.h"
 #include "interp.h"
-#include "io.h"
 #include "module.h"
 #include "native.h"
-#include "notifier.h"
-#include "parser.h"
 #include "rodata.h"
-#include "scheck.h"
-#include "st.h"
 #include "str.h"
-#include "tree.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -25,14 +18,8 @@
 int main(int argc, char **argv) {
     int i, showHelp, error, disassemble;
     char *arg, *sourceFilename;
-    FILE *stream;
-    SpkUnknown *notifier;
-    SpkSymbolTable *st;
-    SpkStmt *tree;
     SpkModule *module;
     SpkUnknown *result; SpkInteger *resultInt;
-    unsigned int dataSize;
-    SpkStmtList predefList, rootClassList;
     SpkUnknown *entry, *tmp;
     SpkArray *argvObj, *args;
     
@@ -87,42 +74,9 @@ int main(int argc, char **argv) {
     
     Spk_Bootstrap();
     
-    stream = fopen(sourceFilename, "r");
-    if (!stream) {
-        fprintf(stderr, "%s: cannot open '%s'\n", argv[0], sourceFilename);
+    module = SpkCompiler_CompileFile(sourceFilename);
+    if (!module)
         return 1;
-    }
-    
-    theInterpreter = SpkInterpreter_New();
-    
-    notifier = Spk_CallAttr(theInterpreter, (SpkUnknown *)Spk_ClassNotifier, Spk_new, Spk_stderr, 0);
-    st = SpkSymbolTable_New();
-    
-    tree = SpkParser_ParseFile(stream, st);
-    if (!tree) {
-        return 1;
-    }
-    
-    fclose(stream);
-    tmp = SpkHost_StringFromCString(sourceFilename);
-    SpkParser_Source(&tree, tmp);
-    Spk_DECREF(tmp);
-    
-    tmp = SpkStaticChecker_Check(tree, st, notifier, &dataSize, &predefList, &rootClassList);
-    Spk_DECREF(st); st = 0;
-    if (!tmp)
-        return 1;
-    Spk_DECREF(tmp);
-    
-    tmp = Spk_Keyword(theInterpreter, notifier, Spk_failOnError, 0);
-    if (!tmp)
-        return 1;
-    Spk_DECREF(tmp);
-    
-    tree = SpkParser_NewModuleDef(tree);
-    module = SpkCodeGen_GenerateCode(tree, dataSize, predefList.first, rootClassList.first);
-    Spk_DECREF(tree); tree = 0;
-    Spk_DECREF(notifier); notifier = 0;
     
     if (disassemble) {
         SpkDisassembler_DisassembleModule(module, stdout);

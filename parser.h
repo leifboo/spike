@@ -38,7 +38,8 @@ SpkExpr *SpkParser_FreezeKeywords(SpkExpr *, struct SpkToken *, struct SpkSymbol
 SpkStmt *SpkParser_NewStmt(SpkStmtKind, SpkExpr *, SpkStmt *, SpkStmt *);
 SpkStmt *SpkParser_NewForStmt(SpkExpr *, SpkExpr *, SpkExpr *, SpkStmt *);
 SpkStmt *SpkParser_NewModuleDef(SpkStmt *);
-SpkStmt *SpkParser_ParseFile(FILE *, struct SpkSymbolTable *);
+SpkStmt *SpkParser_ParseFileStream(FILE *, struct SpkSymbolTable *);
+SpkStmt *SpkParser_ParseString(const char *, struct SpkSymbolTable *);
 void SpkParser_Source(SpkStmt **, SpkUnknown *);
 
 

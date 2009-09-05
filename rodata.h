@@ -65,6 +65,10 @@ extern SpkUnknown *Spk_undefinedSymbol;
 extern SpkUnknown *Spk_unknownOpcode;
 extern SpkUnknown *Spk_wrongNumberOfArguments;
 
+extern SpkUnknown *Spk_Boolean;
+extern SpkUnknown *Spk_False;
+extern SpkUnknown *Spk_True;
+
 typedef struct SpkSpecialSelector {
     SpkUnknown **selector;
     size_t argumentCount;

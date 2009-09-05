@@ -72,6 +72,10 @@ SpkUnknown *Spk_undefinedSymbol;
 SpkUnknown *Spk_unknownOpcode;
 SpkUnknown *Spk_wrongNumberOfArguments;
 
+SpkUnknown *Spk_Boolean;
+SpkUnknown *Spk_False;
+SpkUnknown *Spk_True;
+
 SpkSpecialSelector Spk_operSelectors[Spk_NUM_OPER] = {
     { &Spk___succ__,   0 },
     { &Spk___pred__,   0 },
@@ -177,6 +181,11 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_undefinedSymbol,               "undefinedSymbol:"            },
     { &Spk_unknownOpcode,                 "unknownOpcode"               },
     { &Spk_wrongNumberOfArguments,        "wrongNumberOfArguments"      },
+    
+    { &Spk_Boolean,                       "Boolean"                     },
+    { &Spk_False,                         "False"                       },
+    { &Spk_True,                          "True"                        },
+    
     { 0, 0 }
 };
 

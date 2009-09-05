@@ -9,6 +9,7 @@ obj = \
 	cgen.o \
 	char.o \
 	class.o \
+	compiler.o \
 	dict.o \
 	disasm.o \
 	float.o \

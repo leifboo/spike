@@ -225,17 +225,10 @@ Stmt *SpkParser_NewModuleDef(Stmt *stmtList) {
 
 /****************************************************************************/
 
-Stmt *SpkParser_ParseFile(FILE *yyin, SpkSymbolTable *st) {
-    yyscan_t lexer;
+static Stmt *parse(yyscan_t lexer, SpkSymbolTable *st) {
     void *parser;
     SpkToken token;
     SpkParser parserState;
-    char buffer[1024];
-    
-    SpkLexer_lex_init(&lexer);
-    SpkLexer_restart(yyin, lexer);
-    fgets(buffer, sizeof(buffer), yyin); /* skip #! line */
-    SpkLexer_set_lineno(2, lexer);
     
     parserState.root = 0;
     parserState.error = 0;
@@ -247,15 +240,12 @@ Stmt *SpkParser_ParseFile(FILE *yyin, SpkSymbolTable *st) {
     }
     if (token.id == -1) {
         SpkParser_ParseFree(parser, &free);
-        SpkLexer_lex_destroy(lexer);
         Spk_DECREF(parserState.st);
         /*Spk_XDECREF(parserState.root);*/
         return 0;
     }
     SpkParser_Parse(parser, 0, token, &parserState);
     SpkParser_ParseFree(parser, &free);
-    
-    SpkLexer_lex_destroy(lexer);
     
     Spk_DECREF(parserState.st);
     if (parserState.error) {
@@ -264,6 +254,37 @@ Stmt *SpkParser_ParseFile(FILE *yyin, SpkSymbolTable *st) {
     }
     
     return parserState.root;
+}
+
+Stmt *SpkParser_ParseFileStream(FILE *yyin, SpkSymbolTable *st) {
+    yyscan_t lexer;
+    char buffer[1024];
+    Stmt *tree;
+    
+    SpkLexer_lex_init(&lexer);
+    SpkLexer_restart(yyin, lexer);
+    fgets(buffer, sizeof(buffer), yyin); /* skip shebang (#!) line */
+    SpkLexer_set_lineno(2, lexer);
+    SpkLexer_set_column(1, lexer);
+    
+    tree = parse(lexer, st);
+    
+    SpkLexer_lex_destroy(lexer);
+    
+    return tree;
+}
+
+Stmt *SpkParser_ParseString(const char *input, SpkSymbolTable *st) {
+    yyscan_t lexer;
+    Stmt *tree;
+    
+    SpkLexer_lex_init(&lexer);
+    SpkLexer__scan_string(input, lexer);
+    SpkLexer_set_lineno(1, lexer);
+    SpkLexer_set_column(1, lexer);
+    tree = parse(lexer, st);
+    SpkLexer_lex_destroy(lexer);
+    return tree;
 }
 
 void SpkParser_Source(SpkStmt **pStmtList, SpkUnknown *source) {
@@ -279,12 +300,12 @@ void SpkParser_Source(SpkStmt **pStmtList, SpkUnknown *source) {
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static SpkUnknown *Parser_parseFile(SpkUnknown *_self,
-                                    SpkUnknown *stream,
-                                    SpkUnknown *symbolTable)
+static SpkUnknown *Parser_parse(SpkUnknown *_self,
+                                SpkUnknown *input,
+                                SpkUnknown *symbolTable)
 {
     SpkParser *self;
-    FILE *yyin; SpkSymbolTable *st;
+    FILE *stream = 0; const char *string = 0; SpkSymbolTable *st;
     yyscan_t lexer;
     void *parser;
     SpkToken token;
@@ -292,11 +313,14 @@ static SpkUnknown *Parser_parseFile(SpkUnknown *_self,
     
     self = (SpkParser *)_self;
     
-    if (!SpkHost_IsFileStream(stream)) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a stream is required");
+    if (SpkHost_IsFileStream(input)) {
+        stream = SpkHost_FileStreamAsCFileStream(input);
+    } else if (SpkHost_IsString(input)) {
+        string = SpkHost_StringAsCString(input);
+    } else {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a file stream or string is required");
         goto unwind;
     }
-    yyin = SpkHost_FileStreamAsCFileStream(stream);
     
     st = Spk_CAST(SymbolTable, symbolTable);
     if (!st) {
@@ -305,9 +329,15 @@ static SpkUnknown *Parser_parseFile(SpkUnknown *_self,
     }
     
     SpkLexer_lex_init(&lexer);
-    SpkLexer_restart(yyin, lexer);
-    fgets(buffer, sizeof(buffer), yyin); /* skip #! line */
-    SpkLexer_set_lineno(2, lexer);
+    if (stream) {
+        SpkLexer_restart(stream, lexer);
+        fgets(buffer, sizeof(buffer), stream); /* skip #! line */
+        SpkLexer_set_lineno(2, lexer);
+    } else {
+        SpkLexer__scan_string(string, lexer);
+        SpkLexer_set_lineno(1, lexer);
+    }
+    SpkLexer_set_column(1, lexer);
     
     Spk_XDECREF(self->st);
     Spk_INCREF(st);
@@ -389,7 +419,7 @@ static void Parser_traverse_next(SpkObject *_self) {
 /* class templates */
 
 static SpkMethodTmpl methods[] = {
-    { "parseFile", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Parser_parseFile },
+    { "parse", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Parser_parse },
     { 0, 0, 0 }
 };
 

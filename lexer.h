@@ -22,9 +22,15 @@ typedef struct SpkToken {
 typedef void *yyscan_t;
 #endif
 
+#ifndef YY_TYPEDEF_YY_BUFFER_STATE
+#define YY_TYPEDEF_YY_BUFFER_STATE
+typedef struct yy_buffer_state *YY_BUFFER_STATE;
+#endif
+
 
 int SpkLexer_lex_init(yyscan_t *);
 void SpkLexer_restart(FILE *, yyscan_t);
+YY_BUFFER_STATE SpkLexer__scan_string(const char *, yyscan_t);
 void SpkLexer_set_lineno(int, yyscan_t);
 int SpkLexer_lex(yyscan_t);
 int SpkLexer_lex_destroy(yyscan_t);

@@ -70,9 +70,6 @@ SpkClassBootRec Spk_classBootRec[] = {
 #else /* !MALTIPY */
     /***CLASS(VariableObject, Object),*/
     /******/CLASS(String,  VariableObject),
-    /**/CLASS(Boolean,   Object),
-    /******/CLASS(False, Boolean),
-    /******/CLASS(True,  Boolean),
     /**/CLASS(Integer,    Object),
     /**/CLASS(Float,      Object),
     /**/CLASS(FileStream, Object),
@@ -84,10 +81,6 @@ SpkClassBootRec Spk_classBootRec[] = {
 #define OBJECT(c, v) {(SpkBehavior **)&CLASS_VAR(c),(SpkObject **)&v}
 
 SpkObjectBootRec Spk_objectBootRec[] = {
-#ifndef MALTIPY
-    OBJECT(False,  Spk_false),
-    OBJECT(True,   Spk_true),
-#endif /* !MALTIPY */
     OBJECT(Null,   Spk_null),
     OBJECT(Uninit, Spk_uninit),
     OBJECT(Void,   Spk_void),
@@ -415,9 +408,14 @@ void Spk_Bootstrap(void) {
     
     SpkInterpreter_Boot();
     
+    theInterpreter = SpkInterpreter_New();
+    
 #ifdef MALTIPY
     /* XXX: Do this cleanly! */
     Spk_DECREF(Spk_ClassPythonObject->superclass);
     Spk_ClassPythonObject->superclass = 0;
+#else
+    /* Create true, false, True, False, and Boolean. */
+    SpkBoolean_Boot();
 #endif /* MALTIPY */
 }
