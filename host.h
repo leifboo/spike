@@ -31,13 +31,13 @@ SpkUnknown *SpkHost_StringConcat(SpkUnknown **, SpkUnknown *);
 
 /* symbols */
 /*****/ int SpkHost_IsSymbol(SpkUnknown *);
-/***/ char *SpkHost_SymbolAsCString(SpkUnknown *);
-SpkUnknown *SpkHost_SymbolFromString(const char *);
+const char *SpkHost_SymbolAsCString(SpkUnknown *);
+SpkUnknown *SpkHost_SymbolFromCString(const char *);
 SpkUnknown *SpkHost_SymbolFromCStringAndLength(const char *, size_t);
 
 
 /* selectors */
-/***/ char *SpkHost_SelectorAsCString(SpkUnknown *);
+const char *SpkHost_SelectorAsCString(SpkUnknown *);
 SpkUnknown *SpkHost_NewKeywordSelectorBuilder(void);
 /****/ void SpkHost_AppendKeyword(SpkUnknown **, SpkUnknown *);
 SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *, SpkUnknown *);

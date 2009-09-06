@@ -23,7 +23,7 @@ static SpkUnknown *Class_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnkn
     SpkUnknown *result;
     size_t len;
     
-    name = SpkBehavior_Name((SpkBehavior *)self);
+    name = SpkBehavior_NameAsCString((SpkBehavior *)self);
     len = strlen(format) + strlen(name);
     result = SpkHost_StringFromCStringAndLength(0, len);
     if (!result)
@@ -35,6 +35,11 @@ static SpkUnknown *Class_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnkn
 
 /*------------------------------------------------------------------------*/
 /* class template */
+
+typedef struct SpkClassSubclass {
+    SpkClass base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkClassSubclass;
 
 static SpkAccessorTmpl accessors[] = {
     { "name", Spk_T_OBJECT, offsetof(SpkClass, name), SpkAccessor_READ },
@@ -139,5 +144,10 @@ void SpkClass_InitFromTemplate(SpkClass *self,
                                  &template->thisClass,
                                  superclass,
                                  module);
-    self->name = SpkHost_SymbolFromString(template->name);
+    self->name = SpkHost_SymbolFromCString(template->name);
+}
+
+SpkUnknown *SpkClass_Name(SpkClass *self) {
+    Spk_INCREF(self->name);
+    return self->name;
 }

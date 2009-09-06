@@ -72,7 +72,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     
-    Spk_Bootstrap();
+    if (!Spk_Boot())
+        return 1;
     
     module = SpkCompiler_CompileFile(sourceFilename);
     if (!module)
@@ -83,14 +84,14 @@ int main(int argc, char **argv) {
         return 0;
     }
     
-    argvObj = SpkArray_new(argc - 1);
+    argvObj = SpkArray_New(argc - 1);
     for (i = 1; i < argc; ++i) {
-        tmp = (SpkUnknown *)SpkString_fromCString(argv[i]);
-        SpkArray_setItem(argvObj, i - 1, tmp);
+        tmp = (SpkUnknown *)SpkString_FromCString(argv[i]);
+        SpkArray_SetItem(argvObj, i - 1, tmp);
         Spk_DECREF(tmp);
     }
-    args = SpkArray_new(1);
-    SpkArray_setItem(args, 0, (SpkUnknown *)argvObj);
+    args = SpkArray_New(1);
+    SpkArray_SetItem(args, 0, (SpkUnknown *)argvObj);
     Spk_DECREF(argvObj);
     
     entry = Spk_SendMessage(
@@ -118,7 +119,7 @@ int main(int argc, char **argv) {
     }
     resultInt = Spk_CAST(Integer, result);
     if (resultInt) {
-        return SpkInteger_asLong(resultInt);
+        return SpkInteger_AsCLong(resultInt);
     }
     return 0;
 }

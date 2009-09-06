@@ -143,17 +143,6 @@ struct SpkStmtPair {
 };
 
 
-typedef struct SpkExprSubclass {
-    SpkExpr base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkExprSubclass;
-
-typedef struct SpkStmtSubclass {
-    SpkStmt base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkStmtSubclass;
-
-
 extern struct SpkBehavior *Spk_ClassExpr, *Spk_ClassStmt;
 extern struct SpkClassTmpl Spk_ClassExprTmpl, Spk_ClassStmtTmpl;
 

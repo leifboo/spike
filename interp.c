@@ -24,6 +24,94 @@
 #include <string.h>
 
 
+/*------------------------------------------------------------------------*/
+/* class struct definitions */
+
+struct SpkContext {
+    SpkVariableObject base;
+    SpkContext *caller; /* a.k.a. "sender" */
+    SpkOpcode *pc;
+    SpkUnknown **stackp;
+    SpkContext *homeContext;
+    union {
+        struct /* MethodContext */ {
+            SpkMethod *method;
+            struct SpkBehavior *methodClass;
+            SpkUnknown *receiver;
+            SpkUnknown **framep;
+        } m;
+        struct /* BlockContext */ {
+            size_t index;
+            size_t nargs;
+            SpkOpcode *startpc;
+        } b;
+    } u;
+    int *mark;
+};
+
+
+struct SpkSemaphore {
+    SpkObject base;
+    SpkFiber *firstLink;
+    SpkFiber *lastLink;
+    int excessSignals;
+};
+
+
+struct SpkFiber {
+    SpkObject base;
+    SpkFiber *nextLink;
+    SpkContext *suspendedContext;
+    SpkContext *leafContext;
+    int priority;
+    SpkSemaphore *myList;
+};
+
+
+struct SpkProcessorScheduler {
+    SpkObject base;
+    SpkSemaphore **quiescentFiberLists;
+    SpkFiber *activeFiber;
+};
+
+
+struct SpkThunk {
+    SpkObject base;
+    SpkUnknown *receiver;
+    SpkMethod *method;
+    struct SpkBehavior *methodClass;
+    SpkOpcode *pc;
+};
+
+
+struct SpkMessage {
+    SpkObject base;
+    unsigned int namespace;
+    SpkUnknown *selector;
+    SpkUnknown *arguments;
+};
+
+
+struct SpkInterpreter {
+    SpkObject base;
+
+    /* fibers */
+    SpkProcessorScheduler *scheduler;
+    SpkSemaphore *theInterruptSemaphore;
+    int interruptPending;
+
+    /* contexts */
+    SpkContext *activeContext;
+    SpkContext *newContext;
+
+    /* error handling */
+    int printingStack;
+
+};
+
+
+/*------------------------------------------------------------------------*/
+
 /*** TODO ***/
 #define XXX 0
 #define HIGHEST_PRIORITY XXX
@@ -43,9 +131,13 @@ SpkBehavior *Spk_ClassNull, *Spk_ClassUninit, *Spk_ClassVoid;
 SpkInterpreter *theInterpreter; /* XXX */
 
 
-
 /*------------------------------------------------------------------------*/
 /* class templates */
+
+typedef struct SpkMessageSubclass {
+    SpkMessage base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkMessageSubclass;
 
 static SpkAccessorTmpl MessageAccessors[] = {
     { "selector",  Spk_T_OBJECT, offsetof(SpkMessage, selector),  SpkAccessor_READ },
@@ -68,6 +160,11 @@ SpkClassTmpl Spk_ClassMessageTmpl = {
 };
 
 
+typedef struct SpkMethodSubclass {
+    SpkMethod base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkMethodSubclass;
+
 static SpkMethodTmpl MethodMethods[] = {
     { 0, 0, 0 }
 };
@@ -83,6 +180,11 @@ SpkClassTmpl Spk_ClassMethodTmpl = {
     }
 };
 
+
+typedef struct SpkThunkSubclass {
+    SpkThunk base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkThunkSubclass;
 
 static void Thunk_traverse_init(SpkObject *);
 static SpkUnknown **Thunk_traverse_current(SpkObject *);
@@ -118,6 +220,11 @@ static SpkUnknown **Context_traverse_current(SpkObject *);
 static void Context_traverse_next(SpkObject *);
 static void Context_dealloc(SpkObject *);
 static SpkUnknown *Context_blockCopy(SpkUnknown *, SpkUnknown *, SpkUnknown *);
+
+typedef struct SpkContextSubclass {
+    SpkContext base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkContextSubclass;
 
 static SpkMethodTmpl ContextMethods[] = {
     { "blockCopy", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Context_blockCopy },
@@ -223,6 +330,12 @@ SpkClassTmpl Spk_ClassVoidTmpl = {
     }
 };
 
+
+typedef struct SpkInterpreterSubclass {
+    SpkInterpreter base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkInterpreterSubclass;
+
 static SpkMethodTmpl InterpreterMethods[] = {
     { 0, 0, 0 }
 };
@@ -237,6 +350,12 @@ SpkClassTmpl Spk_ClassInterpreterTmpl = {
     }
 };
 
+
+typedef struct SpkProcessorSchedulerSubclass {
+    SpkProcessorScheduler base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkProcessorSchedulerSubclass;
+
 static SpkMethodTmpl ProcessorSchedulerMethods[] = {
     { 0, 0, 0 }
 };
@@ -250,6 +369,12 @@ SpkClassTmpl Spk_ClassProcessorSchedulerTmpl = {
     }, /*meta*/ {
     }
 };
+
+
+typedef struct SpkFiberSubclass {
+    SpkFiber base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkFiberSubclass;
 
 static SpkMethodTmpl FiberMethods[] = {
     { 0, 0, 0 }
@@ -358,6 +483,24 @@ SpkMethod *SpkMethod_New(size_t size) {
 
 /*------------------------------------------------------------------------*/
 /* thunks */
+
+SpkThunk *SpkThunk_New(
+    SpkUnknown *receiver,
+    SpkMethod *method,
+    SpkBehavior *methodClass)
+{
+    SpkThunk *newThunk;
+    
+    newThunk = (SpkThunk *)SpkObject_New(Spk_ClassThunk);
+    if (!newThunk)
+        return 0;
+    newThunk->receiver = receiver;  Spk_INCREF(receiver);
+    newThunk->method = method;  Spk_INCREF(method);
+    newThunk->methodClass = methodClass;  Spk_INCREF(methodClass);
+    /* skip 'thunk' opcode */
+    newThunk->pc = SpkMethod_OPCODES(method) + 1;
+    return newThunk;
+}
 
 static void Thunk_traverse_init(SpkObject *_self) {
     SpkThunk *self;
@@ -1530,6 +1673,101 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
 
 
 /*------------------------------------------------------------------------*/
+/* native code support */
+
+SpkUnknown *SpkInterpreter_SendMessage(
+    SpkInterpreter *interpreter,
+    SpkUnknown *obj,
+    unsigned int namespace,
+    SpkUnknown *selector,
+    SpkUnknown *argumentArray
+    )
+{
+    static SpkMethod *start;
+    SpkContext *thisContext;
+    SpkMethod *method;
+    SpkOpcode *oldPC; SpkUnknown **oldSP;
+    SpkUnknown *result;
+    
+    thisContext = interpreter->activeContext;
+    if (!thisContext) {
+        /* call from Python or other foreign code */
+        SpkObject *receiver;
+        
+        receiver = Spk_CAST(Object, obj);
+        assert(receiver);
+        
+        if (!start) {
+            start = Spk_NewNativeMethod(SpkNativeCode_ARGS_ARRAY, 0);
+        }
+        
+        thisContext = SpkContext_New(10); /* XXX */
+        thisContext->caller = 0;
+        thisContext->pc = SpkMethod_OPCODES(start) + 7;
+        thisContext->stackp = &SpkContext_VARIABLES(thisContext)[10]; /* XXX */
+        thisContext->homeContext = thisContext;            Spk_INCREF(thisContext);
+        thisContext->u.m.method = start;                   Spk_INCREF(start);
+        thisContext->u.m.methodClass = receiver->klass;    Spk_INCREF(receiver->klass);
+        thisContext->u.m.receiver = (SpkUnknown *)obj;     Spk_INCREF(obj);
+        thisContext->u.m.framep = thisContext->stackp;
+        
+        interpreter->activeContext = thisContext; /* steal reference */
+    }
+    
+    assert(thisContext == thisContext->homeContext);
+    method = thisContext->u.m.method;
+    
+    oldPC = thisContext->pc;
+    oldSP = thisContext->stackp;
+    
+    assert(*thisContext->pc == Spk_OPCODE_BRANCH_ALWAYS && "call from non-leaf native method");
+    
+    /* move the program counter to the trampoline code */
+    if (obj) {
+        thisContext->pc += 2;
+    } else {
+        thisContext->pc += 4;
+        obj = thisContext->u.m.receiver;
+    }
+    
+    /* push arguments on the stack */
+    Spk_INCREF(obj);
+    Spk_INCREF(selector);
+    Spk_INCREF(argumentArray);
+    Spk_DECREF(thisContext->stackp[-1]);
+    Spk_DECREF(thisContext->stackp[-2]);
+    Spk_DECREF(thisContext->stackp[-3]);
+    Spk_DECREF(thisContext->stackp[-4]);
+    *--thisContext->stackp = obj;
+    *--thisContext->stackp = SpkHost_IntegerFromCLong(namespace);
+    *--thisContext->stackp = selector;
+    *--thisContext->stackp = argumentArray;
+    assert(thisContext->stackp >= &SpkContext_VARIABLES(thisContext)[0]);
+    
+    /* interpret */
+    result = SpkInterpreter_Interpret(interpreter);
+    if (!result)
+        return 0; /* unwind */
+    
+    thisContext->pc = oldPC;
+    assert(thisContext->stackp == oldSP);
+    
+    if (thisContext->u.m.method == start) {
+        assert(interpreter->activeContext == thisContext);
+        interpreter->activeContext = 0;
+        Spk_DECREF(thisContext);
+    }
+    
+    return result;
+}
+
+SpkMethod *SpkInterpreter_ThisMethod(SpkInterpreter *interpreter) {
+    /* XXX: Make this work inside leaf methods. */
+    return interpreter->activeContext->homeContext->u.m.method;
+}
+
+
+/*------------------------------------------------------------------------*/
 /* fibers */
 
 SpkSemaphore *SpkSemaphore_New() {
@@ -1638,7 +1876,7 @@ void SpkInterpreter_PrintCallStack(SpkInterpreter *self) {
         methodSel = SpkBehavior_FindSelectorOfMethod(methodClass, method);
         printf("%04x %p%s%s::%s\n",
                ctxt->pc - SpkMethod_OPCODES(method), ctxt, (ctxt == home ? " " : " [] in "),
-               SpkBehavior_Name(methodClass),
+               SpkBehavior_NameAsCString(methodClass),
                methodSel ? SpkHost_SelectorAsCString(methodSel) : "<unknown>");
         Spk_XDECREF(methodSel);
     }

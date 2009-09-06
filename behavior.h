@@ -110,11 +110,6 @@ struct SpkBehavior {
     size_t itemSize;
 };
 
-typedef struct SpkBehaviorSubclass {
-    SpkBehavior base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkBehaviorSubclass;
-
 
 extern SpkBehavior *Spk_ClassBehavior;
 extern struct SpkClassTmpl Spk_ClassBehaviorTmpl;
@@ -126,7 +121,7 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *temp
 void SpkBehavior_InsertMethod(SpkBehavior *, SpkMethodNamespace, SpkUnknown *, SpkMethod *);
 SpkMethod *SpkBehavior_LookupMethod(SpkBehavior *, SpkMethodNamespace, SpkUnknown *);
 SpkUnknown *SpkBehavior_FindSelectorOfMethod(SpkBehavior *, SpkMethod *);
-const char *SpkBehavior_Name(SpkBehavior *);
+const char *SpkBehavior_NameAsCString(SpkBehavior *);
 
 
 #endif /* __spk_behavior_h__ */

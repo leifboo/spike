@@ -54,34 +54,8 @@ struct SpkSymbolTable {
 };
 
 
-typedef struct SpkSymbolNodeSubclass {
-    SpkSymbolNode base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkSymbolNodeSubclass;
-
-typedef struct SpkSTEntrySubclass {
-    SpkSTEntry base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkSTEntrySubclass;
-
-typedef struct SpkContextClassSubclass {
-    SpkContextClass base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkContextClassSubclass;
-
-typedef struct SpkScopeSubclass {
-    SpkScope base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkScopeSubclass;
-
-typedef struct SpkSymbolTableSubclass {
-    SpkSymbolTable base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkSymbolTableSubclass;
-
-
 SpkSymbolNode *SpkSymbolNode_FromSymbol(SpkSymbolTable *st, SpkUnknown *sym);
-SpkSymbolNode *SpkSymbolNode_FromString(SpkSymbolTable *st, const char *str);
+SpkSymbolNode *SpkSymbolNode_FromCString(SpkSymbolTable *st, const char *str);
 SpkSymbolTable *SpkSymbolTable_New(void);
 void SpkSymbolTable_EnterScope(SpkSymbolTable *st, int enterNewContext);
 void SpkSymbolTable_ExitScope(SpkSymbolTable *st);

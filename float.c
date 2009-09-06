@@ -6,6 +6,12 @@
 #include "native.h"
 
 
+struct SpkFloat {
+    SpkObject base;
+    double value;
+};
+
+
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
 
 
@@ -170,6 +176,11 @@ static SpkUnknown *Float_ne(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1
 /*------------------------------------------------------------------------*/
 /* class template */
 
+typedef struct SpkFloatSubclass {
+    SpkFloat base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkFloatSubclass;
+
 static SpkMethodTmpl methods[] = {
     /* operators */
     { "__succ__",   SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Float_succ   },
@@ -204,7 +215,7 @@ SpkClassTmpl Spk_ClassFloatTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SpkFloat *SpkFloat_fromCDouble(double value) {
+SpkFloat *SpkFloat_FromCDouble(double value) {
     SpkFloat *result;
     
     result = (SpkFloat *)SpkObject_New(Spk_ClassFloat);
@@ -212,6 +223,6 @@ SpkFloat *SpkFloat_fromCDouble(double value) {
     return result;
 }
 
-double SpkFloat_asDouble(SpkFloat *self) {
+double SpkFloat_AsCDouble(SpkFloat *self) {
     return self->value;
 }

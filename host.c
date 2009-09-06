@@ -53,7 +53,7 @@ static const char *haltDesc(int code) {
 
 /****/ void SpkHost_HaltWithString(int code, SpkUnknown *message) {
     SpkString *str = Spk_CAST(String, message);
-    SpkHost_Halt(code, SpkString_asString(str));
+    SpkHost_Halt(code, SpkString_AsCString(str));
 }
 
 /****/ void SpkHost_VHaltWithFormat(int code, const char *format, va_list args) {
@@ -76,32 +76,32 @@ static const char *haltDesc(int code) {
 }
 
 /****/ long SpkHost_IntegerAsCLong(SpkUnknown *op) {
-    return SpkInteger_asLong(Spk_CAST(Integer, op));
+    return SpkInteger_AsCLong(Spk_CAST(Integer, op));
 }
 
 SpkUnknown *SpkHost_IntegerFromCLong(long value) {
-    return (SpkUnknown *)SpkInteger_fromLong(value);
+    return (SpkUnknown *)SpkInteger_FromCLong(value);
 }
 
 SpkUnknown *SpkHost_FloatFromCDouble(double value) {
-    return (SpkUnknown *)SpkFloat_fromCDouble(value);
+    return (SpkUnknown *)SpkFloat_FromCDouble(value);
 }
 
 /***/ char *SpkHost_StringAsCString(SpkUnknown *op) {
     SpkString *str = Spk_CAST(String, op);
-    return SpkString_asString(str);
+    return SpkString_AsCString(str);
 }
 
 SpkUnknown *SpkHost_StringFromCString(const char *str) {
-    return (SpkUnknown *)SpkString_fromCString(str);
+    return (SpkUnknown *)SpkString_FromCString(str);
 }
 
 SpkUnknown *SpkHost_StringFromCStringAndLength(const char *str, size_t len) {
-    return (SpkUnknown *)SpkString_fromCStringAndLength(str, len);
+    return (SpkUnknown *)SpkString_FromCStringAndLength(str, len);
 }
 
 SpkUnknown *SpkHost_StringConcat(SpkUnknown **a, SpkUnknown *b) {
-    return (SpkUnknown *)SpkString_concat((SpkString **)a, Spk_CAST(String, b));
+    return (SpkUnknown *)SpkString_Concat((SpkString **)a, Spk_CAST(String, b));
 }
 
 
@@ -112,36 +112,36 @@ SpkUnknown *SpkHost_StringConcat(SpkUnknown **a, SpkUnknown *b) {
     return Spk_CAST(Symbol, op) != (SpkSymbol *)0;
 }
 
-/***/ char *SpkHost_SymbolAsCString(SpkUnknown *unk) {
+const char *SpkHost_SymbolAsCString(SpkUnknown *unk) {
     SpkSymbol *sym = Spk_CAST(Symbol, unk);
     if (sym) {
-        return sym->str;
+        return SpkSymbol_AsCString(sym);
     }
     return 0;
 }
 
-SpkUnknown *SpkHost_SymbolFromString(const char *str) {
-    return (SpkUnknown *)SpkSymbol_get(str);
+SpkUnknown *SpkHost_SymbolFromCString(const char *str) {
+    return (SpkUnknown *)SpkSymbol_FromCString(str);
 }
 
 SpkUnknown *SpkHost_SymbolFromCStringAndLength(const char *str, size_t len) {
-    return (SpkUnknown *)SpkSymbol_fromCStringAndLength(str, len);
+    return (SpkUnknown *)SpkSymbol_FromCStringAndLength(str, len);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* selectors */
 
-/***/ char *SpkHost_SelectorAsCString(SpkUnknown *selector) {
+const char *SpkHost_SelectorAsCString(SpkUnknown *selector) {
     SpkSymbol *sym = Spk_CAST(Symbol, selector);
     if (sym) {
-        return sym->str;
+        return SpkSymbol_AsCString(sym);
     }
     return 0;
 }
 
 SpkUnknown *SpkHost_NewKeywordSelectorBuilder(void) {
-    return (SpkUnknown *)SpkArray_new(2);
+    return (SpkUnknown *)SpkArray_New(2);
 }
 
 /****/ void SpkHost_AppendKeyword(SpkUnknown **builder, SpkUnknown *kw) {
@@ -150,9 +150,9 @@ SpkUnknown *SpkHost_NewKeywordSelectorBuilder(void) {
     SpkUnknown *vd;
     
     kwArray = Spk_CAST(Array, *builder);
-    size = SpkArray_size(kwArray);
+    size = SpkArray_Size(kwArray);
     for (i = 0; i < size; ++i) {
-        SpkUnknown *item = SpkArray_item(kwArray, i);
+        SpkUnknown *item = SpkArray_GetItem(kwArray, i);
         if (item == Spk_uninit) {
             Spk_DECREF(item);
             break;
@@ -164,10 +164,10 @@ SpkUnknown *SpkHost_NewKeywordSelectorBuilder(void) {
         size_t newSize;
         
         newSize = size * 2;
-        newArray = SpkArray_new(newSize);
+        newArray = SpkArray_New(newSize);
         for (i = 0; i < size; ++i) {
-            SpkUnknown *item = SpkArray_item(kwArray, i);
-            vd = SpkArray_setItem(newArray, i, item);
+            SpkUnknown *item = SpkArray_GetItem(kwArray, i);
+            vd = SpkArray_SetItem(newArray, i, item);
             Spk_DECREF(vd);
             Spk_DECREF(item);
         }
@@ -175,7 +175,7 @@ SpkUnknown *SpkHost_NewKeywordSelectorBuilder(void) {
         kwArray = newArray;
         *builder = (SpkUnknown *)kwArray;
     }
-    vd = SpkArray_setItem(kwArray, i, kw);
+    vd = SpkArray_SetItem(kwArray, i, kw);
     Spk_DECREF(vd);
 }
 
@@ -186,21 +186,21 @@ SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
     char *str;
     
     kwArray = Spk_CAST(Array, builder);
-    size = SpkArray_size(kwArray);
+    size = SpkArray_Size(kwArray);
     len = 0;
     
     if (kw) {
         sym = Spk_CAST(Symbol, kw);
-        len += strlen(sym->str);
+        len += strlen(SpkSymbol_AsCString(sym));
     }
     for (i = 0; i < size; ++i) {
-        SpkUnknown *item = SpkArray_item(kwArray, i);
+        SpkUnknown *item = SpkArray_GetItem(kwArray, i);
         if (item == Spk_uninit) {
             Spk_DECREF(item);
             break;
         }
         sym = Spk_CAST(Symbol, item);
-        len += strlen(sym->str) + 1;
+        len += strlen(SpkSymbol_AsCString(sym)) + 1;
         Spk_DECREF(item);
     }
     
@@ -213,24 +213,24 @@ SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
     
     if (kw) {
         sym = Spk_CAST(Symbol, kw);
-        strcat(str, sym->str);
+        strcat(str, SpkSymbol_AsCString(sym));
         if (tally > 0)
             strcat(str, " ");
     }
     for (i = 0; i < size; ++i) {
-        SpkUnknown *item = SpkArray_item(kwArray, i);
+        SpkUnknown *item = SpkArray_GetItem(kwArray, i);
         if (item == Spk_uninit) {
             Spk_DECREF(item);
             break;
         }
         sym = Spk_CAST(Symbol, item);
-        strcat(str, sym->str);
+        strcat(str, SpkSymbol_AsCString(sym));
         strcat(str, ":");
         Spk_DECREF(item);
     }
     str[len] = '\0';
     
-    selector = SpkSymbol_get(str);
+    selector = SpkSymbol_FromCString(str);
     free(str);
     return (SpkUnknown *)selector;
 }
@@ -240,22 +240,22 @@ SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
 /* symbol dictionaries */
 
 SpkUnknown *SpkHost_NewSymbolDict(void) {
-    return (SpkUnknown *)SpkIdentityDictionary_new();
+    return (SpkUnknown *)SpkIdentityDictionary_New();
 }
 
 /****/ void SpkHost_DefineSymbol(SpkUnknown *symbolDict, SpkUnknown *selector, SpkUnknown *method) {
     SpkIdentityDictionary *dict = Spk_CAST(IdentityDictionary, symbolDict);
-    SpkIdentityDictionary_atPut(dict, selector, method);
+    SpkIdentityDictionary_SetItem(dict, selector, method);
 }
 
 SpkUnknown *SpkHost_SymbolValue(SpkUnknown *symbolDict, SpkUnknown *key) {
     SpkIdentityDictionary *dict = Spk_CAST(IdentityDictionary, symbolDict);
-    return SpkIdentityDictionary_at(dict, key);
+    return SpkIdentityDictionary_GetItem(dict, key);
 }
 
 SpkUnknown *SpkHost_FindSymbol(SpkUnknown *symbolDict, SpkUnknown *method) {
     SpkIdentityDictionary *dict = Spk_CAST(IdentityDictionary, symbolDict);
-    return SpkIdentityDictionary_keyAtValue(dict, method);
+    return SpkIdentityDictionary_KeyWithValue(dict, method);
 }
 
 /*****/ int SpkHost_NextSymbol(SpkUnknown *symbolDict,
@@ -264,23 +264,9 @@ SpkUnknown *SpkHost_FindSymbol(SpkUnknown *symbolDict, SpkUnknown *method) {
                                SpkUnknown **pValue)
 {
     SpkIdentityDictionary *dict;
-    size_t pos;
     
     dict = Spk_CAST(IdentityDictionary, symbolDict);
-    pos = *pPos;
-    for ( ; pos < dict->size; ++pos) {
-        SpkUnknown *key = dict->keyArray[pos];
-        if (key) {
-            *pPos = pos + 1;
-            *pKey = key;
-            *pValue = dict->valueArray[pos];
-            return 1;
-        }
-    }
-    *pPos = pos;
-    *pKey = 0;
-    *pValue = 0;
-    return 0;
+    return SpkIdentityDictionary_Next(dict, pPos, pKey, pValue);
 }
 
 
@@ -292,7 +278,7 @@ SpkUnknown *SpkHost_NewLiteralDict(void) {
      * for Symbols, but it fails to uniquify strings, integers,
      * floats...
      */
-    return (SpkUnknown *)SpkIdentityDictionary_new();
+    return (SpkUnknown *)SpkIdentityDictionary_New();
 }
 
 unsigned int SpkHost_InsertLiteral(SpkUnknown *literalDict, SpkUnknown *literal) {
@@ -301,13 +287,13 @@ unsigned int SpkHost_InsertLiteral(SpkUnknown *literalDict, SpkUnknown *literal)
     unsigned int index;
     
     dict = Spk_CAST(IdentityDictionary, literalDict);
-    value = SpkIdentityDictionary_at(dict, literal);
+    value = SpkIdentityDictionary_GetItem(dict, literal);
     if (value) {
-        index = SpkInteger_asLong((SpkInteger *)Spk_CAST(Integer, value));
+        index = SpkInteger_AsCLong((SpkInteger *)Spk_CAST(Integer, value));
     } else {
-        index = dict->tally;
-        value = (SpkUnknown *)SpkInteger_fromLong(index);
-        SpkIdentityDictionary_atPut(dict, literal, value);
+        index = SpkIdentityDictionary_Size(dict);
+        value = (SpkUnknown *)SpkInteger_FromCLong(index);
+        SpkIdentityDictionary_SetItem(dict, literal, value);
     }
     Spk_DECREF(value);
     return index;
@@ -322,19 +308,19 @@ unsigned int SpkHost_InsertLiteral(SpkUnknown *literalDict, SpkUnknown *literal)
 }
 
 /**/ size_t SpkHost_ArgsSize(SpkUnknown *args) {
-    return SpkArray_size(Spk_CAST(Array, args));
+    return SpkArray_Size(Spk_CAST(Array, args));
 }
 
 SpkUnknown *SpkHost_GetArg(SpkUnknown *args, size_t index) {
-    return SpkArray_item(Spk_CAST(Array, args), index);
+    return SpkArray_GetItem(Spk_CAST(Array, args), index);
 }
 
 SpkUnknown *SpkHost_EmptyArgs(void) {
-    return (SpkUnknown *)SpkArray_new(0);
+    return (SpkUnknown *)SpkArray_New(0);
 }
 
 SpkUnknown *SpkHost_ArgsFromVAList(va_list ap) {
-    return (SpkUnknown *)SpkArray_fromVAList(ap);
+    return (SpkUnknown *)SpkArray_FromVAList(ap);
 }
 
 SpkUnknown *SpkHost_GetArgs(SpkUnknown **stackPointer,
@@ -345,7 +331,7 @@ SpkUnknown *SpkHost_GetArgs(SpkUnknown **stackPointer,
     SpkArray *varArgArray;
     
     varArgArray = varArgs ? Spk_CAST(Array, varArgs) : 0;
-    return (SpkUnknown *)SpkArray_withArguments(stackPointer,
+    return (SpkUnknown *)SpkArray_WithArguments(stackPointer,
                                                 argumentCount,
                                                 varArgArray,
                                                 skip);
@@ -361,7 +347,7 @@ SpkUnknown *SpkHost_GetArgs(SpkUnknown **stackPointer,
 
 /***/ FILE *SpkHost_FileStreamAsCFileStream(SpkUnknown *op) {
     SpkFileStream *stream = Spk_CAST(FileStream, op);
-    return stream->stream;
+    return SpkFileStream_AsCFileStream(stream);
 }
 
 
@@ -388,7 +374,7 @@ SpkUnknown *SpkHost_ObjectAsString(SpkUnknown *obj) {
         return;
     printString = Spk_CAST(String, printObj);
     if (printString) {
-        str = SpkString_asString(printString);
+        str = SpkString_AsCString(printString);
         fputs(str, stream);
     }
     Spk_DECREF(printObj);

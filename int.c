@@ -9,6 +9,12 @@
 #include <stdio.h>
 
 
+struct SpkInteger {
+    SpkObject base;
+    ptrdiff_t value;
+};
+
+
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
 
 
@@ -221,17 +227,22 @@ static SpkUnknown *Integer_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkU
     char *str;
     
     self = (SpkInteger *)_self;
-    result = SpkString_fromCStringAndLength(0, 4*sizeof(self->value));
+    result = SpkString_FromCStringAndLength(0, 4*sizeof(self->value));
     if (!result)
         return 0;
-    str = SpkString_asString(result);
-    sprintf(str, "%ld", self->value);
+    str = SpkString_AsCString(result);
+    sprintf(str, "%ld", (long)self->value);
     return (SpkUnknown *)result;
 }
 
 
 /*------------------------------------------------------------------------*/
 /* class template */
+
+typedef struct SpkIntegerSubclass {
+    SpkInteger base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkIntegerSubclass;
 
 static SpkMethodTmpl methods[] = {
     /* operators */
@@ -276,7 +287,11 @@ SpkClassTmpl Spk_ClassIntegerTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SpkInteger *SpkInteger_fromLong(long value) {
+SpkInteger *SpkInteger_FromCLong(long value) {
+    return SpkInteger_FromCPtrdiff((ptrdiff_t)value);
+}
+
+SpkInteger *SpkInteger_FromCPtrdiff(ptrdiff_t value) {
     SpkInteger *result;
     
     result = (SpkInteger *)SpkObject_New(Spk_ClassInteger);
@@ -284,6 +299,10 @@ SpkInteger *SpkInteger_fromLong(long value) {
     return result;
 }
 
-long SpkInteger_asLong(SpkInteger *anInteger) {
+long SpkInteger_AsCLong(SpkInteger *anInteger) {
+    return (long)anInteger->value;
+}
+
+ptrdiff_t SpkInteger_AsCPtrdiff(SpkInteger *anInteger) {
     return anInteger->value;
 }

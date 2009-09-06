@@ -6,6 +6,15 @@
 #include <stdlib.h>
 
 
+struct SpkIdentityDictionary {
+    SpkObject base;
+    size_t size;
+    size_t tally;
+    SpkUnknown **keyArray;
+    SpkUnknown **valueArray;
+};
+
+
 #define HASH(key) (mask & ((size_t)(key) / sizeof(SpkUnknown *)))
 
 
@@ -15,7 +24,7 @@ struct SpkBehavior *Spk_ClassIdentityDictionary;
 /*------------------------------------------------------------------------*/
 /* methods */
 
-SpkUnknown *SpkIdentityDictionary_at(SpkIdentityDictionary *self, SpkUnknown *key) {
+SpkUnknown *SpkIdentityDictionary_GetItem(SpkIdentityDictionary *self, SpkUnknown *key) {
     size_t mask, start, i;
     
     mask = self->size - 1;
@@ -38,7 +47,7 @@ SpkUnknown *SpkIdentityDictionary_at(SpkIdentityDictionary *self, SpkUnknown *ke
     return 0;
 }
 
-SpkUnknown *SpkIdentityDictionary_keyAtValue(SpkIdentityDictionary *self, SpkUnknown *value) {
+SpkUnknown *SpkIdentityDictionary_KeyWithValue(SpkIdentityDictionary *self, SpkUnknown *value) {
     size_t i;
     
     for (i = 0; i < self->size; ++i) {
@@ -50,7 +59,7 @@ SpkUnknown *SpkIdentityDictionary_keyAtValue(SpkIdentityDictionary *self, SpkUnk
     return 0;
 }
 
-void SpkIdentityDictionary_atPut(SpkIdentityDictionary *self, SpkUnknown *key, SpkUnknown *value) {
+void SpkIdentityDictionary_SetItem(SpkIdentityDictionary *self, SpkUnknown *key, SpkUnknown *value) {
     size_t mask, start, i, o;
     
     mask = self->size - 1;
@@ -130,8 +139,35 @@ void SpkIdentityDictionary_atPut(SpkIdentityDictionary *self, SpkUnknown *key, S
     }
 }
 
-SpkIdentityDictionary *SpkIdentityDictionary_new(void) {
+SpkIdentityDictionary *SpkIdentityDictionary_New(void) {
     return (SpkIdentityDictionary *)SpkObject_New(Spk_ClassIdentityDictionary);
+}
+
+int SpkIdentityDictionary_Next(SpkIdentityDictionary *self,
+                               size_t *pPos,
+                               SpkUnknown **pKey,
+                               SpkUnknown **pValue)
+{
+    size_t pos;
+    
+    pos = *pPos;
+    for ( ; pos < self->size; ++pos) {
+        SpkUnknown *key = self->keyArray[pos];
+        if (key) {
+            *pPos = pos + 1;
+            *pKey = key;
+            *pValue = self->valueArray[pos];
+            return 1;
+        }
+    }
+    *pPos = pos;
+    *pKey = 0;
+    *pValue = 0;
+    return 0;
+}
+
+size_t SpkIdentityDictionary_Size(SpkIdentityDictionary *self) {
+    return self->tally;
 }
 
 
@@ -219,6 +255,11 @@ static void IdentityDictionary_traverse_next(SpkObject *_self) {
 
 /*------------------------------------------------------------------------*/
 /* class template */
+
+typedef struct SpkIdentityDictionarySubclass {
+    SpkIdentityDictionary base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkIdentityDictionarySubclass;
 
 static SpkMethodTmpl methods[] = {
     { 0, 0, 0}

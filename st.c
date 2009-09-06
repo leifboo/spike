@@ -36,11 +36,11 @@ SpkSymbolNode *SpkSymbolNode_FromSymbol(SpkSymbolTable *st, SpkUnknown *sym) {
     return s;
 }
 
-SpkSymbolNode *SpkSymbolNode_FromString(SpkSymbolTable *st, const char *str) {
+SpkSymbolNode *SpkSymbolNode_FromCString(SpkSymbolTable *st, const char *str) {
     SpkUnknown *sym;
     SpkSymbolNode *node;
     
-    sym = SpkHost_SymbolFromString(str);
+    sym = SpkHost_SymbolFromCString(str);
     node = SpkSymbolNode_FromSymbol(st, sym);
     Spk_DECREF(sym);
     return node;
@@ -511,6 +511,32 @@ static void SymbolTable_traverse_next(SpkObject *_self) {
 
 /*------------------------------------------------------------------------*/
 /* class templates */
+
+typedef struct SpkSymbolNodeSubclass {
+    SpkSymbolNode base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkSymbolNodeSubclass;
+
+typedef struct SpkSTEntrySubclass {
+    SpkSTEntry base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkSTEntrySubclass;
+
+typedef struct SpkContextClassSubclass {
+    SpkContextClass base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkContextClassSubclass;
+
+typedef struct SpkScopeSubclass {
+    SpkScope base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkScopeSubclass;
+
+typedef struct SpkSymbolTableSubclass {
+    SpkSymbolTable base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkSymbolTableSubclass;
+
 
 static SpkTraverse SymbolNode_traverse = {
     &SymbolNode_traverse_init,

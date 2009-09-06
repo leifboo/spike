@@ -122,7 +122,7 @@ static SpkNativeAccessor *newNativeAccessor(unsigned int type, size_t offset,
     SpkNativeAccessor *newAccessor;
     
     if (0) {
-        /* XXX: See the comment in Spk_ThisMethod() */
+        /* XXX: See the comment in SpkInterpreter_ThisMethod() */
         flags |= SpkNativeCode_LEAF;
     }
     newAccessor = (SpkNativeAccessor *)newNativeMethod(flags, nativeCode, &SpkNativeAccessor_New);
@@ -144,84 +144,12 @@ struct SpkMethod *Spk_NewNativeWriteAccessor(unsigned int type, size_t offset) {
 /* routines to send messages from native code */
 
 SpkUnknown *Spk_SendMessage(SpkInterpreter *interpreter,
-                            SpkUnknown *obj, unsigned int namespace, SpkUnknown *selector, SpkUnknown *argumentArray)
+                            SpkUnknown *obj,
+                            unsigned int namespace,
+                            SpkUnknown *selector,
+                            SpkUnknown *argumentArray)
 {
-    static SpkMethod *start;
-    SpkContext *thisContext;
-    SpkMethod *method;
-    SpkOpcode *oldPC; SpkUnknown **oldSP;
-    SpkUnknown *result;
-    
-    thisContext = interpreter->activeContext;
-    if (!thisContext) {
-        /* call from Python or other foreign code */
-        SpkObject *receiver;
-        
-        receiver = Spk_CAST(Object, obj);
-        assert(receiver);
-        
-        if (!start) {
-            start = Spk_NewNativeMethod(SpkNativeCode_ARGS_ARRAY, 0);
-        }
-        
-        thisContext = SpkContext_New(10); /* XXX */
-        thisContext->caller = 0;
-        thisContext->pc = SpkMethod_OPCODES(start) + 7;
-        thisContext->stackp = &SpkContext_VARIABLES(thisContext)[10]; /* XXX */
-        thisContext->homeContext = thisContext;            Spk_INCREF(thisContext);
-        thisContext->u.m.method = start;                   Spk_INCREF(start);
-        thisContext->u.m.methodClass = receiver->klass;    Spk_INCREF(receiver->klass);
-        thisContext->u.m.receiver = (SpkUnknown *)obj;     Spk_INCREF(obj);
-        thisContext->u.m.framep = thisContext->stackp;
-        
-        interpreter->activeContext = thisContext; /* steal reference */
-    }
-    
-    assert(thisContext == thisContext->homeContext);
-    method = thisContext->u.m.method;
-    
-    oldPC = thisContext->pc;
-    oldSP = thisContext->stackp;
-    
-    assert(*thisContext->pc == Spk_OPCODE_BRANCH_ALWAYS && "call from non-leaf native method");
-    
-    /* move the program counter to the trampoline code */
-    if (obj) {
-        thisContext->pc += 2;
-    } else {
-        thisContext->pc += 4;
-        obj = thisContext->u.m.receiver;
-    }
-    
-    /* push arguments on the stack */
-    Spk_INCREF(obj);
-    Spk_INCREF(selector);
-    Spk_INCREF(argumentArray);
-    Spk_DECREF(thisContext->stackp[-1]);
-    Spk_DECREF(thisContext->stackp[-2]);
-    Spk_DECREF(thisContext->stackp[-3]);
-    Spk_DECREF(thisContext->stackp[-4]);
-    *--thisContext->stackp = obj;
-    *--thisContext->stackp = SpkHost_IntegerFromCLong(namespace);
-    *--thisContext->stackp = selector;
-    *--thisContext->stackp = argumentArray;
-    assert(thisContext->stackp >= &SpkContext_VARIABLES(thisContext)[0]);
-    
-    /* interpret */
-    result = SpkInterpreter_Interpret(interpreter);
-    if (!result)
-        return 0; /* unwind */
-    
-    thisContext->pc = oldPC;
-    assert(thisContext->stackp == oldSP);
-    
-    if (thisContext->u.m.method == start) {
-        assert(interpreter->activeContext == thisContext);
-        interpreter->activeContext = 0;
-        Spk_DECREF(thisContext);
-    }
-    
-    return result;
+    return SpkInterpreter_SendMessage(interpreter, obj, namespace, selector, argumentArray);
 }
 
 static SpkUnknown *vSendMessage(SpkInterpreter *interpreter,
@@ -350,15 +278,6 @@ SpkUnknown *Spk_GetArg(SpkUnknown *args, size_t index) {
 
 
 /*------------------------------------------------------------------------*/
-/* misc. support routines */
-
-SpkMethod *Spk_ThisMethod(SpkInterpreter *interpreter) {
-    /* XXX: Make this work inside leaf methods. */
-    return interpreter->activeContext->homeContext->u.m.method;
-}
-
-
-/*------------------------------------------------------------------------*/
 /* class NativeAccessor */
 
 static SpkMethodTmpl NativeAccessorMethods[] = {
@@ -381,7 +300,7 @@ static SpkUnknown *nativeReadAccessor(SpkUnknown *self, SpkUnknown *arg0, SpkUnk
     char *addr;
     SpkUnknown *result;
     
-    accessor = Spk_CAST(NativeAccessor, Spk_ThisMethod(theInterpreter));
+    accessor = Spk_CAST(NativeAccessor, SpkInterpreter_ThisMethod(theInterpreter));
     assert(accessor);
     
     addr = (char *)self + accessor->offset;
@@ -410,7 +329,7 @@ static SpkUnknown *nativeWriteAccessor(SpkUnknown *self, SpkUnknown *arg0, SpkUn
     SpkNativeAccessor *accessor;
     char *addr;
     
-    accessor = Spk_CAST(NativeAccessor, Spk_ThisMethod(theInterpreter));
+    accessor = Spk_CAST(NativeAccessor, SpkInterpreter_ThisMethod(theInterpreter));
     assert(accessor);
     
     addr = (char *)self + accessor->offset;

@@ -110,7 +110,7 @@ static SpkUnknown *String_ne(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg
 /* Spk_OPER_GET_ITEM */
 static SpkUnknown *String_item(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkString *self; SpkInteger *arg;
-    long index;
+    ptrdiff_t index;
     
     self = (SpkString *)_self;
     arg = Spk_CAST(Integer, arg0);
@@ -118,12 +118,12 @@ static SpkUnknown *String_item(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *
         Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
         return 0;
     }
-    index = SpkInteger_asLong(arg);
-    if (index < 0 || LEN(self) <= index) {
+    index = SpkInteger_AsCPtrdiff(arg);
+    if (index < 0 || LEN(self) <= (size_t)index) {
         Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
-    return (SpkUnknown *)SpkChar_FromChar(STR(self)[index]);
+    return (SpkUnknown *)SpkChar_FromCChar(STR(self)[index]);
 }
 
 
@@ -131,7 +131,7 @@ static SpkUnknown *String_item(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *
 /* methods -- attributes */
 
 static SpkUnknown *String_size(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return (SpkUnknown *)SpkInteger_fromLong(LEN((SpkString *)self));
+    return (SpkUnknown *)SpkInteger_FromCPtrdiff(LEN((SpkString *)self));
 }
 
 
@@ -146,7 +146,7 @@ static SpkUnknown *String_do(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *ar
     
     self = (SpkString *)_self;
     for (i = 0; i < LEN(self); ++i) {
-        c = SpkChar_FromChar(STR(self)[i]);
+        c = SpkChar_FromCChar(STR(self)[i]);
         result = Spk_Call(theInterpreter, arg0, Spk_OPER_APPLY, c, 0);
         Spk_DECREF(c);
         if (!result)
@@ -168,8 +168,8 @@ static SpkUnknown *String_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUn
     char c;
     
     self = (SpkString *)_self;
-    result = SpkString_fromCStringAndLength(0, 2*LEN(self) + 2);
-    d = SpkString_asString(result);
+    result = SpkString_FromCStringAndLength(0, 2*LEN(self) + 2);
+    d = SpkString_AsCString(result);
     s = STR(self);
     *d++ = '"';
     while ((c = *s++)) {
@@ -203,6 +203,8 @@ static SpkUnknown *String_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUn
 
 /*------------------------------------------------------------------------*/
 /* class template */
+
+typedef SpkVariableObjectSubclass SpkStringSubclass;
 
 static SpkMethodTmpl methods[] = {
     /* operators */
@@ -244,11 +246,11 @@ SpkClassTmpl Spk_ClassStringTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SpkString *SpkString_fromCString(const char *str) {
-    return SpkString_fromCStringAndLength(str, strlen(str));
+SpkString *SpkString_FromCString(const char *str) {
+    return SpkString_FromCStringAndLength(str, strlen(str));
 }
 
-SpkString *SpkString_fromCStringAndLength(const char *str, size_t len) {
+SpkString *SpkString_FromCStringAndLength(const char *str, size_t len) {
     SpkString *result;
     char *buffer;
     
@@ -262,7 +264,7 @@ SpkString *SpkString_fromCStringAndLength(const char *str, size_t len) {
     return result;
 }
 
-SpkString *SpkString_fromStream(FILE *stream, size_t size) {
+SpkString *SpkString_FromCStream(FILE *stream, size_t size) {
     SpkString *result;
     char *buffer;
     
@@ -278,7 +280,7 @@ SpkString *SpkString_fromStream(FILE *stream, size_t size) {
     return result;
 }
 
-SpkString *SpkString_concat(SpkString **var, SpkString *newPart) {
+SpkString *SpkString_Concat(SpkString **var, SpkString *newPart) {
     SpkString *self, *arg, *result;
     size_t resultLen;
     
@@ -297,10 +299,10 @@ SpkString *SpkString_concat(SpkString **var, SpkString *newPart) {
     return result;
 }
 
-char *SpkString_asString(SpkString *self) {
+char *SpkString_AsCString(SpkString *self) {
     return STR(self);
 }
 
-size_t SpkString_size(SpkString *self) {
+size_t SpkString_Size(SpkString *self) {
     return self->size;
 }

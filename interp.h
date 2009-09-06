@@ -10,9 +10,17 @@
 #include <stddef.h>
 
 
-typedef struct SpkMethod SpkMethod;
+struct SpkBehavior;
+
+
 typedef struct SpkContext SpkContext;
 typedef struct SpkFiber SpkFiber;
+typedef struct SpkInterpreter SpkInterpreter;
+typedef struct SpkMessage SpkMessage;
+typedef struct SpkMethod SpkMethod;
+typedef struct SpkProcessorScheduler SpkProcessorScheduler;
+typedef struct SpkSemaphore SpkSemaphore;
+typedef struct SpkThunk SpkThunk;
 
 
 typedef unsigned char SpkOpcode;
@@ -84,69 +92,9 @@ enum {
     Spk_LEAF_MAX_STACK_SIZE = 5
 };
 
-struct SpkContext {
-    SpkVariableObject base;
-    SpkContext *caller; /* a.k.a. "sender" */
-    SpkOpcode *pc;
-    SpkUnknown **stackp;
-    SpkContext *homeContext;
-    union {
-        struct /* MethodContext */ {
-            SpkMethod *method;
-            struct SpkBehavior *methodClass;
-            SpkUnknown *receiver;
-            SpkUnknown **framep;
-        } m;
-        struct /* BlockContext */ {
-            size_t index;
-            size_t nargs;
-            SpkOpcode *startpc;
-        } b;
-    } u;
-    int *mark;
-};
-
-typedef struct SpkContextSubclass {
-    SpkContext base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkContextSubclass;
 
 #define SpkContext_VARIABLES(op) ((SpkUnknown **)SpkVariableObject_ITEM_BASE(op))
-
-
-typedef struct SpkSemaphore {
-    SpkObject base;
-    SpkFiber *firstLink;
-    SpkFiber *lastLink;
-    int excessSignals;
-} SpkSemaphore;
-
-
-struct SpkFiber {
-    SpkObject base;
-    SpkFiber *nextLink;
-    SpkContext *suspendedContext;
-    SpkContext *leafContext;
-    int priority;
-    SpkSemaphore *myList;
-};
-
-typedef struct SpkFiberSubclass {
-    SpkFiber base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkFiberSubclass;
-
-
-typedef struct SpkProcessorScheduler {
-    SpkObject base;
-    SpkSemaphore **quiescentFiberLists;
-    SpkFiber *activeFiber;
-} SpkProcessorScheduler;
-
-typedef struct SpkProcessorSchedulerSubclass {
-    SpkProcessorScheduler base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkProcessorSchedulerSubclass;
+#define SpkMethod_OPCODES(op) ((SpkOpcode *)SpkVariableObject_ITEM_BASE(op))
 
 
 struct SpkMethod {
@@ -163,63 +111,6 @@ struct SpkMethod {
     SpkNativeCode nativeCode;
 };
 
-typedef struct SpkMethodSubclass {
-    SpkMethod base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkMethodSubclass;
-
-#define SpkMethod_OPCODES(op) ((SpkOpcode *)SpkVariableObject_ITEM_BASE(op))
-
-
-typedef struct SpkThunk {
-    SpkObject base;
-    SpkUnknown *receiver;
-    SpkMethod *method;
-    struct SpkBehavior *methodClass;
-    SpkOpcode *pc;
-} SpkThunk;
-
-typedef struct SpkThunkSubclass {
-    SpkThunk base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkThunkSubclass;
-
-
-typedef struct SpkMessage {
-    SpkObject base;
-    unsigned int namespace;
-    SpkUnknown *selector;
-    SpkUnknown *arguments;
-} SpkMessage;
-
-typedef struct SpkMessageSubclass {
-    SpkMessage base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkMessageSubclass;
-
-
-typedef struct SpkInterpreter {
-    SpkObject base;
-
-    /* fibers */
-    SpkProcessorScheduler *scheduler;
-    SpkSemaphore *theInterruptSemaphore;
-    int interruptPending;
-
-    /* contexts */
-    SpkContext *activeContext;
-    SpkContext *newContext;
-
-    /* error handling */
-    int printingStack;
-
-} SpkInterpreter;
-
-typedef struct SpkInterpreterSubclass {
-    SpkInterpreter base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkInterpreterSubclass;
-
 
 extern SpkUnknown *Spk_null, *Spk_uninit, *Spk_void;
 
@@ -234,6 +125,7 @@ extern SpkInterpreter *theInterpreter; /* XXX */
 
 SpkMessage *SpkMessage_New(void);
 SpkMethod *SpkMethod_New(size_t);
+SpkThunk *SpkThunk_New(SpkUnknown *, SpkMethod *, struct SpkBehavior *);
 
 SpkContext *SpkContext_New(size_t);
 
@@ -246,6 +138,9 @@ void SpkInterpreter_Boot(void);
 SpkInterpreter *SpkInterpreter_New(void);
 void SpkInterpreter_Init(SpkInterpreter *, SpkProcessorScheduler *);
 SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *);
+SpkUnknown *SpkInterpreter_SendMessage(SpkInterpreter *, SpkUnknown *,
+                                       unsigned int, SpkUnknown *, SpkUnknown *);
+SpkMethod *SpkInterpreter_ThisMethod(SpkInterpreter *);
 void SpkInterpreter_SynchronousSignal(SpkInterpreter *, SpkSemaphore *);
 void SpkInterpreter_TransferTo(SpkInterpreter *, SpkFiber *);
 SpkFiber *SpkInterpreter_WakeHighestPriority(SpkInterpreter *);

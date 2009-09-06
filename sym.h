@@ -6,19 +6,16 @@
 #include "obj.h"
 
 
-typedef struct SpkSymbol {
-    SpkObject base;
-    size_t hash;
-    char str[1];
-} SpkSymbol;
+typedef struct SpkSymbol SpkSymbol;
 
 
 extern struct SpkBehavior *Spk_ClassSymbol;
 extern struct SpkClassTmpl Spk_ClassSymbolTmpl;
 
 
-SpkSymbol *SpkSymbol_get(const char *str);
-SpkSymbol *SpkSymbol_fromCStringAndLength(const char *str, size_t len);
+SpkSymbol *SpkSymbol_FromCString(const char *str);
+SpkSymbol *SpkSymbol_FromCStringAndLength(const char *str, size_t len);
+const char *SpkSymbol_AsCString(SpkSymbol *);
 
 
 #endif /* __spk_sym_h__ */

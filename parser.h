@@ -18,11 +18,6 @@ typedef struct SpkParser {
     struct SpkSymbolTable *st;
 } SpkParser;
 
-typedef struct SpkParserSubclass {
-    SpkParser base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkParserSubclass;
-
 
 SpkStmt *SpkParser_NewClassDef(struct SpkToken *, struct SpkToken *, SpkStmt *, SpkStmt *,
                                struct SpkSymbolTable *);

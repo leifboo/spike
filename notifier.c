@@ -8,6 +8,16 @@
 #include "st.h"
 #include "tree.h"
 
+#include <stdio.h>
+
+
+struct SpkNotifier {
+    SpkObject base;
+    FILE *stream;
+    unsigned int errorTally;
+    SpkUnknown *source;
+};
+
 
 SpkBehavior *Spk_ClassNotifier;
 SpkClassTmpl Spk_ClassNotifierTmpl;
@@ -184,6 +194,11 @@ static void Notifier_traverse_next(SpkObject *_self) {
 
 /*------------------------------------------------------------------------*/
 /* class template */
+
+typedef struct SpkNotifierSubclass {
+    SpkNotifier base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkNotifierSubclass;
 
 static SpkAccessorTmpl accessors[] = {
     { "source", Spk_T_OBJECT, offsetof(SpkNotifier, source),

@@ -982,7 +982,7 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     memset(&voidDef, 0, sizeof(voidDef));
     memset(&voidExpr, 0, sizeof(voidExpr));
     voidDef.kind = Spk_EXPR_NAME;
-    voidDef.sym = 0 /*SpkSymbolNode_FromString(st, "void")*/ ;
+    voidDef.sym = 0 /*SpkSymbolNode_FromCString(st, "void")*/ ;
     voidDef.u.def.pushOpcode = Spk_OPCODE_PUSH_VOID;
     voidExpr.kind = Spk_EXPR_NAME;
     voidExpr.sym = voidDef.sym;
@@ -1819,15 +1819,11 @@ static SpkUnknown *initThunks(SpkUnknown **globals, SpkModule *module,
                 );
             ASSERT(method, "missing global method");
             
-            thunk = (SpkThunk *)SpkObject_New(Spk_ClassThunk);
+            thunk = SpkThunk_New((SpkUnknown *)module, method, methodClass);
+            Spk_DECREF(method);
             if (!thunk) {
                 goto unwind;
             }
-            thunk->receiver = (SpkUnknown *)module;
-            thunk->method = method; /* steal reference */
-            thunk->methodClass = methodClass;  Spk_INCREF(methodClass);
-            /* skip 'thunk' opcode */
-            thunk->pc = SpkMethod_OPCODES(method) + 1;
             
             globals[s->expr->left->u.def.index] = (SpkUnknown *)thunk;
         }

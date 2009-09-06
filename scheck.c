@@ -777,7 +777,7 @@ static Expr *newPseudoVariable(struct PseudoVariable *pv, StaticChecker *checker
     Expr *newExpr;
     
     newExpr = newNameExpr();
-    newExpr->sym = SpkSymbolNode_FromString(checker->st, pv->name);
+    newExpr->sym = SpkSymbolNode_FromCString(checker->st, pv->name);
     newExpr->u.def.pushOpcode = pv->pushOpcode;
     return newExpr;
 }
@@ -800,7 +800,7 @@ static Stmt *globalVarDef(const char *name, StaticChecker *checker) {
     newStmt = (Stmt *)SpkObject_New(Spk_ClassStmt);
     newStmt->kind = Spk_STMT_DEF_VAR;
     newStmt->expr = newNameExpr();
-    newStmt->expr->sym = SpkSymbolNode_FromString(checker->st, name);
+    newStmt->expr->sym = SpkSymbolNode_FromCString(checker->st, name);
     newStmt->expr->u.def.stmt = newStmt;
     return newStmt;
 }

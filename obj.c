@@ -45,7 +45,7 @@ static SpkUnknown *Object_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnk
     SpkUnknown *result;
     size_t len;
     
-    className = SpkBehavior_Name(((SpkObject *)self)->klass);
+    className = SpkBehavior_NameAsCString(((SpkObject *)self)->klass);
     len = strlen(format) + strlen(className) + 2*sizeof(void*); /* assumes %p is hex */
     result = SpkHost_StringFromCStringAndLength(0, len);
     if (!result)

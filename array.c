@@ -18,7 +18,7 @@ SpkBehavior *Spk_ClassArray;
 
 static SpkUnknown *Array_item(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkArray *self; SpkInteger *arg;
-    long index;
+    ptrdiff_t index;
     SpkUnknown *item;
     
     self = (SpkArray *)_self;
@@ -27,8 +27,8 @@ static SpkUnknown *Array_item(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *a
         Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
         return 0;
     }
-    index = SpkInteger_asLong(arg);
-    if (index < 0 || self->size <= index) {
+    index = SpkInteger_AsCPtrdiff(arg);
+    if (index < 0 || self->size <= (size_t)index) {
         Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
@@ -39,7 +39,7 @@ static SpkUnknown *Array_item(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *a
 
 static SpkUnknown *Array_setItem(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkArray *self; SpkInteger *arg;
-    long index;
+    ptrdiff_t index;
     
     self = (SpkArray *)_self;
     arg = Spk_CAST(Integer, arg0);
@@ -47,8 +47,8 @@ static SpkUnknown *Array_setItem(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown
         Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
         return 0;
     }
-    index = SpkInteger_asLong(arg);
-    if (index < 0 || self->size <= index) {
+    index = SpkInteger_AsCPtrdiff(arg);
+    if (index < 0 || self->size <= (size_t)index) {
         Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
@@ -125,6 +125,8 @@ static void Array_traverse_next(SpkObject *_self) {
 /*------------------------------------------------------------------------*/
 /* class template */
 
+typedef SpkVariableObjectSubclass SpkArraySubclass;
+
 static SpkAccessorTmpl accessors[] = {
     { "size", Spk_T_SIZE, offsetof(SpkArray, size), SpkAccessor_READ },
     { 0, 0, 0, 0 }
@@ -179,11 +181,11 @@ SpkClassTmpl Spk_ClassArrayTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SpkArray *SpkArray_new(size_t size) {
+SpkArray *SpkArray_New(size_t size) {
     return (SpkArray *)SpkObject_NewVar(Spk_ClassArray, size);
 }
 
-SpkArray *SpkArray_withArguments(SpkUnknown **stackPointer, size_t argumentCount,
+SpkArray *SpkArray_WithArguments(SpkUnknown **stackPointer, size_t argumentCount,
                                  SpkArray *varArgArray, size_t skip) {
     SpkArray *argumentArray;
     SpkUnknown *item;
@@ -212,7 +214,7 @@ SpkArray *SpkArray_withArguments(SpkUnknown **stackPointer, size_t argumentCount
     return argumentArray;
 }
 
-SpkArray *SpkArray_fromVAList(va_list ap) {
+SpkArray *SpkArray_FromVAList(va_list ap) {
     SpkArray *newArray;
     SpkUnknown *obj;
     size_t size, i;
@@ -242,11 +244,11 @@ SpkArray *SpkArray_fromVAList(va_list ap) {
     return newArray;
 }
 
-size_t SpkArray_size(SpkArray *self) {
+size_t SpkArray_Size(SpkArray *self) {
     return self->size;
 }
 
-SpkUnknown *SpkArray_item(SpkArray *self, long index) {
+SpkUnknown *SpkArray_GetItem(SpkArray *self, size_t index) {
     SpkUnknown *item;
     
     if (index < 0 || self->size <= index) {
@@ -258,7 +260,7 @@ SpkUnknown *SpkArray_item(SpkArray *self, long index) {
     return item;
 }
 
-SpkUnknown *SpkArray_setItem(SpkArray *self, long index, SpkUnknown *value) {
+SpkUnknown *SpkArray_SetItem(SpkArray *self, size_t index, SpkUnknown *value) {
     if (index < 0 || self->size <= index) {
         Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
         return 0;

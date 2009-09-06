@@ -8,19 +8,18 @@
 
 
 typedef SpkVariableObject SpkString;
-typedef SpkVariableObjectSubclass SpkStringSubclass;
 
 
 extern struct SpkBehavior *Spk_ClassString;
 extern struct SpkClassTmpl Spk_ClassStringTmpl;
 
 
-SpkString *SpkString_fromCString(const char *);
-SpkString *SpkString_fromCStringAndLength(const char *, size_t);
-SpkString *SpkString_fromStream(FILE *, size_t);
-SpkString *SpkString_concat(SpkString **, SpkString *);
-char *SpkString_asString(SpkString *);
-size_t SpkString_size(SpkString *);
+SpkString *SpkString_FromCString(const char *);
+SpkString *SpkString_FromCStringAndLength(const char *, size_t);
+SpkString *SpkString_FromCStream(FILE *, size_t);
+SpkString *SpkString_Concat(SpkString **, SpkString *);
+char *SpkString_AsCString(SpkString *);
+size_t SpkString_Size(SpkString *);
 
 
 #endif /* __spk_str_h__ */

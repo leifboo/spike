@@ -6,23 +6,15 @@
 #include "obj.h"
 
 
-typedef struct SpkFloat {
-    SpkObject base;
-    double value;
-} SpkFloat;
-
-typedef struct SpkFloatSubclass {
-    SpkFloat base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkFloatSubclass;
+typedef struct SpkFloat SpkFloat;
 
 
 extern struct SpkBehavior *Spk_ClassFloat;
 extern struct SpkClassTmpl Spk_ClassFloatTmpl;
 
 
-SpkFloat *SpkFloat_fromCDouble(double);
-double SpkFloat_asDouble(SpkFloat *);
+SpkFloat *SpkFloat_FromCDouble(double);
+double SpkFloat_AsCDouble(SpkFloat *);
 
 
 #endif /* __spk_float_h__ */

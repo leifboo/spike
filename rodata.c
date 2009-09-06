@@ -204,7 +204,7 @@ static StringTableEntry stringTable[] = {
 
 static int initSymbols(SymbolTableEntry *t) {
     for ( ; t->p; ++t) {
-        *t->p = SpkHost_SymbolFromString(t->s);
+        *t->p = SpkHost_SymbolFromCString(t->s);
         if (!*t->p) {
             return -1;
         }
@@ -287,7 +287,7 @@ SpkUnknown *Spk_ParseSelector(const char *methodName) {
         Spk_DECREF(builder);
         
     } else {
-        selector = SpkHost_SymbolFromString(methodName);
+        selector = SpkHost_SymbolFromCString(methodName);
     }
     
     return selector;

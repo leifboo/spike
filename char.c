@@ -11,6 +11,12 @@
 #include <stdlib.h>
 
 
+struct SpkChar {
+    SpkObject base;
+    char value;
+};
+
+
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
 
 
@@ -222,6 +228,11 @@ static SpkUnknown *Char_bor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1
 /*------------------------------------------------------------------------*/
 /* class template */
 
+typedef struct SpkCharSubclass {
+    SpkChar base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkCharSubclass;
+
 static SpkMethodTmpl methods[] = {
     /* operators */
     { "__succ__",   SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Char_succ   },
@@ -263,7 +274,7 @@ SpkClassTmpl Spk_ClassCharTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SpkChar *SpkChar_FromChar(char c) {
+SpkChar *SpkChar_FromCChar(char c) {
     SpkChar *result;
     
     result = (SpkChar *)SpkObject_New(Spk_ClassChar);
@@ -271,6 +282,6 @@ SpkChar *SpkChar_FromChar(char c) {
     return result;
 }
 
-char SpkChar_AsChar(SpkChar *aChar) {
+char SpkChar_AsCChar(SpkChar *aChar) {
     return aChar->value;
 }

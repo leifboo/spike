@@ -213,7 +213,7 @@ static void initCoreClasses(void) {
     for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
         Spk_ClassObject->ns[namespace].methodDict = SpkHost_NewSymbolDict();
     }
-    ((SpkClass *)Spk_ClassObject)->name = SpkHost_SymbolFromString(Spk_ClassObjectTmpl.name);
+    ((SpkClass *)Spk_ClassObject)->name = SpkHost_SymbolFromCString(Spk_ClassObjectTmpl.name);
     
     /* Initialize the remaining core classes. */
     /**/SpkClass_InitFromTemplate((SpkClass *)Spk_ClassBehavior, &Spk_ClassBehaviorTmpl, Spk_ClassObject, 0);
@@ -376,24 +376,17 @@ static void initGlobalVars(void) {
         assert(!Spk_CAST(VariableObject, obj));
         *r->var = obj;
     }
-    
-#ifndef MALTIPY
-    /* init I/O */
-    Spk_stdin->stream = stdin;
-    Spk_stdout->stream = stdout;
-    Spk_stderr->stream = stderr;
-#endif /* !MALTIPY */
 }
 
 
-void Spk_Bootstrap(void) {
+int Spk_Boot(void) {
     SpkHost_Init();
     initCoreClasses();
     if (Spk_InitSymbols() < 0)
-        return;
+        return 0;
     initBuiltInClasses();
     if (Spk_InitReadOnlyData() < 0)
-        return;
+        return 0;
     
     /* XXX: There is an order-of-init problem that prevents core
        classes from defining operators.  As a work-around, simply
@@ -416,6 +409,12 @@ void Spk_Bootstrap(void) {
     Spk_ClassPythonObject->superclass = 0;
 #else
     /* Create true, false, True, False, and Boolean. */
-    SpkBoolean_Boot();
+    if (!SpkBoolean_Boot())
+        return 0;
+    /* init I/O */
+    if (!SpkIO_Boot())
+        return 0;
 #endif /* MALTIPY */
+    
+    return 1;
 }

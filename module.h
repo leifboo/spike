@@ -13,10 +13,6 @@ typedef struct SpkModule {
     struct SpkBehavior *firstClass;
 } SpkModule;
 
-typedef struct SpkModuleSubclass {
-    SpkModule base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkModuleSubclass;
 
 #define SpkModule_VARIABLES(op) ((SpkUnknown **)((char *)(op) + ((SpkObject *)(op))->klass->instVarOffset) + Spk_ClassModule->instVarBaseIndex)
 #define SpkModule_LITERALS(op) (((SpkModule *)(op))->literals)

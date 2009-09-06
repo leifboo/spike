@@ -1,6 +1,7 @@
 
 #include "metaclass.h"
 
+#include "behavior.h"
 #include "class.h"
 #include "host.h"
 #include "interp.h"
@@ -35,6 +36,11 @@ static SpkUnknown *Metaclass_new(SpkUnknown *_self, SpkUnknown *name, SpkUnknown
 
 /*------------------------------------------------------------------------*/
 /* class template */
+
+typedef struct SpkMetaclassSubclass {
+    SpkMetaclass base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkMetaclassSubclass;
 
 static SpkMethodTmpl methods[] = {
     { "new",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Metaclass_new   },

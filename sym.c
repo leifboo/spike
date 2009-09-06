@@ -9,6 +9,13 @@
 #include <string.h>
 
 
+struct SpkSymbol {
+    SpkObject base;
+    size_t hash;
+    char str[1];
+};
+
+
 SpkBehavior *Spk_ClassSymbol;
 
 static struct {
@@ -28,10 +35,10 @@ static SpkUnknown *Symbol_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUn
     
     self = (SpkSymbol *)_self;
     len = strlen(self->str);
-    result = SpkString_fromCStringAndLength(0, len + 1);
+    result = SpkString_FromCStringAndLength(0, len + 1);
     if (!result)
         return 0;
-    str = SpkString_asString(result);
+    str = SpkString_AsCString(result);
     str[0] = '$';
     memcpy(&str[1], self->str, len);
     return (SpkUnknown *)result;
@@ -175,14 +182,18 @@ static SpkSymbol *newSymbol(const char *str, size_t len, size_t hash) {
     return sym;
 }
 
-SpkSymbol *SpkSymbol_get(const char *str) {
+SpkSymbol *SpkSymbol_FromCString(const char *str) {
     size_t hash, len;
     
     hash = getHashAndLength((unsigned char *)str, &len);
     return newSymbol(str, len, hash);
 }
 
-SpkSymbol *SpkSymbol_fromCStringAndLength(const char *str, size_t len) {
+SpkSymbol *SpkSymbol_FromCStringAndLength(const char *str, size_t len) {
     size_t hash = getHash((unsigned char *)str, len);
     return newSymbol(str, len, hash);
+}
+
+const char *SpkSymbol_AsCString(SpkSymbol *self) {
+    return self->str;
 }

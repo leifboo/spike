@@ -32,21 +32,21 @@ SpkClassTmpl Spk_ClassParserTmpl;
 
 static SpkSymbolNode *symbolNodeForToken(SpkToken *token, SpkSymbolTable *st) {
     switch (token->id) {
-    case Spk_TOKEN_ARG:      return SpkSymbolNode_FromString(st, "arg");
-    case Spk_TOKEN_CLASS:    return SpkSymbolNode_FromString(st, "class");
-    case Spk_TOKEN_BREAK:    return SpkSymbolNode_FromString(st, "break");
-    case Spk_TOKEN_CONTINUE: return SpkSymbolNode_FromString(st, "continue");
-    case Spk_TOKEN_DO:       return SpkSymbolNode_FromString(st, "do");
-    case Spk_TOKEN_ELSE:     return SpkSymbolNode_FromString(st, "else");
-    case Spk_TOKEN_FOR:      return SpkSymbolNode_FromString(st, "for");
-    case Spk_TOKEN_IF:       return SpkSymbolNode_FromString(st, "if");
-    case Spk_TOKEN_IMPORT:   return SpkSymbolNode_FromString(st, "import");
-    case Spk_TOKEN_META:     return SpkSymbolNode_FromString(st, "meta");
-    case Spk_TOKEN_RAISE:    return SpkSymbolNode_FromString(st, "raise");
-    case Spk_TOKEN_RETURN:   return SpkSymbolNode_FromString(st, "return");
-    case Spk_TOKEN_VAR:      return SpkSymbolNode_FromString(st, "var");
-    case Spk_TOKEN_WHILE:    return SpkSymbolNode_FromString(st, "while");
-    case Spk_TOKEN_YIELD:    return SpkSymbolNode_FromString(st, "yield");
+    case Spk_TOKEN_ARG:      return SpkSymbolNode_FromCString(st, "arg");
+    case Spk_TOKEN_CLASS:    return SpkSymbolNode_FromCString(st, "class");
+    case Spk_TOKEN_BREAK:    return SpkSymbolNode_FromCString(st, "break");
+    case Spk_TOKEN_CONTINUE: return SpkSymbolNode_FromCString(st, "continue");
+    case Spk_TOKEN_DO:       return SpkSymbolNode_FromCString(st, "do");
+    case Spk_TOKEN_ELSE:     return SpkSymbolNode_FromCString(st, "else");
+    case Spk_TOKEN_FOR:      return SpkSymbolNode_FromCString(st, "for");
+    case Spk_TOKEN_IF:       return SpkSymbolNode_FromCString(st, "if");
+    case Spk_TOKEN_IMPORT:   return SpkSymbolNode_FromCString(st, "import");
+    case Spk_TOKEN_META:     return SpkSymbolNode_FromCString(st, "meta");
+    case Spk_TOKEN_RAISE:    return SpkSymbolNode_FromCString(st, "raise");
+    case Spk_TOKEN_RETURN:   return SpkSymbolNode_FromCString(st, "return");
+    case Spk_TOKEN_VAR:      return SpkSymbolNode_FromCString(st, "var");
+    case Spk_TOKEN_WHILE:    return SpkSymbolNode_FromCString(st, "while");
+    case Spk_TOKEN_YIELD:    return SpkSymbolNode_FromCString(st, "yield");
     
     case Spk_TOKEN_IDENTIFIER:
     case Spk_TOKEN_TYPE_IDENTIFIER:
@@ -76,7 +76,7 @@ Stmt *SpkParser_NewClassDef(SpkToken *name, SpkToken *super,
     newStmt->u.klass.superclassName->sym
         = super
         ? super->sym
-        : SpkSymbolNode_FromString(st, "Object");
+        : SpkSymbolNode_FromCString(st, "Object");
     return newStmt;
 }
 
@@ -417,6 +417,11 @@ static void Parser_traverse_next(SpkObject *_self) {
 
 /*------------------------------------------------------------------------*/
 /* class templates */
+
+typedef struct SpkParserSubclass {
+    SpkParser base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkParserSubclass;
 
 static SpkMethodTmpl methods[] = {
     { "parse", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Parser_parse },

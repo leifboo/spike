@@ -18,6 +18,11 @@ SpkBehavior *Spk_ClassBehavior;
 /*------------------------------------------------------------------------*/
 /* class template */
 
+typedef struct SpkBehaviorSubclass {
+    SpkBehavior base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkBehaviorSubclass;
+
 static SpkAccessorTmpl accessors[] = {
     { "superclass", Spk_T_OBJECT, offsetof(SpkBehavior, superclass), SpkAccessor_READ },
     { 0, 0, 0, 0 }
@@ -114,7 +119,7 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *temp
             SpkUnknown *messageSelector;
             SpkMethod *method;
             
-            messageSelector = SpkHost_SymbolFromString(accessorTmpl->name);
+            messageSelector = SpkHost_SymbolFromCString(accessorTmpl->name);
             if (accessorTmpl->flags & SpkAccessor_READ) {
                 method = Spk_NewNativeReadAccessor(accessorTmpl->type, accessorTmpl->offset);
                 SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_RVALUE, messageSelector, method);
@@ -162,7 +167,7 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *temp
 }
 
 static void maybeAccelerateMethod(SpkBehavior *self, SpkMethodNamespace namespace, SpkUnknown *messageSelector, SpkMethod *method) {
-    char *name;
+    const char *name;
     SpkOper operator;
     
     name = SpkHost_SelectorAsCString(messageSelector);
@@ -222,12 +227,17 @@ SpkUnknown *SpkBehavior_FindSelectorOfMethod(SpkBehavior *self, SpkMethod *metho
     return 0;
 }
 
-const char *SpkBehavior_Name(SpkBehavior *self) {
+const char *SpkBehavior_NameAsCString(SpkBehavior *self) {
     SpkClass *c;
+    SpkUnknown *name;
+    const char *result;
     
     c = Spk_CAST(Class, self);
-    if (c) {
-        return SpkHost_SymbolAsCString(c->name);
-    }
-    return "<unknown>";
+    if (!c)
+        return "<unknown>";
+    
+    name = SpkClass_Name(c);
+    result = SpkHost_SymbolAsCString(name);
+    Spk_DECREF(name);
+    return result;
 }

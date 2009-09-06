@@ -221,23 +221,25 @@ void SpkDisassembler_DisassembleMethodOpcodes(SpkMethod *method, SpkUnknown **li
         
         fprintf(out, "\t%s", mnemonic);
         if (base && pArgumentCount) {
-            fprintf(out, "\t%s[%u] %u", base, index, *pArgumentCount);
+            fprintf(out, "\t%s[%lu] %lu", base,
+                    (unsigned long)index, (unsigned long)*pArgumentCount);
         } else if (pCount) {
             fprintf(out, "\t%lu", (unsigned long)*pCount);
         } else if (keyword) {
             fprintf(out, "\t%s", keyword);
         } else if (pArgumentCount) {
             SpkUnknown *s = SpkHost_ObjectAsString(selector);
-            fprintf(out, "\t[%u].%s %u", namespace, SpkHost_StringAsCString(s), *pArgumentCount);
+            fprintf(out, "\t[%u].%s %lu", namespace, SpkHost_StringAsCString(s),
+                    (unsigned long)*pArgumentCount);
             Spk_DECREF(s);
         } else if (selector) {
             SpkUnknown *s = SpkHost_ObjectAsString(selector);
             fprintf(out, "\t$%s", SpkHost_StringAsCString(s));
             Spk_DECREF(s);
         } else if (pLabel) {
-            fprintf(out, "\t%04x", *pLabel);
+            fprintf(out, "\t%04lx", (unsigned long)*pLabel);
         } else if (base) {
-            fprintf(out, "\t%s[%u]", base, index);
+            fprintf(out, "\t%s[%lu]", base, (unsigned long)index);
         } else {
             switch (opcode) {
             case Spk_OPCODE_SAVE:
@@ -301,7 +303,7 @@ void SpkDisassembler_DisassembleClass(SpkBehavior *aClass, unsigned int indent, 
     SpkMethodNamespace namespace;
     
     tab(indent, out);
-    fprintf(out, "class %s\n", SpkBehavior_Name(aClass));
+    fprintf(out, "class %s\n", SpkBehavior_NameAsCString(aClass));
     for (nestedClass = aClass->nestedClassList.first; nestedClass; nestedClass = nestedClass->nextInScope) {
         SpkDisassembler_DisassembleClass(nestedClass, indent + 1, out);
         fprintf(out, "\n");
@@ -319,7 +321,7 @@ void SpkDisassembler_DisassembleModule(SpkModule *module, FILE *out) {
     
     fprintf(out, "literal table\n");
     for (i = 0; i < module->literalCount; ++i) {
-        fprintf(out, "    %04u: ", i);
+        fprintf(out, "    %04lu: ", (unsigned long)i);
         SpkHost_PrintObject(module->literals[i], out);
         fprintf(out, "\n");
     }

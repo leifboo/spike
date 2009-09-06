@@ -47,6 +47,11 @@ static SpkUnknown *Module__initPythonModule(SpkUnknown *_self, SpkUnknown *modul
 /*------------------------------------------------------------------------*/
 /* class template */
 
+typedef struct SpkModuleSubclass {
+    SpkModule base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkModuleSubclass;
+
 static SpkMethodTmpl methods[] = {
 #ifdef MALTIPY
     { "_initPythonModule", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &Module__initPythonModule },

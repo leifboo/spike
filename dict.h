@@ -6,28 +6,20 @@
 #include "obj.h"
 
 
-typedef struct SpkIdentityDictionary {
-    SpkObject base;
-    size_t size;
-    size_t tally;
-    SpkUnknown **keyArray;
-    SpkUnknown **valueArray;
-} SpkIdentityDictionary;
-
-typedef struct SpkIdentityDictionarySubclass {
-    SpkIdentityDictionary base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkIdentityDictionarySubclass;
+typedef struct SpkIdentityDictionary SpkIdentityDictionary;
 
 
 extern struct SpkBehavior *Spk_ClassIdentityDictionary;
 extern struct SpkClassTmpl Spk_ClassIdentityDictionaryTmpl;
 
 
-SpkUnknown *SpkIdentityDictionary_at(SpkIdentityDictionary *self, SpkUnknown *key);
-SpkUnknown *SpkIdentityDictionary_keyAtValue(SpkIdentityDictionary *self, SpkUnknown *value);
-void SpkIdentityDictionary_atPut(SpkIdentityDictionary *self, SpkUnknown *key, SpkUnknown *value);
-SpkIdentityDictionary *SpkIdentityDictionary_new(void);
+SpkUnknown *SpkIdentityDictionary_GetItem(SpkIdentityDictionary *self, SpkUnknown *key);
+SpkUnknown *SpkIdentityDictionary_KeyWithValue(SpkIdentityDictionary *self, SpkUnknown *value);
+void SpkIdentityDictionary_SetItem(SpkIdentityDictionary *self, SpkUnknown *key, SpkUnknown *value);
+SpkIdentityDictionary *SpkIdentityDictionary_New(void);
+int SpkIdentityDictionary_Next(SpkIdentityDictionary *, size_t *,
+                               SpkUnknown **, SpkUnknown **);
+size_t SpkIdentityDictionary_Size(SpkIdentityDictionary *);
 
 
 #endif /* __spk_dict_h__ */

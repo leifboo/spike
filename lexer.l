@@ -238,7 +238,7 @@ static SpkUnknown *charFromLiteral(char *str, size_t len) {
         }
     }
     
-    return (SpkUnknown *)SpkChar_FromChar(result);
+    return (SpkUnknown *)SpkChar_FromCChar(result);
 }
 
 static SpkUnknown *stringFromLiteral(char *str, size_t len) {
@@ -330,10 +330,10 @@ int SpkLexer_GetNextToken(SpkToken *token, yyscan_t scanner, SpkSymbolTable *st)
         break;
     case Spk_TOKEN_IDENTIFIER:
     case Spk_TOKEN_TYPE_IDENTIFIER:
-        token->sym = SpkSymbolNode_FromString(st, yyget_text(scanner));
+        token->sym = SpkSymbolNode_FromCString(st, yyget_text(scanner));
         break;
     case Spk_TOKEN_SYMBOL:
-        token->sym = SpkSymbolNode_FromString(st, yyget_text(scanner) + 1);
+        token->sym = SpkSymbolNode_FromCString(st, yyget_text(scanner) + 1);
         break;
     }
     return id;

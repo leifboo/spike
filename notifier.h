@@ -5,20 +5,8 @@
 
 #include "obj.h"
 
-#include <stdio.h>
 
-
-typedef struct SpkNotifier {
-    SpkObject base;
-    FILE *stream;
-    unsigned int errorTally;
-    SpkUnknown *source;
-} SpkNotifier;
-
-typedef struct SpkNotifierSubclass {
-    SpkNotifier base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkNotifierSubclass;
+typedef struct SpkNotifier SpkNotifier;
 
 
 extern struct SpkBehavior *Spk_ClassNotifier;

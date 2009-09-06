@@ -73,8 +73,6 @@ int Spk_IsArgs(SpkUnknown *);
 size_t Spk_ArgsSize(SpkUnknown *);
 SpkUnknown *Spk_GetArg(SpkUnknown *, size_t);
 
-struct SpkMethod *Spk_ThisMethod(struct SpkInterpreter *);
-
 
 extern struct SpkBehavior *Spk_ClassNativeAccessor;
 extern struct SpkClassTmpl Spk_ClassNativeAccessorTmpl;

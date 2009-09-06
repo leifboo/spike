@@ -270,6 +270,11 @@ static void Stmt_traverse_next(SpkObject *_self) {
 /*------------------------------------------------------------------------*/
 /* class templates */
 
+typedef struct SpkExprSubclass {
+    SpkExpr base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkExprSubclass;
+
 static SpkMethodTmpl ExprMethods[] = {
     { 0, 0, 0}
 };
@@ -294,6 +299,11 @@ SpkClassTmpl Spk_ClassExprTmpl = {
     }
 };
 
+
+typedef struct SpkStmtSubclass {
+    SpkStmt base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkStmtSubclass;
 
 static SpkMethodTmpl StmtMethods[] = {
     { 0, 0, 0}

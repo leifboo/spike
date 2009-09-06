@@ -7,20 +7,17 @@
 #include <stdio.h>
 
 
-typedef struct SpkFileStream {
-    SpkObject base;
-    FILE *stream;
-} SpkFileStream;
-
-typedef struct SpkFileStreamSubclass {
-    SpkFileStream base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkFileStreamSubclass;
+typedef struct SpkFileStream SpkFileStream;
 
 
 extern struct SpkBehavior *Spk_ClassFileStream;
 extern struct SpkClassTmpl Spk_ClassFileStreamTmpl;
 extern SpkFileStream *Spk_stdin, *Spk_stdout, *Spk_stderr;
+
+
+int SpkIO_Boot(void);
+
+FILE *SpkFileStream_AsCFileStream(SpkFileStream *);
 
 
 #endif /* __spk_io_h__ */
