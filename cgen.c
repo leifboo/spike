@@ -1096,6 +1096,9 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
     case Spk_STMT_DEF_METHOD:
     case Spk_STMT_DEF_CLASS:
         break;
+    case Spk_STMT_DEF_MODULE:
+        ASSERT(0, "unexpected module node");
+        break;
     case Spk_STMT_DO_WHILE:
         childNextLabel = stmt->expr->codeOffset;
         _(emitCodeForStmt(stmt->top, childNextLabel, nextLabel,
@@ -1836,8 +1839,10 @@ static SpkUnknown *initThunks(SpkUnknown **globals, SpkModule *module,
     return 0;
 }
 
-SpkModule *SpkCodeGen_GenerateCode(Stmt *tree, unsigned int dataSize,
-                                   Stmt *predefList, Stmt *rootClassList) {
+SpkModule *SpkCodeGen_GenerateCode(Stmt *tree) {
+    unsigned int dataSize;
+    Stmt *predefList;
+    Stmt *rootClassList;
     Stmt *s;
     CodeGen gcgen;
     ModuleCodeGen *cgen;
@@ -1845,6 +1850,12 @@ SpkModule *SpkCodeGen_GenerateCode(Stmt *tree, unsigned int dataSize,
     SpkUnknown **globals;
     unsigned int index;
     SpkBehavior *aClass;
+    
+    ASSERT(tree->kind == Spk_STMT_DEF_MODULE, "module node expected");
+    ASSERT(tree->top->kind == Spk_STMT_COMPOUND, "compound statement expected");
+    dataSize = tree->u.module.dataSize;
+    predefList = tree->u.module.predefList.first;
+    rootClassList = tree->u.module.rootClassList.first;
     
     memset(&gcgen, 0, sizeof(gcgen));
     cgen = &gcgen.u.module;

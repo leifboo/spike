@@ -7,10 +7,7 @@ struct SpkModule;
 struct SpkStmt;
 
 
-struct SpkModule *SpkCodeGen_GenerateCode(struct SpkStmt *tree,
-                                          unsigned int dataSize,
-                                          struct SpkStmt *predefList,
-                                          struct SpkStmt *rootClassList);
+struct SpkModule *SpkCodeGen_GenerateCode(struct SpkStmt *tree);
 
 
 #endif /* __spk_cgen_h__ */

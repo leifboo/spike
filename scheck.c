@@ -684,6 +684,9 @@ static SpkUnknown *checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker,
     case Spk_STMT_DEF_CLASS:
         _(checkClassDef(stmt, outer, checker, outerPass));
         break;
+    case Spk_STMT_DEF_MODULE:
+        ASSERT(0, "unexpected module node");
+        break;
     case Spk_STMT_DO_WHILE:
         _(checkExpr(stmt->expr, stmt, checker, outerPass));
         _(checkStmt(stmt->top, stmt, checker, outerPass));
@@ -835,17 +838,21 @@ static SpkUnknown *declareClass(SpkBehavior *aClass,
 
 SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
                                    SpkSymbolTable *st,
-                                   SpkUnknown *requestor,
-                                   unsigned int *pDataSize,
-                                   StmtList *predefList,
-                                   StmtList *rootClassList)
+                                   SpkUnknown *requestor)
 {
+    StmtList *predefList;
+    StmtList *rootClassList;
     Stmt *s;
     StaticChecker checker;
     struct PseudoVariable *pv;
     unsigned int pass;
     SpkClassBootRec *classBootRec;
     SpkVarBootRec *varBootRec;
+    
+    ASSERT(tree->kind == Spk_STMT_DEF_MODULE, "module node expected");
+    ASSERT(tree->top->kind == Spk_STMT_COMPOUND, "compound statement expected");
+    predefList = &tree->u.module.predefList;
+    rootClassList = &tree->u.module.rootClassList;
     
     checker.st = st;
     checker.requestor = requestor;
@@ -877,12 +884,12 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     rootClassList->first = rootClassList->last = 0;
 
     for (pass = 1; pass <= 3; ++pass) {
-        for (s = tree; s; s = s->next) {
+        for (s = tree->top->top; s; s = s->next) {
             _(checkStmt(s, 0, &checker, pass));
         }
     }
     
-    *pDataSize = checker.st->currentScope->context->nDefs;
+    tree->u.module.dataSize = checker.st->currentScope->context->nDefs;
     
     SpkSymbolTable_ExitScope(checker.st); /* global */
     SpkSymbolTable_ExitScope(checker.st); /* built-in */

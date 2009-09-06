@@ -1,11 +1,42 @@
 
 #include "tree.h"
 
+#include "cgen.h"
 #include "class.h"
+#include "parser.h"
+#include "scheck.h"
+#include "st.h"
+
 #include <string.h>
 
 
 SpkBehavior *Spk_ClassExpr, *Spk_ClassStmt;
+
+
+/*------------------------------------------------------------------------*/
+/* methods */
+
+static SpkUnknown *Stmt_asModuleDef(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    Spk_INCREF(self); /* XXX: account for stolen reference */
+    return (SpkUnknown *)SpkParser_NewModuleDef((SpkStmt *)self);
+}
+
+static SpkUnknown *Stmt_check(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *requestor) {
+    SpkStmt *self;
+    SpkSymbolTable *st;
+    
+    self = (SpkStmt *)_self;
+    st = Spk_CAST(SymbolTable, arg0);
+    if (!st) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a symbol table is required");
+        return 0;
+    }
+    return (SpkUnknown *)SpkStaticChecker_Check(self, st, requestor);
+}
+
+static SpkUnknown *Stmt_generateCode(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return (SpkUnknown *)SpkCodeGen_GenerateCode((SpkStmt *)self);
+}
 
 
 /*------------------------------------------------------------------------*/
@@ -306,6 +337,9 @@ typedef struct SpkStmtSubclass {
 } SpkStmtSubclass;
 
 static SpkMethodTmpl StmtMethods[] = {
+    { "asModuleDef",  SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Stmt_asModuleDef },
+    { "check",        SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Stmt_check },
+    { "generateCode", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Stmt_generateCode },
     { 0, 0, 0}
 };
 

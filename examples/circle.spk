@@ -1,0 +1,28 @@
+#!/usr/bin/env spike-1
+
+main(argv) {
+    var sourceFilename, stream;
+    var st, notifier;
+    var parser, tree;
+    var module;
+    
+    sourceFilename = argv[1];
+    stream = FileStream.open(sourceFilename, "r");
+    if (stream == null) {
+        stderr.printf("%s: cannot open '%s'\n", argv[0], sourceFilename);
+        return 1;
+    }
+    
+    st = SymbolTable.new();
+    notifier = Notifier.new(stderr);
+    
+    parser = Parser.new();
+    tree = parser.parse(stream, st);
+    tree = tree.asModuleDef();
+    tree.check(st, notifier);
+    module = tree.generateCode();
+    
+    stdout.printf("module: %s\n", module.printString);
+    
+    return 0;
+}

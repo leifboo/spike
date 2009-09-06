@@ -36,6 +36,7 @@ typedef enum SpkStmtKind {
     Spk_STMT_DEF_ARG,
     Spk_STMT_DEF_CLASS,
     Spk_STMT_DEF_METHOD,
+    Spk_STMT_DEF_MODULE,
     Spk_STMT_DEF_VAR,
     Spk_STMT_DO_WHILE,
     Spk_STMT_EXPR,
@@ -62,6 +63,24 @@ typedef struct SpkArgList SpkArgList;
 typedef struct SpkStmt SpkStmt;
 typedef struct SpkStmtList SpkStmtList;
 typedef struct SpkStmtPair SpkStmtPair;
+
+
+struct SpkExprList {
+    SpkExpr *first, *last;
+};
+
+struct SpkArgList {
+    SpkExpr *fixed, *var;
+};
+
+struct SpkStmtList {
+    SpkStmt *first, *last;
+};
+
+struct SpkStmtPair {
+    SpkStmt *top, *bottom;
+};
+
 
 struct SpkExpr {
     SpkObject base;
@@ -98,13 +117,6 @@ struct SpkExpr {
     size_t endLabel;
 };
 
-struct SpkExprList {
-    SpkExpr *first, *last;
-};
-
-struct SpkArgList {
-    SpkExpr *fixed, *var;
-};
 
 struct SpkStmt {
     SpkObject base;
@@ -129,17 +141,13 @@ struct SpkStmt {
             size_t classVarCount;
             int predefined;
         } klass;
+        struct {
+            unsigned int dataSize;
+            SpkStmtList predefList, rootClassList;
+        } module;
         SpkUnknown *source;
     } u;
     size_t codeOffset;
-};
-
-struct SpkStmtList {
-    SpkStmt *first, *last;
-};
-
-struct SpkStmtPair {
-    SpkStmt *top, *bottom;
 };
 
 

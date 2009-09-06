@@ -27,14 +27,17 @@ static SpkModule *compileTree(SpkStmt **pTree, /* destroys reference */
 {
     SpkStmt *tree;
     SpkUnknown *tmp = 0;
-    unsigned int dataSize;
-    SpkStmtList predefList, rootClassList;
     SpkModule *module = 0;
     
-    tree = *pTree;
+    tree = SpkParser_NewModuleDef(*pTree);
+    if (!tree) {
+        tree = *pTree;
+        *pTree = 0;
+        goto unwind;
+    }
     *pTree = 0;
     
-    tmp = SpkStaticChecker_Check(tree, st, notifier, &dataSize, &predefList, &rootClassList);
+    tmp = SpkStaticChecker_Check(tree, st, notifier);
     if (!tmp)
         goto unwind;
     
@@ -42,8 +45,7 @@ static SpkModule *compileTree(SpkStmt **pTree, /* destroys reference */
     if (!tmp)
         goto unwind;
     
-    tree = SpkParser_NewModuleDef(tree);
-    module = SpkCodeGen_GenerateCode(tree, dataSize, predefList.first, rootClassList.first);
+    module = SpkCodeGen_GenerateCode(tree);
     
     Spk_DECREF(tmp);
     Spk_DECREF(tree);

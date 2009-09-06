@@ -217,7 +217,7 @@ Stmt *SpkParser_NewModuleDef(Stmt *stmtList) {
     compoundStmt->top = stmtList;
 
     moduleDef = (SpkStmt *)SpkObject_New(Spk_ClassStmt);
-    moduleDef->kind = Spk_STMT_DEF_CLASS;
+    moduleDef->kind = Spk_STMT_DEF_MODULE;
     moduleDef->top = compoundStmt;
     
     return moduleDef;
