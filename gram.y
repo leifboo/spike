@@ -217,7 +217,7 @@ primary_expr(r) ::= literal_string(expr).                                       
 primary_expr(r) ::= LPAREN expr(expr) RPAREN.                                   { r = expr.first; }
 primary_expr(r) ::= LPAREN TYPE_IDENTIFIER(name) RPAREN.                        { r = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, &name); r->sym = name.sym; }
 primary_expr(r) ::= block(expr).                                                { r = expr; }
-primary_expr(r) ::= LCURLY(t) expr(expr) RCURLY.                                { r = SpkParser_NewExpr(Spk_EXPR_COMPOUND, 0, 0, expr.first, 0, &t); }
+primary_expr(r) ::= LCURLY(t) expr(expr) RCURLY.                                { r = SpkParser_NewCompoundExpr(expr.first, &t); }
 
 %type literal_string {SpkExpr *}
 literal_string(r) ::= STR(t).                                                   { r = SpkParser_NewExpr(Spk_EXPR_LITERAL, 0, 0, 0, 0, &t); r->aux.literalValue = t.literalValue; }

@@ -21,6 +21,7 @@ SpkArray *SpkArray_FromVAList(va_list);
 size_t SpkArray_Size(SpkArray *);
 SpkUnknown *SpkArray_GetItem(SpkArray *, size_t);
 SpkUnknown *SpkArray_SetItem(SpkArray *, size_t, SpkUnknown *);
+void SpkArray_Sort(SpkArray *, int (*)(SpkUnknown *const *, SpkUnknown *const *));
 
 
 #endif /* __spk_array_h__ */

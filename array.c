@@ -4,7 +4,9 @@
 #include "class.h"
 #include "int.h"
 #include "native.h"
+
 #include <stdarg.h>
+#include <stdlib.h>
 
 
 SpkBehavior *Spk_ClassArray;
@@ -270,4 +272,14 @@ SpkUnknown *SpkArray_SetItem(SpkArray *self, size_t index, SpkUnknown *value) {
     ARRAY(self)[index] = value;
     Spk_INCREF(Spk_void);
     return Spk_void;
+}
+
+void SpkArray_Sort(SpkArray *self,
+                   int (*compare)(SpkUnknown *const *, SpkUnknown *const *))
+{
+    qsort(ARRAY(self),
+          self->size,
+          sizeof(SpkUnknown *),
+          (int(*)(const void *, const void *))compare
+        );
 }

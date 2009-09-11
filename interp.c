@@ -220,6 +220,7 @@ static SpkUnknown **Context_traverse_current(SpkObject *);
 static void Context_traverse_next(SpkObject *);
 static void Context_dealloc(SpkObject *);
 static SpkUnknown *Context_blockCopy(SpkUnknown *, SpkUnknown *, SpkUnknown *);
+static SpkUnknown *Context_compoundExpression(SpkUnknown *, SpkUnknown *, SpkUnknown *);
 
 typedef struct SpkContextSubclass {
     SpkContext base;
@@ -228,6 +229,7 @@ typedef struct SpkContextSubclass {
 
 static SpkMethodTmpl ContextMethods[] = {
     { "blockCopy", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Context_blockCopy },
+    { "compoundExpression", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_ARRAY, &Context_compoundExpression },
     { 0, 0, 0 }
 };
 
@@ -633,6 +635,14 @@ static SpkUnknown *Context_blockCopy(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
     newContext->u.b.startpc = newContext->pc = self->pc + 3; /* skip branch */
     
     return (SpkUnknown *)newContext;
+}
+
+static SpkUnknown *Context_compoundExpression(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkContext *self = (SpkContext *)_self;
+    return Spk_CallAttrWithArguments(theInterpreter,
+                                     self->homeContext->u.m.receiver,
+                                     Spk_compoundExpression,
+                                     arg0);
 }
 
 

@@ -226,6 +226,24 @@ SpkUnknown *Spk_CallAttr(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknow
     return result;
 }
 
+SpkUnknown *Spk_CallAttrWithArguments(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *name,
+                                      SpkUnknown *argumentArray)
+{
+    SpkUnknown *result, *thunk;
+    
+    thunk = Spk_Attr(interpreter, obj, name);
+    if (!thunk) {
+        return 0;
+    }
+    result = Spk_SendMessage(interpreter,
+                             thunk,
+                             Spk_METHOD_NAMESPACE_RVALUE,
+                             *Spk_operCallSelectors[Spk_OPER_APPLY].selector,
+                             argumentArray);
+    Spk_DECREF(thunk);
+    return result;
+}
+
 SpkUnknown *Spk_Keyword(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *selector, ...) {
     SpkUnknown *result;
     va_list ap;

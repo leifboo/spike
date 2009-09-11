@@ -45,6 +45,7 @@ extern SpkUnknown *Spk_badExpr;
 extern SpkUnknown *Spk_blockCopy;
 extern SpkUnknown *Spk_cannotReenterBlock;
 extern SpkUnknown *Spk_cannotReturn;
+extern SpkUnknown *Spk_compoundExpression;
 extern SpkUnknown *Spk_doesNotUnderstand;
 extern SpkUnknown *Spk_failOnError;
 extern SpkUnknown *Spk_importModule;

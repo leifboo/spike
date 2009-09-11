@@ -67,6 +67,7 @@ static SpkUnknown *badExpr(Expr *expr, const char *desc, StaticChecker *checker)
 
 
 static SpkUnknown *checkStmt(Stmt *, Stmt *, StaticChecker *, unsigned int);
+static SpkUnknown *checkExpr(Expr *, Stmt *, StaticChecker *, unsigned int);
 static SpkUnknown *checkOneExpr(Expr *, Stmt *, StaticChecker *, unsigned int);
 
 
@@ -75,19 +76,22 @@ static SpkUnknown *checkVarDefList(Expr *defList,
                                    StaticChecker *checker,
                                    unsigned int pass)
 {
-    Expr *def;
+    Expr *expr, *def;
     
-    if (pass != 1) {
-        goto leave;
-    }
-    for (def = defList; def; def = def->next) {
+    for (expr = defList; expr; expr = expr->next) {
+        if (expr->kind == Spk_EXPR_ASSIGN) {
+            def = expr->left;
+            _(checkExpr(expr->right, stmt, checker, pass));
+        } else {
+            def = expr;
+        }
         if (def->kind != Spk_EXPR_NAME) {
             _(badExpr(def, "invalid variable definition", checker));
             continue;
         }
-        _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
+        if (pass == 1)
+            _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
     }
- leave:
     Spk_INCREF(Spk_void);
     return Spk_void;
     
@@ -187,7 +191,12 @@ static SpkUnknown *checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker,
         _(checkBlock(expr, stmt, checker, pass));
         break;
     case Spk_EXPR_COMPOUND:
-        /* XXX */
+        for (arg = expr->right; arg; arg = arg->nextArg) {
+            _(checkExpr(arg, stmt, checker, pass));
+        }
+        if (expr->var) {
+            _(checkExpr(expr->var, stmt, checker, pass));
+        }
         break;
     case Spk_EXPR_CALL:
     case Spk_EXPR_KEYWORD:

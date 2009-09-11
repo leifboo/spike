@@ -179,6 +179,23 @@ SpkUnknown *SpkHost_NewKeywordSelectorBuilder(void) {
     Spk_DECREF(vd);
 }
 
+static int compareSymbols(SpkUnknown *const *p1, SpkUnknown *const *p2) {
+    SpkSymbol *sym1, *sym2;
+    const char *s1, *s2;
+    
+    sym1 = Spk_CAST(Symbol, *p1);
+    sym2 = Spk_CAST(Symbol, *p2);
+    if (!sym1 && !sym2)
+        return 0;
+    if (!sym1)
+        return 1;
+    if (!sym2)
+        return -1;
+    s1 = SpkSymbol_AsCString(sym1);
+    s2 = SpkSymbol_AsCString(sym2);
+    return strcmp(s1, s2);
+}
+
 SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
     SpkArray *kwArray;
     SpkSymbol *sym, *selector;
@@ -192,6 +209,11 @@ SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
     if (kw) {
         sym = Spk_CAST(Symbol, kw);
         len += strlen(SpkSymbol_AsCString(sym));
+        if (0) {
+            /* XXX: The formal arguments must be permuted in the same
+               way. */
+            SpkArray_Sort(kwArray, &compareSymbols);
+        }
     }
     for (i = 0; i < size; ++i) {
         SpkUnknown *item = SpkArray_GetItem(kwArray, i);

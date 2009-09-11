@@ -207,6 +207,17 @@ Expr *SpkParser_FreezeKeywords(Expr *expr, SpkToken *kw,
     return expr;
 }
 
+Expr *SpkParser_NewCompoundExpr(Expr *args, SpkToken *token) {
+    Expr *arg;
+    
+    /* convert comma expression to argument list */
+    for (arg = args; arg; arg = arg->nextArg) {
+        arg->nextArg = arg->next;
+        arg->next = 0;
+    }
+    return SpkParser_NewExpr(Spk_EXPR_COMPOUND, 0, 0, 0, args, token);
+}
+
 Stmt *SpkParser_NewModuleDef(Stmt *stmtList) {
     /* Wrap the top-level statement list in a module (class)
        definition.  XXX: Where does this code really belong? */

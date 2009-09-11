@@ -62,6 +62,7 @@ SpkUnknown *Spk_VCall(struct SpkInterpreter *, SpkUnknown *, SpkCallOper, va_lis
 SpkUnknown *Spk_Attr(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *);
 SpkUnknown *Spk_SetAttr(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, SpkUnknown *);
 SpkUnknown *Spk_CallAttr(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, ...);
+SpkUnknown *Spk_CallAttrWithArguments(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, SpkUnknown *);
 SpkUnknown *Spk_Keyword(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, ...);
 SpkUnknown *Spk_VKeyword(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, va_list);
 

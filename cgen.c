@@ -499,9 +499,26 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         CHECK_STACKP();
         break;
     case Spk_EXPR_COMPOUND:
-        /* XXX */
-        EMIT_OPCODE(Spk_OPCODE_PUSH_NULL);
+        EMIT_OPCODE(Spk_OPCODE_PUSH_CONTEXT);
         tallyPush(cgen);
+        EMIT_OPCODE(Spk_OPCODE_GET_ATTR);
+        _(emitLiteralIndex(Spk_compoundExpression, cgen));
+        for (arg = expr->right, argumentCount = 0;
+             arg;
+             arg = arg->nextArg, ++argumentCount) {
+            _(emitCodeForExpr(arg, 0, cgen));
+        }
+        if (expr->var) {
+            _(emitCodeForExpr(expr->var, 0, cgen));
+        }
+        ++cgen->nMessageSends;
+        EMIT_OPCODE(Spk_OPCODE_CALL);
+        encodeUnsignedInt(Spk_METHOD_NAMESPACE_RVALUE, cgen);
+        encodeUnsignedInt(Spk_OPER_APPLY, cgen);
+        encodeUnsignedInt(argumentCount, cgen);
+        cgen->stackPointer -= argumentCount + 1;
+        tallyPush(cgen); /* result */
+        CHECK_STACKP();
         break;
     case Spk_EXPR_CALL:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
@@ -1055,6 +1072,29 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     return 0;
 }
 
+static SpkUnknown *emitCodeForVarDefList(Expr *defList, OpcodeGen *cgen) {
+    Expr *expr, *def;
+    
+    for (expr = defList; expr; expr = expr->next) {
+        if (expr->kind == Spk_EXPR_ASSIGN) {
+            _(emitCodeForExpr(expr->right, 0, cgen));
+            /* similar to store(), but with a definition instead of a
+               reference */
+            def = expr->left;
+            ASSERT(def->kind == Spk_EXPR_NAME, "name expected");
+            EMIT_OPCODE(def->u.def.storeOpcode);
+            encodeUnsignedInt(def->u.def.index, cgen);
+            EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
+            CHECK_STACKP();
+        }
+    }
+    Spk_INCREF(Spk_void);
+    return Spk_void;
+    
+ unwind:
+    return 0;
+}
+
 /****************************************************************************/
 /* statements */
 
@@ -1092,9 +1132,11 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
         _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, continueLabel, cgen));
         break;
     case Spk_STMT_DEF_ARG:
-    case Spk_STMT_DEF_VAR:
     case Spk_STMT_DEF_METHOD:
     case Spk_STMT_DEF_CLASS:
+        break;
+    case Spk_STMT_DEF_VAR:
+        _(emitCodeForVarDefList(stmt->expr, cgen));
         break;
     case Spk_STMT_DEF_MODULE:
         ASSERT(0, "unexpected module node");
@@ -1340,6 +1382,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
 
 static SpkUnknown *emitCodeForClassBody(Stmt *body, CodeGen *cgen) {
     Stmt *s;
+    Expr *expr;
     
     ASSERT(body->kind == Spk_STMT_COMPOUND,
            "compound statement expected");
@@ -1349,6 +1392,10 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, CodeGen *cgen) {
             _(emitCodeForMethod(s, cgen));
             break;
         case Spk_STMT_DEF_VAR:
+            for (expr = s->expr; expr; expr = expr->next) {
+                ASSERT(expr->kind == Spk_EXPR_NAME,
+                       "initializers not allowed here");
+            }
             break;
         case Spk_STMT_DEF_CLASS:
             _(emitCodeForClass(s, cgen));
@@ -1784,7 +1831,8 @@ static SpkUnknown *initGlobalVars(SpkUnknown **globals, Stmt *stmtList) {
             Spk_INCREF(s->expr->u.def.initValue);
             break;
         case Spk_STMT_DEF_VAR:
-            if (s->expr->u.def.initValue) {
+            if (s->expr->kind == Spk_EXPR_NAME &&
+                s->expr->u.def.initValue) {
                 globals[s->expr->u.def.index] = s->expr->u.def.initValue;
                 Spk_INCREF(s->expr->u.def.initValue);
             }

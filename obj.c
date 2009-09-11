@@ -39,6 +39,11 @@ static SpkUnknown *Object_ne(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg
     return result;
 }
 
+static SpkUnknown *Object_compoundExpression(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    Spk_INCREF(arg0);
+    return arg0;
+}
+
 static SpkUnknown *Object_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
     static const char *format = "<%s instance at %p>";
     const char *className;
@@ -161,6 +166,7 @@ static SpkAccessorTmpl ObjectAccessors[] = {
 static SpkMethodTmpl ObjectMethods[] = {
     { "__eq__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Object_eq },
     { "__ne__", SpkNativeCode_BINARY_OPER, &Object_ne },
+    { "compoundExpression", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_ARRAY, &Object_compoundExpression },
     { "printString", SpkNativeCode_ARGS_0, &Object_printString },
     { 0, 0, 0 }
 };

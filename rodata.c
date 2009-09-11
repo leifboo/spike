@@ -52,6 +52,7 @@ SpkUnknown *Spk_badExpr;
 SpkUnknown *Spk_blockCopy;
 SpkUnknown *Spk_cannotReenterBlock;
 SpkUnknown *Spk_cannotReturn;
+SpkUnknown *Spk_compoundExpression;
 SpkUnknown *Spk_doesNotUnderstand;
 SpkUnknown *Spk_failOnError;
 SpkUnknown *Spk_importModule;
@@ -162,6 +163,7 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_blockCopy,                     "blockCopy"                   },
     { &Spk_cannotReenterBlock,            "cannotReenterBlock"          },
     { &Spk_cannotReturn,                  "cannotReturn"                },
+    { &Spk_compoundExpression,            "compoundExpression"          },
     { &Spk_doesNotUnderstand,             "doesNotUnderstand:"          },
     { &Spk_failOnError,                   "failOnError"                 },
     { &Spk_importModule,                  "importModule"                },
