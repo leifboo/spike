@@ -32,6 +32,47 @@ static SpkUnknown *Class_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnkn
     return result;
 }
 
+static SpkUnknown *Class_subclass(SpkUnknown *_self, SpkUnknown *args, SpkUnknown *arg1) {
+    SpkBehavior *self;
+    SpkUnknown *name, *instVarCount, *classVarCount;
+    
+    self = (SpkBehavior *)_self;
+    
+    if (!Spk_IsArgs(args)) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "argument list expected");
+        goto unwind;
+    }
+    if (Spk_ArgsSize(args) != 3) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "wrong number of arguments");
+        goto unwind;
+    }
+    
+    /* subclass:instVarCount:classVarCount: */
+    name = Spk_GetArg(args, 0);
+    instVarCount = Spk_GetArg(args, 1);
+    classVarCount = Spk_GetArg(args, 2);
+    
+    if (!SpkHost_IsSymbol(name)) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a symbol is required");
+        goto unwind;
+    }
+    if (!SpkHost_IsInteger(instVarCount) ||
+        !SpkHost_IsInteger(classVarCount)) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
+        goto unwind;
+    }
+    
+    /* XXX: module? */
+    return (SpkUnknown *)SpkClass_New(
+        name, self,
+        (size_t)SpkHost_IntegerAsCLong(instVarCount),
+        (size_t)SpkHost_IntegerAsCLong(classVarCount)
+        );
+
+ unwind:
+    return 0;
+}
+
 
 /*------------------------------------------------------------------------*/
 /* class template */
@@ -48,6 +89,8 @@ static SpkAccessorTmpl accessors[] = {
 
 static SpkMethodTmpl methods[] = {
     { "printString", SpkNativeCode_ARGS_0, &Class_printString },
+    { "subclass:instVarCount:classVarCount:",
+      SpkNativeCode_ARGS_ARRAY, &Class_subclass },
     { 0, 0, 0 }
 };
 

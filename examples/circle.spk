@@ -1,28 +1,59 @@
 #!/usr/bin/env spike-1
 
-main(argv) {
-    var sourceFilename, stream;
-    var st, notifier;
-    var parser, tree;
-    var module;
+class Color {
+    red() { self.green(); }
+    green() { self.blue(); }
+    blue() { stdout.printf("blue: %s\n", self.printString); }
+}
+
+createClass() {
+    var myClass;
     
-    sourceFilename = argv[1];
-    stream = FileStream.open(sourceFilename, "r");
+    myClass = (Color)
+              subclass: $Foo
+              instVarCount: 4
+              classVarCount: 2;
+    stdout.printf("created class: %s\n", myClass.printString);
+    
+    var myInstance;
+    myInstance = myClass.new();
+    myInstance.blue();
+}
+
+interpreter(argv) {
+    var sourceFilename = argv[1];
+    var stream = FileStream.open(sourceFilename, "r");
     if (stream == null) {
         stderr.printf("%s: cannot open '%s'\n", argv[0], sourceFilename);
         return 1;
     }
     
-    st = SymbolTable.new();
-    notifier = Notifier.new(stderr);
+    var st = SymbolTable.new();
+    var notifier = Notifier.new(stderr);
     
-    parser = Parser.new();
-    tree = parser.parse(stream, st);
+    var parser = Parser.new();
+    var tree = parser.parse(stream, st);
     tree = tree.asModuleDef();
     tree.check(st, notifier);
-    module = tree.generateCode();
     
-    stdout.printf("module: %s\n", module.printString);
+    var module = tree.generateCode();
     
+    var newArgv = Array.new(argv.size - 1);
+    newArgv[0] = sourceFilename;
+    var i;
+    for (i = 1; i < newArgv.size; ++i) {
+        newArgv[i] = argv[i + 1];
+    }
+    
+    stdout.printf("---- running %s\n", sourceFilename);
+    module.main(newArgv);
+    
+    return 0;
+}
+
+main(argv) {
+    createClass();
+    if (argv.size > 1)
+        return interpreter(argv);
     return 0;
 }
