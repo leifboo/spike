@@ -75,6 +75,8 @@ enum SpkOpcode {
     Spk_OPCODE_ARG,
     Spk_OPCODE_ARG_VAR,
     Spk_OPCODE_NATIVE,
+    Spk_OPCODE_NATIVE_PUSH_INST_VAR,
+    Spk_OPCODE_NATIVE_STORE_INST_VAR,
     Spk_OPCODE_RESTORE_SENDER,
     Spk_OPCODE_RESTORE_CALLER,
     Spk_OPCODE_THUNK,
@@ -112,6 +114,14 @@ struct SpkMethod {
 };
 
 
+struct SpkMessage {
+    SpkObject base;
+    unsigned int namespace;
+    SpkUnknown *selector;
+    SpkUnknown *arguments;
+};
+
+
 extern SpkUnknown *Spk_null, *Spk_uninit, *Spk_void;
 
 extern struct SpkBehavior *Spk_ClassMessage,*Spk_ClassMethod, *Spk_ClassThunk, *Spk_ClassContext, *Spk_ClassMethodContext, *Spk_ClassBlockContext;
@@ -140,7 +150,6 @@ void SpkInterpreter_Init(SpkInterpreter *, SpkProcessorScheduler *);
 SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *);
 SpkUnknown *SpkInterpreter_SendMessage(SpkInterpreter *, SpkUnknown *,
                                        unsigned int, SpkUnknown *, SpkUnknown *);
-SpkMethod *SpkInterpreter_ThisMethod(SpkInterpreter *);
 void SpkInterpreter_SynchronousSignal(SpkInterpreter *, SpkSemaphore *);
 void SpkInterpreter_TransferTo(SpkInterpreter *, SpkFiber *);
 SpkFiber *SpkInterpreter_WakeHighestPriority(SpkInterpreter *);

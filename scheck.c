@@ -86,7 +86,8 @@ static SpkUnknown *checkVarDefList(Expr *defList,
             def = expr;
         }
         if (def->kind != Spk_EXPR_NAME) {
-            _(badExpr(def, "invalid variable definition", checker));
+            if (pass == 1)
+                _(badExpr(def, "invalid variable definition", checker));
             continue;
         }
         if (pass == 1)

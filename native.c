@@ -10,29 +10,7 @@
 #include <stdarg.h>
 
 
-typedef struct SpkNativeAccessor {
-    SpkMethod base;
-    SpkInstVarType type;
-    size_t offset;
-} SpkNativeAccessor;
-
-typedef struct SpkNativeAccessorSubclass {
-    SpkNativeAccessor base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkNativeAccessorSubclass;
-
-
-typedef SpkMethod *NewMethodHook(size_t);
-
-
-static SpkUnknown *nativeReadAccessor(SpkUnknown *, SpkUnknown *, SpkUnknown *);
-static SpkUnknown *nativeWriteAccessor(SpkUnknown *, SpkUnknown *, SpkUnknown *);
-
-
-SpkBehavior *Spk_ClassNativeAccessor;
-
-
-static SpkMethod *newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCode, NewMethodHook *newMethodHook) {
+SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) {
     SpkMethod *newMethod;
     size_t argumentCount, variadic;
     size_t size;
@@ -63,7 +41,7 @@ static SpkMethod *newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode native
     default: assert(0); /* XXX */
     }
     
-    newMethod = (*newMethodHook)(size);
+    newMethod = SpkMethod_New(size);
     newMethod->nativeCode = nativeCode;
     
     ip = SpkMethod_OPCODES(newMethod);
@@ -107,36 +85,6 @@ static SpkMethod *newNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode native
     *ip++ = Spk_OPCODE_RET;
     
     return newMethod;
-}
-
-SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) {
-    return newNativeMethod(flags, nativeCode, &SpkMethod_New);
-}
-
-SpkMethod *SpkNativeAccessor_New(size_t size) {
-    return (SpkMethod *)SpkObject_NewVar(Spk_ClassNativeAccessor, size);
-}
-
-static SpkNativeAccessor *newNativeAccessor(unsigned int type, size_t offset,
-                                            SpkNativeCodeFlags flags, SpkNativeCode nativeCode) {
-    SpkNativeAccessor *newAccessor;
-    
-    if (0) {
-        /* XXX: See the comment in SpkInterpreter_ThisMethod() */
-        flags |= SpkNativeCode_LEAF;
-    }
-    newAccessor = (SpkNativeAccessor *)newNativeMethod(flags, nativeCode, &SpkNativeAccessor_New);
-    newAccessor->type = type;
-    newAccessor->offset = offset;
-    return newAccessor;
-}
-
-struct SpkMethod *Spk_NewNativeReadAccessor(unsigned int type, size_t offset) {
-    return (SpkMethod *)newNativeAccessor(type, offset, SpkNativeCode_ARGS_0, &nativeReadAccessor);
-}
-
-struct SpkMethod *Spk_NewNativeWriteAccessor(unsigned int type, size_t offset) {
-    return (SpkMethod *)newNativeAccessor(type, offset, SpkNativeCode_ARGS_1, &nativeWriteAccessor);
 }
 
 
@@ -292,77 +240,4 @@ size_t Spk_ArgsSize(SpkUnknown *args) {
 
 SpkUnknown *Spk_GetArg(SpkUnknown *args, size_t index) {
     return SpkHost_GetArg(args, index);
-}
-
-
-/*------------------------------------------------------------------------*/
-/* class NativeAccessor */
-
-static SpkMethodTmpl NativeAccessorMethods[] = {
-    { 0, 0, 0}
-};
-
-SpkClassTmpl Spk_ClassNativeAccessorTmpl = {
-    "NativeAccessor", {
-        /*accessors*/ 0,
-        NativeAccessorMethods,
-        /*lvalueMethods*/ 0,
-        offsetof(SpkNativeAccessorSubclass, variables),
-        sizeof(SpkOpcode)
-    }, /*meta*/ {
-    }
-};
-
-static SpkUnknown *nativeReadAccessor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkNativeAccessor *accessor;
-    char *addr;
-    SpkUnknown *result;
-    
-    accessor = Spk_CAST(NativeAccessor, SpkInterpreter_ThisMethod(theInterpreter));
-    assert(accessor);
-    
-    addr = (char *)self + accessor->offset;
-    
-    switch (accessor->type) {
-    case Spk_T_OBJECT:
-        result = *(SpkUnknown **)addr;
-        if (!result) {
-            result = Spk_null;
-        }
-        Spk_INCREF(result);
-        break;
-        
-    case Spk_T_SIZE:
-        result = SpkHost_IntegerFromCLong(*(long *)addr);
-        break;
-        
-    default:
-        assert(0 && "XXX");
-    }
-    
-    return result;
-}
-
-static SpkUnknown *nativeWriteAccessor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkNativeAccessor *accessor;
-    char *addr;
-    
-    accessor = Spk_CAST(NativeAccessor, SpkInterpreter_ThisMethod(theInterpreter));
-    assert(accessor);
-    
-    addr = (char *)self + accessor->offset;
-    
-    switch (accessor->type) {
-    case Spk_T_OBJECT:
-        Spk_INCREF(arg0);
-        Spk_XDECREF(*(SpkUnknown **)addr);
-        *(SpkUnknown **)addr = arg0;
-        break;
-        
-    default:
-        assert(0 && "XXX");
-    }
-    
-    Spk_INCREF(Spk_void);
-    return Spk_void;
 }

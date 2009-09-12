@@ -1,6 +1,7 @@
 
 #include "behavior.h"
 
+#include "cgen.h"
 #include "class.h"
 #include "host.h"
 #include "interp.h"
@@ -121,13 +122,17 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *temp
             
             messageSelector = SpkHost_SymbolFromCString(accessorTmpl->name);
             if (accessorTmpl->flags & SpkAccessor_READ) {
-                method = Spk_NewNativeReadAccessor(accessorTmpl->type, accessorTmpl->offset);
+                method = SpkCodeGen_NewNativeAccessor(SpkAccessor_READ,
+                                                      accessorTmpl->type,
+                                                      accessorTmpl->offset);
                 SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_RVALUE, messageSelector, method);
                 Spk_DECREF(method);
             }
             
             if (accessorTmpl->flags & SpkAccessor_WRITE) {
-                method = Spk_NewNativeWriteAccessor(accessorTmpl->type, accessorTmpl->offset);
+                method = SpkCodeGen_NewNativeAccessor(SpkAccessor_WRITE,
+                                                      accessorTmpl->type,
+                                                      accessorTmpl->offset);
                 SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_LVALUE, messageSelector, method);
                 Spk_DECREF(method);
             }

@@ -50,8 +50,6 @@ typedef SpkUnknown *(*SpkNativeCode)(SpkUnknown *, SpkUnknown *, SpkUnknown *);
 
 
 struct SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags, SpkNativeCode);
-struct SpkMethod *Spk_NewNativeReadAccessor(unsigned int, size_t);
-struct SpkMethod *Spk_NewNativeWriteAccessor(unsigned int, size_t);
 
 SpkUnknown *Spk_SendMessage(struct SpkInterpreter *, SpkUnknown *, unsigned int, SpkUnknown *, SpkUnknown *);
 
@@ -73,10 +71,6 @@ void Spk_HaltWithString(int, SpkUnknown *);
 int Spk_IsArgs(SpkUnknown *);
 size_t Spk_ArgsSize(SpkUnknown *);
 SpkUnknown *Spk_GetArg(SpkUnknown *, size_t);
-
-
-extern struct SpkBehavior *Spk_ClassNativeAccessor;
-extern struct SpkClassTmpl Spk_ClassNativeAccessorTmpl;
 
 
 #endif /* __spk_native_h__ */

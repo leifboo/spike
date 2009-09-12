@@ -1963,3 +1963,118 @@ SpkModule *SpkCodeGen_GenerateCode(Stmt *tree) {
     Spk_XDECREF(module);
     return 0;
 }
+
+
+/****************************************************************************/
+
+SpkMethod *SpkCodeGen_NewNativeAccessor(unsigned int kind,
+                                        unsigned int type,
+                                        size_t offset)
+{
+    CodeGen gcgen;
+    OpcodeGen *cgen; MethodCodeGen *mcg;
+    int run;
+    size_t stackSize = 0;
+    
+    ASSERT(kind == SpkAccessor_READ || kind == SpkAccessor_WRITE,
+           "invalid kind");
+    
+    /* initialize method code generator */
+    cgen = &gcgen.u.o;
+    cgen->generic = &gcgen;
+    cgen->generic->kind = CODE_GEN_METHOD;
+    cgen->generic->outer = 0;
+    cgen->generic->module = 0;
+    cgen->generic->level = 0;
+    mcg = &gcgen.u.o.u.method;
+    mcg->opcodeGen = &cgen->generic->u.o;
+    mcg->opcodeGen->generic = cgen->generic;
+    mcg->methodInstance = 0;
+    cgen->varArgList = 0;
+    cgen->localCount = 0;
+    
+    switch (kind) {
+    case SpkAccessor_READ:
+        cgen->argumentCount = 0;
+        break;
+    case SpkAccessor_WRITE:
+        cgen->argumentCount = 1;
+        break;
+    }
+    
+    rewindOpcodes(cgen, 0);
+    
+    for (run = 0; run < 2; ++run) {
+        switch (run) {
+        case 0:
+            /* dry run to compute offsets */
+            stackSize = 0;
+            break;
+        case 1:
+            /* now generate code for real */
+            stackSize = cgen->stackSize;
+            ASSERT(stackSize <= Spk_LEAF_MAX_STACK_SIZE,
+                   "stack too big for leaf");
+            mcg->methodInstance = SpkMethod_New(cgen->currentOffset);
+            rewindOpcodes(cgen, SpkMethod_OPCODES(mcg->methodInstance));
+            break;
+        }
+        
+        /* leaf */
+        EMIT_OPCODE(Spk_OPCODE_LEAF);
+        
+        /* arg */
+        cgen->stackSize = stackSize;
+        EMIT_OPCODE(Spk_OPCODE_ARG);
+        encodeUnsignedInt(cgen->argumentCount, cgen);
+        encodeUnsignedInt(cgen->localCount, cgen);
+        encodeUnsignedInt(cgen->stackSize, cgen);
+        cgen->stackSize = 0;
+        
+        switch (kind) {
+        case SpkAccessor_READ:
+            /* push result */
+            EMIT_OPCODE(Spk_OPCODE_NATIVE_PUSH_INST_VAR);
+            encodeUnsignedInt(type, cgen);
+            encodeUnsignedInt(offset, cgen);
+            tallyPush(cgen);
+            break;
+            
+        case SpkAccessor_WRITE:
+            /* push argument variable */
+            EMIT_OPCODE(Spk_OPCODE_PUSH_LOCAL);
+            encodeUnsignedInt(0, cgen);
+            tallyPush(cgen);
+            /* store in native field */
+            EMIT_OPCODE(Spk_OPCODE_NATIVE_STORE_INST_VAR);
+            encodeUnsignedInt(type, cgen);
+            encodeUnsignedInt(offset, cgen);
+            /* pop */
+            EMIT_OPCODE(Spk_OPCODE_POP);
+            --cgen->stackPointer;
+            
+            /* push void result */
+            EMIT_OPCODE(Spk_OPCODE_PUSH_VOID);
+            tallyPush(cgen);
+            
+            break;
+        }
+        
+        
+        /* restore sender */
+        EMIT_OPCODE(Spk_OPCODE_RESTORE_SENDER);
+        
+        /* ret */
+        EMIT_OPCODE(Spk_OPCODE_RET);
+    }
+    
+    ASSERT(cgen->currentOffset == mcg->methodInstance->base.size,
+           "bad method size");
+    ASSERT(cgen->stackSize == stackSize,
+           "bad stack size");
+    
+    return mcg->methodInstance;
+    
+ unwind:
+    return 0;
+}

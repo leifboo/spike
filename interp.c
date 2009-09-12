@@ -84,14 +84,6 @@ struct SpkThunk {
 };
 
 
-struct SpkMessage {
-    SpkObject base;
-    unsigned int namespace;
-    SpkUnknown *selector;
-    SpkUnknown *arguments;
-};
-
-
 struct SpkInterpreter {
     SpkObject base;
 
@@ -1508,6 +1500,52 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             }
             break; }
             
+        case Spk_OPCODE_NATIVE_PUSH_INST_VAR: {
+            SpkInstVarType type;
+            size_t offset;
+            char *addr;
+            
+            DECODE_UINT(type);
+            DECODE_UINT(offset);
+            addr = (char *)receiver + offset;
+            switch (type) {
+            case Spk_T_OBJECT:
+                tmp = *(SpkUnknown **)addr;
+                if (!tmp)
+                    tmp = Spk_null;
+                Spk_INCREF(tmp);
+                break;
+            case Spk_T_SIZE:
+                tmp = SpkHost_IntegerFromCLong(*(size_t *)addr);
+                break;
+            default:
+                unknownOpcode(self);
+                tmp = Spk_uninit;
+                Spk_INCREF(tmp);
+            }
+            PUSH(tmp);
+            break; }
+            
+        case Spk_OPCODE_NATIVE_STORE_INST_VAR: {
+            SpkInstVarType type;
+            size_t offset;
+            char *addr;
+            
+            DECODE_UINT(type);
+            DECODE_UINT(offset);
+            addr = (char *)receiver + offset;
+            tmp = STACK_TOP();
+            switch (type) {
+            case Spk_T_OBJECT:
+                Spk_INCREF(tmp);
+                Spk_XDECREF(*(SpkUnknown **)addr);
+                *(SpkUnknown **)addr = tmp;
+                break;
+            default:
+                unknownOpcode(self);
+            }
+            break; }
+            
         case Spk_OPCODE_RESTORE_SENDER: {
             SpkContext *thisCntx, *caller;
             /* restore sender */
@@ -1769,11 +1807,6 @@ SpkUnknown *SpkInterpreter_SendMessage(
     }
     
     return result;
-}
-
-SpkMethod *SpkInterpreter_ThisMethod(SpkInterpreter *interpreter) {
-    /* XXX: Make this work inside leaf methods. */
-    return interpreter->activeContext->homeContext->u.m.method;
 }
 
 

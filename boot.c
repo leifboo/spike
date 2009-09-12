@@ -284,7 +284,6 @@ static void initCoreClasses(void) {
     
     /**/Spk_ClassVariableObject = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassVariableObjectTmpl, Spk_ClassObject, Spk_builtInModule);
     /******/Spk_ClassMethod = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassMethodTmpl, Spk_ClassVariableObject, Spk_builtInModule);
-    /**********/Spk_ClassNativeAccessor = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassNativeAccessorTmpl, Spk_ClassMethod, Spk_builtInModule);
     
 #ifndef MALTIPY
     /* for building selectors */
@@ -314,12 +313,10 @@ static void initCoreClasses(void) {
     SpkBehavior_AddMethodsFromTemplate(Spk_ClassModule,         &Spk_ClassModuleTmpl.thisClass);
     SpkBehavior_AddMethodsFromTemplate(Spk_ClassVariableObject, &Spk_ClassVariableObjectTmpl.thisClass);
     SpkBehavior_AddMethodsFromTemplate(Spk_ClassMethod,         &Spk_ClassMethodTmpl.thisClass);
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassNativeAccessor, &Spk_ClassNativeAccessorTmpl.thisClass);
     
     SpkBehavior_AddMethodsFromTemplate(Spk_ClassModule->base.klass,         &Spk_ClassModuleTmpl.metaclass);
     SpkBehavior_AddMethodsFromTemplate(Spk_ClassVariableObject->base.klass, &Spk_ClassVariableObjectTmpl.metaclass);
     SpkBehavior_AddMethodsFromTemplate(Spk_ClassMethod->base.klass,         &Spk_ClassMethodTmpl.metaclass);
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassNativeAccessor->base.klass, &Spk_ClassNativeAccessorTmpl.metaclass);
     
 #ifndef MALTIPY
     SpkBehavior_AddMethodsFromTemplate(Spk_ClassIdentityDictionary, &Spk_ClassIdentityDictionaryTmpl.thisClass);
