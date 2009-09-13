@@ -11,6 +11,7 @@
 #include "rodata.h"
 #include "st.h"
 #include "tree.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -83,6 +84,11 @@ typedef struct OpcodeGen {
     unsigned int nContextRefs;
     int inLeaf;
     
+    size_t currentLineOffset;
+    SpkOpcode *lineCodesBegin, *lineCodesEnd;
+    size_t currentLineLabel;
+    unsigned int currentLineNo;
+    
     union {
         BlockCodeGen block;
         MethodCodeGen method;
@@ -93,6 +99,7 @@ typedef struct ClassCodeGen {
     struct CodeGen *generic;
     Stmt *classDef;
     SpkBehavior *classInstance;
+    SpkUnknown *source;
 } ClassCodeGen;
 
 typedef struct ModuleCodeGen {
@@ -126,19 +133,26 @@ typedef struct CodeGen {
 do { if (cgen->opcodesEnd) *cgen->opcodesEnd++ = (opcode); \
 cgen->currentOffset++; } while (0)
 
-#define SET_OFFSET(n) \
+#define SET_STMT_OFFSET(n) \
 do { if (cgen->opcodesEnd) \
 ASSERT((n)->codeOffset == cgen->currentOffset, "bad code offset"); \
 else (n)->codeOffset = cgen->currentOffset; } while (0)
 
-#define SET_END(n) \
+#define SET_EXPR_OFFSET(n) if (setExprOffset((n), cgen)) ; else goto unwind
+
+#define SET_EXPR_END(n) \
 do { if (cgen->opcodesEnd) \
 ASSERT((n)->endLabel == cgen->currentOffset, "bad end label"); \
 else (n)->endLabel = cgen->currentOffset; } while (0)
 
+#define EMIT_LINE_CODE(code) \
+do { if (cgen->lineCodesEnd) *cgen->lineCodesEnd++ = (code); \
+cgen->currentLineOffset++; } while (0)
+
+
 static unsigned int getLiteralIndex(SpkUnknown *, OpcodeGen *);
 
-static void encodeUnsignedInt(unsigned long value, OpcodeGen *cgen) {
+static void encodeUnsignedIntEx(unsigned long value, int which, OpcodeGen *cgen) {
     SpkOpcode byte;
     
     do {
@@ -147,11 +161,14 @@ static void encodeUnsignedInt(unsigned long value, OpcodeGen *cgen) {
         if (value) {
             byte |= 0x80;
         }
-        EMIT_OPCODE(byte);
+        switch (which) {
+        case 0: EMIT_OPCODE(byte); break;
+        case 1: EMIT_LINE_CODE(byte); break;
+        }
     } while (value);
 }
 
-static void encodeSignedInt(long value, OpcodeGen *cgen) {
+static void encodeSignedIntEx(long value, int which, OpcodeGen *cgen) {
     int more, negative;
     SpkOpcode byte;
     
@@ -170,8 +187,46 @@ static void encodeSignedInt(long value, OpcodeGen *cgen) {
         } else {
             byte |= 0x80;
         }
-        EMIT_OPCODE(byte);
+        switch (which) {
+        case 0: EMIT_OPCODE(byte); break;
+        case 1: EMIT_LINE_CODE(byte); break;
+        }
     } while (more);
+}
+
+static void encodeUnsignedInt(unsigned long value, OpcodeGen *cgen) {
+    encodeUnsignedIntEx(value, 0, cgen);
+}
+
+static void encodeSignedInt(long value, OpcodeGen *cgen) {
+    encodeSignedIntEx(value, 0, cgen);
+}
+
+static int setExprOffset(Expr *expr, OpcodeGen *cgen) {
+    if (cgen->opcodesEnd) {
+        ASSERT(expr->codeOffset == cgen->currentOffset, "bad code offset");
+    } else {
+        expr->codeOffset = cgen->currentOffset;
+    }
+    
+    if (expr->lineNo != cgen->currentLineNo &&
+        cgen->currentLineLabel < cgen->currentOffset) {
+        size_t codeDelta; long lineDelta;
+        
+        /* Code offsets always increase; but line numbers might jump
+           backwards -- at least in theory -- depending upon the
+           evaluation order. */
+        codeDelta = cgen->currentOffset - cgen->currentLineLabel;
+        lineDelta = (long)expr->lineNo - (long)cgen->currentLineNo;
+        encodeUnsignedIntEx(codeDelta, 1, cgen);
+        encodeSignedIntEx(lineDelta, 1, cgen);
+        cgen->currentLineLabel = cgen->currentOffset;
+        cgen->currentLineNo = expr->lineNo;
+    }
+    return 1;
+
+ unwind:
+    return 0;
 }
 
 static SpkUnknown *fixUpBranch(size_t target, OpcodeGen *cgen) {
@@ -365,7 +420,9 @@ static int inLeaf(OpcodeGen *cgen) {
         !cgen->varArgList;
 }
 
-static void rewindOpcodes(OpcodeGen *cgen, SpkOpcode *opcodes) {
+static void rewindOpcodes(OpcodeGen *cgen,
+                          SpkOpcode *opcodes,
+                          SpkOpcode *lineCodes) {
     cgen->currentOffset = 0;
     cgen->opcodesBegin = cgen->opcodesEnd = opcodes;
     cgen->stackPointer = cgen->stackSize = 0;
@@ -374,6 +431,10 @@ static void rewindOpcodes(OpcodeGen *cgen, SpkOpcode *opcodes) {
     if (!opcodes) {
         cgen->inLeaf = 0;
     }
+    cgen->currentLineOffset = 0;
+    cgen->lineCodesBegin = cgen->lineCodesEnd = lineCodes;
+    cgen->currentLineLabel = 0;
+    cgen->currentLineNo = 0;
 }
 
 
@@ -467,7 +528,7 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     if (super) {
         *super = 0;
     }
-    SET_OFFSET(expr);
+    SET_EXPR_OFFSET(expr);
     
     switch (expr->kind) {
     case Spk_EXPR_LITERAL:
@@ -685,7 +746,7 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         }
     }
     
-    SET_END(expr);
+    SET_EXPR_END(expr);
     
     Spk_INCREF(Spk_void);
     return Spk_void;
@@ -880,7 +941,7 @@ static SpkUnknown *emitBranchForOneExpr(Expr *expr, int cond,
         if (pushOpcode == Spk_OPCODE_PUSH_FALSE ||
             pushOpcode == Spk_OPCODE_PUSH_TRUE) {
             int killCode = pushOpcode == Spk_OPCODE_PUSH_TRUE ? cond : !cond;
-            SET_OFFSET(expr);
+            SET_EXPR_OFFSET(expr);
             if (killCode) {
                 if (dup) {
                     EMIT_OPCODE(pushOpcode);
@@ -889,7 +950,7 @@ static SpkUnknown *emitBranchForOneExpr(Expr *expr, int cond,
                 }
                 _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, label, cgen));
             }
-            SET_END(expr);
+            SET_EXPR_END(expr);
             break;
         } /* else fall through */
     default:
@@ -910,7 +971,7 @@ static SpkUnknown *emitBranchForOneExpr(Expr *expr, int cond,
         }
         break;
     case Spk_EXPR_AND:
-        SET_OFFSET(expr);
+        SET_EXPR_OFFSET(expr);
         if (cond) {
             /* branch if true */
             _(emitBranchForExpr(expr->left, 0, fallThroughLabel,
@@ -924,10 +985,10 @@ static SpkUnknown *emitBranchForOneExpr(Expr *expr, int cond,
             _(emitBranchForExpr(expr->right, 0, label, fallThroughLabel,
                                 dup, cgen));
         }
-        SET_END(expr);
+        SET_EXPR_END(expr);
         break;
     case Spk_EXPR_OR:
-        SET_OFFSET(expr);
+        SET_EXPR_OFFSET(expr);
         if (cond) {
             /* branch if true */
             _(emitBranchForExpr(expr->left, 1, label, expr->right->codeOffset,
@@ -941,10 +1002,10 @@ static SpkUnknown *emitBranchForOneExpr(Expr *expr, int cond,
             _(emitBranchForExpr(expr->right, 0, label, fallThroughLabel,
                                 dup, cgen));
         }
-        SET_END(expr);
+        SET_EXPR_END(expr);
         break;
     case Spk_EXPR_COND:
-        SET_OFFSET(expr);
+        SET_EXPR_OFFSET(expr);
         _(emitBranchForExpr(expr->cond, 0, expr->right->codeOffset,
                             expr->left->codeOffset, 0, cgen));
         _(emitBranchForExpr(expr->left, cond, label, fallThroughLabel,
@@ -952,7 +1013,7 @@ static SpkUnknown *emitBranchForOneExpr(Expr *expr, int cond,
         _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, fallThroughLabel, cgen));
         _(emitBranchForExpr(expr->right, cond, label, fallThroughLabel,
                             dup, cgen));
-        SET_END(expr);
+        SET_EXPR_END(expr);
         break;
     }
     
@@ -992,10 +1053,10 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     OpcodeGen *cgen; BlockCodeGen *bcg;
     Stmt *body;
     Expr *valueExpr, voidDef, voidExpr;
-    size_t codeSize, stackSize;
-    SpkOpcode *opcodesBegin;
+    size_t endLabel, stackSize;
+    SpkOpcode *opcodesBegin, *lineCodesBegin;
     CodeGen *home;
-    
+
     memset(&voidDef, 0, sizeof(voidDef));
     memset(&voidExpr, 0, sizeof(voidExpr));
     voidDef.kind = Spk_EXPR_NAME;
@@ -1021,14 +1082,22 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     cgen->varArgList = 0;
     cgen->localCount = expr->aux.block.localCount;
     
-    rewindOpcodes(cgen, 0);
+    rewindOpcodes(cgen, 0, 0);
     opcodesBegin = 0;
+    lineCodesBegin = 0;
     switch (outer->kind) {
     case CODE_GEN_BLOCK:
     case CODE_GEN_METHOD:
-        opcodesBegin = outer->u.o.opcodesBegin
-                       ? outer->u.o.opcodesBegin + outer->u.o.currentOffset
-                       : 0;
+        cgen->currentOffset = outer->u.o.currentOffset;
+        if (outer->u.o.opcodesEnd) {
+            opcodesBegin = outer->u.o.opcodesEnd;
+        }
+        cgen->currentLineOffset = outer->u.o.currentLineOffset;
+        if (outer->u.o.lineCodesEnd) {
+            lineCodesBegin = outer->u.o.lineCodesEnd;
+        }
+        cgen->currentLineLabel = outer->u.o.currentLineLabel;
+        cgen->currentLineNo = outer->u.o.currentLineNo;
         break;
     default:
         ASSERT(0, "block not allowed here");
@@ -1042,18 +1111,28 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     if (opcodesBegin) {
         /* now generate code for real */
         
-        codeSize = cgen->currentOffset;
+        endLabel = cgen->currentOffset;
         stackSize = cgen->stackSize;
-        rewindOpcodes(cgen, opcodesBegin);
+        rewindOpcodes(cgen, opcodesBegin, lineCodesBegin);
+        cgen->currentOffset = outer->u.o.currentOffset;
+        cgen->currentLineOffset = outer->u.o.currentLineOffset;
+        cgen->currentLineLabel = outer->u.o.currentLineLabel;
+        cgen->currentLineNo = outer->u.o.currentLineNo;
         
         _(emitCodeForBlockBody(body, valueExpr, cgen));
         
-        ASSERT(cgen->currentOffset == codeSize, "bad code size");
-        ASSERT(cgen->stackSize == stackSize, "bad stack size");
+        ASSERT(cgen->currentOffset == endLabel, "bad code size for block");
+        ASSERT(cgen->stackSize == stackSize, "bad stack size for block");
+        
     }
     
-    outer->u.o.currentOffset += cgen->currentOffset;
+    outer->u.o.currentOffset = cgen->currentOffset;
     outer->u.o.opcodesEnd = cgen->opcodesEnd;
+    
+    outer->u.o.currentLineOffset = cgen->currentLineOffset;
+    outer->u.o.lineCodesEnd = cgen->lineCodesEnd;
+    outer->u.o.currentLineLabel = cgen->currentLineLabel;
+    outer->u.o.currentLineNo = cgen->currentLineNo;
     
     /* Guarantee that the home context is at least as big as the
      * biggest child block context needs to be.  See
@@ -1113,7 +1192,7 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
     /* for branching to the next statement in the control flow */
     nextLabel = stmt->next ? stmt->next->codeOffset : parentNextLabel;
     
-    SET_OFFSET(stmt);
+    SET_STMT_OFFSET(stmt);
     
     switch (stmt->kind) {
     case Spk_STMT_BREAK:
@@ -1279,7 +1358,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     cgen->argumentCount = stmt->u.method.argumentCount;
     cgen->varArgList = stmt->u.method.argList.var ? 1 : 0;
     cgen->localCount = stmt->u.method.localCount;
-    rewindOpcodes(cgen, 0);
+    rewindOpcodes(cgen, 0, 0);
     
     body = stmt->top;
     ASSERT(body->kind == Spk_STMT_COMPOUND,
@@ -1302,7 +1381,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         stackSize = cgen->stackSize;
         
         /* re-compute offsets w/o save & restore */
-        rewindOpcodes(cgen, 0);
+        rewindOpcodes(cgen, 0, 0);
         cgen->inLeaf = 1;
         if (thunk) EMIT_OPCODE(Spk_OPCODE_THUNK);
         leaf(cgen);
@@ -1311,7 +1390,13 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         
         /* now generate code for real */
         mcg->methodInstance = SpkMethod_New(cgen->currentOffset);
-        rewindOpcodes(cgen, SpkMethod_OPCODES(mcg->methodInstance));
+        mcg->methodInstance->debug.lineCodeTally
+            = cgen->currentLineOffset;
+        mcg->methodInstance->debug.lineCodes
+            = (SpkOpcode *)malloc(cgen->currentLineOffset);
+        rewindOpcodes(cgen,
+                      SpkMethod_OPCODES(mcg->methodInstance),
+                      mcg->methodInstance->debug.lineCodes);
         if (thunk) EMIT_OPCODE(Spk_OPCODE_THUNK);
         leaf(cgen);
         _(emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen));
@@ -1322,7 +1407,13 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
 
         /* now generate code for real */
         mcg->methodInstance = SpkMethod_New(cgen->currentOffset);
-        rewindOpcodes(cgen, SpkMethod_OPCODES(mcg->methodInstance));
+        mcg->methodInstance->debug.lineCodeTally
+            = cgen->currentLineOffset;
+        mcg->methodInstance->debug.lineCodes
+            = (SpkOpcode *)malloc(cgen->currentLineOffset);
+        rewindOpcodes(cgen,
+                      SpkMethod_OPCODES(mcg->methodInstance),
+                      mcg->methodInstance->debug.lineCodes);
     
         if (thunk) EMIT_OPCODE(Spk_OPCODE_THUNK);
         cgen->stackSize = stackSize;
@@ -1332,11 +1423,26 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         _(emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen));
         _(emitCodeForStmt(&sentinel, 0, 0, 0, cgen));
     }
+    
+    { /* find source pathname */
+        CodeGen *cg;
+        
+        for (cg = outer; cg; cg = cg->outer) {
+            if (cg->kind == CODE_GEN_CLASS && cg->u.klass.source) {
+                Spk_INCREF(cg->u.klass.source);
+                mcg->methodInstance->debug.source = cg->u.klass.source;
+                break;
+            }
+        }
+    }
 
     ASSERT(cgen->currentOffset == mcg->methodInstance->base.size,
            "bad code size");
     ASSERT(cgen->stackSize == stackSize,
            "bad stack size");
+    
+    ASSERT(cgen->currentLineOffset == mcg->methodInstance->debug.lineCodeTally,
+           "bad line code size");
     
     for (s = body->top; s; s = s->next) {
         switch (s->kind) {
@@ -1405,6 +1511,9 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, CodeGen *cgen) {
             break;
 #endif /* MALTIPY */
         case Spk_STMT_PRAGMA_SOURCE:
+            Spk_INCREF(s->u.source);
+            Spk_XDECREF(cgen->u.klass.source);
+            cgen->u.klass.source = s->u.source;
             break;
         default:
             ASSERT(0, "executable code not allowed here");
@@ -1431,6 +1540,7 @@ static SpkUnknown *emitCodeForClass(Stmt *stmt, CodeGen *outer) {
     cgen->generic->outer = outer;
     cgen->generic->module = outer->module;
     cgen->classDef = stmt;
+    cgen->source = 0;
     cgen->generic->level = outer->level + 1;
     
     theClass = (SpkBehavior *)stmt->expr->u.def.initValue;
@@ -1604,7 +1714,7 @@ static SpkUnknown *generateImports(Stmt *stmtList, CodeGen *outer) {
     cgen->argumentCount = 1;
     cgen->varArgList = 0;
     cgen->localCount = 0;
-    rewindOpcodes(cgen, 0);
+    rewindOpcodes(cgen, 0, 0);
     
     for (run = 0; run < 2; ++run) {
         switch (run) {
@@ -1616,7 +1726,7 @@ static SpkUnknown *generateImports(Stmt *stmtList, CodeGen *outer) {
             /* now generate code for real */
             stackSize = cgen->stackSize;
             mcg->methodInstance = SpkMethod_New(cgen->currentOffset);
-            rewindOpcodes(cgen, SpkMethod_OPCODES(mcg->methodInstance));
+            rewindOpcodes(cgen, SpkMethod_OPCODES(mcg->methodInstance), 0);
             break;
         }
         
@@ -1738,6 +1848,7 @@ static SpkUnknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
     cgen->generic->module = moduleCodeGen;
     cgen->classDef = stmt;
     cgen->classInstance = moduleCodeGen->moduleClassInstance;
+    cgen->source = 0;
     cgen->generic->level = 1;
     
     _(emitCodeForClassBody(stmt->top, cgen->generic));
@@ -2002,7 +2113,7 @@ SpkMethod *SpkCodeGen_NewNativeAccessor(unsigned int kind,
         break;
     }
     
-    rewindOpcodes(cgen, 0);
+    rewindOpcodes(cgen, 0, 0);
     
     for (run = 0; run < 2; ++run) {
         switch (run) {
@@ -2016,7 +2127,7 @@ SpkMethod *SpkCodeGen_NewNativeAccessor(unsigned int kind,
             ASSERT(stackSize <= Spk_LEAF_MAX_STACK_SIZE,
                    "stack too big for leaf");
             mcg->methodInstance = SpkMethod_New(cgen->currentOffset);
-            rewindOpcodes(cgen, SpkMethod_OPCODES(mcg->methodInstance));
+            rewindOpcodes(cgen, SpkMethod_OPCODES(mcg->methodInstance), 0);
             break;
         }
         

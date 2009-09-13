@@ -110,6 +110,11 @@ struct SpkMethod {
         struct SpkMethod *first;
         struct SpkMethod *last;
     } nestedMethodList;
+    struct {
+        SpkUnknown *source;
+        size_t lineCodeTally;
+        SpkOpcode *lineCodes;
+    } debug;
     SpkNativeCode nativeCode;
 };
 

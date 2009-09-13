@@ -152,6 +152,33 @@ SpkClassTmpl Spk_ClassMessageTmpl = {
 };
 
 
+static void Method_zero(SpkObject *_self) {
+    SpkMethod *self = (SpkMethod *)_self;
+    (*Spk_ClassMethod->superclass->zero)(_self);
+    self->nextInScope = 0;
+    self->nestedClassList.first = 0;
+    self->nestedClassList.last = 0;
+    self->nestedMethodList.first = 0;
+    self->nestedMethodList.last = 0;
+    self->debug.source = 0;
+    self->debug.lineCodeTally = 0;
+    self->debug.lineCodes = 0;
+    self->nativeCode = 0;
+    return;
+}
+
+static void Method_dealloc(SpkObject *_self) {
+    SpkMethod *self = (SpkMethod *)_self;
+    if (self->debug.source) {
+        /* XXX: lazy */
+        Spk_DECREF(self->debug.source);
+        self->debug.source = 0;
+    }
+    free(self->debug.lineCodes);
+    self->debug.lineCodes = 0;
+    (*Spk_ClassMethod->superclass->dealloc)(_self);
+}
+
 typedef struct SpkMethodSubclass {
     SpkMethod base;
     SpkUnknown *variables[1]; /* stretchy */
@@ -167,7 +194,9 @@ SpkClassTmpl Spk_ClassMethodTmpl = {
         MethodMethods,
         /*lvalueMethods*/ 0,
         offsetof(SpkMethodSubclass, variables),
-        sizeof(SpkOpcode)
+        sizeof(SpkOpcode),
+        &Method_zero,
+        &Method_dealloc
     }, /*meta*/ {
     }
 };
@@ -459,19 +488,7 @@ SpkMessage *SpkMessage_New() {
 }
 
 SpkMethod *SpkMethod_New(size_t size) {
-    SpkMethod *newMethod;
-    
-    newMethod = (SpkMethod *)SpkObject_NewVar(Spk_ClassMethod, size);
-    if (!newMethod) {
-        return 0;
-    }
-    newMethod->nextInScope = 0;
-    newMethod->nestedClassList.first = 0;
-    newMethod->nestedClassList.last = 0;
-    newMethod->nestedMethodList.first = 0;
-    newMethod->nestedMethodList.last = 0;
-    newMethod->nativeCode = 0;
-    return newMethod;
+    return (SpkMethod *)SpkObject_NewVar(Spk_ClassMethod, size);
 }
 
 
@@ -1906,21 +1923,52 @@ void SpkInterpreter_Resume(SpkInterpreter *self, SpkFiber *aFiber) {
 /*------------------------------------------------------------------------*/
 /* debug support */
 
+static unsigned int lineNumber(size_t offset, SpkMethod *method) {
+    SpkOpcode *instructionPointer, *end;
+    size_t codeDelta; long lineDelta;
+    size_t label;
+    unsigned int lineNo;
+    
+    instructionPointer = method->debug.lineCodes;
+    end = instructionPointer + method->debug.lineCodeTally;
+    
+    label = 0;
+    lineNo = 0;
+    while (instructionPointer < end) {
+        DECODE_UINT(codeDelta);
+        DECODE_SINT(lineDelta);
+        label += codeDelta;
+        if (offset < label)
+            break;
+        lineNo += lineDelta;
+    }
+    return lineNo;
+}
+
 void SpkInterpreter_PrintCallStack(SpkInterpreter *self) {
     SpkContext *ctxt, *home;
     SpkMethod *method;
     SpkBehavior *methodClass;
-    SpkUnknown *methodSel;
+    SpkUnknown *methodSel, *source;
+    size_t offset;
+    unsigned int lineNo;
     
     for (ctxt = self->activeContext; ctxt; ctxt = ctxt->sender) {
         home = ctxt->homeContext;
         method = home->u.m.method;
         methodClass = home->u.m.methodClass;
         methodSel = SpkBehavior_FindSelectorOfMethod(methodClass, method);
-        printf("%04x %p%s%s::%s\n",
-               ctxt->pc - SpkMethod_OPCODES(method), ctxt, (ctxt == home ? " " : " [] in "),
+        source = method->debug.source;
+        offset = ctxt->pc - SpkMethod_OPCODES(method);
+        lineNo = lineNumber(offset, method);
+        printf("%04lx %p%s%s::%s at %s:%u\n",
+               (unsigned long)offset,
+               ctxt,
+               (ctxt == home ? " " : " [] in "),
                SpkBehavior_NameAsCString(methodClass),
-               methodSel ? SpkHost_SelectorAsCString(methodSel) : "<unknown>");
+               methodSel ? SpkHost_SelectorAsCString(methodSel) : "<unknown>",
+               source ? SpkHost_StringAsCString(source) : "<unknown>",
+               lineNo);
         Spk_XDECREF(methodSel);
     }
 }
