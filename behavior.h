@@ -62,8 +62,9 @@ typedef struct SpkAccessorTmpl {
 
 typedef struct SpkMethodTmpl {
     const char *name;
-    SpkNativeCodeFlags flags;
-    SpkNativeCode code;
+    SpkNativeCodeFlags nativeFlags;
+    SpkNativeCode nativeCode;
+    SpkOpcode *code;
 } SpkMethodTmpl;
 
 typedef struct SpkBehaviorTmpl {

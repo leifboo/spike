@@ -149,7 +149,7 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *temp
             SpkMethod *method;
             
             messageSelector = Spk_ParseSelector(methodTmpl->name);
-            method = Spk_NewNativeMethod(methodTmpl->flags, methodTmpl->code);
+            method = Spk_NewNativeMethod(methodTmpl->nativeFlags, methodTmpl->nativeCode);
             SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_RVALUE, messageSelector, method);
             Spk_DECREF(method);
             Spk_DECREF(messageSelector);
@@ -163,7 +163,7 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *temp
             SpkMethod *method;
             
             messageSelector = Spk_ParseSelector(methodTmpl->name);
-            method = Spk_NewNativeMethod(methodTmpl->flags, methodTmpl->code);
+            method = Spk_NewNativeMethod(methodTmpl->nativeFlags, methodTmpl->nativeCode);
             SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_LVALUE, messageSelector, method);
             Spk_DECREF(method);
             Spk_DECREF(messageSelector);

@@ -21,10 +21,10 @@ createClass() {
 }
 
 interpreter(argv) {
-    var sourceFilename = argv[1];
-    var stream = FileStream.open(sourceFilename, "r");
+    var sourcePathname = argv[1];
+    var stream = FileStream.open(sourcePathname, "r");
     if (stream == null) {
-        stderr.printf("%s: cannot open '%s'\n", argv[0], sourceFilename);
+        stderr.printf("%s: cannot open '%s'\n", argv[0], sourcePathname);
         return 1;
     }
     
@@ -33,19 +33,20 @@ interpreter(argv) {
     
     var parser = Parser.new();
     var tree = parser.parse(stream, st);
+    tree = tree.source(sourcePathname);
     tree = tree.asModuleDef();
     tree.check(st, notifier);
     
     var module = tree.generateCode();
     
     var newArgv = Array.new(argv.size - 1);
-    newArgv[0] = sourceFilename;
+    newArgv[0] = sourcePathname;
     var i;
     for (i = 1; i < newArgv.size; ++i) {
         newArgv[i] = argv[i + 1];
     }
     
-    stdout.printf("---- running %s\n", sourceFilename);
+    stdout.printf("---- running %s\n", sourcePathname);
     module.main(newArgv);
     
     return 0;

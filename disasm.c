@@ -39,13 +39,62 @@
 } while (0)
 
 
-static void tab(unsigned int indent, FILE *out) {
-    while (indent--)
+typedef struct Level {
+    struct Level *outer;
+    const char *name;
+} Level;
+
+typedef struct Visitor {
+    void (*preMethod)(SpkMethod *, SpkUnknown **, Level *,
+                      void *);
+    void (*postMethod)(SpkMethod *, SpkUnknown **, Level *,
+                       void *);
+    void (*preMethodNamespace)(SpkMethodNamespace, Level *, void *);
+    void (*postMethodNamespace)(SpkMethodNamespace, Level *, void *);
+    void (*preClassBody)(SpkBehavior *, Level *, void *);
+    void (*postClassBody)(SpkBehavior *, Level *, void *);
+    void (*preClass)(SpkBehavior *, Level *, void *);
+    void (*postClass)(SpkBehavior *, Level *, void *);
+    void (*preModule)(SpkModule *, Level *, void *);
+    void (*postModule)(SpkModule *, Level *, void *);
+} Visitor;
+
+
+/*------------------------------------------------------------------------*/
+/* utilities */
+
+static void tab(Level *level, FILE *out) {
+    for ( ; level->outer; level = level->outer)
         fprintf(out, "\t");
 }
 
-void SpkDisassembler_DisassembleMethodOpcodes(SpkMethod *method, SpkUnknown **literals, unsigned int indent, FILE *out) {
+static void spaces(Level *level, FILE *out) {
+    for ( ; level->outer; level = level->outer)
+        fprintf(out, "    ");
+}
+
+static void nest(Level *level, FILE *out) {
+    if (level->outer)
+        nest(level->outer, out);
+    fprintf(out, "%s_", level->name);
+}
+
+
+/*------------------------------------------------------------------------*/
+/* disassembly */
+
+static void disassembleMethod(SpkMethod *method,
+                              SpkUnknown **literals,
+                              Level *level,
+                              void *closure)
+{
     SpkOpcode *begin, *ip, *instructionPointer, *end;
+    FILE *out;
+    
+    out = (FILE *)closure;
+    
+    tab(level->outer, out);
+    fprintf(out, "%s\n", level->name);
     
     begin = SpkMethod_OPCODES(method);
     end = begin + method->base.size;
@@ -209,7 +258,7 @@ void SpkDisassembler_DisassembleMethodOpcodes(SpkMethod *method, SpkUnknown **li
             break;
         }
         
-        tab(indent, out);
+        tab(level, out);
         fprintf(out, "%04x", ip - begin);
         for (i = 0; i < 3; ++i, ++ip) {
             if (ip < instructionPointer) {
@@ -260,64 +309,60 @@ void SpkDisassembler_DisassembleMethodOpcodes(SpkMethod *method, SpkUnknown **li
         }
         fprintf(out, "\n");
     }
-}
-
-void SpkDisassembler_DisassembleMethod(SpkMethod *method, SpkUnknown **literals, unsigned int indent, FILE *out) {
-    SpkBehavior *nestedClass;
-    SpkMethod *nestedMethod;
     
-    for (nestedClass = method->nestedClassList.first; nestedClass; nestedClass = nestedClass->nextInScope) {
-        SpkDisassembler_DisassembleClass(nestedClass, indent + 1, out);
-        fprintf(out, "\n");
-    }
-    for (nestedMethod = method->nestedMethodList.first; nestedMethod; nestedMethod = nestedMethod->nextInScope) {
-        tab(indent + 1, out);
-        fprintf(out, "method\n");
-        SpkDisassembler_DisassembleMethod(nestedMethod, literals, indent + 1, out);
-        fprintf(out, "\n");
-    }
-    SpkDisassembler_DisassembleMethodOpcodes(method, literals, indent + 1, out);
+    fprintf(out, "\n");
 }
 
-static void disassembleMethodDict(SpkUnknown *methodDict,
-                                  SpkMethodNamespace namespace,
-                                  SpkUnknown **literals,
-                                  unsigned int indent,
-                                  FILE *out)
+static void disassemblePreClass(SpkBehavior *aClass,
+                                Level *level, void *closure)
 {
-    SpkUnknown *selector, *methodName, *method;
-    size_t pos = 0;
-    
-    while (SpkHost_NextSymbol(methodDict, &pos, &selector, &method)) {
-        tab(indent, out);
-        methodName = SpkHost_ObjectAsString(selector);
-        fprintf(out, "%d.%s\n", namespace, SpkHost_StringAsCString(methodName));
-        SpkDisassembler_DisassembleMethod((SpkMethod *)method, literals, indent, out);
-        fprintf(out, "\n");
-        Spk_DECREF(methodName);
-    }
+    FILE *out = (FILE *)closure;
+    tab(level->outer, out);
+    fprintf(out, "class %s\n", level->name);
 }
 
-void SpkDisassembler_DisassembleClass(SpkBehavior *aClass, unsigned int indent, FILE *out) {
-    SpkBehavior *nestedClass;
-    SpkMethodNamespace namespace;
+static void disassemblePreMethodNamespace(SpkMethodNamespace namespace,
+                                          Level *level,
+                                          void *closure)
+{
+    FILE *out;
+    const char *name;
     
-    tab(indent, out);
-    fprintf(out, "class %s\n", SpkBehavior_NameAsCString(aClass));
-    for (nestedClass = aClass->nestedClassList.first; nestedClass; nestedClass = nestedClass->nextInScope) {
-        SpkDisassembler_DisassembleClass(nestedClass, indent + 1, out);
-        fprintf(out, "\n");
+    out = (FILE *)closure;
+    switch (namespace) {
+    case Spk_METHOD_NAMESPACE_RVALUE:
+        name = "rvalue";
+        break;
+    case Spk_METHOD_NAMESPACE_LVALUE:
+        name = "lvalue";
+        break;
+    case Spk_NUM_METHOD_NAMESPACES: break;
     }
-    for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
-        disassembleMethodDict(aClass->ns[namespace].methodDict, namespace, aClass->module->literals, indent + 1, out);
-    }
-    return;
+    
+    tab(level->outer, out);
+    fprintf(out, "%s\n", name);
 }
 
-void SpkDisassembler_DisassembleModule(SpkModule *module, FILE *out) {
+static void disassemblePreClassBody(SpkBehavior *aClass,
+                                    Level *level, void *closure)
+{
+    FILE *out = (FILE *)closure;
+    tab(level->outer, out);
+    fprintf(out, "%s\n", level->name);
+}
+
+static void disassemblePostClass(SpkBehavior *aClass,
+                                 Level *level, void *closure)
+{
+    FILE *out = (FILE *)closure;
+    fprintf(out, "\n");
+}
+
+static void disassemblePreModule(SpkModule *module,
+                                 Level *level, void *closure)
+{
+    FILE *out = (FILE *)closure;
     size_t i;
-    SpkBehavior *nestedClass;
-    SpkMethodNamespace namespace;
     
     fprintf(out, "literal table\n");
     for (i = 0; i < module->literalCount; ++i) {
@@ -326,12 +371,594 @@ void SpkDisassembler_DisassembleModule(SpkModule *module, FILE *out) {
         fprintf(out, "\n");
     }
     fprintf(out, "\n");
+}
+
+static Visitor disassembler = {
+    0,
+    &disassembleMethod,
+    &disassemblePreMethodNamespace,
+    0,
+    &disassemblePreClassBody,
+    0,
+    &disassemblePreClass,
+    &disassemblePostClass,
+    &disassemblePreModule,
+    0
+};
+
+
+/*------------------------------------------------------------------------*/
+/* traversal */
+
+static void traverseClass(SpkBehavior *, Level *, Visitor *, void *);
+
+static void traverseMethod(SpkMethod *method,
+                           SpkUnknown **literals,
+                           Level *level,
+                           Visitor *visitor,
+                           void *closure)
+{
+    SpkBehavior *nestedClass;
+    SpkMethod *nestedMethod;
+    Level nestedMethodLevel;
     
-    for (nestedClass = module->base.klass->nestedClassList.first; nestedClass; nestedClass = nestedClass->nextInScope) {
-        SpkDisassembler_DisassembleClass(nestedClass, 0, out);
+    if (visitor->preMethod)
+        (*visitor->preMethod)(method, literals, level, closure);
+    
+    for (nestedClass = method->nestedClassList.first;
+         nestedClass;
+         nestedClass = nestedClass->nextInScope)
+    {
+        traverseClass(nestedClass, level, visitor, closure);
+    }
+    
+    nestedMethodLevel.outer = level;
+    nestedMethodLevel.name = "<method>";
+    
+    for (nestedMethod = method->nestedMethodList.first;
+         nestedMethod;
+         nestedMethod = nestedMethod->nextInScope)
+    {
+        traverseMethod(nestedMethod, literals, &nestedMethodLevel,
+                       visitor, closure);
+    }
+    
+    if (visitor->postMethod)
+        (*visitor->postMethod)(method, literals, level, closure);
+}
+
+static void traverseMethodDict(SpkUnknown *methodDict,
+                               SpkMethodNamespace namespace,
+                               SpkUnknown **literals,
+                               Level *outer,
+                               Visitor *visitor,
+                               void *closure)
+{
+    SpkUnknown *selector, *methodName, *method;
+    size_t pos = 0;
+    Level namespaceLevel, methodLevel;
+    
+    namespaceLevel.outer = outer;
+    namespaceLevel.name = 0;
+    switch (namespace) {
+    case Spk_METHOD_NAMESPACE_RVALUE:
+        namespaceLevel.name = "rv";
+        break;
+    case Spk_METHOD_NAMESPACE_LVALUE:
+        namespaceLevel.name = "lv";
+        break;
+    case Spk_NUM_METHOD_NAMESPACES: break;
+    }
+    
+    if (visitor->preMethodNamespace)
+        (*visitor->preMethodNamespace)(namespace, &namespaceLevel, closure);
+    
+    methodLevel.outer = &namespaceLevel;
+    
+    while (SpkHost_NextSymbol(methodDict, &pos, &selector, &method)) {
+        methodName = SpkHost_ObjectAsString(selector);
+        
+        /* XXX: SpkHost_SelectorAsMangledName ? */
+        methodLevel.name = SpkHost_StringAsCString(methodName);
+        if (*methodLevel.name == '$')
+            ++methodLevel.name;
+        
+        traverseMethod((SpkMethod *)method, literals, &methodLevel,
+                       visitor, closure);
+        
+        Spk_DECREF(methodName);
+    }
+    
+    if (visitor->postMethodNamespace)
+        (*visitor->postMethodNamespace)(namespace, &namespaceLevel, closure);
+}
+
+static void traverseClassBody(SpkBehavior *aClass, const char *name, Level *outer,
+                              Visitor *visitor, void *closure)
+{
+    SpkMethodNamespace namespace;
+    Level level;
+    
+    level.outer = outer;
+    level.name = name;
+    
+    if (visitor->preClassBody)
+        (*visitor->preClassBody)(aClass, &level, closure);
+    
+    for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
+        traverseMethodDict(aClass->ns[namespace].methodDict, namespace,
+                           aClass->module->literals, &level,
+                           visitor, closure);
+    }
+    
+    if (visitor->postClassBody)
+        (*visitor->postClassBody)(aClass, &level, closure);
+}
+
+static void traverseClass(SpkBehavior *aClass, Level *outer,
+                          Visitor *visitor, void *closure)
+{
+    SpkBehavior *nestedClass;
+    Level level;
+    
+    level.outer = outer;
+    level.name = SpkBehavior_NameAsCString(aClass);
+    
+    if (visitor->preClass)
+        (*visitor->preClass)(aClass, &level, closure);
+    
+    for (nestedClass = aClass->nestedClassList.first;
+         nestedClass;
+         nestedClass = nestedClass->nextInScope)
+    {
+        traverseClass(nestedClass, &level, visitor, closure);
+    }
+    
+    traverseClassBody(aClass, "instance", &level, visitor, closure);
+    traverseClassBody(aClass->base.klass, "class", &level, visitor, closure);
+    
+    if (visitor->postClass)
+        (*visitor->postClass)(aClass, &level, closure);
+}
+
+static void traverseModule(SpkModule *module,
+                           Visitor *visitor, void *closure)
+{
+    SpkBehavior *nestedClass;
+    SpkMethodNamespace namespace;
+    Level level;
+    
+    level.outer = 0;
+    level.name = "module";
+    
+    if (visitor->preModule)
+        (*visitor->preModule)(module, &level, closure);
+    
+    for (nestedClass = module->base.klass->nestedClassList.first;
+         nestedClass;
+         nestedClass = nestedClass->nextInScope)
+    {
+        traverseClass(nestedClass, &level, visitor, closure);
+    }
+    
+    for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
+        traverseMethodDict(module->base.klass->ns[namespace].methodDict,
+                           namespace,
+                           module->literals,
+                           &level,
+                           visitor,
+                           closure);
+    }
+    
+    if (visitor->postModule)
+        (*visitor->postModule)(module, &level, closure);
+}
+
+
+/*------------------------------------------------------------------------*/
+/* C code generation */
+
+static const char *opcodeName(SpkOpcode opcode) {
+    switch (opcode) {
+    case Spk_OPCODE_NOP: return "Spk_OPCODE_NOP";
+    case Spk_OPCODE_PUSH_LOCAL: return "Spk_OPCODE_PUSH_LOCAL";
+    case Spk_OPCODE_PUSH_INST_VAR: return "Spk_OPCODE_PUSH_INST_VAR";
+    case Spk_OPCODE_PUSH_GLOBAL: return "Spk_OPCODE_PUSH_GLOBAL";
+    case Spk_OPCODE_PUSH_LITERAL: return "Spk_OPCODE_PUSH_LITERAL";
+    case Spk_OPCODE_PUSH_SELF: return "Spk_OPCODE_PUSH_SELF";
+    case Spk_OPCODE_PUSH_SUPER: return "Spk_OPCODE_PUSH_SUPER";
+    case Spk_OPCODE_PUSH_FALSE: return "Spk_OPCODE_PUSH_FALSE";
+    case Spk_OPCODE_PUSH_TRUE: return "Spk_OPCODE_PUSH_TRUE";
+    case Spk_OPCODE_PUSH_NULL: return "Spk_OPCODE_PUSH_NULL";
+    case Spk_OPCODE_PUSH_VOID: return "Spk_OPCODE_PUSH_VOID";
+    case Spk_OPCODE_PUSH_CONTEXT: return "Spk_OPCODE_PUSH_CONTEXT";
+    case Spk_OPCODE_DUP: return "Spk_OPCODE_DUP";
+    case Spk_OPCODE_DUP_N: return "Spk_OPCODE_DUP_N";
+    case Spk_OPCODE_STORE_LOCAL: return "Spk_OPCODE_STORE_LOCAL";
+    case Spk_OPCODE_STORE_INST_VAR: return "Spk_OPCODE_STORE_INST_VAR";
+    case Spk_OPCODE_STORE_GLOBAL: return "Spk_OPCODE_STORE_GLOBAL";
+    case Spk_OPCODE_POP: return "Spk_OPCODE_POP";
+    case Spk_OPCODE_ROT: return "Spk_OPCODE_ROT";
+    case Spk_OPCODE_BRANCH_IF_FALSE: return "Spk_OPCODE_BRANCH_IF_FALSE";
+    case Spk_OPCODE_BRANCH_IF_TRUE: return "Spk_OPCODE_BRANCH_IF_TRUE";
+    case Spk_OPCODE_BRANCH_ALWAYS: return "Spk_OPCODE_BRANCH_ALWAYS";
+    case Spk_OPCODE_ID: return "Spk_OPCODE_ID";
+    case Spk_OPCODE_OPER: return "Spk_OPCODE_OPER";
+    case Spk_OPCODE_OPER_SUPER: return "Spk_OPCODE_OPER_SUPER";
+    case Spk_OPCODE_CALL: return "Spk_OPCODE_CALL";
+    case Spk_OPCODE_CALL_VAR: return "Spk_OPCODE_CALL_VAR";
+    case Spk_OPCODE_CALL_SUPER: return "Spk_OPCODE_CALL_SUPER";
+    case Spk_OPCODE_CALL_SUPER_VAR: return "Spk_OPCODE_CALL_SUPER_VAR";
+    case Spk_OPCODE_GET_ATTR: return "Spk_OPCODE_GET_ATTR";
+    case Spk_OPCODE_GET_ATTR_SUPER: return "Spk_OPCODE_GET_ATTR_SUPER";
+    case Spk_OPCODE_GET_ATTR_VAR: return "Spk_OPCODE_GET_ATTR_VAR";
+    case Spk_OPCODE_GET_ATTR_VAR_SUPER: return "Spk_OPCODE_GET_ATTR_VAR_SUPER";
+    case Spk_OPCODE_SET_ATTR: return "Spk_OPCODE_SET_ATTR";
+    case Spk_OPCODE_SET_ATTR_SUPER: return "Spk_OPCODE_SET_ATTR_SUPER";
+    case Spk_OPCODE_SET_ATTR_VAR: return "Spk_OPCODE_SET_ATTR_VAR";
+    case Spk_OPCODE_SET_ATTR_VAR_SUPER: return "Spk_OPCODE_SET_ATTR_VAR_SUPER";
+    case Spk_OPCODE_SEND_MESSAGE: return "Spk_OPCODE_SEND_MESSAGE";
+    case Spk_OPCODE_SEND_MESSAGE_SUPER: return "Spk_OPCODE_SEND_MESSAGE_SUPER";
+    case Spk_OPCODE_SEND_MESSAGE_VAR: return "Spk_OPCODE_SEND_MESSAGE_VAR";
+    case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR: return "Spk_OPCODE_SEND_MESSAGE_SUPER_VAR";
+    case Spk_OPCODE_RAISE: return "Spk_OPCODE_RAISE";
+    case Spk_OPCODE_RET: return "Spk_OPCODE_RET";
+    case Spk_OPCODE_RET_TRAMP: return "Spk_OPCODE_RET_TRAMP";
+    case Spk_OPCODE_LEAF: return "Spk_OPCODE_LEAF";
+    case Spk_OPCODE_SAVE: return "Spk_OPCODE_SAVE";
+    case Spk_OPCODE_ARG: return "Spk_OPCODE_ARG";
+    case Spk_OPCODE_ARG_VAR: return "Spk_OPCODE_ARG_VAR";
+    case Spk_OPCODE_NATIVE: return "Spk_OPCODE_NATIVE";
+    case Spk_OPCODE_NATIVE_PUSH_INST_VAR: return "Spk_OPCODE_NATIVE_PUSH_INST_VAR";
+    case Spk_OPCODE_NATIVE_STORE_INST_VAR: return "Spk_OPCODE_NATIVE_STORE_INST_VAR";
+    case Spk_OPCODE_RESTORE_SENDER: return "Spk_OPCODE_RESTORE_SENDER";
+    case Spk_OPCODE_RESTORE_CALLER: return "Spk_OPCODE_RESTORE_CALLER";
+    case Spk_OPCODE_THUNK: return "Spk_OPCODE_THUNK";
+    case Spk_OPCODE_CALL_THUNK: return "Spk_OPCODE_CALL_THUNK";
+    case Spk_OPCODE_CALL_BLOCK: return "Spk_OPCODE_CALL_BLOCK";
+    case Spk_OPCODE_CHECK_STACKP: return "Spk_OPCODE_CHECK_STACKP";
+    
+    case Spk_NUM_OPCODES: break;
+    }
+    return 0;
+}
+
+static const char *namespaceName(SpkMethodNamespace namespace) {
+    switch (namespace) {
+    case Spk_METHOD_NAMESPACE_RVALUE: return "Spk_METHOD_NAMESPACE_RVALUE";
+    case Spk_METHOD_NAMESPACE_LVALUE: return "Spk_METHOD_NAMESPACE_LVALUE";
+    
+    case Spk_NUM_METHOD_NAMESPACES: break;
+    }
+    return 0;
+}
+
+static const char *operName(SpkOper oper) {
+    switch (oper) {
+    case Spk_OPER_SUCC: return "Spk_OPER_SUCC";
+    case Spk_OPER_PRED: return "Spk_OPER_PRED";
+    case Spk_OPER_ADDR: return "Spk_OPER_ADDR";
+    case Spk_OPER_IND: return "Spk_OPER_IND";
+    case Spk_OPER_POS: return "Spk_OPER_POS";
+    case Spk_OPER_NEG: return "Spk_OPER_NEG";
+    case Spk_OPER_BNEG: return "Spk_OPER_BNEG";
+    case Spk_OPER_LNEG: return "Spk_OPER_LNEG";
+    case Spk_OPER_MUL: return "Spk_OPER_MUL";
+    case Spk_OPER_DIV: return "Spk_OPER_DIV";
+    case Spk_OPER_MOD: return "Spk_OPER_MOD";
+    case Spk_OPER_ADD: return "Spk_OPER_ADD";
+    case Spk_OPER_SUB: return "Spk_OPER_SUB";
+    case Spk_OPER_LSHIFT: return "Spk_OPER_LSHIFT";
+    case Spk_OPER_RSHIFT: return "Spk_OPER_RSHIFT";
+    case Spk_OPER_LT: return "Spk_OPER_LT";
+    case Spk_OPER_GT: return "Spk_OPER_GT";
+    case Spk_OPER_LE: return "Spk_OPER_LE";
+    case Spk_OPER_GE: return "Spk_OPER_GE";
+    case Spk_OPER_EQ: return "Spk_OPER_EQ";
+    case Spk_OPER_NE: return "Spk_OPER_NE";
+    case Spk_OPER_BAND: return "Spk_OPER_BAND";
+    case Spk_OPER_BXOR: return "Spk_OPER_BXOR";
+    case Spk_OPER_BOR: return "Spk_OPER_BOR";
+    
+    case Spk_NUM_OPER: break;
+    }
+    return 0;
+}
+
+static const char *callOperName(SpkCallOper oper) {
+    switch (oper) {
+    case Spk_OPER_APPLY: return "Spk_OPER_APPLY";
+    case Spk_OPER_INDEX: return "Spk_OPER_INDEX";
+    
+    case Spk_NUM_CALL_OPER: break;
+    }
+    return 0;
+}
+
+static void genCCodeForMethodOpcodes(SpkMethod *method,
+                                     SpkUnknown **literals,
+                                     Level *level,
+                                     void *closure)
+{
+    Level *outer;
+    SpkOpcode *begin, *ip, *instructionPointer, *end;
+    FILE *out;
+    
+    out = (FILE *)closure;
+    
+    outer = level->outer;
+    if (0) spaces(outer, out);
+    fprintf(out, "static SpkOpcode ");
+    nest(level, out);
+    fprintf(out, "code[] = {\n");
+    
+    begin = SpkMethod_OPCODES(method);
+    end = begin + method->base.size;
+    instructionPointer = begin;
+    
+    while (instructionPointer < end) {
+        SpkOpcode opcode;
+        size_t index = 0;
+        ptrdiff_t displacement = 0;
+        size_t contextSize = 0;
+        size_t argumentCount = 0;
+        size_t localCount = 0, stackSize = 0;
+        size_t count = 0;
+        SpkMethodNamespace namespace = 0;
+        SpkOper operator = 0;
+        SpkCallOper callOperator = 0;
+        SpkUnknown *literal = 0;
+        
+        if (0) spaces(level, out); else fprintf(out, "    ");
+        
+        opcode = *instructionPointer++;
+        fprintf(out, "%s, ", opcodeName(opcode));
+        ip = instructionPointer;
+        
+        switch (opcode) {
+        
+        case Spk_OPCODE_NOP:
+            break;
+        
+        case Spk_OPCODE_PUSH_LOCAL:
+        case Spk_OPCODE_PUSH_INST_VAR:
+        case Spk_OPCODE_PUSH_GLOBAL:
+            DECODE_UINT(index);
+            break;
+        
+        case Spk_OPCODE_PUSH_LITERAL:
+            DECODE_UINT(index);
+            literal = literals[index];
+            break;
+            
+        case Spk_OPCODE_PUSH_SELF:
+        case Spk_OPCODE_PUSH_SUPER:
+        case Spk_OPCODE_PUSH_FALSE:
+        case Spk_OPCODE_PUSH_TRUE:
+        case Spk_OPCODE_PUSH_NULL:
+        case Spk_OPCODE_PUSH_VOID:
+        case Spk_OPCODE_PUSH_CONTEXT:
+            break;
+            
+        case Spk_OPCODE_DUP_N:
+            DECODE_UINT(count);
+            break;
+        case Spk_OPCODE_DUP:
+            break;
+
+        case Spk_OPCODE_STORE_LOCAL:
+        case Spk_OPCODE_STORE_INST_VAR:
+        case Spk_OPCODE_STORE_GLOBAL:
+            DECODE_UINT(index);
+            break;
+            
+        case Spk_OPCODE_POP:
+            break;
+            
+        case Spk_OPCODE_ROT:
+            DECODE_UINT(count);
+            break;
+
+        case Spk_OPCODE_BRANCH_IF_FALSE:
+        case Spk_OPCODE_BRANCH_IF_TRUE:
+        case Spk_OPCODE_BRANCH_ALWAYS:
+            DECODE_SINT(displacement);
+            break;
+            
+        case Spk_OPCODE_ID:
+            break;
+            
+        case Spk_OPCODE_OPER:
+        case Spk_OPCODE_OPER_SUPER:
+            operator = (SpkOper)(*instructionPointer++);
+            fprintf(out, "%s, ", operName(operator));
+            ip = instructionPointer;
+            break;
+            
+        case Spk_OPCODE_CALL:
+        case Spk_OPCODE_CALL_VAR:
+        case Spk_OPCODE_CALL_SUPER:
+        case Spk_OPCODE_CALL_SUPER_VAR:
+            namespace = (SpkMethodNamespace)(*instructionPointer++);
+            callOperator = (SpkCallOper)(*instructionPointer++);
+            fprintf(out, "%s, ", namespaceName(namespace));
+            fprintf(out, "%s, ", callOperName(callOperator));
+            ip = instructionPointer;
+            DECODE_UINT(argumentCount);
+            break;
+
+        case Spk_OPCODE_GET_ATTR:
+        case Spk_OPCODE_GET_ATTR_SUPER:
+        case Spk_OPCODE_SET_ATTR:
+        case Spk_OPCODE_SET_ATTR_SUPER:
+            DECODE_UINT(index);
+            literal = literals[index];
+            break;
+            
+        case Spk_OPCODE_GET_ATTR_VAR:
+        case Spk_OPCODE_GET_ATTR_VAR_SUPER:
+        case Spk_OPCODE_SET_ATTR_VAR:
+        case Spk_OPCODE_SET_ATTR_VAR_SUPER:
+            break;
+            
+        case Spk_OPCODE_SEND_MESSAGE:
+        case Spk_OPCODE_SEND_MESSAGE_SUPER:
+            DECODE_UINT(index);
+            DECODE_UINT(argumentCount);
+            literal = literals[index];
+            break;
+            
+        case Spk_OPCODE_RAISE:
+            break;
+
+        case Spk_OPCODE_RET:
+        case Spk_OPCODE_RET_TRAMP:
+            break;
+            
+        case Spk_OPCODE_LEAF:
+            break;
+            
+        case Spk_OPCODE_SAVE:
+            DECODE_UINT(contextSize);
+            break;
+            
+        case Spk_OPCODE_ARG:
+        case Spk_OPCODE_ARG_VAR:
+            DECODE_UINT(argumentCount);
+            DECODE_UINT(localCount);
+            DECODE_UINT(stackSize);
+            break;
+            
+        case Spk_OPCODE_NATIVE:
+            break;
+            
+        case Spk_OPCODE_RESTORE_SENDER:
+        case Spk_OPCODE_RESTORE_CALLER:
+        case Spk_OPCODE_THUNK:
+        case Spk_OPCODE_CALL_THUNK:
+        case Spk_OPCODE_CALL_BLOCK:
+            break;
+            
+        case Spk_OPCODE_CHECK_STACKP:
+            DECODE_UINT(index);
+            break;
+        }
+        
+        for ( ; ip < instructionPointer; ++ip) {
+            fprintf(out, "0x%02x, ", *ip);
+        }
         fprintf(out, "\n");
     }
-    for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
-        disassembleMethodDict(module->base.klass->ns[namespace].methodDict, namespace, module->literals, 0, out);
-    }
+    
+    if (0) spaces(level, out); else fprintf(out, "    ");
+    fprintf(out, "%s\n", opcodeName(Spk_OPCODE_NOP));
+    
+    if (0) spaces(outer, out);
+    fprintf(out, "};\n\n");
+}
+
+static void genCCodePreMethodNamespace(SpkMethodNamespace namespace,
+                                       Level *level,
+                                       void *closure)
+{
+    FILE *out = (FILE *)closure;
+    fprintf(out, "static SpkMethodTmpl ");
+    nest(level, out);
+    fprintf(out, "methods[] = {\n");
+}
+
+static void genCCodeForMethodTableEntry(SpkMethod *method,
+                                        SpkUnknown **literals,
+                                        Level *level,
+                                        void *closure)
+{
+    FILE *out = (FILE *)closure;
+    
+    fprintf(out, "    { \"%s\", 0, 0, ", level->name);
+    nest(level, out);
+    fprintf(out, "code },\n");
+}
+
+static void genCCodePostMethodNamespace(SpkMethodNamespace namespace,
+                                        Level *level,
+                                        void *closure)
+{
+    FILE *out = (FILE *)closure;
+    
+    fprintf(out, "    { 0 }\n};\n\n");
+}
+
+static void genCCodeClassTemplate(SpkBehavior *aClass,
+                                  Level *level, void *closure)
+{
+    FILE *out = (FILE *)closure;
+    
+    fprintf(out,
+            "SpkClassTmpl ");
+    nest(level, out);
+    fprintf(out, "classTmpl = {\n"
+            "    \"%s\", {\n"
+            "        /*accessors*/ 0,\n"
+            "        ",
+            level->name);
+    nest(level, out);
+    fprintf(out, "instance_rv_methods,\n"
+            "        ");
+    nest(level, out);
+    fprintf(out, "instance_lv_methods\n"
+            "    }, /*meta*/ {\n"
+            "        /*accessors*/ 0,\n"
+            "        ");
+    nest(level, out);
+    fprintf(out, "class_rv_methods,\n"
+            "        ");
+    nest(level, out);
+    fprintf(out, "class_lv_methods\n"
+            "    }\n"
+            "};\n\n"
+            );
+}
+
+
+static Visitor cCodeGenOpcodes = {
+    0,
+    &genCCodeForMethodOpcodes,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+};
+
+static Visitor cCodeGenClassTemplates = {
+    0,
+    &genCCodeForMethodTableEntry,
+    &genCCodePreMethodNamespace,
+    &genCCodePostMethodNamespace,
+    0,
+    0,
+    0,
+    &genCCodeClassTemplate,
+    0,
+    0
+};
+
+
+/*------------------------------------------------------------------------*/
+/* C API */
+
+void SpkDisassembler_DisassembleModule(SpkModule *module, FILE *out) {
+    traverseModule(module, &disassembler, (void *)out);
+}
+
+void SpkDisassembler_DisassembleModuleAsCCode(SpkModule *module, FILE *out) {
+    fprintf(out,
+            "\n"
+            "#include \"class.h\"\n"
+            "\n");
+    traverseModule(module, &cCodeGenOpcodes, (void *)out);
+    traverseModule(module, &cCodeGenClassTemplates, (void *)out);
 }

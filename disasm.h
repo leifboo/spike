@@ -12,10 +12,8 @@ struct SpkMethod;
 struct SpkModule;
 
 
-void SpkDisassembler_DisassembleMethodOpcodes(struct SpkMethod *, SpkUnknown **, unsigned int, FILE *);
-void SpkDisassembler_DisassembleMethod(struct SpkMethod *, SpkUnknown **, unsigned int, FILE *);
-void SpkDisassembler_DisassembleClass(struct SpkBehavior *, unsigned int, FILE *);
 void SpkDisassembler_DisassembleModule(struct SpkModule *, FILE *);
+void SpkDisassembler_DisassembleModuleAsCCode(struct SpkModule *, FILE *);
 
 
 #endif /* __spk_disasm_h__ */

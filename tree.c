@@ -38,6 +38,15 @@ static SpkUnknown *Stmt_generateCode(SpkUnknown *self, SpkUnknown *arg0, SpkUnkn
     return (SpkUnknown *)SpkCodeGen_GenerateCode((SpkStmt *)self);
 }
 
+static SpkUnknown *Stmt_source(SpkUnknown *self, SpkUnknown *sourcePathname, SpkUnknown *arg1) {
+    SpkStmt *tree;
+    
+    tree = (SpkStmt *)self;
+    Spk_INCREF(tree); /* XXX: account for stolen reference */
+    SpkParser_Source(&tree, sourcePathname);
+    return (SpkUnknown *)tree;
+}
+
 
 /*------------------------------------------------------------------------*/
 /* low-level hooks */
@@ -340,6 +349,7 @@ static SpkMethodTmpl StmtMethods[] = {
     { "asModuleDef",  SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Stmt_asModuleDef },
     { "check",        SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Stmt_check },
     { "generateCode", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Stmt_generateCode },
+    { "source",       SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &Stmt_source },
     { 0, 0, 0}
 };
 

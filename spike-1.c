@@ -42,6 +42,10 @@ int main(int argc, char **argv) {
                 disassemble = 1;
                 continue;
             }
+            if (strcmp(arg, "gen-c-code") == 0) {
+                disassemble = 2;
+                continue;
+            }
             fprintf(stderr, "%s: unrecognized option %s\n", argv[0], argv[i]);
             error = 1;
         } else {
@@ -64,6 +68,7 @@ int main(int argc, char **argv) {
     if (showHelp) {
         printf("-?, -h, --help    Display this help and exit.\n");
         printf("--disassemble     Display code disassembly and exit.\n");
+        printf("--gen-c-code      Display C code disassembly and exit.\n");
         return 0;
     }
     
@@ -79,8 +84,12 @@ int main(int argc, char **argv) {
     if (!module)
         return 1;
     
-    if (disassemble) {
+    switch (disassemble) {
+    case 1:
         SpkDisassembler_DisassembleModule(module, stdout);
+        return 0;
+    case 2:
+        SpkDisassembler_DisassembleModuleAsCCode(module, stdout);
         return 0;
     }
     
