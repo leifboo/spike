@@ -151,7 +151,6 @@ struct SpkStmt {
 };
 
 
-extern struct SpkBehavior *Spk_ClassExpr, *Spk_ClassStmt;
 extern struct SpkClassTmpl Spk_ClassExprTmpl, Spk_ClassStmtTmpl;
 
 

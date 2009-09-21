@@ -10,7 +10,6 @@
 typedef SpkVariableObject SpkString;
 
 
-extern struct SpkBehavior *Spk_ClassString;
 extern struct SpkClassTmpl Spk_ClassStringTmpl;
 
 

@@ -4,6 +4,7 @@
 #include "bool.h"
 #include "char.h"
 #include "class.h"
+#include "heart.h"
 #include "int.h"
 #include "native.h"
 #include <string.h>
@@ -12,9 +13,6 @@
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
 #define STR(op) ((char *)SpkVariableObject_ITEM_BASE(op))
 #define LEN(op) ((op)->size - 1)
-
-
-SpkBehavior *Spk_ClassString;
 
 
 /*------------------------------------------------------------------------*/
@@ -69,7 +67,7 @@ static SpkUnknown *String_add(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *a
         return 0;
     }
     resultLen = LEN(self) + LEN(arg);
-    result = (SpkString *)SpkObject_NewVar(Spk_ClassString, resultLen + 1);
+    result = (SpkString *)SpkObject_NewVar(Spk_CLASS(String), resultLen + 1);
     if (!result)
         return 0;
     memcpy(STR(result), STR(self), LEN(self));
@@ -232,7 +230,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl Spk_ClassStringTmpl = {
-    "String", {
+    Spk_HEART_CLASS_TMPL(String, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
@@ -254,7 +252,7 @@ SpkString *SpkString_FromCStringAndLength(const char *str, size_t len) {
     SpkString *result;
     char *buffer;
     
-    result = (SpkString *)SpkObject_NewVar(Spk_ClassString, len + 1);
+    result = (SpkString *)SpkObject_NewVar(Spk_CLASS(String), len + 1);
     if (!result)
         return 0;
     buffer = STR(result);
@@ -268,7 +266,7 @@ SpkString *SpkString_FromCStream(FILE *stream, size_t size) {
     SpkString *result;
     char *buffer;
     
-    result = (SpkString *)SpkObject_NewVar(Spk_ClassString, size);
+    result = (SpkString *)SpkObject_NewVar(Spk_CLASS(String), size);
     if (!result)
         return 0;
     buffer = STR(result);
@@ -286,7 +284,7 @@ SpkString *SpkString_Concat(SpkString **var, SpkString *newPart) {
     
     self = *var;
     resultLen = LEN(self) + LEN(newPart);
-    result = (SpkString *)SpkObject_NewVar(Spk_ClassString, resultLen + 1);
+    result = (SpkString *)SpkObject_NewVar(Spk_CLASS(String), resultLen + 1);
     if (!result) {
         *var = 0;
         Spk_DECREF(self);

@@ -3,6 +3,7 @@
 
 #include "bool.h"
 #include "class.h"
+#include "heart.h"
 #include "native.h"
 
 
@@ -15,16 +16,13 @@ struct SpkFloat {
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
 
 
-SpkBehavior *Spk_ClassFloat;
-
-
 /*------------------------------------------------------------------------*/
 /* method helpers */
 
 static SpkUnknown *Float_unaryOper(SpkFloat *self, SpkOper oper) {
     SpkFloat *result;
     
-    result = (SpkFloat *)SpkObject_New(Spk_ClassFloat);
+    result = (SpkFloat *)SpkObject_New(Spk_CLASS(Float));
     switch (oper) {
     case Spk_OPER_SUCC: result->value = self->value + 1; break;
     case Spk_OPER_PRED: result->value = self->value - 1; break;
@@ -45,7 +43,7 @@ static SpkUnknown *Float_binaryOper(SpkFloat *self, SpkUnknown *arg0, SpkOper op
         Spk_Halt(Spk_HALT_TYPE_ERROR, "a float is required");
         return 0;
     }
-    result = (SpkFloat *)SpkObject_New(Spk_ClassFloat);
+    result = (SpkFloat *)SpkObject_New(Spk_CLASS(Float));
     switch (oper) {
     case Spk_OPER_MUL: result->value = self->value * arg->value;  break;
     case Spk_OPER_DIV: result->value = self->value / arg->value;  break;
@@ -202,7 +200,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl Spk_ClassFloatTmpl = {
-    "Float", {
+    Spk_HEART_CLASS_TMPL(Float, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
@@ -218,7 +216,7 @@ SpkClassTmpl Spk_ClassFloatTmpl = {
 SpkFloat *SpkFloat_FromCDouble(double value) {
     SpkFloat *result;
     
-    result = (SpkFloat *)SpkObject_New(Spk_ClassFloat);
+    result = (SpkFloat *)SpkObject_New(Spk_CLASS(Float));
     result->value = value;
     return result;
 }

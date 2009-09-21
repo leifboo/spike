@@ -2,6 +2,7 @@
 #include "notifier.h"
 
 #include "class.h"
+#include "heart.h"
 #include "host.h"
 #include "native.h"
 #include "rodata.h"
@@ -17,10 +18,6 @@ struct SpkNotifier {
     unsigned int errorTally;
     SpkUnknown *source;
 };
-
-
-SpkBehavior *Spk_ClassNotifier;
-SpkClassTmpl Spk_ClassNotifierTmpl;
 
 
 /*------------------------------------------------------------------------*/
@@ -158,7 +155,7 @@ static SpkUnknown *ClassNotifier_new(SpkUnknown *self, SpkUnknown *arg0, SpkUnkn
 
 static void Notifier_zero(SpkObject *_self) {
     SpkNotifier *self = (SpkNotifier *)_self;
-    (*Spk_ClassNotifier->superclass->zero)(_self);
+    (*Spk_CLASS(Notifier)->superclass->zero)(_self);
     self->stream = 0;
     self->source = 0;
 }
@@ -168,7 +165,7 @@ static void Notifier_zero(SpkObject *_self) {
 /* memory layout of instances */
 
 static void Notifier_traverse_init(SpkObject *self) {
-    (*Spk_ClassNotifier->superclass->traverse.init)(self);
+    (*Spk_CLASS(Notifier)->superclass->traverse.init)(self);
 }
 
 static SpkUnknown **Notifier_traverse_current(SpkObject *_self) {
@@ -177,7 +174,7 @@ static SpkUnknown **Notifier_traverse_current(SpkObject *_self) {
     self = (SpkNotifier *)_self;
     if (self->source)
         return (SpkUnknown **)&self->source;
-    return (*Spk_ClassNotifier->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(Notifier)->superclass->traverse.current)(_self);
 }
 
 static void Notifier_traverse_next(SpkObject *_self) {
@@ -188,7 +185,7 @@ static void Notifier_traverse_next(SpkObject *_self) {
         self->source = 0;
         return;
     }
-    (*Spk_ClassNotifier->superclass->traverse.next)(_self);
+    (*Spk_CLASS(Notifier)->superclass->traverse.next)(_self);
 }
 
 
@@ -227,7 +224,7 @@ static SpkTraverse traverse = {
 };
 
 SpkClassTmpl Spk_ClassNotifierTmpl = {
-    "Notifier", {
+    Spk_HEART_CLASS_TMPL(Notifier, Object), {
         accessors,
         methods,
         /*lvalueMethods*/ 0,

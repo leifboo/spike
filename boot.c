@@ -5,6 +5,7 @@
 #include "char.h"
 #include "class.h"
 #include "float.h"
+#include "heart.h"
 #include "host.h"
 #include "interp.h"
 #include "metaclass.h"
@@ -34,11 +35,10 @@
 #include <stdio.h>
 
 
-#define CLASS_VAR(c) Spk_Class ## c
 #define CLASS_TMPL(c) Spk_Class ## c ## Tmpl
 
 
-#define CLASS(c, s) {&CLASS_VAR(c), &CLASS_TMPL(c), &CLASS_VAR(s)}
+#define CLASS(c, s) &CLASS_TMPL(c)
 
 SpkClassBootRec Spk_classBootRec[] = {
     /***CLASS(VariableObject, Object),*/
@@ -74,11 +74,11 @@ SpkClassBootRec Spk_classBootRec[] = {
     /**/CLASS(Float,      Object),
     /**/CLASS(FileStream, Object),
 #endif /* !MALTIPY */
-    {0, 0}
+    0
 };
 
 
-#define OBJECT(c, v) {(SpkBehavior **)&CLASS_VAR(c),(SpkObject **)&v}
+#define OBJECT(c, v) { offsetof(SpkHeart, c), (SpkObject **)&v }
 
 SpkObjectBootRec Spk_objectBootRec[] = {
     OBJECT(Null,   Spk_null),
@@ -88,7 +88,7 @@ SpkObjectBootRec Spk_objectBootRec[] = {
 };
 
 
-#define VAR(c, v, n) {(SpkBehavior **)&CLASS_VAR(c),(SpkObject **)&v, n}
+#define VAR(c, v, n) { offsetof(SpkHeart, c), (SpkObject **)&v, n }
 
 SpkVarBootRec Spk_globalVarBootRec[] = {
 #ifndef MALTIPY
@@ -100,13 +100,32 @@ SpkVarBootRec Spk_globalVarBootRec[] = {
 };
 
 
+typedef struct SpkHeartSubclass {
+    SpkHeart base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkHeartSubclass;
+
+SpkBehaviorTmpl Spk_ModuleHeartTmpl = {
+    /*accessors*/ 0,
+    /*methods*/ 0,
+    /*lvalueMethods*/ 0,
+    offsetof(SpkHeartSubclass, variables)
+};
+
+
 static void initCoreClasses(void) {
+    SpkBehavior
+        *Object, *Behavior,
+        *Class, *Metaclass;
     SpkMetaclass
-        *ClassObjectClass, *ClassBehaviorClass,
-        *ClassClassClass, *ClassMetaclassClass;
+        *ObjectClass, *BehaviorClass,
+        *ClassClass, *MetaclassClass;
+    SpkBehavior *Module, *Heart;
 #ifndef MALTIPY
+    SpkBehavior
+        *IdentityDictionary, *Symbol;
     SpkMetaclass
-        *ClassIdentityDictionaryClass, *ClassSymbolClass;
+        *IdentityDictionaryClass, *SymbolClass;
 #endif /* !MALTIPY */
     SpkMethodNamespace namespace;
     size_t i;
@@ -120,42 +139,42 @@ static void initCoreClasses(void) {
      */
     
     /* Create the core classes. */
-    Spk_ClassObject    = (SpkBehavior *)SpkObjMem_Alloc(Spk_ClassClassTmpl.thisClass.instVarOffset);
-    Spk_ClassBehavior  = (SpkBehavior *)SpkObjMem_Alloc(Spk_ClassClassTmpl.thisClass.instVarOffset);
-    Spk_ClassClass     = (SpkBehavior *)SpkObjMem_Alloc(Spk_ClassClassTmpl.thisClass.instVarOffset);
-    Spk_ClassMetaclass = (SpkBehavior *)SpkObjMem_Alloc(Spk_ClassClassTmpl.thisClass.instVarOffset);
+    Object    = (SpkBehavior *)SpkObjMem_Alloc(Spk_ClassClassTmpl.thisClass.instVarOffset);
+    Behavior  = (SpkBehavior *)SpkObjMem_Alloc(Spk_ClassClassTmpl.thisClass.instVarOffset);
+    Class     = (SpkBehavior *)SpkObjMem_Alloc(Spk_ClassClassTmpl.thisClass.instVarOffset);
+    Metaclass = (SpkBehavior *)SpkObjMem_Alloc(Spk_ClassClassTmpl.thisClass.instVarOffset);
     
     /* Create the core metaclasses. */
-    ClassObjectClass    = (SpkMetaclass *)SpkObjMem_Alloc(Spk_ClassMetaclassTmpl.thisClass.instVarOffset);
-    ClassBehaviorClass  = (SpkMetaclass *)SpkObjMem_Alloc(Spk_ClassMetaclassTmpl.thisClass.instVarOffset);
-    ClassClassClass     = (SpkMetaclass *)SpkObjMem_Alloc(Spk_ClassMetaclassTmpl.thisClass.instVarOffset);
-    ClassMetaclassClass = (SpkMetaclass *)SpkObjMem_Alloc(Spk_ClassMetaclassTmpl.thisClass.instVarOffset);
+    ObjectClass    = (SpkMetaclass *)SpkObjMem_Alloc(Spk_ClassMetaclassTmpl.thisClass.instVarOffset);
+    BehaviorClass  = (SpkMetaclass *)SpkObjMem_Alloc(Spk_ClassMetaclassTmpl.thisClass.instVarOffset);
+    ClassClass     = (SpkMetaclass *)SpkObjMem_Alloc(Spk_ClassMetaclassTmpl.thisClass.instVarOffset);
+    MetaclassClass = (SpkMetaclass *)SpkObjMem_Alloc(Spk_ClassMetaclassTmpl.thisClass.instVarOffset);
     
     /* Each class is an instance of the corresponding metaclass. */
-    Spk_ClassObject->base.klass    = (SpkBehavior *)ClassObjectClass;     Spk_INCREF(ClassObjectClass);
-    Spk_ClassBehavior->base.klass  = (SpkBehavior *)ClassBehaviorClass;   Spk_INCREF(ClassBehaviorClass);
-    Spk_ClassClass->base.klass     = (SpkBehavior *)ClassClassClass;      Spk_INCREF(ClassClassClass);
-    Spk_ClassMetaclass->base.klass = (SpkBehavior *)ClassMetaclassClass;  Spk_INCREF(ClassMetaclassClass);
+    Object->base.klass    = (SpkBehavior *)ObjectClass;     Spk_INCREF(ObjectClass);
+    Behavior->base.klass  = (SpkBehavior *)BehaviorClass;   Spk_INCREF(BehaviorClass);
+    Class->base.klass     = (SpkBehavior *)ClassClass;      Spk_INCREF(ClassClass);
+    Metaclass->base.klass = (SpkBehavior *)MetaclassClass;  Spk_INCREF(MetaclassClass);
     
     /* Each metaclass is an instance of 'Metaclass'. */
-    ClassObjectClass->base.base.klass    = Spk_ClassMetaclass;  Spk_INCREF(Spk_ClassMetaclass);
-    ClassBehaviorClass->base.base.klass  = Spk_ClassMetaclass;  Spk_INCREF(Spk_ClassMetaclass);
-    ClassClassClass->base.base.klass     = Spk_ClassMetaclass;  Spk_INCREF(Spk_ClassMetaclass);
-    ClassMetaclassClass->base.base.klass = Spk_ClassMetaclass;  Spk_INCREF(Spk_ClassMetaclass);
+    ObjectClass->base.base.klass    = Metaclass;  Spk_INCREF(Metaclass);
+    BehaviorClass->base.base.klass  = Metaclass;  Spk_INCREF(Metaclass);
+    ClassClass->base.base.klass     = Metaclass;  Spk_INCREF(Metaclass);
+    MetaclassClass->base.base.klass = Metaclass;  Spk_INCREF(Metaclass);
     
 #ifndef MALTIPY
     /* Create IdentityDictionary and Symbol. */
-    Spk_ClassIdentityDictionary = (SpkBehavior *)SpkObjMem_Alloc(Spk_ClassClassTmpl.thisClass.instVarOffset);
-    Spk_ClassSymbol             = (SpkBehavior *)SpkObjMem_Alloc(Spk_ClassClassTmpl.thisClass.instVarOffset);
+    IdentityDictionary = (SpkBehavior *)SpkObjMem_Alloc(Spk_ClassClassTmpl.thisClass.instVarOffset);
+    Symbol             = (SpkBehavior *)SpkObjMem_Alloc(Spk_ClassClassTmpl.thisClass.instVarOffset);
     
-    ClassIdentityDictionaryClass = (SpkMetaclass *)SpkObjMem_Alloc(Spk_ClassMetaclassTmpl.thisClass.instVarOffset);
-    ClassSymbolClass             = (SpkMetaclass *)SpkObjMem_Alloc(Spk_ClassMetaclassTmpl.thisClass.instVarOffset);
+    IdentityDictionaryClass = (SpkMetaclass *)SpkObjMem_Alloc(Spk_ClassMetaclassTmpl.thisClass.instVarOffset);
+    SymbolClass             = (SpkMetaclass *)SpkObjMem_Alloc(Spk_ClassMetaclassTmpl.thisClass.instVarOffset);
     
-    Spk_ClassIdentityDictionary->base.klass = (SpkBehavior *)ClassIdentityDictionaryClass;  Spk_INCREF(ClassIdentityDictionaryClass);
-    Spk_ClassSymbol->base.klass             = (SpkBehavior *)ClassSymbolClass;              Spk_INCREF(ClassSymbolClass);
+    IdentityDictionary->base.klass = (SpkBehavior *)IdentityDictionaryClass;  Spk_INCREF(IdentityDictionaryClass);
+    Symbol->base.klass             = (SpkBehavior *)SymbolClass;              Spk_INCREF(SymbolClass);
     
-    ClassIdentityDictionaryClass->base.base.klass = Spk_ClassMetaclass;  Spk_INCREF(Spk_ClassMetaclass);
-    ClassSymbolClass->base.base.klass             = Spk_ClassMetaclass;  Spk_INCREF(Spk_ClassMetaclass);
+    IdentityDictionaryClass->base.base.klass = Metaclass;  Spk_INCREF(Metaclass);
+    SymbolClass->base.base.klass             = Metaclass;  Spk_INCREF(Metaclass);
 #endif /* !MALTIPY */
     
     /*
@@ -171,128 +190,145 @@ static void initCoreClasses(void) {
     
     /* 'Object' is the only class in the system with no superclass.
        It must be handled as a special case. */
-    Spk_ClassObject->superclass = 0;
-    Spk_ClassObject->module = 0;
+    Object->superclass = 0;
+    Object->module = 0;
     for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
         for (i = 0; i < Spk_NUM_OPER; ++i) {
-            Spk_ClassObject->ns[namespace].operTable[i] = 0;
+            Object->ns[namespace].operTable[i] = 0;
         }
         for (i = 0; i < Spk_NUM_CALL_OPER; ++i) {
-            Spk_ClassObject->ns[namespace].operCallTable[i] = 0;
+            Object->ns[namespace].operCallTable[i] = 0;
         }
     }
-    Spk_ClassObject->zero = Spk_ClassObjectTmpl.thisClass.zero;
-    Spk_ClassObject->dealloc = Spk_ClassObjectTmpl.thisClass.dealloc;
-    Spk_ClassObject->traverse = *Spk_ClassObjectTmpl.thisClass.traverse;
-    Spk_ClassObject->next = 0;
-    Spk_ClassObject->nextInScope = 0;
-    Spk_ClassObject->nestedClassList.first = 0;
-    Spk_ClassObject->nestedClassList.last = 0;
-    Spk_ClassObject->instVarOffset = Spk_ClassObjectTmpl.thisClass.instVarOffset;
-    Spk_ClassObject->instVarBaseIndex = 0;
-    Spk_ClassObject->instVarCount = 0;
-    Spk_ClassObject->instanceSize = Spk_ClassObject->instVarOffset;
-    Spk_ClassObject->itemSize = Spk_ClassObjectTmpl.thisClass.itemSize;
+    Object->zero = Spk_ClassObjectTmpl.thisClass.zero;
+    Object->dealloc = Spk_ClassObjectTmpl.thisClass.dealloc;
+    Object->traverse = *Spk_ClassObjectTmpl.thisClass.traverse;
+    Object->next = 0;
+    Object->nextInScope = 0;
+    Object->nestedClassList.first = 0;
+    Object->nestedClassList.last = 0;
+    Object->instVarOffset = Spk_ClassObjectTmpl.thisClass.instVarOffset;
+    Object->instVarBaseIndex = 0;
+    Object->instVarCount = 0;
+    Object->instanceSize = Object->instVarOffset;
+    Object->itemSize = Spk_ClassObjectTmpl.thisClass.itemSize;
 #ifndef MALTIPY
     /* Before continuing, partially initialize IdentityDictionary and Symbol. */
-    Spk_ClassIdentityDictionary->superclass = Spk_ClassObject;
-    Spk_ClassIdentityDictionary->zero = Spk_ClassObject->zero;
-    Spk_ClassIdentityDictionary->instVarOffset = Spk_ClassIdentityDictionaryTmpl.thisClass.instVarOffset;
-    Spk_ClassIdentityDictionary->instVarBaseIndex = Spk_ClassObject->instVarBaseIndex + Spk_ClassObject->instVarCount;
-    Spk_ClassIdentityDictionary->instVarCount = 0;
-    Spk_ClassIdentityDictionary->instanceSize = Spk_ClassIdentityDictionaryTmpl.thisClass.instVarOffset;
-    Spk_ClassIdentityDictionary->itemSize = Spk_ClassObject->itemSize;
-    Spk_ClassSymbol->zero = Spk_ClassObject->zero;
+    IdentityDictionary->superclass = Object;
+    IdentityDictionary->zero = Object->zero;
+    IdentityDictionary->instVarOffset = Spk_ClassIdentityDictionaryTmpl.thisClass.instVarOffset;
+    IdentityDictionary->instVarBaseIndex = Object->instVarBaseIndex + Object->instVarCount;
+    IdentityDictionary->instVarCount = 0;
+    IdentityDictionary->instanceSize = Spk_ClassIdentityDictionaryTmpl.thisClass.instVarOffset;
+    IdentityDictionary->itemSize = Object->itemSize;
+    Symbol->zero = Object->zero;
     if (Spk_ClassIdentityDictionaryTmpl.thisClass.zero) {
-        Spk_ClassIdentityDictionary->zero = Spk_ClassIdentityDictionaryTmpl.thisClass.zero;
+        IdentityDictionary->zero = Spk_ClassIdentityDictionaryTmpl.thisClass.zero;
     }
     if (Spk_ClassSymbolTmpl.thisClass.zero) {
-        Spk_ClassSymbol->zero = Spk_ClassSymbolTmpl.thisClass.zero;
+        Symbol->zero = Spk_ClassSymbolTmpl.thisClass.zero;
     }
 #endif /* !MALTIPY */
+    /* XXX: These two cannot be module-ized. */
+    Spk_ClassSymbol = Symbol;
+    Spk_ClassIdentityDictionary = IdentityDictionary;
     for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
-        Spk_ClassObject->ns[namespace].methodDict = SpkHost_NewSymbolDict();
+        Object->ns[namespace].methodDict = SpkHost_NewSymbolDict();
     }
-    ((SpkClass *)Spk_ClassObject)->name = SpkHost_SymbolFromCString(Spk_ClassObjectTmpl.name);
+    ((SpkClass *)Object)->name = SpkHost_SymbolFromCString(Spk_ClassObjectTmpl.name);
     
     /* Initialize the remaining core classes. */
-    /**/SpkClass_InitFromTemplate((SpkClass *)Spk_ClassBehavior, &Spk_ClassBehaviorTmpl, Spk_ClassObject, 0);
-    /******/SpkClass_InitFromTemplate((SpkClass *)Spk_ClassClass, &Spk_ClassClassTmpl, Spk_ClassBehavior, 0);
-    /******/SpkClass_InitFromTemplate((SpkClass *)Spk_ClassMetaclass, &Spk_ClassMetaclassTmpl, Spk_ClassBehavior, 0);
+    /**/SpkClass_InitFromTemplate((SpkClass *)Behavior, &Spk_ClassBehaviorTmpl, Object, 0);
+    /******/SpkClass_InitFromTemplate((SpkClass *)Class, &Spk_ClassClassTmpl, Behavior, 0);
+    /******/SpkClass_InitFromTemplate((SpkClass *)Metaclass, &Spk_ClassMetaclassTmpl, Behavior, 0);
 #ifndef MALTIPY
-    /**/SpkClass_InitFromTemplate((SpkClass *)Spk_ClassIdentityDictionary, &Spk_ClassIdentityDictionaryTmpl, Spk_ClassObject, 0);
-    /**/SpkClass_InitFromTemplate((SpkClass *)Spk_ClassSymbol, &Spk_ClassSymbolTmpl, Spk_ClassObject, 0);
+    /**/SpkClass_InitFromTemplate((SpkClass *)IdentityDictionary, &Spk_ClassIdentityDictionaryTmpl, Object, 0);
+    /**/SpkClass_InitFromTemplate((SpkClass *)Symbol, &Spk_ClassSymbolTmpl, Object, 0);
 #endif /* !MALTIPY */
     
     /* The metaclass of 'Object' is a subclass of 'Class'.  The rest
        of the metaclass hierarchy mirrors the class hierarchy. */
-    SpkBehavior_Init((SpkBehavior *)ClassObjectClass, Spk_ClassClass, 0, 0);
-    /**/SpkBehavior_Init((SpkBehavior *)ClassBehaviorClass, (SpkBehavior *)ClassObjectClass, 0, 0);
-    /******/SpkBehavior_Init((SpkBehavior *)ClassClassClass, (SpkBehavior *)ClassBehaviorClass, 0, 0);
-    /******/SpkBehavior_Init((SpkBehavior *)ClassMetaclassClass, (SpkBehavior *)ClassBehaviorClass, 0, 0);
+    SpkBehavior_Init((SpkBehavior *)ObjectClass, Class, 0, 0);
+    /**/SpkBehavior_Init((SpkBehavior *)BehaviorClass, (SpkBehavior *)ObjectClass, 0, 0);
+    /******/SpkBehavior_Init((SpkBehavior *)ClassClass, (SpkBehavior *)BehaviorClass, 0, 0);
+    /******/SpkBehavior_Init((SpkBehavior *)MetaclassClass, (SpkBehavior *)BehaviorClass, 0, 0);
 #ifndef MALTIPY
-    /**/SpkBehavior_Init((SpkBehavior *)ClassIdentityDictionaryClass, (SpkBehavior *)ClassObjectClass, 0, 0);
-    /**/SpkBehavior_Init((SpkBehavior *)ClassSymbolClass, (SpkBehavior *)ClassObjectClass, 0, 0);
+    /**/SpkBehavior_Init((SpkBehavior *)IdentityDictionaryClass, (SpkBehavior *)ObjectClass, 0, 0);
+    /**/SpkBehavior_Init((SpkBehavior *)SymbolClass, (SpkBehavior *)ObjectClass, 0, 0);
 #endif /* !MALTIPY */
     
     /* Each metaclass has a reference to is sole instance. */
-    ClassObjectClass->thisClass = (SpkClass *)Spk_ClassObject;        Spk_INCREF(Spk_ClassObject);
-    ClassBehaviorClass->thisClass = (SpkClass *)Spk_ClassBehavior;    Spk_INCREF(Spk_ClassBehavior);
-    ClassClassClass->thisClass = (SpkClass *)Spk_ClassClass;          Spk_INCREF(Spk_ClassClass);
-    ClassMetaclassClass->thisClass = (SpkClass *)Spk_ClassMetaclass;  Spk_INCREF(Spk_ClassMetaclass);
+    ObjectClass->thisClass = (SpkClass *)Object;        Spk_INCREF(Object);
+    BehaviorClass->thisClass = (SpkClass *)Behavior;    Spk_INCREF(Behavior);
+    ClassClass->thisClass = (SpkClass *)Class;          Spk_INCREF(Class);
+    MetaclassClass->thisClass = (SpkClass *)Metaclass;  Spk_INCREF(Metaclass);
 #ifndef MALTIPY
-    ClassIdentityDictionaryClass->thisClass = (SpkClass *)Spk_ClassIdentityDictionary; Spk_INCREF(Spk_ClassIdentityDictionary);
-    ClassSymbolClass->thisClass = (SpkClass *)Spk_ClassSymbol;                         Spk_INCREF(Spk_ClassSymbol);
+    IdentityDictionaryClass->thisClass = (SpkClass *)IdentityDictionary; Spk_INCREF(IdentityDictionary);
+    SymbolClass->thisClass = (SpkClass *)Symbol;                         Spk_INCREF(Symbol);
 #endif /* !MALTIPY */
     
     /*
-     * Create class 'Module' and its first instance, the built-in
-     * module.
+     * Create class 'Module' and its first subclass and instance:
+     * the built-in "heart" module.
      */
+    Module = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassModuleTmpl, Object, Metaclass, 0);
     
-    Spk_ClassModule = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassModuleTmpl, Spk_ClassObject, 0);
-    Spk_builtInModule = (SpkModule *)SpkObject_New(Spk_ClassModule);
-    Spk_builtInModule->literals = 0;
-    Spk_builtInModule->firstClass = 0;
+    Heart = (SpkBehavior *)SpkObject_New(Behavior);
+    SpkBehavior_InitFromTemplate(Heart, &Spk_ModuleHeartTmpl, Module, 0);
+    Spk_heart = (SpkModule *)SpkModule_New(Heart);
+    
+    /*
+     * Initialize the class variables for existing classes.
+     */
+    Spk_CLASS(Object) = Object;
+    Spk_CLASS(Behavior) = Behavior;
+    Spk_CLASS(Class) = Class;
+    Spk_CLASS(Metaclass) = Metaclass;
+    Spk_CLASS(Module) = Module;
+#ifndef MALTIPY
+    Spk_CLASS(IdentityDictionary) = IdentityDictionary;
+    Spk_CLASS(Symbol) = Symbol;
+#endif /* !MALTIPY */
     
     /*
      * Patch the 'module' field of existing classes.
      */
-    Spk_ClassObject->module    = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
-    Spk_ClassBehavior->module  = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
-    Spk_ClassClass->module     = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
-    Spk_ClassMetaclass->module = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
+    Spk_CLASS(Object)->module    = Spk_heart;  Spk_INCREF(Spk_heart);
+    Spk_CLASS(Behavior)->module  = Spk_heart;  Spk_INCREF(Spk_heart);
+    Spk_CLASS(Class)->module     = Spk_heart;  Spk_INCREF(Spk_heart);
+    Spk_CLASS(Metaclass)->module = Spk_heart;  Spk_INCREF(Spk_heart);
     
-    ClassObjectClass->base.module    = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
-    ClassBehaviorClass->base.module  = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
-    ClassClassClass->base.module     = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
-    ClassMetaclassClass->base.module = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
+    ObjectClass->base.module    = Spk_heart;  Spk_INCREF(Spk_heart);
+    BehaviorClass->base.module  = Spk_heart;  Spk_INCREF(Spk_heart);
+    ClassClass->base.module     = Spk_heart;  Spk_INCREF(Spk_heart);
+    MetaclassClass->base.module = Spk_heart;  Spk_INCREF(Spk_heart);
     
 #ifndef MALTIPY
-    Spk_ClassIdentityDictionary->module = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
-    Spk_ClassSymbol->module             = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
+    Spk_CLASS(IdentityDictionary)->module = Spk_heart;  Spk_INCREF(Spk_heart);
+    Spk_CLASS(Symbol)->module             = Spk_heart;  Spk_INCREF(Spk_heart);
     
-    ClassIdentityDictionaryClass->base.module = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
-    ClassSymbolClass->base.module             = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
+    IdentityDictionaryClass->base.module = Spk_heart;  Spk_INCREF(Spk_heart);
+    SymbolClass->base.module             = Spk_heart;  Spk_INCREF(Spk_heart);
 #endif /* !MALTIPY */
     
-    Spk_ClassModule->module    = Spk_builtInModule;  Spk_INCREF(Spk_builtInModule);
+    Spk_CLASS(Module)->module    = Spk_heart;  Spk_INCREF(Spk_heart);
+    Heart->module                = Spk_heart;  Spk_INCREF(Spk_heart);
     
     /*
      * Create the remaining classes needed to fully describe a class.
      */
     
-    /**/Spk_ClassVariableObject = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassVariableObjectTmpl, Spk_ClassObject, Spk_builtInModule);
-    /******/Spk_ClassMethod = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassMethodTmpl, Spk_ClassVariableObject, Spk_builtInModule);
+    /**/Spk_CLASS(VariableObject) = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassVariableObjectTmpl, Spk_CLASS(Object), Metaclass, Spk_heart);
+    /******/Spk_CLASS(Method) = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassMethodTmpl, Spk_CLASS(VariableObject), Metaclass, Spk_heart);
     
 #ifndef MALTIPY
     /* for building selectors */
-    /******/Spk_ClassArray = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassArrayTmpl, Spk_ClassVariableObject, Spk_builtInModule);
+    /******/Spk_CLASS(Array) = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassArrayTmpl, Spk_CLASS(VariableObject), Metaclass, Spk_heart);
     
     /* Stand-in until initGlobalObjects() is called. */
-    Spk_null   = (SpkUnknown *)Spk_ClassObject;
-    Spk_uninit = (SpkUnknown *)Spk_ClassObject;
-    Spk_void   = (SpkUnknown *)Spk_ClassObject;
+    Spk_null   = (SpkUnknown *)Spk_CLASS(Object);
+    Spk_uninit = (SpkUnknown *)Spk_CLASS(Object);
+    Spk_void   = (SpkUnknown *)Spk_CLASS(Object);
 #endif /* !MALTIPY */
     
     /*
@@ -300,64 +336,71 @@ static void initCoreClasses(void) {
      * existing classes with methods.
      */
     
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassObject,    &Spk_ClassObjectTmpl.thisClass);
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassBehavior,  &Spk_ClassBehaviorTmpl.thisClass);
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassClass,     &Spk_ClassClassTmpl.thisClass);
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassMetaclass, &Spk_ClassMetaclassTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Object),    &Spk_ClassObjectTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Behavior),  &Spk_ClassBehaviorTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Class),     &Spk_ClassClassTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Metaclass), &Spk_ClassMetaclassTmpl.thisClass);
     
-    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)ClassObjectClass,    &Spk_ClassObjectTmpl.metaclass);
-    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)ClassBehaviorClass,  &Spk_ClassBehaviorTmpl.metaclass);
-    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)ClassClassClass,     &Spk_ClassClassTmpl.metaclass);
-    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)ClassMetaclassClass, &Spk_ClassMetaclassTmpl.metaclass);
+    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)ObjectClass,    &Spk_ClassObjectTmpl.metaclass);
+    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)BehaviorClass,  &Spk_ClassBehaviorTmpl.metaclass);
+    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)ClassClass,     &Spk_ClassClassTmpl.metaclass);
+    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)MetaclassClass, &Spk_ClassMetaclassTmpl.metaclass);
     
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassModule,         &Spk_ClassModuleTmpl.thisClass);
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassVariableObject, &Spk_ClassVariableObjectTmpl.thisClass);
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassMethod,         &Spk_ClassMethodTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Module),         &Spk_ClassModuleTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(VariableObject), &Spk_ClassVariableObjectTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Method),         &Spk_ClassMethodTmpl.thisClass);
     
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassModule->base.klass,         &Spk_ClassModuleTmpl.metaclass);
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassVariableObject->base.klass, &Spk_ClassVariableObjectTmpl.metaclass);
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassMethod->base.klass,         &Spk_ClassMethodTmpl.metaclass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Module)->base.klass,         &Spk_ClassModuleTmpl.metaclass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(VariableObject)->base.klass, &Spk_ClassVariableObjectTmpl.metaclass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Method)->base.klass,         &Spk_ClassMethodTmpl.metaclass);
     
 #ifndef MALTIPY
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassIdentityDictionary, &Spk_ClassIdentityDictionaryTmpl.thisClass);
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassSymbol,             &Spk_ClassSymbolTmpl.thisClass);
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassArray,              &Spk_ClassArrayTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(IdentityDictionary), &Spk_ClassIdentityDictionaryTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Symbol),             &Spk_ClassSymbolTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Array),              &Spk_ClassArrayTmpl.thisClass);
     
-    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)ClassIdentityDictionaryClass, &Spk_ClassIdentityDictionaryTmpl.metaclass);
-    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)ClassSymbolClass,             &Spk_ClassSymbolTmpl.metaclass);
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassArray->base.klass,                  &Spk_ClassArrayTmpl.metaclass);
+    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)IdentityDictionaryClass, &Spk_ClassIdentityDictionaryTmpl.metaclass);
+    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)SymbolClass,             &Spk_ClassSymbolTmpl.metaclass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Array)->base.klass,           &Spk_ClassArrayTmpl.metaclass);
 #endif /* !MALTIPY */
     
     /*
      * The End
      */
     
-    Spk_DECREF(ClassObjectClass);
-    Spk_DECREF(ClassBehaviorClass);
-    Spk_DECREF(ClassClassClass);
-    Spk_DECREF(ClassMetaclassClass);
+    Spk_DECREF(ObjectClass);
+    Spk_DECREF(BehaviorClass);
+    Spk_DECREF(ClassClass);
+    Spk_DECREF(MetaclassClass);
 #ifndef MALTIPY
-    Spk_DECREF(ClassIdentityDictionaryClass);
-    Spk_DECREF(ClassSymbolClass);
+    Spk_DECREF(IdentityDictionaryClass);
+    Spk_DECREF(SymbolClass);
 #endif /* !MALTIPY */
 }
 
 
 static void initBuiltInClasses(void) {
     SpkClassBootRec *r;
+    SpkBehavior **classVar, **superclassVar;
+    SpkClassTmpl *t;
     
-    for (r = Spk_classBootRec; r->var; ++r) {
-        *r->var = (SpkBehavior *)SpkClass_FromTemplate(r->tmpl, *r->superclass, Spk_builtInModule);
+    for (r = Spk_classBootRec; *r; ++r) {
+        t = *r;
+        classVar = (SpkBehavior **)((char *)Spk_heart + t->classVarOffset);
+        superclassVar = (SpkBehavior **)((char *)Spk_heart + t->superclassVarOffset);
+        *classVar = (SpkBehavior *)SpkClass_FromTemplate(t, *superclassVar, Spk_heart);
     }
 }
 
 
 static void initGlobalObjects(void) {
     SpkObjectBootRec *r;
+    SpkBehavior **classVar;
     SpkObject *obj;
     
     for (r = Spk_objectBootRec; r->var; ++r) {
-        obj = SpkObject_New(*r->klass);
+        classVar = (SpkBehavior **)((char *)Spk_heart + r->classVarOffset);
+        obj = SpkObject_New(*classVar);
         assert(!Spk_CAST(VariableObject, obj));
         *r->var = obj;
     }
@@ -366,10 +409,12 @@ static void initGlobalObjects(void) {
 
 static void initGlobalVars(void) {
     SpkVarBootRec *r;
+    SpkBehavior **classVar;
     SpkObject *obj;
     
     for (r = Spk_globalVarBootRec; r->var; ++r) {
-        obj = SpkObject_New(*r->klass);
+        classVar = (SpkBehavior **)((char *)Spk_heart + r->classVarOffset);
+        obj = SpkObject_New(*classVar);
         assert(!Spk_CAST(VariableObject, obj));
         *r->var = obj;
     }
@@ -388,9 +433,9 @@ int Spk_Boot(void) {
     /* XXX: There is an order-of-init problem that prevents core
        classes from defining operators.  As a work-around, simply
        re-initialize the affected classes.  */
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassObject, &Spk_ClassObjectTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Object), &Spk_ClassObjectTmpl.thisClass);
 #ifndef MALTIPY
-    SpkBehavior_AddMethodsFromTemplate(Spk_ClassArray, &Spk_ClassArrayTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Array), &Spk_ClassArrayTmpl.thisClass);
 #endif /* !MALTIPY */
     
     initGlobalObjects();
@@ -402,8 +447,8 @@ int Spk_Boot(void) {
     
 #ifdef MALTIPY
     /* XXX: Do this cleanly! */
-    Spk_DECREF(Spk_ClassPythonObject->superclass);
-    Spk_ClassPythonObject->superclass = 0;
+    Spk_DECREF(Spk_CLASS(PythonObject)->superclass);
+    Spk_CLASS(PythonObject)->superclass = 0;
 #else
     /* Create true, false, True, False, and Boolean. */
     if (!SpkBoolean_Boot())

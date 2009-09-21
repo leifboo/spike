@@ -2,6 +2,7 @@
 #include "dict.h"
 
 #include "class.h"
+#include "heart.h"
 #include "native.h"
 #include <stdlib.h>
 
@@ -18,7 +19,7 @@ struct SpkIdentityDictionary {
 #define HASH(key) (mask & ((size_t)(key) / sizeof(SpkUnknown *)))
 
 
-struct SpkBehavior *Spk_ClassIdentityDictionary;
+SpkBehavior *Spk_ClassIdentityDictionary;
 
 
 /*------------------------------------------------------------------------*/
@@ -189,7 +190,7 @@ static void IdentityDictionary_dealloc(SpkObject *_self) {
     free(self->valueArray);
     self->keyArray = 0;
     self->valueArray = 0;
-    (*Spk_ClassIdentityDictionary->superclass->dealloc)(_self);
+    (*Spk_CLASS(IdentityDictionary)->superclass->dealloc)(_self);
 }
 
 
@@ -200,7 +201,7 @@ static void IdentityDictionary_traverse_init(SpkObject *_self) {
     SpkIdentityDictionary *self;
     
     self = (SpkIdentityDictionary *)_self;
-    (*Spk_ClassIdentityDictionary->superclass->traverse.init)(_self);
+    (*Spk_CLASS(IdentityDictionary)->superclass->traverse.init)(_self);
     for ( ; self->size > 0; --self->size) {
         if (self->keyArray[self->size - 1])
             break;
@@ -218,7 +219,7 @@ static SpkUnknown **IdentityDictionary_traverse_current(SpkObject *_self) {
     if (self->tally > 0) {
         return &self->valueArray[self->tally - 1];
     }
-    return (*Spk_ClassIdentityDictionary->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(IdentityDictionary)->superclass->traverse.current)(_self);
 }
 
 static void IdentityDictionary_traverse_next(SpkObject *_self) {
@@ -249,7 +250,7 @@ static void IdentityDictionary_traverse_next(SpkObject *_self) {
         }
         self->tally = 0;
     }
-    (*Spk_ClassIdentityDictionary->superclass->traverse.next)(_self);
+    (*Spk_CLASS(IdentityDictionary)->superclass->traverse.next)(_self);
 }
 
 
@@ -272,7 +273,7 @@ static SpkTraverse traverse = {
 };
 
 SpkClassTmpl Spk_ClassIdentityDictionaryTmpl = {
-    "IdentityDictionary", {
+    Spk_HEART_CLASS_TMPL(IdentityDictionary, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,

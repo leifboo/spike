@@ -129,9 +129,6 @@ struct SpkMessage {
 
 extern SpkUnknown *Spk_null, *Spk_uninit, *Spk_void;
 
-extern struct SpkBehavior *Spk_ClassMessage,*Spk_ClassMethod, *Spk_ClassThunk, *Spk_ClassContext, *Spk_ClassMethodContext, *Spk_ClassBlockContext;
-extern struct SpkBehavior *Spk_ClassInterpreter, *Spk_ClassProcessorScheduler, *Spk_ClassFiber;
-extern struct SpkBehavior *Spk_ClassNull, *Spk_ClassUninit, *Spk_ClassVoid;
 extern struct SpkClassTmpl Spk_ClassMessageTmpl, Spk_ClassMethodTmpl, Spk_ClassThunkTmpl, Spk_ClassContextTmpl, Spk_ClassMethodContextTmpl, Spk_ClassBlockContextTmpl;
 extern struct SpkClassTmpl Spk_ClassInterpreterTmpl, Spk_ClassProcessorSchedulerTmpl, Spk_ClassFiberTmpl;
 extern struct SpkClassTmpl Spk_ClassNullTmpl, Spk_ClassUninitTmpl, Spk_ClassVoidTmpl;

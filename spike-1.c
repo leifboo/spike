@@ -4,6 +4,7 @@
 #include "boot.h"
 #include "compiler.h"
 #include "disasm.h"
+#include "heart.h"
 #include "int.h"
 #include "interp.h"
 #include "module.h"
@@ -13,6 +14,9 @@
 
 #include <stdio.h>
 #include <string.h>
+
+
+SpkModule *Spk_heart;
 
 
 int main(int argc, char **argv) {

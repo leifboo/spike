@@ -10,7 +10,6 @@
 typedef struct SpkFileStream SpkFileStream;
 
 
-extern struct SpkBehavior *Spk_ClassFileStream;
 extern struct SpkClassTmpl Spk_ClassFileStreamTmpl;
 extern SpkFileStream *Spk_stdin, *Spk_stdout, *Spk_stderr;
 

@@ -3,6 +3,7 @@
 
 #include "class.h"
 #include "gram.h"
+#include "heart.h"
 #include "host.h"
 #include "lexer.h"
 #include "st.h"
@@ -23,11 +24,6 @@ typedef SpkStmtList StmtList;
 void SpkParser_Parse(void *yyp, int yymajor, SpkToken yyminor, SpkParser *);
 void *SpkParser_ParseAlloc(void *(*mallocProc)(size_t));
 void SpkParser_ParseFree(void *p, void (*freeProc)(void*));
-
-
-SpkBehavior *Spk_ClassParser;
-SpkClassTmpl Spk_ClassParserTmpl;
-
 
 
 static SpkSymbolNode *symbolNodeForToken(SpkToken *token, SpkSymbolTable *st) {
@@ -66,7 +62,7 @@ Stmt *SpkParser_NewClassDef(SpkToken *name, SpkToken *super,
 {
     Stmt *newStmt;
     
-    newStmt = (Stmt *)SpkObject_New(Spk_ClassStmt);
+    newStmt = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
     newStmt->kind = Spk_STMT_DEF_CLASS;
     newStmt->top = body;
     newStmt->bottom = metaBody;
@@ -105,7 +101,7 @@ Expr *SpkParser_NewClassAttrExpr(SpkToken *className, SpkToken *attrName,
 Stmt *SpkParser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom) {
     Stmt *newStmt;
     
-    newStmt = (Stmt *)SpkObject_New(Spk_ClassStmt);
+    newStmt = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
     newStmt->kind = kind;
     newStmt->top = top;
     newStmt->bottom = bottom;
@@ -116,7 +112,7 @@ Stmt *SpkParser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom) {
 Stmt *SpkParser_NewForStmt(Expr *expr1, Expr *expr2, Expr *expr3, Stmt *body) {
     Stmt *newStmt;
     
-    newStmt = (Stmt *)SpkObject_New(Spk_ClassStmt);
+    newStmt = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
     newStmt->kind = Spk_STMT_FOR;
     newStmt->top = body;
     newStmt->init = expr1;
@@ -131,7 +127,7 @@ Expr *SpkParser_NewExpr(ExprKind kind, SpkOper oper, Expr *cond,
 {
     Expr *newExpr;
     
-    newExpr = (Expr *)SpkObject_New(Spk_ClassExpr);
+    newExpr = (Expr *)SpkObject_New(Spk_CLASS(Expr));
     newExpr->kind = kind;
     newExpr->oper = oper;
     newExpr->cond = cond;
@@ -145,7 +141,7 @@ Expr *SpkParser_NewExpr(ExprKind kind, SpkOper oper, Expr *cond,
 Expr *SpkParser_NewBlock(Stmt *stmtList, Expr *expr, SpkToken *token) {
     Expr *newExpr;
     
-    newExpr = (Expr *)SpkObject_New(Spk_ClassExpr);
+    newExpr = (Expr *)SpkObject_New(Spk_CLASS(Expr));
     newExpr->kind = Spk_EXPR_BLOCK;
     newExpr->right = expr;
     newExpr->aux.block.stmtList = stmtList;
@@ -159,7 +155,7 @@ Expr *SpkParser_NewKeywordExpr(SpkToken *kw, Expr *arg,
     Expr *newExpr;
     SpkSymbolNode *kwNode;
     
-    newExpr = (Expr *)SpkObject_New(Spk_ClassExpr);
+    newExpr = (Expr *)SpkObject_New(Spk_CLASS(Expr));
     newExpr->kind = Spk_EXPR_KEYWORD;
     newExpr->right = arg;
     newExpr->lineNo = kw->lineNo;
@@ -193,7 +189,7 @@ Expr *SpkParser_FreezeKeywords(Expr *expr, SpkToken *kw,
     
     kwNode = kw ? symbolNodeForToken(kw, st) : 0;
     if (!expr) {
-        expr = (Expr *)SpkObject_New(Spk_ClassExpr);
+        expr = (Expr *)SpkObject_New(Spk_CLASS(Expr));
         expr->kind = Spk_EXPR_KEYWORD;
         expr->lineNo = kw->lineNo;
         expr->aux.keywords = SpkHost_NewKeywordSelectorBuilder();
@@ -223,11 +219,11 @@ Stmt *SpkParser_NewModuleDef(Stmt *stmtList) {
        definition.  XXX: Where does this code really belong? */
     SpkStmt *compoundStmt, *moduleDef;
     
-    compoundStmt = (SpkStmt *)SpkObject_New(Spk_ClassStmt);
+    compoundStmt = (SpkStmt *)SpkObject_New(Spk_CLASS(Stmt));
     compoundStmt->kind = Spk_STMT_COMPOUND;
     compoundStmt->top = stmtList;
 
-    moduleDef = (SpkStmt *)SpkObject_New(Spk_ClassStmt);
+    moduleDef = (SpkStmt *)SpkObject_New(Spk_CLASS(Stmt));
     moduleDef->kind = Spk_STMT_DEF_MODULE;
     moduleDef->top = compoundStmt;
     
@@ -385,7 +381,7 @@ static SpkUnknown *Parser_parse(SpkUnknown *_self,
 
 static void Parser_zero(SpkObject *_self) {
     SpkParser *self = (SpkParser *)_self;
-    (*Spk_ClassParser->superclass->zero)(_self);
+    (*Spk_CLASS(Parser)->superclass->zero)(_self);
     self->root = 0;
     self->error = 0;
     self->st = 0;
@@ -396,7 +392,7 @@ static void Parser_zero(SpkObject *_self) {
 /* memory layout of instances */
 
 static void Parser_traverse_init(SpkObject *self) {
-    (*Spk_ClassParser->superclass->traverse.init)(self);
+    (*Spk_CLASS(Parser)->superclass->traverse.init)(self);
 }
 
 static SpkUnknown **Parser_traverse_current(SpkObject *_self) {
@@ -407,7 +403,7 @@ static SpkUnknown **Parser_traverse_current(SpkObject *_self) {
         return (SpkUnknown **)&self->root;
     if (self->st)
         return (SpkUnknown **)&self->st;
-    return (*Spk_ClassParser->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(Parser)->superclass->traverse.current)(_self);
 }
 
 static void Parser_traverse_next(SpkObject *_self) {
@@ -422,7 +418,7 @@ static void Parser_traverse_next(SpkObject *_self) {
         self->st = 0;
         return;
     }
-    (*Spk_ClassParser->superclass->traverse.next)(_self);
+    (*Spk_CLASS(Parser)->superclass->traverse.next)(_self);
 }
 
 
@@ -446,7 +442,7 @@ static SpkTraverse traverse = {
 };
 
 SpkClassTmpl Spk_ClassParserTmpl = {
-    "Parser", {
+    Spk_HEART_CLASS_TMPL(Parser, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,

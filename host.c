@@ -5,6 +5,7 @@
 #include "behavior.h"
 #include "dict.h"
 #include "float.h"
+#include "heart.h"
 #include "int.h"
 #include "interp.h"
 #include "io.h"

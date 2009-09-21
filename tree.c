@@ -3,14 +3,12 @@
 
 #include "cgen.h"
 #include "class.h"
+#include "heart.h"
 #include "parser.h"
 #include "scheck.h"
 #include "st.h"
 
 #include <string.h>
-
-
-SpkBehavior *Spk_ClassExpr, *Spk_ClassStmt;
 
 
 /*------------------------------------------------------------------------*/
@@ -54,7 +52,7 @@ static SpkUnknown *Stmt_source(SpkUnknown *self, SpkUnknown *sourcePathname, Spk
 static void Expr_zero(SpkObject *_self) {
     SpkExpr *self = (SpkExpr *)_self;
     size_t baseSize = offsetof(SpkExpr, kind);
-    (*Spk_ClassExpr->superclass->zero)(_self);
+    (*Spk_CLASS(Expr)->superclass->zero)(_self);
     memset((char *)self + baseSize,
            0,
            sizeof(SpkExpr) - baseSize);
@@ -63,7 +61,7 @@ static void Expr_zero(SpkObject *_self) {
 static void Stmt_zero(SpkObject *_self) {
     SpkStmt *self = (SpkStmt *)_self;
     size_t baseSize = offsetof(SpkStmt, kind);
-    (*Spk_ClassStmt->superclass->zero)(_self);
+    (*Spk_CLASS(Stmt)->superclass->zero)(_self);
     memset((char *)self + baseSize,
            0,
            sizeof(SpkStmt) - baseSize);
@@ -76,7 +74,7 @@ static void Stmt_zero(SpkObject *_self) {
 /* Expr */
 
 static void Expr_traverse_init(SpkObject *self) {
-    (*Spk_ClassExpr->superclass->traverse.init)(self);
+    (*Spk_CLASS(Expr)->superclass->traverse.init)(self);
 }
 
 static SpkUnknown **Expr_traverse_current(SpkObject *_self) {
@@ -129,7 +127,7 @@ static SpkUnknown **Expr_traverse_current(SpkObject *_self) {
         break;
     }
         
-    return (*Spk_ClassExpr->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(Expr)->superclass->traverse.current)(_self);
 }
 
 static void Expr_traverse_next(SpkObject *_self) {
@@ -203,14 +201,14 @@ static void Expr_traverse_next(SpkObject *_self) {
         break;
     }
     
-    (*Spk_ClassExpr->superclass->traverse.next)(_self);
+    (*Spk_CLASS(Expr)->superclass->traverse.next)(_self);
 }
 
 
 /* Stmt */
 
 static void Stmt_traverse_init(SpkObject *self) {
-    (*Spk_ClassStmt->superclass->traverse.init)(self);
+    (*Spk_CLASS(Stmt)->superclass->traverse.init)(self);
 }
 
 static SpkUnknown **Stmt_traverse_current(SpkObject *_self) {
@@ -247,7 +245,7 @@ static SpkUnknown **Stmt_traverse_current(SpkObject *_self) {
         break;
     }
     
-    return (*Spk_ClassStmt->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(Stmt)->superclass->traverse.current)(_self);
 }
 
 static void Stmt_traverse_next(SpkObject *_self) {
@@ -303,7 +301,7 @@ static void Stmt_traverse_next(SpkObject *_self) {
         break;
     }
     
-    (*Spk_ClassStmt->superclass->traverse.next)(_self);
+    (*Spk_CLASS(Stmt)->superclass->traverse.next)(_self);
 }
 
 
@@ -326,7 +324,7 @@ static SpkTraverse Expr_traverse = {
 };
 
 SpkClassTmpl Spk_ClassExprTmpl = {
-    "Expr", {
+    Spk_HEART_CLASS_TMPL(Expr, Object), {
         /*accessors*/ 0,
         ExprMethods,
         /*lvalueMethods*/ 0,
@@ -360,7 +358,7 @@ static SpkTraverse Stmt_traverse = {
 };
 
 SpkClassTmpl Spk_ClassStmtTmpl = {
-    "Stmt", {
+    Spk_HEART_CLASS_TMPL(Stmt, Object), {
         /*accessors*/ 0,
         StmtMethods,
         /*lvalueMethods*/ 0,

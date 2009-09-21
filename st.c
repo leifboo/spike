@@ -2,6 +2,7 @@
 #include "st.h"
 
 #include "class.h"
+#include "heart.h"
 #include "host.h"
 #include "interp.h"
 #include "native.h"
@@ -9,10 +10,6 @@
 #include "tree.h"
 #include <assert.h>
 #include <string.h>
-
-
-SpkBehavior *Spk_ClassSymbolNode, *Spk_ClassSTEntry,
-    *Spk_ClassContextClass, *Spk_ClassScope, *Spk_ClassSymbolTable;
 
 
 /*------------------------------------------------------------------------*/
@@ -26,7 +23,7 @@ SpkSymbolNode *SpkSymbolNode_FromSymbol(SpkSymbolTable *st, SpkUnknown *sym) {
         return s;
     }
     
-    s = (SpkSymbolNode *)SpkObject_New(Spk_ClassSymbolNode);
+    s = (SpkSymbolNode *)SpkObject_New(Spk_CLASS(SymbolNode));
     Spk_INCREF(sym);
     Spk_XDECREF(s->sym);
     s->sym = sym;
@@ -49,7 +46,7 @@ SpkSymbolNode *SpkSymbolNode_FromCString(SpkSymbolTable *st, const char *str) {
 SpkSymbolTable *SpkSymbolTable_New() {
     SpkSymbolTable *newSymbolTable;
     
-    newSymbolTable = (SpkSymbolTable *)SpkObject_New(Spk_ClassSymbolTable);
+    newSymbolTable = (SpkSymbolTable *)SpkObject_New(Spk_CLASS(SymbolTable));
     Spk_XDECREF(newSymbolTable->symbolNodes);
     newSymbolTable->symbolNodes = SpkHost_NewSymbolDict();
     return newSymbolTable;
@@ -61,12 +58,12 @@ void SpkSymbolTable_EnterScope(SpkSymbolTable *st, int enterNewContext) {
     
     outerScope = st->currentScope;
     
-    newScope = (SpkScope *)SpkObject_New(Spk_ClassScope);
+    newScope = (SpkScope *)SpkObject_New(Spk_CLASS(Scope));
     Spk_XINCREF(outerScope);
     Spk_XDECREF(newScope->outer);
     newScope->outer = outerScope;
     if (enterNewContext) {
-        newContext = (SpkContextClass *)SpkObject_New(Spk_ClassContextClass);
+        newContext = (SpkContextClass *)SpkObject_New(Spk_CLASS(ContextClass));
         Spk_INCREF(newScope);
         Spk_XDECREF(newContext->scope);
         newContext->scope = newScope;
@@ -182,7 +179,7 @@ SpkUnknown *SpkSymbolTable_Insert(SpkSymbolTable *st, SpkExpr *def,
         return Spk_void;
     }
     
-    newEntry = (SpkSTEntry *)SpkObject_New(Spk_ClassSTEntry);
+    newEntry = (SpkSTEntry *)SpkObject_New(Spk_CLASS(STEntry));
     Spk_XDECREF(newEntry->scope);
     Spk_XDECREF(newEntry->nextInScope);
     Spk_XDECREF(newEntry->shadow);
@@ -286,14 +283,14 @@ static SpkUnknown *ClassSymbolTable_new(SpkUnknown *self, SpkUnknown *arg0, SpkU
 
 static void SymbolNode_zero(SpkObject *_self) {
     SpkSymbolNode *self = (SpkSymbolNode *)_self;
-    (*Spk_ClassSymbolNode->superclass->zero)(_self);
+    (*Spk_CLASS(SymbolNode)->superclass->zero)(_self);
     self->entry = 0;
     self->sym = 0;
 }
 
 static void STEntry_zero(SpkObject *_self) {
     SpkSTEntry *self = (SpkSTEntry *)_self;
-    (*Spk_ClassSTEntry->superclass->zero)(_self);
+    (*Spk_CLASS(STEntry)->superclass->zero)(_self);
     self->scope = 0;
     self->nextInScope = 0;
     self->shadow = 0;
@@ -303,13 +300,13 @@ static void STEntry_zero(SpkObject *_self) {
 
 static void ContextClass_zero(SpkObject *_self) {
     SpkContextClass *self = (SpkContextClass *)_self;
-    (*Spk_ClassContextClass->superclass->zero)(_self);
+    (*Spk_CLASS(ContextClass)->superclass->zero)(_self);
     self->scope = 0;
 }
 
 static void Scope_zero(SpkObject *_self) {
     SpkScope *self = (SpkScope *)_self;
-    (*Spk_ClassScope->superclass->zero)(_self);
+    (*Spk_CLASS(Scope)->superclass->zero)(_self);
     self->outer = 0;
     self->entryList = 0;
     self->context = 0;
@@ -317,7 +314,7 @@ static void Scope_zero(SpkObject *_self) {
 
 static void SymbolTable_zero(SpkObject *_self) {
     SpkSymbolTable *self = (SpkSymbolTable *)_self;
-    (*Spk_ClassSymbolTable->superclass->zero)(_self);
+    (*Spk_CLASS(SymbolTable)->superclass->zero)(_self);
     self->currentScope = 0;
     self->symbolNodes = 0;
 }
@@ -329,7 +326,7 @@ static void SymbolTable_zero(SpkObject *_self) {
 /* SymbolNode */
 
 static void SymbolNode_traverse_init(SpkObject *self) {
-    (*Spk_ClassSymbolNode->superclass->traverse.init)(self);
+    (*Spk_CLASS(SymbolNode)->superclass->traverse.init)(self);
 }
 
 static SpkUnknown **SymbolNode_traverse_current(SpkObject *_self) {
@@ -340,7 +337,7 @@ static SpkUnknown **SymbolNode_traverse_current(SpkObject *_self) {
         return (SpkUnknown **)&self->entry;
     if (self->sym)
         return (SpkUnknown **)&self->sym;
-    return (*Spk_ClassSymbolNode->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(SymbolNode)->superclass->traverse.current)(_self);
 }
 
 static void SymbolNode_traverse_next(SpkObject *_self) {
@@ -355,14 +352,14 @@ static void SymbolNode_traverse_next(SpkObject *_self) {
         self->sym = 0;
         return;
     }
-    (*Spk_ClassSymbolNode->superclass->traverse.next)(_self);
+    (*Spk_CLASS(SymbolNode)->superclass->traverse.next)(_self);
 }
 
 
 /* STEntry */
 
 static void STEntry_traverse_init(SpkObject *self) {
-    (*Spk_ClassSTEntry->superclass->traverse.init)(self);
+    (*Spk_CLASS(STEntry)->superclass->traverse.init)(self);
 }
 
 static SpkUnknown **STEntry_traverse_current(SpkObject *_self) {
@@ -379,7 +376,7 @@ static SpkUnknown **STEntry_traverse_current(SpkObject *_self) {
         return (SpkUnknown **)&self->sym;
     if (self->def)
         return (SpkUnknown **)&self->def;
-    return (*Spk_ClassSTEntry->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(STEntry)->superclass->traverse.current)(_self);
 }
 
 static void STEntry_traverse_next(SpkObject *_self) {
@@ -406,14 +403,14 @@ static void STEntry_traverse_next(SpkObject *_self) {
         self->def = 0;
         return;
     }
-    (*Spk_ClassSTEntry->superclass->traverse.next)(_self);
+    (*Spk_CLASS(STEntry)->superclass->traverse.next)(_self);
 }
 
 
 /* ContextClass */
 
 static void ContextClass_traverse_init(SpkObject *self) {
-    (*Spk_ClassContextClass->superclass->traverse.init)(self);
+    (*Spk_CLASS(ContextClass)->superclass->traverse.init)(self);
 }
 
 static SpkUnknown **ContextClass_traverse_current(SpkObject *_self) {
@@ -422,7 +419,7 @@ static SpkUnknown **ContextClass_traverse_current(SpkObject *_self) {
     self = (SpkContextClass *)_self;
     if (self->scope)
         return (SpkUnknown **)&self->scope;
-    return (*Spk_ClassContextClass->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(ContextClass)->superclass->traverse.current)(_self);
 }
 
 static void ContextClass_traverse_next(SpkObject *_self) {
@@ -433,14 +430,14 @@ static void ContextClass_traverse_next(SpkObject *_self) {
         self->scope = 0;
         return;
     }
-    (*Spk_ClassContextClass->superclass->traverse.next)(_self);
+    (*Spk_CLASS(ContextClass)->superclass->traverse.next)(_self);
 }
 
 
 /* Scope */
 
 static void Scope_traverse_init(SpkObject *self) {
-    (*Spk_ClassScope->superclass->traverse.init)(self);
+    (*Spk_CLASS(Scope)->superclass->traverse.init)(self);
 }
 
 static SpkUnknown **Scope_traverse_current(SpkObject *_self) {
@@ -453,7 +450,7 @@ static SpkUnknown **Scope_traverse_current(SpkObject *_self) {
         return (SpkUnknown **)&self->entryList;
     if (self->context)
         return (SpkUnknown **)&self->context;
-    return (*Spk_ClassScope->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(Scope)->superclass->traverse.current)(_self);
 }
 
 static void Scope_traverse_next(SpkObject *_self) {
@@ -472,14 +469,14 @@ static void Scope_traverse_next(SpkObject *_self) {
         self->context = 0;
         return;
     }
-    (*Spk_ClassScope->superclass->traverse.next)(_self);
+    (*Spk_CLASS(Scope)->superclass->traverse.next)(_self);
 }
 
 
 /* SymbolTable */
 
 static void SymbolTable_traverse_init(SpkObject *self) {
-    (*Spk_ClassSymbolTable->superclass->traverse.init)(self);
+    (*Spk_CLASS(SymbolTable)->superclass->traverse.init)(self);
 }
 
 static SpkUnknown **SymbolTable_traverse_current(SpkObject *_self) {
@@ -490,7 +487,7 @@ static SpkUnknown **SymbolTable_traverse_current(SpkObject *_self) {
         return (SpkUnknown **)&self->currentScope;
     if (self->symbolNodes)
         return (SpkUnknown **)&self->symbolNodes;
-    return (*Spk_ClassSymbolTable->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(SymbolTable)->superclass->traverse.current)(_self);
 }
 
 static void SymbolTable_traverse_next(SpkObject *_self) {
@@ -505,7 +502,7 @@ static void SymbolTable_traverse_next(SpkObject *_self) {
         self->symbolNodes = 0;
         return;
     }
-    (*Spk_ClassSymbolTable->superclass->traverse.next)(_self);
+    (*Spk_CLASS(SymbolTable)->superclass->traverse.next)(_self);
 }
 
 
@@ -545,7 +542,7 @@ static SpkTraverse SymbolNode_traverse = {
 };
 
 SpkClassTmpl Spk_ClassSymbolNodeTmpl = {
-    "SymbolNode", {
+    Spk_HEART_CLASS_TMPL(SymbolNode, Object), {
         /*accessors*/ 0,
         /*methods*/ 0,
         /*lvalueMethods*/ 0,
@@ -566,7 +563,7 @@ static SpkTraverse STEntry_traverse = {
 };
 
 SpkClassTmpl Spk_ClassSTEntryTmpl = {
-    "STEntry", {
+    Spk_HEART_CLASS_TMPL(STEntry, Object), {
         /*accessors*/ 0,
         /*methods*/ 0,
         /*lvalueMethods*/ 0,
@@ -587,7 +584,7 @@ static SpkTraverse ContextClass_traverse = {
 };
 
 SpkClassTmpl Spk_ClassContextClassTmpl = {
-    "ContextClass", {
+    Spk_HEART_CLASS_TMPL(ContextClass, Object), {
         /*accessors*/ 0,
         /*methods*/ 0,
         /*lvalueMethods*/ 0,
@@ -608,7 +605,7 @@ static SpkTraverse Scope_traverse = {
 };
 
 SpkClassTmpl Spk_ClassScopeTmpl = {
-    "Scope", {
+    Spk_HEART_CLASS_TMPL(Scope, Object), {
         /*accessors*/ 0,
         /*methods*/ 0,
         /*lvalueMethods*/ 0,
@@ -639,7 +636,7 @@ static SpkTraverse SymbolTable_traverse = {
 };
 
 SpkClassTmpl Spk_ClassSymbolTableTmpl = {
-    "SymbolTable", {
+    Spk_HEART_CLASS_TMPL(SymbolTable, Object), {
         /*accessors*/ 0,
         SymbolTableMethods,
         /*lvalueMethods*/ 0,

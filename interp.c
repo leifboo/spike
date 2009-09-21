@@ -7,6 +7,7 @@
 #include "bridge.h"
 #endif
 #include "class.h"
+#include "heart.h"
 #include "host.h"
 #include "module.h"
 #include "native.h"
@@ -117,9 +118,6 @@ SpkUnknown *Spk_null;
 SpkUnknown *Spk_uninit;
 SpkUnknown *Spk_void;
 
-SpkBehavior *Spk_ClassMessage, *Spk_ClassMethod, *Spk_ClassThunk, *Spk_ClassContext, *Spk_ClassMethodContext, *Spk_ClassBlockContext;
-SpkBehavior *Spk_ClassInterpreter, *Spk_ClassProcessorScheduler, *Spk_ClassFiber;
-SpkBehavior *Spk_ClassNull, *Spk_ClassUninit, *Spk_ClassVoid;
 SpkInterpreter *theInterpreter; /* XXX */
 
 
@@ -142,7 +140,7 @@ static SpkMethodTmpl MessageMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassMessageTmpl = {
-    "Message", {
+    Spk_HEART_CLASS_TMPL(Message, Object), {
         MessageAccessors,
         MessageMethods,
         /*lvalueMethods*/ 0,
@@ -154,7 +152,7 @@ SpkClassTmpl Spk_ClassMessageTmpl = {
 
 static void Method_zero(SpkObject *_self) {
     SpkMethod *self = (SpkMethod *)_self;
-    (*Spk_ClassMethod->superclass->zero)(_self);
+    (*Spk_CLASS(Method)->superclass->zero)(_self);
     self->nextInScope = 0;
     self->nestedClassList.first = 0;
     self->nestedClassList.last = 0;
@@ -176,7 +174,7 @@ static void Method_dealloc(SpkObject *_self) {
     }
     free(self->debug.lineCodes);
     self->debug.lineCodes = 0;
-    (*Spk_ClassMethod->superclass->dealloc)(_self);
+    (*Spk_CLASS(Method)->superclass->dealloc)(_self);
 }
 
 typedef struct SpkMethodSubclass {
@@ -189,7 +187,7 @@ static SpkMethodTmpl MethodMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassMethodTmpl = {
-    "Method", {
+    Spk_HEART_CLASS_TMPL(Method, VariableObject), {
         /*accessors*/ 0,
         MethodMethods,
         /*lvalueMethods*/ 0,
@@ -222,7 +220,7 @@ static SpkMethodTmpl ThunkMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassThunkTmpl = {
-    "Thunk", {
+    Spk_HEART_CLASS_TMPL(Thunk, Object), {
         /*accessors*/ 0,
         ThunkMethods,
         /*lvalueMethods*/ 0,
@@ -261,7 +259,7 @@ static SpkTraverse Context_traverse = {
 };
 
 SpkClassTmpl Spk_ClassContextTmpl = {
-    "Context", {
+    Spk_HEART_CLASS_TMPL(Context, VariableObject), {
         /*accessors*/ 0,
         ContextMethods,
         /*lvalueMethods*/ 0,
@@ -280,7 +278,7 @@ static SpkMethodTmpl MethodContextMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassMethodContextTmpl = {
-    "MethodContext", {
+    Spk_HEART_CLASS_TMPL(MethodContext, Context), {
         /*accessors*/ 0,
         MethodContextMethods,
         /*lvalueMethods*/ 0,
@@ -301,7 +299,7 @@ static SpkMethodTmpl BlockContextMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassBlockContextTmpl = {
-    "BlockContext", {
+    Spk_HEART_CLASS_TMPL(BlockContext, Context), {
         BlockContextAccessors,
         BlockContextMethods,
         /*lvalueMethods*/ 0,
@@ -317,7 +315,7 @@ static SpkMethodTmpl NullMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassNullTmpl = {
-    "Null", {
+    Spk_HEART_CLASS_TMPL(Null, Object), {
         /*accessors*/ 0,
         NullMethods,
         /*lvalueMethods*/ 0
@@ -331,7 +329,7 @@ static SpkMethodTmpl UninitMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassUninitTmpl = {
-    "Uninit", {
+    Spk_HEART_CLASS_TMPL(Uninit, Object), {
         /*accessors*/ 0,
         UninitMethods,
         /*lvalueMethods*/ 0
@@ -345,7 +343,7 @@ static SpkMethodTmpl VoidMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassVoidTmpl = {
-    "Void", {
+    Spk_HEART_CLASS_TMPL(Void, Object), {
         /*accessors*/ 0,
         VoidMethods,
         /*lvalueMethods*/ 0
@@ -364,7 +362,7 @@ static SpkMethodTmpl InterpreterMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassInterpreterTmpl = {
-    "Interpreter", {
+    Spk_HEART_CLASS_TMPL(Interpreter, Object), {
         /*accessors*/ 0,
         InterpreterMethods,
         /*lvalueMethods*/ 0,
@@ -384,7 +382,7 @@ static SpkMethodTmpl ProcessorSchedulerMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassProcessorSchedulerTmpl = {
-    "ProcessorScheduler", {
+    Spk_HEART_CLASS_TMPL(ProcessorScheduler, Object), {
         /*accessors*/ 0,
         ProcessorSchedulerMethods,
         /*lvalueMethods*/ 0,
@@ -404,7 +402,7 @@ static SpkMethodTmpl FiberMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassFiberTmpl = {
-    "Fiber", {
+    Spk_HEART_CLASS_TMPL(Fiber, Object), {
         /*accessors*/ 0,
         FiberMethods,
         /*lvalueMethods*/ 0,
@@ -422,12 +420,12 @@ void SpkInterpreter_Boot(void) {
     
     callThunk = SpkMethod_New(1);
     SpkMethod_OPCODES(callThunk)[0] = Spk_OPCODE_CALL_THUNK;
-    SpkBehavior_InsertMethod(Spk_ClassThunk, Spk_METHOD_NAMESPACE_RVALUE, Spk___apply__, callThunk);
+    SpkBehavior_InsertMethod(Spk_CLASS(Thunk), Spk_METHOD_NAMESPACE_RVALUE, Spk___apply__, callThunk);
     Spk_DECREF(callThunk);
     
     callBlock = SpkMethod_New(1);
     SpkMethod_OPCODES(callBlock)[0] = Spk_OPCODE_CALL_BLOCK;
-    SpkBehavior_InsertMethod(Spk_ClassBlockContext, Spk_METHOD_NAMESPACE_RVALUE, Spk___apply__, callBlock);
+    SpkBehavior_InsertMethod(Spk_CLASS(BlockContext), Spk_METHOD_NAMESPACE_RVALUE, Spk___apply__, callBlock);
     Spk_DECREF(callBlock);
 }
 
@@ -450,18 +448,18 @@ SpkInterpreter *SpkInterpreter_New(void) {
     leafContext->u.m.receiver = 0;
     leafContext->u.m.framep = 0;
     
-    fiber =(SpkFiber *)SpkObject_New(Spk_ClassFiber);
+    fiber =(SpkFiber *)SpkObject_New(Spk_CLASS(Fiber));
     fiber->nextLink = 0;
     fiber->suspendedContext = 0;
     fiber->leafContext = leafContext; /* steal reference */
     fiber->priority = 0;
     fiber->myList = 0;
     
-    scheduler =(SpkProcessorScheduler *)SpkObject_New(Spk_ClassProcessorScheduler);
+    scheduler =(SpkProcessorScheduler *)SpkObject_New(Spk_CLASS(ProcessorScheduler));
     scheduler->quiescentFiberLists = 0;
     scheduler->activeFiber = fiber; /* steal reference */
     
-    newInterpreter = (SpkInterpreter *)SpkObject_New(Spk_ClassInterpreter);
+    newInterpreter = (SpkInterpreter *)SpkObject_New(Spk_CLASS(Interpreter));
     SpkInterpreter_Init(newInterpreter, scheduler);
     Spk_DECREF(scheduler);
     
@@ -484,11 +482,11 @@ void SpkInterpreter_Init(SpkInterpreter *self, SpkProcessorScheduler *aScheduler
 }
 
 SpkMessage *SpkMessage_New() {
-    return (SpkMessage *)SpkObject_New(Spk_ClassMessage);
+    return (SpkMessage *)SpkObject_New(Spk_CLASS(Message));
 }
 
 SpkMethod *SpkMethod_New(size_t size) {
-    return (SpkMethod *)SpkObject_NewVar(Spk_ClassMethod, size);
+    return (SpkMethod *)SpkObject_NewVar(Spk_CLASS(Method), size);
 }
 
 
@@ -502,7 +500,7 @@ SpkThunk *SpkThunk_New(
 {
     SpkThunk *newThunk;
     
-    newThunk = (SpkThunk *)SpkObject_New(Spk_ClassThunk);
+    newThunk = (SpkThunk *)SpkObject_New(Spk_CLASS(Thunk));
     if (!newThunk)
         return 0;
     newThunk->receiver = receiver;  Spk_INCREF(receiver);
@@ -517,7 +515,7 @@ static void Thunk_traverse_init(SpkObject *_self) {
     SpkThunk *self;
     
     self = (SpkThunk *)_self;
-    (*Spk_ClassThunk->superclass->traverse.init)(_self);
+    (*Spk_CLASS(Thunk)->superclass->traverse.init)(_self);
     self->pc = (SpkOpcode *)0 + 3;
 }
 
@@ -532,7 +530,7 @@ static SpkUnknown **Thunk_traverse_current(SpkObject *_self) {
     case 2: return (SpkUnknown **)&self->method;
     case 1: return (SpkUnknown **)&self->methodClass;
     }
-    return (*Spk_ClassThunk->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(Thunk)->superclass->traverse.current)(_self);
 }
 
 static void Thunk_traverse_next(SpkObject *_self) {
@@ -542,7 +540,7 @@ static void Thunk_traverse_next(SpkObject *_self) {
     if (self->pc)
         --self->pc;
     else
-        (*Spk_ClassThunk->superclass->traverse.next)(_self);
+        (*Spk_CLASS(Thunk)->superclass->traverse.next)(_self);
 }
 
 
@@ -554,7 +552,7 @@ SpkContext *SpkContext_New(size_t size) {
     SpkUnknown **p;
     size_t count;
     
-    newContext = (SpkContext *)SpkObject_NewVar(Spk_ClassMethodContext, size);
+    newContext = (SpkContext *)SpkObject_NewVar(Spk_CLASS(MethodContext), size);
     if (!newContext) {
         return 0;
     }
@@ -570,7 +568,7 @@ SpkContext *SpkContext_New(size_t size) {
 }
 
 static void Context_traverse_init(SpkObject *self) {
-    (*Spk_ClassContext->superclass->traverse.init)(self);
+    (*Spk_CLASS(Context)->superclass->traverse.init)(self);
 }
 
 static SpkUnknown **Context_traverse_current(SpkObject *_self) {
@@ -579,7 +577,7 @@ static SpkUnknown **Context_traverse_current(SpkObject *_self) {
     self = (SpkContext *)_self;
     if (self->base.size > 0)
         return &(SpkContext_VARIABLES(self)[self->base.size - 1]);
-    return (*Spk_ClassContext->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(Context)->superclass->traverse.current)(_self);
 }
 
 static void Context_traverse_next(SpkObject *_self) {
@@ -589,7 +587,7 @@ static void Context_traverse_next(SpkObject *_self) {
     if (self->base.size > 0)
         --self->base.size;
     else
-        (*Spk_ClassContext->superclass->traverse.next)(_self);
+        (*Spk_CLASS(Context)->superclass->traverse.next)(_self);
 }
 
 static void Context_dealloc(SpkObject *_self) {
@@ -611,7 +609,7 @@ static void Context_dealloc(SpkObject *_self) {
         Spk_DECREF(self->u.m.receiver);
     }
     
-    (*Spk_ClassContext->superclass->dealloc)(_self);
+    (*Spk_CLASS(Context)->superclass->dealloc)(_self);
 }
 
 static SpkUnknown *Context_blockCopy(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
@@ -633,9 +631,9 @@ static SpkUnknown *Context_blockCopy(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
     size = self->homeContext->base.size;
     
     newContext = SpkContext_New(size);
-    Spk_INCREF(Spk_ClassBlockContext);
+    Spk_INCREF(Spk_CLASS(BlockContext));
     Spk_DECREF(newContext->base.base.klass);
-    newContext->base.base.klass = Spk_ClassBlockContext;
+    newContext->base.base.klass = Spk_CLASS(BlockContext);
     newContext->caller = 0;
     newContext->stackp = &SpkContext_VARIABLES(newContext)[newContext->base.size];
     newContext->homeContext = self->homeContext;  Spk_INCREF(self->homeContext);
@@ -831,7 +829,7 @@ do { --stackPointer; \
 
 /* Python interoperability */
 #ifdef MALTIPY
-#define GET_CLASS(op) (PyObject_TypeCheck((op), &SpkSpikeObject_Type) ? ((SpkObject *)(op))->klass : Spk_ClassPythonObject)
+#define GET_CLASS(op) (PyObject_TypeCheck((op), &SpkSpikeObject_Type) ? ((SpkObject *)(op))->klass : Spk_CLASS(PythonObject))
 #else
 #define GET_CLASS(op) (((SpkObject *)(op))->klass)
 #endif
@@ -1642,7 +1640,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 Spk_DECREF(varArgTuple);
                 POP(1);
             }
-            thunk = (SpkThunk *)SpkObject_New(Spk_ClassThunk);
+            thunk = (SpkThunk *)SpkObject_New(Spk_CLASS(Thunk));
             thunk->receiver = receiver;        /* steal reference from stack */
             thunk->method = method;            Spk_INCREF(method);
             thunk->methodClass = methodClass;  Spk_INCREF(methodClass);
@@ -1831,7 +1829,7 @@ SpkUnknown *SpkInterpreter_SendMessage(
 /* fibers */
 
 SpkSemaphore *SpkSemaphore_New() {
-    return XXX /*(Semaphore *)SpkObject_New(Spk_ClassSemaphore) */ ;
+    return XXX /*(Semaphore *)SpkObject_New(Spk_CLASS(Semaphore)) */ ;
 }
 
 int SpkSemaphore_IsEmpty(SpkSemaphore *self) {

@@ -3,6 +3,7 @@
 
 #include "cgen.h"
 #include "disasm.h"
+#include "heart.h"
 #include "host.h"
 #include "interp.h"
 #include "io.h"
@@ -17,7 +18,7 @@
 
 
 static SpkUnknown *defaultNotifier(void) {
-    return Spk_CallAttr(theInterpreter, (SpkUnknown *)Spk_ClassNotifier, Spk_new, Spk_stderr, 0);
+    return Spk_CallAttr(theInterpreter, (SpkUnknown *)Spk_CLASS(Notifier), Spk_new, Spk_stderr, 0);
 }
 
 

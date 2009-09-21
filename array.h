@@ -11,7 +11,6 @@
 typedef SpkVariableObject SpkArray;
 
 
-extern struct SpkBehavior *Spk_ClassArray;
 extern struct SpkClassTmpl Spk_ClassArrayTmpl;
 
 

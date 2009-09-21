@@ -9,7 +9,6 @@
 typedef struct SpkChar SpkChar;
 
 
-extern struct SpkBehavior *Spk_ClassChar;
 extern struct SpkClassTmpl Spk_ClassCharTmpl;
 
 

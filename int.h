@@ -9,7 +9,6 @@
 typedef struct SpkInteger SpkInteger;
 
 
-extern struct SpkBehavior *Spk_ClassInteger;
 extern struct SpkClassTmpl Spk_ClassIntegerTmpl;
 
 

@@ -2,6 +2,7 @@
 #include "sym.h"
 
 #include "class.h"
+#include "heart.h"
 #include "native.h"
 #include "str.h"
 
@@ -54,7 +55,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl Spk_ClassSymbolTmpl = {
-    "Symbol", {
+    Spk_HEART_CLASS_TMPL(Symbol, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,

@@ -10,8 +10,6 @@
 
 int SpkBoolean_Boot(void);
 
-extern struct SpkBehavior *Spk_ClassBoolean, *Spk_ClassFalse, *Spk_ClassTrue;
-
 #endif /* !MALTIPY */
 
 

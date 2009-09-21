@@ -9,7 +9,6 @@
 typedef struct SpkFloat SpkFloat;
 
 
-extern struct SpkBehavior *Spk_ClassFloat;
 extern struct SpkClassTmpl Spk_ClassFloatTmpl;
 
 

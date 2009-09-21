@@ -7,6 +7,7 @@
 #include "bridge.h"
 #endif
 #include "class.h"
+#include "heart.h"
 #include "host.h"
 #include "interp.h"
 #include "native.h"
@@ -14,9 +15,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-
-SpkBehavior *Spk_ClassObject, *Spk_ClassVariableObject;
 
 
 /*------------------------------------------------------------------------*/
@@ -116,7 +114,7 @@ static void Object_dealloc(SpkObject *self) {
 
 static void VariableObject_zero(SpkObject *_self) {
     SpkVariableObject *self = (SpkVariableObject *)_self;
-    (*Spk_ClassVariableObject->superclass->zero)(_self);
+    (*Spk_CLASS(VariableObject)->superclass->zero)(_self);
     memset(SpkVariableObject_ITEM_BASE(self), 0,
            self->size * self->base.klass->itemSize);
 }
@@ -183,7 +181,7 @@ static SpkTraverse ObjectTraverse = {
 };
 
 SpkClassTmpl Spk_ClassObjectTmpl = {
-    "Object", {
+    "Object", offsetof(SpkHeart, Object), 0, {
         ObjectAccessors,
         ObjectMethods,
         /*lvalueMethods*/ 0,
@@ -210,7 +208,7 @@ static SpkMethodTmpl ClassVariableObjectMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassVariableObjectTmpl = {
-    "VariableObject", {
+    Spk_HEART_CLASS_TMPL(VariableObject, Object), {
         /*accessors*/ 0,
         VariableObjectMethods,
         /*lvalueMethods*/ 0,

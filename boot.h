@@ -3,24 +3,23 @@
 #define __spk_boot_h__
 
 
+#include <stddef.h>
+
+
 struct SpkBehavior;
 struct SpkClassTmpl;
 struct SpkObject;
 
 
-typedef struct SpkClassBootRec {
-    struct SpkBehavior **var;
-    struct SpkClassTmpl *tmpl;
-    struct SpkBehavior **superclass;
-} SpkClassBootRec;
+typedef struct SpkClassTmpl *SpkClassBootRec;
 
 typedef struct SpkObjectBootRec {
-    struct SpkBehavior **klass;
+    size_t classVarOffset;
     struct SpkObject **var;
 } SpkObjectBootRec;
 
 typedef struct SpkVarBootRec {
-    struct SpkBehavior **klass;
+    size_t classVarOffset;
     struct SpkObject **var;
     const char *name;
 } SpkVarBootRec;

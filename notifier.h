@@ -9,7 +9,6 @@
 typedef struct SpkNotifier SpkNotifier;
 
 
-extern struct SpkBehavior *Spk_ClassNotifier;
 extern struct SpkClassTmpl Spk_ClassNotifierTmpl;
 
 

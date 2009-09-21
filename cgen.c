@@ -3,6 +3,7 @@
 
 #include "behavior.h"
 #include "class.h"
+#include "heart.h"
 #include "host.h"
 #include "interp.h"
 #include "module.h"
@@ -2024,12 +2025,12 @@ SpkModule *SpkCodeGen_GenerateCode(Stmt *tree) {
     cgen->rodataMap = SpkHost_NewLiteralDict();
     /* Create a 'Module' subclass to represent this module. */
     cgen->moduleClassInstance
-        = (SpkBehavior *)SpkObject_New(Spk_ClassBehavior);
+        = (SpkBehavior *)SpkObject_New(Spk_CLASS(Behavior));
     if (!cgen->rodataMap || !cgen->rodataMap) {
         goto unwind;
     }
     
-    SpkBehavior_Init(cgen->moduleClassInstance, Spk_ClassModule, 0, dataSize);
+    SpkBehavior_Init(cgen->moduleClassInstance, Spk_CLASS(Module), 0, dataSize);
     
     /* Create all classes. */
     for (s = rootClassList; s; s = s->u.klass.nextRootClassDef) {

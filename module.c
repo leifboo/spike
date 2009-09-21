@@ -2,12 +2,9 @@
 #include "module.h"
 
 #include "class.h"
+#include "heart.h"
 #include "rodata.h"
 #include <stdlib.h>
-
-
-SpkBehavior *Spk_ClassModule;
-SpkModule *Spk_builtInModule;
 
 
 /*------------------------------------------------------------------------*/
@@ -60,7 +57,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl Spk_ClassModuleTmpl = {
-    "Module", {
+    Spk_HEART_CLASS_TMPL(Module, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,

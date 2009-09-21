@@ -112,7 +112,6 @@ struct SpkBehavior {
 };
 
 
-extern SpkBehavior *Spk_ClassBehavior;
 extern struct SpkClassTmpl Spk_ClassBehaviorTmpl;
 
 

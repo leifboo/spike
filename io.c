@@ -6,6 +6,7 @@
 #include "char.h"
 #include "class.h"
 #include "float.h"
+#include "heart.h"
 #include "int.h"
 #include "native.h"
 #include "rodata.h"
@@ -21,7 +22,6 @@ struct SpkFileStream {
 };
 
 
-SpkBehavior *Spk_ClassFileStream;
 SpkFileStream *Spk_stdin, *Spk_stdout, *Spk_stderr;
 
 
@@ -365,7 +365,7 @@ static SpkUnknown *ClassFileStream_open(SpkUnknown *self, SpkUnknown *arg0, SpkU
 
 static void FileStream_zero(SpkObject *_self) {
     SpkFileStream *self = (SpkFileStream *)_self;
-    (*Spk_ClassFileStream->superclass->zero)(_self);
+    (*Spk_CLASS(FileStream)->superclass->zero)(_self);
     self->stream = 0;
 }
 
@@ -375,7 +375,7 @@ static void FileStream_dealloc(SpkObject *_self) {
         fclose(self->stream);
         self->stream = 0;
     }
-    (*Spk_ClassFileStream->superclass->dealloc)(_self);
+    (*Spk_CLASS(FileStream)->superclass->dealloc)(_self);
 }
 
 
@@ -410,7 +410,7 @@ static SpkMethodTmpl metaMethods[] = {
 };
 
 SpkClassTmpl Spk_ClassFileStreamTmpl = {
-    "FileStream", {
+    Spk_HEART_CLASS_TMPL(FileStream, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,

@@ -16,7 +16,6 @@ typedef struct SpkMetaclass {
 } SpkMetaclass;
 
 
-extern struct SpkBehavior *Spk_ClassMetaclass;
 extern struct SpkClassTmpl Spk_ClassMetaclassTmpl;
 
 

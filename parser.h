@@ -39,7 +39,6 @@ SpkStmt *SpkParser_ParseString(const char *, struct SpkSymbolTable *);
 void SpkParser_Source(SpkStmt **, SpkUnknown *);
 
 
-extern struct SpkBehavior *Spk_ClassParser;
 extern struct SpkClassTmpl Spk_ClassParserTmpl;
 
 

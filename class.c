@@ -1,6 +1,7 @@
 
 #include "class.h"
 
+#include "heart.h"
 #include "host.h"
 #include "interp.h"
 #include "metaclass.h"
@@ -9,9 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-
-struct SpkBehavior *Spk_ClassClass;
 
 
 /*------------------------------------------------------------------------*/
@@ -95,7 +93,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl Spk_ClassClassTmpl = {
-    "Class", {
+    Spk_HEART_CLASS_TMPL(Class, Behavior), {
         accessors,
         methods,
         /*lvalueMethods*/ 0,
@@ -133,15 +131,15 @@ SpkClass *SpkClass_New(SpkUnknown *name, SpkBehavior *superclass,
 
 SpkClass *SpkClass_EmptyFromTemplate(SpkClassTmpl *template,
                                      SpkBehavior *superclass,
+                                     SpkBehavior *Metaclass,
                                      struct SpkModule *module)
 {
     SpkMetaclass *newMetaclass, *superMeta;
     SpkClass *newClass;
     
     /* It is too early to call SpkMetaclass_FromTemplate(). */
-    superMeta = Spk_CAST(Metaclass, superclass->base.klass);
-    assert(superMeta);
-    newMetaclass = (SpkMetaclass *)SpkObject_New(Spk_ClassMetaclass);
+    superMeta = (SpkMetaclass *)superclass->base.klass;
+    newMetaclass = (SpkMetaclass *)SpkObject_New(Metaclass);
     SpkBehavior_InitFromTemplate((SpkBehavior *)newMetaclass, &template->metaclass, (SpkBehavior *)superMeta, module);
     
     newClass = (SpkClass *)SpkObject_New((SpkBehavior *)newMetaclass);

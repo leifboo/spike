@@ -3,6 +3,7 @@
 
 #include "bool.h"
 #include "class.h"
+#include "heart.h"
 #include "interp.h"
 #include "module.h"
 #include "native.h"
@@ -20,9 +21,6 @@ struct SpkChar {
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
 
 
-SpkBehavior *Spk_ClassChar;
-
-
 /* XXX: There are only 256 of these objects... */
 
 
@@ -32,7 +30,7 @@ SpkBehavior *Spk_ClassChar;
 static SpkUnknown *Char_unaryOper(SpkChar *self, SpkOper oper) {
     SpkChar *result;
     
-    result = (SpkChar *)SpkObject_New(Spk_ClassChar);
+    result = (SpkChar *)SpkObject_New(Spk_CLASS(Char));
     switch (oper) {
     case Spk_OPER_SUCC: result->value = self->value + 1; break;
     case Spk_OPER_PRED: result->value = self->value - 1; break;
@@ -55,7 +53,7 @@ static SpkUnknown *Char_binaryOper(SpkChar *self, SpkUnknown *arg0, SpkOper oper
         Spk_Halt(Spk_HALT_TYPE_ERROR, "a Char object is required");
         return 0;
     }
-    result = (SpkChar *)SpkObject_New(Spk_ClassChar);
+    result = (SpkChar *)SpkObject_New(Spk_CLASS(Char));
     switch (oper) {
     case Spk_OPER_MUL:    result->value = self->value * arg->value;  break;
     case Spk_OPER_DIV:    result->value = self->value / arg->value;  break;
@@ -261,7 +259,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl Spk_ClassCharTmpl = {
-    "Char", {
+    Spk_HEART_CLASS_TMPL(Char, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
@@ -277,7 +275,7 @@ SpkClassTmpl Spk_ClassCharTmpl = {
 SpkChar *SpkChar_FromCChar(char c) {
     SpkChar *result;
     
-    result = (SpkChar *)SpkObject_New(Spk_ClassChar);
+    result = (SpkChar *)SpkObject_New(Spk_CLASS(Char));
     result->value = c;
     return result;
 }

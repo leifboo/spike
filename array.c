@@ -2,14 +2,12 @@
 #include "array.h"
 
 #include "class.h"
+#include "heart.h"
 #include "int.h"
 #include "native.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
-
-
-SpkBehavior *Spk_ClassArray;
 
 
 #define ARRAY(op) ((SpkUnknown **)SpkVariableObject_ITEM_BASE(op))
@@ -89,7 +87,7 @@ static void Array_zero(SpkObject *_self) {
     size_t i;
     
     self = (SpkArray *)_self;
-    (*Spk_ClassArray->superclass->zero)(_self);
+    (*Spk_CLASS(Array)->superclass->zero)(_self);
     for (i = 0; i < self->size; ++i) {
         Spk_INCREF(Spk_uninit);
         ARRAY(self)[i] = Spk_uninit;
@@ -101,7 +99,7 @@ static void Array_zero(SpkObject *_self) {
 /* memory layout of instances */
 
 static void Array_traverse_init(SpkObject *self) {
-    (*Spk_ClassArray->superclass->traverse.init)(self);
+    (*Spk_CLASS(Array)->superclass->traverse.init)(self);
 }
 
 static SpkUnknown **Array_traverse_current(SpkObject *_self) {
@@ -110,7 +108,7 @@ static SpkUnknown **Array_traverse_current(SpkObject *_self) {
     self = (SpkArray *)_self;
     if (self->size > 0)
         return &(ARRAY(self)[self->size - 1]);
-    return (*Spk_ClassArray->superclass->traverse.current)(_self);
+    return (*Spk_CLASS(Array)->superclass->traverse.current)(_self);
 }
 
 static void Array_traverse_next(SpkObject *_self) {
@@ -120,7 +118,7 @@ static void Array_traverse_next(SpkObject *_self) {
     if (self->size > 0)
         --self->size;
     else
-        (*Spk_ClassArray->superclass->traverse.next)(_self);
+        (*Spk_CLASS(Array)->superclass->traverse.next)(_self);
 }
 
 
@@ -166,7 +164,7 @@ static SpkTraverse traverse = {
 };
 
 SpkClassTmpl Spk_ClassArrayTmpl = {
-    "Array", {
+    Spk_HEART_CLASS_TMPL(Array, VariableObject), {
         accessors,
         methods,
         lvalueMethods,
@@ -184,7 +182,7 @@ SpkClassTmpl Spk_ClassArrayTmpl = {
 /* C API */
 
 SpkArray *SpkArray_New(size_t size) {
-    return (SpkArray *)SpkObject_NewVar(Spk_ClassArray, size);
+    return (SpkArray *)SpkObject_NewVar(Spk_CLASS(Array), size);
 }
 
 SpkArray *SpkArray_WithArguments(SpkUnknown **stackPointer, size_t argumentCount,
@@ -196,7 +194,7 @@ SpkArray *SpkArray_WithArguments(SpkUnknown **stackPointer, size_t argumentCount
     varArgCount = varArgArray ? varArgArray->size - skip : 0;
     n = argumentCount + varArgCount;
     
-    argumentArray = (SpkArray *)SpkObject_NewVar(Spk_ClassArray, n);
+    argumentArray = (SpkArray *)SpkObject_NewVar(Spk_CLASS(Array), n);
     
     /* copy & reverse fixed arguments */
     for (i = 0; i < argumentCount; ++i) {
@@ -222,7 +220,7 @@ SpkArray *SpkArray_FromVAList(va_list ap) {
     size_t size, i;
     
     size = 2;
-    newArray = (SpkArray *)SpkObject_NewVar(Spk_ClassArray, size);
+    newArray = (SpkArray *)SpkObject_NewVar(Spk_CLASS(Array), size);
     for (i = 0,  obj = va_arg(ap, SpkUnknown *);
          /*****/ obj;
          ++i,    obj = va_arg(ap, SpkUnknown *)) {
@@ -230,7 +228,7 @@ SpkArray *SpkArray_FromVAList(va_list ap) {
             SpkArray *tmpArray = newArray;
             size_t tmpSize = size, j;
             size *= 2;
-            newArray = (SpkArray *)SpkObject_NewVar(Spk_ClassArray, size);
+            newArray = (SpkArray *)SpkObject_NewVar(Spk_CLASS(Array), size);
             for (j = 0; j < tmpSize; ++j) {
                 SpkUnknown *tmp = ARRAY(newArray)[j];
                 ARRAY(newArray)[j] = ARRAY(tmpArray)[j];

@@ -34,13 +34,12 @@ SpkObject *SpkObject_New(struct SpkBehavior *);
 SpkObject *SpkObject_NewVar(struct SpkBehavior *, size_t);
 
 
-extern struct SpkBehavior *Spk_ClassObject, *Spk_ClassVariableObject;
 extern struct SpkClassTmpl Spk_ClassObjectTmpl, Spk_ClassVariableObjectTmpl;
 
 
 #define SpkVariableObject_ITEM_BASE(op) (((char *)op) + ((SpkVariableObject *)op)->base.klass->instanceSize)
 
-#define Spk_CAST(c, op) ((Spk ## c *)Spk_Cast(Spk_Class ## c, (SpkUnknown *)(op)))
+#define Spk_CAST(c, op) ((Spk ## c *)Spk_Cast(Spk_CLASS(c), (SpkUnknown *)(op)))
 
 
 #endif /* __spk_obj_h__ */

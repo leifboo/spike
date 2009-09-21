@@ -3,6 +3,7 @@
 
 #include "bool.h"
 #include "class.h"
+#include "heart.h"
 #include "native.h"
 #include "str.h"
 
@@ -18,16 +19,13 @@ struct SpkInteger {
 #define BOOL(cond) ((cond) ? Spk_true : Spk_false)
 
 
-SpkBehavior *Spk_ClassInteger;
-
-
 /*------------------------------------------------------------------------*/
 /* method helpers */
 
 static SpkUnknown *Integer_unaryOper(SpkInteger *self, SpkOper oper) {
     SpkInteger *result;
     
-    result = (SpkInteger *)SpkObject_New(Spk_ClassInteger);
+    result = (SpkInteger *)SpkObject_New(Spk_CLASS(Integer));
     switch (oper) {
     case Spk_OPER_SUCC: result->value = self->value + 1; break;
     case Spk_OPER_PRED: result->value = self->value - 1; break;
@@ -49,7 +47,7 @@ static SpkUnknown *Integer_binaryOper(SpkInteger *self, SpkUnknown *arg0, SpkOpe
         Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
         return 0;
     }
-    result = (SpkInteger *)SpkObject_New(Spk_ClassInteger);
+    result = (SpkInteger *)SpkObject_New(Spk_CLASS(Integer));
     switch (oper) {
     case Spk_OPER_MUL:    result->value = self->value * arg->value;  break;
     case Spk_OPER_DIV:    result->value = self->value / arg->value;  break;
@@ -274,7 +272,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl Spk_ClassIntegerTmpl = {
-    "Integer", {
+    Spk_HEART_CLASS_TMPL(Integer, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
@@ -294,7 +292,7 @@ SpkInteger *SpkInteger_FromCLong(long value) {
 SpkInteger *SpkInteger_FromCPtrdiff(ptrdiff_t value) {
     SpkInteger *result;
     
-    result = (SpkInteger *)SpkObject_New(Spk_ClassInteger);
+    result = (SpkInteger *)SpkObject_New(Spk_CLASS(Integer));
     result->value = value;
     return result;
 }

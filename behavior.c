@@ -3,6 +3,7 @@
 
 #include "cgen.h"
 #include "class.h"
+#include "heart.h"
 #include "host.h"
 #include "interp.h"
 #include "module.h"
@@ -11,9 +12,6 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-
-SpkBehavior *Spk_ClassBehavior;
 
 
 /*------------------------------------------------------------------------*/
@@ -34,7 +32,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 SpkClassTmpl Spk_ClassBehaviorTmpl = {
-    "Behavior", {
+    Spk_HEART_CLASS_TMPL(Behavior, Object), {
         accessors,
         methods,
         /*lvalueMethods*/ 0,

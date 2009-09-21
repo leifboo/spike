@@ -7,6 +7,7 @@
 #include "behavior.h"
 #include "boot.h"
 #include "class.h"
+#include "heart.h"
 #include "host.h"
 #include "interp.h"
 #include "native.h"
@@ -781,7 +782,7 @@ static struct PseudoVariable {
 static Expr *newNameExpr(void) {
     Expr *newExpr;
     
-    newExpr = (Expr *)SpkObject_New(Spk_ClassExpr);        
+    newExpr = (Expr *)SpkObject_New(Spk_CLASS(Expr));        
     newExpr->kind = Spk_EXPR_NAME;
     return newExpr;
 }
@@ -798,7 +799,7 @@ static Expr *newPseudoVariable(struct PseudoVariable *pv, StaticChecker *checker
 static Stmt *predefinedClassDef(SpkClass *predefClass, StaticChecker *checker) {
     Stmt *newStmt;
     
-    newStmt = (Stmt *)SpkObject_New(Spk_ClassStmt);
+    newStmt = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
     newStmt->kind = Spk_STMT_DEF_CLASS;
     newStmt->expr = newNameExpr();
     newStmt->expr->sym = SpkSymbolNode_FromSymbol(checker->st, predefClass->name);
@@ -810,7 +811,7 @@ static Stmt *predefinedClassDef(SpkClass *predefClass, StaticChecker *checker) {
 static Stmt *globalVarDef(const char *name, StaticChecker *checker) {
     Stmt *newStmt;
     
-    newStmt = (Stmt *)SpkObject_New(Spk_ClassStmt);
+    newStmt = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
     newStmt->kind = Spk_STMT_DEF_VAR;
     newStmt->expr = newNameExpr();
     newStmt->expr->sym = SpkSymbolNode_FromCString(checker->st, name);
@@ -856,7 +857,7 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     StaticChecker checker;
     struct PseudoVariable *pv;
     unsigned int pass;
-    SpkClassBootRec *classBootRec;
+    SpkClassBootRec *classBootRec; SpkBehavior **classVar;
     SpkVarBootRec *varBootRec;
     
     ASSERT(tree->kind == Spk_STMT_DEF_MODULE, "module node expected");
@@ -876,12 +877,13 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     
     predefList->first = predefList->last = 0;
     /* XXX: What about the other core classes? */
-    _(declareClass(Spk_ClassObject, predefList, &checker));
+    _(declareClass(Spk_CLASS(Object), predefList, &checker));
 #ifndef MALTIPY
-    _(declareClass(Spk_ClassArray, predefList, &checker));
+    _(declareClass(Spk_CLASS(Array), predefList, &checker));
 #endif /* !MALTIPY */
-    for (classBootRec = Spk_classBootRec; classBootRec->var; ++classBootRec) {
-        _(declareClass(*classBootRec->var, predefList, &checker));
+    for (classBootRec = Spk_classBootRec; *classBootRec; ++classBootRec) {
+        classVar = (SpkBehavior **)((char *)Spk_heart + (*classBootRec)->classVarOffset);
+        _(declareClass(*classVar, predefList, &checker));
     }
     for (varBootRec = Spk_globalVarBootRec; varBootRec->var; ++varBootRec) {
         Stmt *varDef = globalVarDef(varBootRec->name, &checker);

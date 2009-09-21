@@ -66,8 +66,6 @@ SpkUnknown *SpkSymbolTable_Bind(SpkSymbolTable *st, struct SpkExpr *expr,
                                 SpkUnknown *requestor);
 
 
-extern struct SpkBehavior *Spk_ClassSymbolNode, *Spk_ClassSTEntry,
-    *Spk_ClassContextClass, *Spk_ClassScope, *Spk_ClassSymbolTable;
 extern struct SpkClassTmpl Spk_ClassSymbolNodeTmpl, Spk_ClassSTEntryTmpl,
     Spk_ClassContextClassTmpl, Spk_ClassScopeTmpl, Spk_ClassSymbolTableTmpl;
 

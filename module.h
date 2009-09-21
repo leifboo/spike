@@ -14,13 +14,11 @@ typedef struct SpkModule {
 } SpkModule;
 
 
-#define SpkModule_VARIABLES(op) ((SpkUnknown **)((char *)(op) + ((SpkObject *)(op))->klass->instVarOffset) + Spk_ClassModule->instVarBaseIndex)
+#define SpkModule_VARIABLES(op) ((SpkUnknown **)((char *)(op) + ((SpkObject *)(op))->klass->instVarOffset) + Spk_CLASS(Module)->instVarBaseIndex)
 #define SpkModule_LITERALS(op) (((SpkModule *)(op))->literals)
 
 
-extern struct SpkBehavior *Spk_ClassModule;
 extern struct SpkClassTmpl Spk_ClassModuleTmpl;
-extern SpkModule *Spk_builtInModule;
 
 
 SpkModule *SpkModule_New(struct SpkBehavior *);
