@@ -3,7 +3,9 @@
 #define __spk_oper_h__
 
 
-typedef enum SpkOper {
+typedef unsigned int SpkOper;
+
+enum /*SpkOper*/ {
     Spk_OPER_SUCC,
     Spk_OPER_PRED,
     Spk_OPER_ADDR,
@@ -30,15 +32,17 @@ typedef enum SpkOper {
     Spk_OPER_BOR,
 
     Spk_NUM_OPER
-} SpkOper;
+};
 
 
-typedef enum SpkCallOper {
+typedef unsigned int SpkCallOper;
+
+enum /*SpkCallOper*/ {
     Spk_OPER_APPLY,
     Spk_OPER_INDEX,
     
     Spk_NUM_CALL_OPER
-} SpkCallOper;
+};
 
 
 #endif /* __spk_oper_h__ */

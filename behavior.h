@@ -14,12 +14,14 @@ typedef struct SpkBehavior SpkBehavior;
 typedef SpkMethod *SpkOperTable[Spk_NUM_OPER];
 typedef SpkMethod *SpkOperCallTable[Spk_NUM_CALL_OPER];
 
-typedef enum SpkMethodNamespace {
+typedef unsigned int SpkMethodNamespace;
+
+enum /*SpkMethodNamespace*/ {
     Spk_METHOD_NAMESPACE_RVALUE,
     Spk_METHOD_NAMESPACE_LVALUE,
     
     Spk_NUM_METHOD_NAMESPACES
-} SpkMethodNamespace;
+};
 
 
 typedef enum SpkInstVarType {
@@ -116,8 +118,8 @@ extern struct SpkClassTmpl Spk_ClassBehaviorTmpl;
 
 
 void SpkBehavior_Init(SpkBehavior *self, SpkBehavior *superclass, struct SpkModule *module, size_t instVarCount);
-void SpkBehavior_InitFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *template, SpkBehavior *superclass, struct SpkModule *module);
-void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *template);
+void SpkBehavior_InitFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl, SpkBehavior *superclass, struct SpkModule *module);
+void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl);
 void SpkBehavior_InsertMethod(SpkBehavior *, SpkMethodNamespace, SpkUnknown *, SpkMethod *);
 SpkMethod *SpkBehavior_LookupMethod(SpkBehavior *, SpkMethodNamespace, SpkUnknown *);
 SpkUnknown *SpkBehavior_FindSelectorOfMethod(SpkBehavior *, SpkMethod *);

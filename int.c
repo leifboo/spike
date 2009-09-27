@@ -235,7 +235,7 @@ static SpkUnknown *Integer_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkU
 
 
 /*------------------------------------------------------------------------*/
-/* class template */
+/* class tmpl */
 
 typedef struct SpkIntegerSubclass {
     SpkInteger base;
@@ -268,7 +268,7 @@ static SpkMethodTmpl methods[] = {
     { "__bor__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_bor    },
     /* printing */
     { "printString", SpkNativeCode_ARGS_0, &Integer_printString },
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassIntegerTmpl = {
@@ -278,6 +278,7 @@ SpkClassTmpl Spk_ClassIntegerTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkIntegerSubclass, variables)
     }, /*meta*/ {
+        0
     }
 };
 

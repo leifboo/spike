@@ -172,7 +172,7 @@ static SpkUnknown *Float_ne(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1
 
 
 /*------------------------------------------------------------------------*/
-/* class template */
+/* class tmpl */
 
 typedef struct SpkFloatSubclass {
     SpkFloat base;
@@ -196,7 +196,7 @@ static SpkMethodTmpl methods[] = {
     { "__ge__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Float_ge     },
     { "__eq__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Float_eq     },
     { "__ne__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Float_ne     },
-    { 0, 0, 0}
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassFloatTmpl = {
@@ -206,6 +206,7 @@ SpkClassTmpl Spk_ClassFloatTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkFloatSubclass, variables)
     }, /*meta*/ {
+        0
     }
 };
 

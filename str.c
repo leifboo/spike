@@ -200,7 +200,7 @@ static SpkUnknown *String_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUn
 
 
 /*------------------------------------------------------------------------*/
-/* class template */
+/* class tmpl */
 
 typedef SpkVariableObjectSubclass SpkStringSubclass;
 
@@ -226,7 +226,7 @@ static SpkMethodTmpl methods[] = {
     { "do:", SpkNativeCode_ARGS_1, &String_do },
     /* printing */
     { "printString", SpkNativeCode_ARGS_0, &String_printString },
-    { 0, 0, 0}
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassStringTmpl = {
@@ -237,6 +237,7 @@ SpkClassTmpl Spk_ClassStringTmpl = {
         offsetof(SpkStringSubclass, variables),
         sizeof(char)
     }, /*meta*/ {
+        0
     }
 };
 
@@ -279,7 +280,7 @@ SpkString *SpkString_FromCStream(FILE *stream, size_t size) {
 }
 
 SpkString *SpkString_Concat(SpkString **var, SpkString *newPart) {
-    SpkString *self, *arg, *result;
+    SpkString *self, *result;
     size_t resultLen;
     
     self = *var;
@@ -291,7 +292,7 @@ SpkString *SpkString_Concat(SpkString **var, SpkString *newPart) {
         return 0;
     }
     memcpy(STR(result), STR(self), LEN(self));
-    memcpy(STR(result) + LEN(self), STR(arg), arg->size);
+    memcpy(STR(result) + LEN(self), STR(newPart), newPart->size);
     Spk_DECREF(self);
     *var = result;
     return result;

@@ -93,32 +93,32 @@ SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
 
 SpkUnknown *Spk_SendMessage(SpkInterpreter *interpreter,
                             SpkUnknown *obj,
-                            unsigned int namespace,
+                            unsigned int ns,
                             SpkUnknown *selector,
                             SpkUnknown *argumentArray)
 {
-    return SpkInterpreter_SendMessage(interpreter, obj, namespace, selector, argumentArray);
+    return SpkInterpreter_SendMessage(interpreter, obj, ns, selector, argumentArray);
 }
 
 static SpkUnknown *vSendMessage(SpkInterpreter *interpreter,
-                                SpkUnknown *obj, unsigned int namespace, SpkUnknown *selector, va_list ap)
+                                SpkUnknown *obj, unsigned int ns, SpkUnknown *selector, va_list ap)
 {
     SpkUnknown *argumentList, *result;
 
     argumentList = SpkHost_ArgsFromVAList(ap);
-    result = Spk_SendMessage(interpreter, obj, namespace, selector, argumentList);
+    result = Spk_SendMessage(interpreter, obj, ns, selector, argumentList);
     Spk_DECREF(argumentList);
     return result;
 }
 
 static SpkUnknown *sendMessage(SpkInterpreter *interpreter,
-                               SpkUnknown *obj, unsigned int namespace, SpkUnknown *selector, ...)
+                               SpkUnknown *obj, unsigned int ns, SpkUnknown *selector, ...)
 {
     SpkUnknown *result;
     va_list ap;
     
     va_start(ap, selector);
-    result = vSendMessage(interpreter, obj, namespace, selector, ap);
+    result = vSendMessage(interpreter, obj, ns, selector, ap);
     va_end(ap);
     return result;
 }

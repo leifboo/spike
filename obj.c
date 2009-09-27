@@ -158,7 +158,7 @@ static void Object_traverse_next(SpkObject *self) {
 
 static SpkAccessorTmpl ObjectAccessors[] = {
     { "class", Spk_T_OBJECT, offsetof(SpkObject, klass), SpkAccessor_READ },
-    { 0, 0, 0, 0 }
+    { 0 }
 };
 
 static SpkMethodTmpl ObjectMethods[] = {
@@ -166,12 +166,12 @@ static SpkMethodTmpl ObjectMethods[] = {
     { "__ne__", SpkNativeCode_BINARY_OPER, &Object_ne },
     { "compoundExpression", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_ARRAY, &Object_compoundExpression },
     { "printString", SpkNativeCode_ARGS_0, &Object_printString },
-    { 0, 0, 0 }
+    { 0 }
 };
 
 static SpkMethodTmpl ClassObjectMethods[] = {
     { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &ClassObject_new },
-    { 0, 0, 0}
+    { 0 }
 };
 
 static SpkTraverse ObjectTraverse = {
@@ -199,12 +199,12 @@ SpkClassTmpl Spk_ClassObjectTmpl = {
 
 
 static SpkMethodTmpl VariableObjectMethods[] = {
-    { 0, 0, 0 }
+    { 0 }
 };
 
 static SpkMethodTmpl ClassVariableObjectMethods[] = {
     { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &ClassVariableObject_new },
-    { 0, 0, 0}
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassVariableObjectTmpl = {

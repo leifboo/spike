@@ -25,7 +25,7 @@ typedef struct SpkThunk SpkThunk;
 
 typedef unsigned char SpkOpcode;
 
-enum SpkOpcode {
+enum /*SpkOpcode*/ {
     Spk_OPCODE_NOP,
     Spk_OPCODE_PUSH_LOCAL,
     Spk_OPCODE_PUSH_INST_VAR,
@@ -121,7 +121,7 @@ struct SpkMethod {
 
 struct SpkMessage {
     SpkObject base;
-    unsigned int namespace;
+    unsigned int ns;
     SpkUnknown *selector;
     SpkUnknown *arguments;
 };

@@ -42,7 +42,7 @@ typedef struct SpkMetaclassSubclass {
 
 static SpkMethodTmpl methods[] = {
     { "new",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Metaclass_new   },
-    { 0, 0, 0}
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassMetaclassTmpl = {
@@ -52,6 +52,7 @@ SpkClassTmpl Spk_ClassMetaclassTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkMetaclassSubclass, variables)
     }, /*meta*/ {
+        0
     }
 };
 
@@ -70,15 +71,15 @@ SpkMetaclass *SpkMetaclass_New(SpkMetaclass *superMeta, size_t instVarCount)
     return newMetaclass;
 }
 
-SpkMetaclass *SpkMetaclass_FromTemplate(SpkBehaviorTmpl *template,
+SpkMetaclass *SpkMetaclass_FromTemplate(SpkBehaviorTmpl *tmpl,
                                         SpkMetaclass *superMeta,
                                         struct SpkModule *module)
 {
     SpkMetaclass *newMetaclass;
     
     newMetaclass = (SpkMetaclass *)SpkObject_New(Spk_CLASS(Metaclass));
-    SpkBehavior_InitFromTemplate((SpkBehavior *)newMetaclass, template, (SpkBehavior *)superMeta, module);
-    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)newMetaclass, template);
+    SpkBehavior_InitFromTemplate((SpkBehavior *)newMetaclass, tmpl, (SpkBehavior *)superMeta, module);
+    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)newMetaclass, tmpl);
     newMetaclass->thisClass = 0;
     return newMetaclass;
 }

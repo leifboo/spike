@@ -190,7 +190,7 @@ static void Notifier_traverse_next(SpkObject *_self) {
 
 
 /*------------------------------------------------------------------------*/
-/* class template */
+/* class tmpl */
 
 typedef struct SpkNotifierSubclass {
     SpkNotifier base;
@@ -200,7 +200,7 @@ typedef struct SpkNotifierSubclass {
 static SpkAccessorTmpl accessors[] = {
     { "source", Spk_T_OBJECT, offsetof(SpkNotifier, source),
       SpkAccessor_READ | SpkAccessor_WRITE },
-    { 0, 0, 0, 0 }
+    { 0 }
 };
 
 static SpkMethodTmpl methods[] = {
@@ -209,12 +209,12 @@ static SpkMethodTmpl methods[] = {
     { "redefinedSymbol:", SpkNativeCode_ARGS_1, &Notifier_redefinedSymbol },
     { "undefinedSymbol:", SpkNativeCode_ARGS_1, &Notifier_undefinedSymbol },
     { "failOnError", SpkNativeCode_ARGS_0, &Notifier_failOnError },
-    { 0, 0, 0 }
+    { 0 }
 };
 
 static SpkMethodTmpl metaMethods[] = {
     { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &ClassNotifier_new },
-    { 0, 0, 0}
+    { 0 }
 };
 
 static SpkTraverse traverse = {

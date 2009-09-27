@@ -24,11 +24,11 @@ typedef struct SpkBehaviorSubclass {
 
 static SpkAccessorTmpl accessors[] = {
     { "superclass", Spk_T_OBJECT, offsetof(SpkBehavior, superclass), SpkAccessor_READ },
-    { 0, 0, 0, 0 }
+    { 0 }
 };
 
 static SpkMethodTmpl methods[] = {
-    { 0, 0, 0}
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassBehaviorTmpl = {
@@ -38,6 +38,7 @@ SpkClassTmpl Spk_ClassBehaviorTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkBehaviorSubclass, variables)
     }, /*meta*/ {
+        0
     }
 };
 
@@ -47,20 +48,20 @@ SpkClassTmpl Spk_ClassBehaviorTmpl = {
 
 void SpkBehavior_Init(SpkBehavior *self, SpkBehavior *superclass, SpkModule *module, size_t instVarCount) {
     size_t i;
-    SpkMethodNamespace namespace;
+    SpkMethodNamespace ns;
     
     Spk_INCREF(superclass);
     Spk_XINCREF(module);
     self->superclass = superclass;
     self->module = module;
     
-    for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
-        self->ns[namespace].methodDict = SpkHost_NewSymbolDict();
+    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+        self->ns[ns].methodDict = SpkHost_NewSymbolDict();
         for (i = 0; i < Spk_NUM_OPER; ++i) {
-            self->ns[namespace].operTable[i] = 0;
+            self->ns[ns].operTable[i] = 0;
         }
         for (i = 0; i < Spk_NUM_CALL_OPER; ++i) {
-            self->ns[namespace].operCallTable[i] = 0;
+            self->ns[ns].operCallTable[i] = 0;
         }
     }
     
@@ -85,36 +86,36 @@ void SpkBehavior_Init(SpkBehavior *self, SpkBehavior *superclass, SpkModule *mod
     return;
 }
 
-void SpkBehavior_InitFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *template, SpkBehavior *superclass, SpkModule *module) {
+void SpkBehavior_InitFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl, SpkBehavior *superclass, SpkModule *module) {
     
     SpkBehavior_Init(self, superclass, module, 0);
     
-    if (template->instVarOffset != 0) {
-        assert(template->instVarOffset >= self->instVarOffset);
-        self->instanceSize += template->instVarOffset - self->instVarOffset;
-        self->instVarOffset = template->instVarOffset;
+    if (tmpl->instVarOffset != 0) {
+        assert(tmpl->instVarOffset >= self->instVarOffset);
+        self->instanceSize += tmpl->instVarOffset - self->instVarOffset;
+        self->instVarOffset = tmpl->instVarOffset;
     }
     
-    if (template->itemSize != 0) {
+    if (tmpl->itemSize != 0) {
         assert(self->itemSize == 0 ||
-               self->itemSize == template->itemSize);
-        self->itemSize = template->itemSize;
+               self->itemSize == tmpl->itemSize);
+        self->itemSize = tmpl->itemSize;
     }
     
-    if (template->zero)
-        self->zero = template->zero;
-    if (template->dealloc)
-        self->dealloc = template->dealloc;
-    if (template->traverse)
-        self->traverse = *template->traverse;
+    if (tmpl->zero)
+        self->zero = tmpl->zero;
+    if (tmpl->dealloc)
+        self->dealloc = tmpl->dealloc;
+    if (tmpl->traverse)
+        self->traverse = *tmpl->traverse;
 }
 
-void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *template) {
+void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl) {
     
-    if (template->accessors) {
+    if (tmpl->accessors) {
         SpkAccessorTmpl *accessorTmpl;
         
-        for (accessorTmpl = template->accessors; accessorTmpl->name; ++accessorTmpl) {
+        for (accessorTmpl = tmpl->accessors; accessorTmpl->name; ++accessorTmpl) {
             SpkUnknown *messageSelector;
             SpkMethod *method;
             
@@ -139,10 +140,10 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *temp
         }
     }
     
-    if (template->methods) {
+    if (tmpl->methods) {
         SpkMethodTmpl *methodTmpl;
         
-        for (methodTmpl = template->methods; methodTmpl->name; ++methodTmpl) {
+        for (methodTmpl = tmpl->methods; methodTmpl->name; ++methodTmpl) {
             SpkUnknown *messageSelector;
             SpkMethod *method;
             
@@ -153,10 +154,10 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *temp
             Spk_DECREF(messageSelector);
         }
     }
-    if (template->lvalueMethods) {
+    if (tmpl->lvalueMethods) {
         SpkMethodTmpl *methodTmpl;
         
-        for (methodTmpl = template->lvalueMethods; methodTmpl->name; ++methodTmpl) {
+        for (methodTmpl = tmpl->lvalueMethods; methodTmpl->name; ++methodTmpl) {
             SpkUnknown *messageSelector;
             SpkMethod *method;
             
@@ -169,9 +170,9 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *temp
     }
 }
 
-static void maybeAccelerateMethod(SpkBehavior *self, SpkMethodNamespace namespace, SpkUnknown *messageSelector, SpkMethod *method) {
+static void maybeAccelerateMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkUnknown *messageSelector, SpkMethod *method) {
     const char *name;
-    SpkOper operator;
+    SpkOper oper;
     
     name = SpkHost_SelectorAsCString(messageSelector);
     if (!name) {
@@ -179,22 +180,22 @@ static void maybeAccelerateMethod(SpkBehavior *self, SpkMethodNamespace namespac
     }
     if (name[0] == '_' && name[1] == '_') {
         /* special selector */
-        for (operator = 0; operator < Spk_NUM_CALL_OPER; ++operator) {
-            if (messageSelector == *Spk_operCallSelectors[operator].selector) {
+        for (oper = 0; oper < Spk_NUM_CALL_OPER; ++oper) {
+            if (messageSelector == *Spk_operCallSelectors[oper].selector) {
                 Spk_INCREF(method);
                 Spk_INCREF(self);
-                Spk_XDECREF(self->ns[namespace].operCallTable[operator]);
-                self->ns[namespace].operCallTable[operator] = method;
+                Spk_XDECREF(self->ns[ns].operCallTable[oper]);
+                self->ns[ns].operCallTable[oper] = method;
                 break;
             }
         }
-        if (operator >= Spk_NUM_CALL_OPER) {
-            for (operator = 0; operator < Spk_NUM_OPER; ++operator) {
-                if (messageSelector == *Spk_operSelectors[operator].selector) {
+        if (oper >= Spk_NUM_CALL_OPER) {
+            for (oper = 0; oper < Spk_NUM_OPER; ++oper) {
+                if (messageSelector == *Spk_operSelectors[oper].selector) {
                     Spk_INCREF(method);
                     Spk_INCREF(self);
-                    Spk_XDECREF(self->ns[namespace].operTable[operator]);
-                    self->ns[namespace].operTable[operator] = method;
+                    Spk_XDECREF(self->ns[ns].operTable[oper]);
+                    self->ns[ns].operTable[oper] = method;
                     break;
                 }
             }
@@ -202,15 +203,15 @@ static void maybeAccelerateMethod(SpkBehavior *self, SpkMethodNamespace namespac
     }
 }
 
-void SpkBehavior_InsertMethod(SpkBehavior *self, SpkMethodNamespace namespace, SpkUnknown *messageSelector, SpkMethod *method) {
-    SpkHost_DefineSymbol(self->ns[namespace].methodDict, messageSelector, (SpkUnknown *)method);
-    maybeAccelerateMethod(self, namespace, messageSelector, method);
+void SpkBehavior_InsertMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkUnknown *messageSelector, SpkMethod *method) {
+    SpkHost_DefineSymbol(self->ns[ns].methodDict, messageSelector, (SpkUnknown *)method);
+    maybeAccelerateMethod(self, ns, messageSelector, method);
 }
 
-SpkMethod *SpkBehavior_LookupMethod(SpkBehavior *self, SpkMethodNamespace namespace, SpkUnknown *messageSelector) {
+SpkMethod *SpkBehavior_LookupMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkUnknown *messageSelector) {
     SpkUnknown *value;
     
-    value = SpkHost_SymbolValue(self->ns[namespace].methodDict, messageSelector);
+    value = SpkHost_SymbolValue(self->ns[ns].methodDict, messageSelector);
     if (value) {
         return Spk_CAST(Method, value);
     }
@@ -218,11 +219,11 @@ SpkMethod *SpkBehavior_LookupMethod(SpkBehavior *self, SpkMethodNamespace namesp
 }
 
 SpkUnknown *SpkBehavior_FindSelectorOfMethod(SpkBehavior *self, SpkMethod *method) {
-    SpkMethodNamespace namespace;
+    SpkMethodNamespace ns;
     SpkUnknown *messageSelector;
     
-    for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
-        messageSelector = SpkHost_FindSymbol(self->ns[namespace].methodDict, (SpkUnknown *)method);
+    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+        messageSelector = SpkHost_FindSymbol(self->ns[ns].methodDict, (SpkUnknown *)method);
         if (messageSelector) {
             return messageSelector;
         }

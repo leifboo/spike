@@ -21,11 +21,6 @@ typedef SpkStmt Stmt;
 typedef SpkStmtList StmtList;
 
 
-void SpkParser_Parse(void *yyp, int yymajor, SpkToken yyminor, SpkParser *);
-void *SpkParser_ParseAlloc(void *(*mallocProc)(size_t));
-void SpkParser_ParseFree(void *p, void (*freeProc)(void*));
-
-
 static SpkSymbolNode *symbolNodeForToken(SpkToken *token, SpkSymbolTable *st) {
     switch (token->id) {
     case Spk_TOKEN_ARG:      return SpkSymbolNode_FromCString(st, "arg");
@@ -432,7 +427,7 @@ typedef struct SpkParserSubclass {
 
 static SpkMethodTmpl methods[] = {
     { "parse", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Parser_parse },
-    { 0, 0, 0 }
+    { 0 }
 };
 
 static SpkTraverse traverse = {
@@ -452,5 +447,6 @@ SpkClassTmpl Spk_ClassParserTmpl = {
         /*dealloc*/ 0,
         &traverse
     }, /*meta*/ {
+        0
     }
 };

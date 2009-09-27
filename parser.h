@@ -38,6 +38,11 @@ SpkStmt *SpkParser_ParseFileStream(FILE *, struct SpkSymbolTable *);
 SpkStmt *SpkParser_ParseString(const char *, struct SpkSymbolTable *);
 void SpkParser_Source(SpkStmt **, SpkUnknown *);
 
+void SpkParser_Parse(void *yyp, int yymajor, struct SpkToken yyminor, SpkParser *);
+void *SpkParser_ParseAlloc(void *(*mallocProc)(size_t));
+void SpkParser_ParseFree(void *p, void (*freeProc)(void*));
+void SpkParser_ParseTrace(FILE *TraceFILE, char *zTracePrompt);
+
 
 extern struct SpkClassTmpl Spk_ClassParserTmpl;
 

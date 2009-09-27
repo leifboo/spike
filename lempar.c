@@ -62,7 +62,7 @@
 
 /* The yyzerominor constant is used to initialize instances of
 ** YYMINORTYPE objects to zero. */
-static const YYMINORTYPE yyzerominor;
+static YYMINORTYPE yyzerominor;
 
 /* Next are that tables used to determine what action to take based on the
 ** current state and lookahead token.  These tables are used to implement

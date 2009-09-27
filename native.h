@@ -17,7 +17,9 @@ struct SpkMethod;
 #define Spk_SUPER (0)
 
 
-typedef enum SpkNativeCodeFlags {
+typedef unsigned int SpkNativeCodeFlags;
+
+enum /*SpkNativeCodeFlags*/ {
     SpkNativeCode_ARGS_0              = 0x0000,
     SpkNativeCode_ARGS_1              = 0x0001,
     SpkNativeCode_ARGS_2              = 0x0002,
@@ -33,7 +35,7 @@ typedef enum SpkNativeCodeFlags {
     SpkNativeCode_BINARY_OPER         = SpkNativeCode_ARGS_1,
     SpkNativeCode_TERNARY_OPER        = SpkNativeCode_ARGS_2,
     SpkNativeCode_METH_ATTR           = SpkNativeCode_THUNK
-} SpkNativeCodeFlags;
+};
 
 enum /*halt codes*/ {
     Spk_HALT_ASSERTION_ERROR,

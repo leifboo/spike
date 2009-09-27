@@ -129,7 +129,7 @@ typedef SpkVariableObjectSubclass SpkArraySubclass;
 
 static SpkAccessorTmpl accessors[] = {
     { "size", Spk_T_SIZE, offsetof(SpkArray, size), SpkAccessor_READ },
-    { 0, 0, 0, 0 }
+    { 0 }
 };
 
 static SpkMethodTmpl methods[] = {
@@ -149,12 +149,12 @@ static SpkMethodTmpl methods[] = {
     { "__index__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_item },
     /* enumerating */
     { "do:", SpkNativeCode_ARGS_1, &Array_do },
-    { 0, 0, 0}
+    { 0 }
 };
 
 static SpkMethodTmpl lvalueMethods[] = {
     { "__index__", SpkNativeCode_ARGS_2 | SpkNativeCode_LEAF, &Array_setItem },
-    { 0, 0, 0}
+    { 0 }
 };
 
 static SpkTraverse traverse = {
@@ -174,6 +174,7 @@ SpkClassTmpl Spk_ClassArrayTmpl = {
         /*dealloc*/ 0,
         &traverse
     }, /*meta*/ {
+        0
     }
 };
 

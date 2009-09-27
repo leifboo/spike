@@ -255,7 +255,7 @@ static void IdentityDictionary_traverse_next(SpkObject *_self) {
 
 
 /*------------------------------------------------------------------------*/
-/* class template */
+/* class tmpl */
 
 typedef struct SpkIdentityDictionarySubclass {
     SpkIdentityDictionary base;
@@ -263,7 +263,7 @@ typedef struct SpkIdentityDictionarySubclass {
 } SpkIdentityDictionarySubclass;
 
 static SpkMethodTmpl methods[] = {
-    { 0, 0, 0}
+    { 0 }
 };
 
 static SpkTraverse traverse = {
@@ -283,5 +283,6 @@ SpkClassTmpl Spk_ClassIdentityDictionaryTmpl = {
         &IdentityDictionary_dealloc,
         &traverse
     }, /*meta*/ {
+        0
     }
 };

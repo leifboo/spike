@@ -380,7 +380,7 @@ static void FileStream_dealloc(SpkObject *_self) {
 
 
 /*------------------------------------------------------------------------*/
-/* class template */
+/* class tmpl */
 
 typedef struct SpkFileStreamSubclass {
     SpkFileStream base;
@@ -401,12 +401,12 @@ static SpkMethodTmpl methods[] = {
     { "puts",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &FileStream_puts },
     { "reopen", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &FileStream_reopen },
     { "rewind", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &FileStream_rewind },
-    { 0, 0, 0}
+    { 0 }
 };
 
 static SpkMethodTmpl metaMethods[] = {
     { "open",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &ClassFileStream_open },
-    { 0, 0, 0}
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassFileStreamTmpl = {

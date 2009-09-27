@@ -127,7 +127,7 @@ static void initCoreClasses(void) {
     SpkMetaclass
         *IdentityDictionaryClass, *SymbolClass;
 #endif /* !MALTIPY */
-    SpkMethodNamespace namespace;
+    SpkMethodNamespace ns;
     size_t i;
     
     /* Cf. figure 16.4 on p. 271 of the Blue Book.  (Spike has no
@@ -192,12 +192,12 @@ static void initCoreClasses(void) {
        It must be handled as a special case. */
     Object->superclass = 0;
     Object->module = 0;
-    for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
+    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
         for (i = 0; i < Spk_NUM_OPER; ++i) {
-            Object->ns[namespace].operTable[i] = 0;
+            Object->ns[ns].operTable[i] = 0;
         }
         for (i = 0; i < Spk_NUM_CALL_OPER; ++i) {
-            Object->ns[namespace].operCallTable[i] = 0;
+            Object->ns[ns].operCallTable[i] = 0;
         }
     }
     Object->zero = Spk_ClassObjectTmpl.thisClass.zero;
@@ -232,8 +232,8 @@ static void initCoreClasses(void) {
     /* XXX: These two cannot be module-ized. */
     Spk_ClassSymbol = Symbol;
     Spk_ClassIdentityDictionary = IdentityDictionary;
-    for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
-        Object->ns[namespace].methodDict = SpkHost_NewSymbolDict();
+    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+        Object->ns[ns].methodDict = SpkHost_NewSymbolDict();
     }
     ((SpkClass *)Object)->name = SpkHost_SymbolFromCString(Spk_ClassObjectTmpl.name);
     
@@ -332,7 +332,7 @@ static void initCoreClasses(void) {
 #endif /* !MALTIPY */
     
     /*
-     * The class template machinery is now operational.  Populate the
+     * The class tmpl machinery is now operational.  Populate the
      * existing classes with methods.
      */
     

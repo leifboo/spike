@@ -31,6 +31,7 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
 int SpkLexer_lex_init(yyscan_t *);
 void SpkLexer_restart(FILE *, yyscan_t);
 YY_BUFFER_STATE SpkLexer__scan_string(const char *, yyscan_t);
+int SpkLexer_get_column(yyscan_t);
 void SpkLexer_set_lineno(int, yyscan_t);
 void SpkLexer_set_column(int, yyscan_t);
 int SpkLexer_lex(yyscan_t);

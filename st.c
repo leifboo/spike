@@ -552,6 +552,7 @@ SpkClassTmpl Spk_ClassSymbolNodeTmpl = {
         /*dealloc*/ 0,
         &SymbolNode_traverse
     }, /*meta*/ {
+        0
     }
 };
 
@@ -573,6 +574,7 @@ SpkClassTmpl Spk_ClassSTEntryTmpl = {
         /*dealloc*/ 0,
         &STEntry_traverse
     }, /*meta*/ {
+        0
     }
 };
 
@@ -594,6 +596,7 @@ SpkClassTmpl Spk_ClassContextClassTmpl = {
         /*dealloc*/ 0,
         &ContextClass_traverse
     }, /*meta*/ {
+        0
     }
 };
 
@@ -615,18 +618,19 @@ SpkClassTmpl Spk_ClassScopeTmpl = {
         /*dealloc*/ 0,
         &Scope_traverse
     }, /*meta*/ {
+        0
     }
 };
 
 
 static SpkMethodTmpl SymbolTableMethods[] = {
     { "init", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &SymbolTable_init },
-    { 0, 0, 0 }
+    { 0 }
 };
 
 static SpkMethodTmpl ClassSymbolTableMethods[] = {
     { "new",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &ClassSymbolTable_new },
-    { 0, 0, 0}
+    { 0 }
 };
 
 static SpkTraverse SymbolTable_traverse = {

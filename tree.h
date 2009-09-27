@@ -125,7 +125,7 @@ struct SpkStmt {
     SpkExpr *init, *expr, *incr;
     union {
         struct {
-            unsigned int namespace;
+            unsigned int ns;
             struct SpkSymbolNode *name;
             struct { SpkExpr *fixed, *var; } argList;
             size_t argumentCount;

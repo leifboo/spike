@@ -111,7 +111,7 @@ static void disassembleMethod(SpkMethod *method,
         size_t argumentCount = 0, *pArgumentCount = 0;
         size_t localCount = 0, stackSize = 0;
         size_t count = 0, *pCount = 0;
-        unsigned int namespace = 0, operator = 0;
+        unsigned int ns = 0, oper = 0;
         size_t label = 0, *pLabel = 0;
         int i;
         SpkUnknown *literal = 0;
@@ -180,8 +180,8 @@ static void disassembleMethod(SpkMethod *method,
         case Spk_OPCODE_OPER:       mnemonic = "oper";  goto oper;
         case Spk_OPCODE_OPER_SUPER: mnemonic = "soper"; goto oper;
  oper:
-            operator = (unsigned int)(*instructionPointer++);
-            selector = *Spk_operSelectors[operator].selector;
+            oper = (unsigned int)(*instructionPointer++);
+            selector = *Spk_operSelectors[oper].selector;
             break;
             
         case Spk_OPCODE_CALL:           mnemonic = "call";   goto call;
@@ -189,9 +189,9 @@ static void disassembleMethod(SpkMethod *method,
         case Spk_OPCODE_CALL_SUPER:     mnemonic = "scall";  goto call;
         case Spk_OPCODE_CALL_SUPER_VAR: mnemonic = "scallv"; goto call;
  call:
-            namespace = (unsigned int)(*instructionPointer++);
-            operator = (unsigned int)(*instructionPointer++);
-            selector = *Spk_operCallSelectors[operator].selector;
+            ns = (unsigned int)(*instructionPointer++);
+            oper = (unsigned int)(*instructionPointer++);
+            selector = *Spk_operCallSelectors[oper].selector;
             DECODE_UINT(argumentCount);
             pArgumentCount = &argumentCount;
             break;
@@ -278,7 +278,7 @@ static void disassembleMethod(SpkMethod *method,
             fprintf(out, "\t%s", keyword);
         } else if (pArgumentCount) {
             SpkUnknown *s = SpkHost_ObjectAsString(selector);
-            fprintf(out, "\t[%u].%s %lu", namespace, SpkHost_StringAsCString(s),
+            fprintf(out, "\t[%u].%s %lu", ns, SpkHost_StringAsCString(s),
                     (unsigned long)*pArgumentCount);
             Spk_DECREF(s);
         } else if (selector) {
@@ -321,7 +321,7 @@ static void disassemblePreClass(SpkBehavior *aClass,
     fprintf(out, "class %s\n", level->name);
 }
 
-static void disassemblePreMethodNamespace(SpkMethodNamespace namespace,
+static void disassemblePreMethodNamespace(SpkMethodNamespace ns,
                                           Level *level,
                                           void *closure)
 {
@@ -329,7 +329,7 @@ static void disassemblePreMethodNamespace(SpkMethodNamespace namespace,
     const char *name;
     
     out = (FILE *)closure;
-    switch (namespace) {
+    switch (ns) {
     case Spk_METHOD_NAMESPACE_RVALUE:
         name = "rvalue";
         break;
@@ -428,7 +428,7 @@ static void traverseMethod(SpkMethod *method,
 }
 
 static void traverseMethodDict(SpkUnknown *methodDict,
-                               SpkMethodNamespace namespace,
+                               SpkMethodNamespace ns,
                                SpkUnknown **literals,
                                Level *outer,
                                Visitor *visitor,
@@ -440,7 +440,7 @@ static void traverseMethodDict(SpkUnknown *methodDict,
     
     namespaceLevel.outer = outer;
     namespaceLevel.name = 0;
-    switch (namespace) {
+    switch (ns) {
     case Spk_METHOD_NAMESPACE_RVALUE:
         namespaceLevel.name = "rv";
         break;
@@ -451,7 +451,7 @@ static void traverseMethodDict(SpkUnknown *methodDict,
     }
     
     if (visitor->preMethodNamespace)
-        (*visitor->preMethodNamespace)(namespace, &namespaceLevel, closure);
+        (*visitor->preMethodNamespace)(ns, &namespaceLevel, closure);
     
     methodLevel.outer = &namespaceLevel;
     
@@ -470,13 +470,13 @@ static void traverseMethodDict(SpkUnknown *methodDict,
     }
     
     if (visitor->postMethodNamespace)
-        (*visitor->postMethodNamespace)(namespace, &namespaceLevel, closure);
+        (*visitor->postMethodNamespace)(ns, &namespaceLevel, closure);
 }
 
 static void traverseClassBody(SpkBehavior *aClass, const char *name, Level *outer,
                               Visitor *visitor, void *closure)
 {
-    SpkMethodNamespace namespace;
+    SpkMethodNamespace ns;
     Level level;
     
     level.outer = outer;
@@ -485,8 +485,8 @@ static void traverseClassBody(SpkBehavior *aClass, const char *name, Level *oute
     if (visitor->preClassBody)
         (*visitor->preClassBody)(aClass, &level, closure);
     
-    for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
-        traverseMethodDict(aClass->ns[namespace].methodDict, namespace,
+    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+        traverseMethodDict(aClass->ns[ns].methodDict, ns,
                            aClass->module->literals, &level,
                            visitor, closure);
     }
@@ -525,7 +525,7 @@ static void traverseModule(SpkModule *module,
                            Visitor *visitor, void *closure)
 {
     SpkBehavior *nestedClass;
-    SpkMethodNamespace namespace;
+    SpkMethodNamespace ns;
     Level level;
     
     level.outer = 0;
@@ -541,9 +541,9 @@ static void traverseModule(SpkModule *module,
         traverseClass(nestedClass, &level, visitor, closure);
     }
     
-    for (namespace = 0; namespace < Spk_NUM_METHOD_NAMESPACES; ++namespace) {
-        traverseMethodDict(module->base.klass->ns[namespace].methodDict,
-                           namespace,
+    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+        traverseMethodDict(module->base.klass->ns[ns].methodDict,
+                           ns,
                            module->literals,
                            &level,
                            visitor,
@@ -623,8 +623,8 @@ static const char *opcodeName(SpkOpcode opcode) {
     return 0;
 }
 
-static const char *namespaceName(SpkMethodNamespace namespace) {
-    switch (namespace) {
+static const char *namespaceName(SpkMethodNamespace ns) {
+    switch (ns) {
     case Spk_METHOD_NAMESPACE_RVALUE: return "Spk_METHOD_NAMESPACE_RVALUE";
     case Spk_METHOD_NAMESPACE_LVALUE: return "Spk_METHOD_NAMESPACE_LVALUE";
     
@@ -704,8 +704,8 @@ static void genCCodeForMethodOpcodes(SpkMethod *method,
         size_t argumentCount = 0;
         size_t localCount = 0, stackSize = 0;
         size_t count = 0;
-        SpkMethodNamespace namespace = 0;
-        SpkOper operator = 0;
+        SpkMethodNamespace ns = 0;
+        SpkOper oper = 0;
         SpkCallOper callOperator = 0;
         SpkUnknown *literal = 0;
         
@@ -770,8 +770,8 @@ static void genCCodeForMethodOpcodes(SpkMethod *method,
             
         case Spk_OPCODE_OPER:
         case Spk_OPCODE_OPER_SUPER:
-            operator = (SpkOper)(*instructionPointer++);
-            fprintf(out, "%s, ", operName(operator));
+            oper = (SpkOper)(*instructionPointer++);
+            fprintf(out, "%s, ", operName(oper));
             ip = instructionPointer;
             break;
             
@@ -779,9 +779,9 @@ static void genCCodeForMethodOpcodes(SpkMethod *method,
         case Spk_OPCODE_CALL_VAR:
         case Spk_OPCODE_CALL_SUPER:
         case Spk_OPCODE_CALL_SUPER_VAR:
-            namespace = (SpkMethodNamespace)(*instructionPointer++);
+            ns = (SpkMethodNamespace)(*instructionPointer++);
             callOperator = (SpkCallOper)(*instructionPointer++);
-            fprintf(out, "%s, ", namespaceName(namespace));
+            fprintf(out, "%s, ", namespaceName(ns));
             fprintf(out, "%s, ", callOperName(callOperator));
             ip = instructionPointer;
             DECODE_UINT(argumentCount);
@@ -857,7 +857,7 @@ static void genCCodeForMethodOpcodes(SpkMethod *method,
     fprintf(out, "};\n\n");
 }
 
-static void genCCodePreMethodNamespace(SpkMethodNamespace namespace,
+static void genCCodePreMethodNamespace(SpkMethodNamespace ns,
                                        Level *level,
                                        void *closure)
 {
@@ -879,7 +879,7 @@ static void genCCodeForMethodTableEntry(SpkMethod *method,
     fprintf(out, "code },\n");
 }
 
-static void genCCodePostMethodNamespace(SpkMethodNamespace namespace,
+static void genCCodePostMethodNamespace(SpkMethodNamespace ns,
                                         Level *level,
                                         void *closure)
 {

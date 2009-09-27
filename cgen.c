@@ -1471,7 +1471,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         break;
     case CODE_GEN_CLASS:
         SpkBehavior_InsertMethod(outer->u.klass.classInstance,
-                                 stmt->u.method.namespace,
+                                 stmt->u.method.ns,
                                  messageSelector,
                                  mcg->methodInstance);
         Spk_DECREF(mcg->methodInstance);

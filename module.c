@@ -42,7 +42,7 @@ static SpkUnknown *Module__initPythonModule(SpkUnknown *_self, SpkUnknown *modul
 
 
 /*------------------------------------------------------------------------*/
-/* class template */
+/* class tmpl */
 
 typedef struct SpkModuleSubclass {
     SpkModule base;
@@ -53,7 +53,7 @@ static SpkMethodTmpl methods[] = {
 #ifdef MALTIPY
     { "_initPythonModule", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &Module__initPythonModule },
 #endif
-    { 0, 0, 0}
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassModuleTmpl = {
@@ -63,6 +63,7 @@ SpkClassTmpl Spk_ClassModuleTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkModuleSubclass, variables)
     }, /*meta*/ {
+        0
     }
 };
 

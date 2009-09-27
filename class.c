@@ -73,7 +73,7 @@ static SpkUnknown *Class_subclass(SpkUnknown *_self, SpkUnknown *args, SpkUnknow
 
 
 /*------------------------------------------------------------------------*/
-/* class template */
+/* class tmpl */
 
 typedef struct SpkClassSubclass {
     SpkClass base;
@@ -82,14 +82,14 @@ typedef struct SpkClassSubclass {
 
 static SpkAccessorTmpl accessors[] = {
     { "name", Spk_T_OBJECT, offsetof(SpkClass, name), SpkAccessor_READ },
-    { 0, 0, 0, 0 }
+    { 0 }
 };
 
 static SpkMethodTmpl methods[] = {
     { "printString", SpkNativeCode_ARGS_0, &Class_printString },
     { "subclass:instVarCount:classVarCount:",
       SpkNativeCode_ARGS_ARRAY, &Class_subclass },
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassClassTmpl = {
@@ -99,6 +99,7 @@ SpkClassTmpl Spk_ClassClassTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkClassSubclass, variables)
     }, /*meta*/ {
+        0
     }
 };
 
@@ -129,7 +130,7 @@ SpkClass *SpkClass_New(SpkUnknown *name, SpkBehavior *superclass,
     return newClass;
 }
 
-SpkClass *SpkClass_EmptyFromTemplate(SpkClassTmpl *template,
+SpkClass *SpkClass_EmptyFromTemplate(SpkClassTmpl *tmpl,
                                      SpkBehavior *superclass,
                                      SpkBehavior *Metaclass,
                                      struct SpkModule *module)
@@ -140,10 +141,10 @@ SpkClass *SpkClass_EmptyFromTemplate(SpkClassTmpl *template,
     /* It is too early to call SpkMetaclass_FromTemplate(). */
     superMeta = (SpkMetaclass *)superclass->base.klass;
     newMetaclass = (SpkMetaclass *)SpkObject_New(Metaclass);
-    SpkBehavior_InitFromTemplate((SpkBehavior *)newMetaclass, &template->metaclass, (SpkBehavior *)superMeta, module);
+    SpkBehavior_InitFromTemplate((SpkBehavior *)newMetaclass, &tmpl->metaclass, (SpkBehavior *)superMeta, module);
     
     newClass = (SpkClass *)SpkObject_New((SpkBehavior *)newMetaclass);
-    SpkClass_InitFromTemplate(newClass, template, superclass, module);
+    SpkClass_InitFromTemplate(newClass, tmpl, superclass, module);
     
     newMetaclass->thisClass = newClass;  Spk_INCREF(newClass);
     
@@ -152,7 +153,7 @@ SpkClass *SpkClass_EmptyFromTemplate(SpkClassTmpl *template,
     return newClass;
 }
 
-SpkClass *SpkClass_FromTemplate(SpkClassTmpl *template,
+SpkClass *SpkClass_FromTemplate(SpkClassTmpl *tmpl,
                                 SpkBehavior *superclass,
                                 struct SpkModule *module)
 {
@@ -161,15 +162,15 @@ SpkClass *SpkClass_FromTemplate(SpkClassTmpl *template,
     
     superMeta = Spk_CAST(Metaclass, superclass->base.klass);
     assert(superMeta);
-    newMetaclass = SpkMetaclass_FromTemplate(&template->metaclass, superMeta, module);
+    newMetaclass = SpkMetaclass_FromTemplate(&tmpl->metaclass, superMeta, module);
     
     newClass = (SpkClass *)SpkObject_New((SpkBehavior *)newMetaclass);
-    SpkClass_InitFromTemplate(newClass, template, superclass, module);
+    SpkClass_InitFromTemplate(newClass, tmpl, superclass, module);
     
     assert(!newMetaclass->thisClass);
     newMetaclass->thisClass = newClass;  Spk_INCREF(newClass);
     
-    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)newClass, &template->thisClass);
+    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)newClass, &tmpl->thisClass);
     
     Spk_DECREF(newMetaclass);
     
@@ -177,15 +178,15 @@ SpkClass *SpkClass_FromTemplate(SpkClassTmpl *template,
 }
 
 void SpkClass_InitFromTemplate(SpkClass *self,
-                               SpkClassTmpl *template,
+                               SpkClassTmpl *tmpl,
                                SpkBehavior *superclass,
                                struct SpkModule *module)
 {
     SpkBehavior_InitFromTemplate((SpkBehavior *)self,
-                                 &template->thisClass,
+                                 &tmpl->thisClass,
                                  superclass,
                                  module);
-    self->name = SpkHost_SymbolFromCString(template->name);
+    self->name = SpkHost_SymbolFromCString(tmpl->name);
 }
 
 SpkUnknown *SpkClass_Name(SpkClass *self) {

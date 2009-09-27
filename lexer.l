@@ -114,6 +114,12 @@ ${L}({L}|{D})*		{ count(yyscanner); return Spk_TOKEN_SYMBOL; }
 
 %%
 
+
+#ifndef __cplusplus
+#define yyinput input
+#endif
+
+
 static void comment(yyscan_t yyscanner)
 {
     char c;
@@ -123,7 +129,7 @@ static void comment(yyscan_t yyscanner)
     column = yyget_column(yyscanner);
     
     column += 2;
-    c = input(yyscanner);
+    c = yyinput(yyscanner);
     do {
         while (c != '*') {
             if (!c) {
@@ -136,10 +142,10 @@ static void comment(yyscan_t yyscanner)
             } else {
                 column++;
             }
-            c = input(yyscanner);
+            c = yyinput(yyscanner);
         }
         column++;
-        c = input(yyscanner);
+        c = yyinput(yyscanner);
     } while (c != '/');
     column++;
 
@@ -151,9 +157,9 @@ static void lcomment(yyscan_t yyscanner)
 {
     char c;
 
-    c = input(yyscanner);
+    c = yyinput(yyscanner);
     while (c && c != '\n')
-        c = input(yyscanner);
+        c = yyinput(yyscanner);
     yyset_lineno(yyget_lineno(yyscanner) + 1, yyscanner);
     yyset_column(1, yyscanner);
 }

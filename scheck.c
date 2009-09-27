@@ -247,7 +247,7 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
 {
     Stmt *body, *s;
     Expr *expr, *arg;
-    SpkMethodNamespace namespace;
+    SpkMethodNamespace ns;
     SpkSymbolNode *name;
     SpkOper oper;
     unsigned int innerPass;
@@ -259,7 +259,7 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
     
     switch (outerPass) {
     case 1:
-        namespace = Spk_METHOD_NAMESPACE_RVALUE;
+        ns = Spk_METHOD_NAMESPACE_RVALUE;
         name = 0;
         switch (expr->kind) {
         case Spk_EXPR_NAME:
@@ -270,7 +270,7 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
                 _(badExpr(expr, "invalid method declarator", checker));
                 break;
             }
-            namespace = Spk_METHOD_NAMESPACE_LVALUE;
+            ns = Spk_METHOD_NAMESPACE_LVALUE;
             switch (expr->left->kind) {
             case Spk_EXPR_NAME:
                 name = expr->left->sym;  Spk_INCREF(name);
@@ -374,7 +374,7 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
             _(badExpr(expr, "invalid method declarator", checker));
             break;
         }
-        stmt->u.method.namespace = namespace;
+        stmt->u.method.ns = ns;
         stmt->u.method.name = name;
         break;
     
@@ -776,7 +776,7 @@ static struct PseudoVariable {
     { "true",        Spk_OPCODE_PUSH_TRUE },
     { "null",        Spk_OPCODE_PUSH_NULL },
     { "thisContext", Spk_OPCODE_PUSH_CONTEXT },
-    { 0, 0 }
+    { 0 }
 };
 
 static Expr *newNameExpr(void) {

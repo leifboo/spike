@@ -224,7 +224,7 @@ static SpkUnknown *Char_bor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1
 
 
 /*------------------------------------------------------------------------*/
-/* class template */
+/* class tmpl */
 
 typedef struct SpkCharSubclass {
     SpkChar base;
@@ -255,7 +255,7 @@ static SpkMethodTmpl methods[] = {
     { "__band__",   SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_band   },
     { "__bxor__",   SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_bxor   },
     { "__bor__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_bor    },
-    { 0, 0, 0}
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassCharTmpl = {
@@ -265,6 +265,7 @@ SpkClassTmpl Spk_ClassCharTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkCharSubclass, variables)
     }, /*meta*/ {
+        0
     }
 };
 

@@ -132,11 +132,11 @@ typedef struct SpkMessageSubclass {
 static SpkAccessorTmpl MessageAccessors[] = {
     { "selector",  Spk_T_OBJECT, offsetof(SpkMessage, selector),  SpkAccessor_READ },
     { "arguments", Spk_T_OBJECT, offsetof(SpkMessage, arguments), SpkAccessor_READ },
-    { 0, 0, 0, 0 }
+    { 0 }
 };
 
 static SpkMethodTmpl MessageMethods[] = {
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassMessageTmpl = {
@@ -146,6 +146,7 @@ SpkClassTmpl Spk_ClassMessageTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkMessageSubclass, variables)
     }, /*meta*/ {
+        0
     }
 };
 
@@ -183,7 +184,7 @@ typedef struct SpkMethodSubclass {
 } SpkMethodSubclass;
 
 static SpkMethodTmpl MethodMethods[] = {
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassMethodTmpl = {
@@ -196,6 +197,7 @@ SpkClassTmpl Spk_ClassMethodTmpl = {
         &Method_zero,
         &Method_dealloc
     }, /*meta*/ {
+        0
     }
 };
 
@@ -216,7 +218,7 @@ static SpkTraverse Thunk_traverse = {
 };
 
 static SpkMethodTmpl ThunkMethods[] = {
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassThunkTmpl = {
@@ -230,6 +232,7 @@ SpkClassTmpl Spk_ClassThunkTmpl = {
         /*dealloc*/ 0,
         &Thunk_traverse
     }, /*meta*/ {
+        0
     }
 };
 
@@ -249,7 +252,7 @@ typedef struct SpkContextSubclass {
 static SpkMethodTmpl ContextMethods[] = {
     { "blockCopy", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Context_blockCopy },
     { "compoundExpression", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_ARRAY, &Context_compoundExpression },
-    { 0, 0, 0 }
+    { 0 }
 };
 
 static SpkTraverse Context_traverse = {
@@ -269,12 +272,13 @@ SpkClassTmpl Spk_ClassContextTmpl = {
         &Context_dealloc,
         &Context_traverse
     }, /*meta*/ {
+        0
     }
 };
 
 
 static SpkMethodTmpl MethodContextMethods[] = {
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassMethodContextTmpl = {
@@ -285,17 +289,18 @@ SpkClassTmpl Spk_ClassMethodContextTmpl = {
         offsetof(SpkContextSubclass, variables),
         sizeof(SpkUnknown *)
     }, /*meta*/ {
+        0
     }
 };
 
 
 static SpkAccessorTmpl BlockContextAccessors[] = {
     { "numArgs", Spk_T_SIZE, offsetof(SpkContext, u.b.nargs), SpkAccessor_READ },
-    { 0, 0, 0, 0 }
+    { 0 }
 };
 
 static SpkMethodTmpl BlockContextMethods[] = {
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassBlockContextTmpl = {
@@ -306,12 +311,13 @@ SpkClassTmpl Spk_ClassBlockContextTmpl = {
         offsetof(SpkContextSubclass, variables),
         sizeof(SpkUnknown *)
     }, /*meta*/ {
+        0
     }
 };
 
 
 static SpkMethodTmpl NullMethods[] = {
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassNullTmpl = {
@@ -320,12 +326,13 @@ SpkClassTmpl Spk_ClassNullTmpl = {
         NullMethods,
         /*lvalueMethods*/ 0
     }, /*meta*/ {
+        0
     }
 };
 
 
 static SpkMethodTmpl UninitMethods[] = {
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassUninitTmpl = {
@@ -334,12 +341,13 @@ SpkClassTmpl Spk_ClassUninitTmpl = {
         UninitMethods,
         /*lvalueMethods*/ 0
     }, /*meta*/ {
+        0
     }
 };
 
 
 static SpkMethodTmpl VoidMethods[] = {
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassVoidTmpl = {
@@ -348,6 +356,7 @@ SpkClassTmpl Spk_ClassVoidTmpl = {
         VoidMethods,
         /*lvalueMethods*/ 0
     }, /*meta*/ {
+        0
     }
 };
 
@@ -358,7 +367,7 @@ typedef struct SpkInterpreterSubclass {
 } SpkInterpreterSubclass;
 
 static SpkMethodTmpl InterpreterMethods[] = {
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassInterpreterTmpl = {
@@ -368,6 +377,7 @@ SpkClassTmpl Spk_ClassInterpreterTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkInterpreterSubclass, variables)
     }, /*meta*/ {
+        0
     }
 };
 
@@ -378,7 +388,7 @@ typedef struct SpkProcessorSchedulerSubclass {
 } SpkProcessorSchedulerSubclass;
 
 static SpkMethodTmpl ProcessorSchedulerMethods[] = {
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassProcessorSchedulerTmpl = {
@@ -388,6 +398,7 @@ SpkClassTmpl Spk_ClassProcessorSchedulerTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkProcessorSchedulerSubclass, variables)
     }, /*meta*/ {
+        0
     }
 };
 
@@ -398,7 +409,7 @@ typedef struct SpkFiberSubclass {
 } SpkFiberSubclass;
 
 static SpkMethodTmpl FiberMethods[] = {
-    { 0, 0, 0 }
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassFiberTmpl = {
@@ -408,6 +419,7 @@ SpkClassTmpl Spk_ClassFiberTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkFiberSubclass, variables)
     }, /*meta*/ {
+        0
     }
 };
 
@@ -861,10 +873,10 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
     SpkUnknown *tmp;
 
     /* message sending */
-    SpkMethodNamespace namespace;
+    SpkMethodNamespace ns;
     SpkUnknown *messageSelector = 0; /* ref counted */
     size_t argumentCount = 0, varArg = 0, variadic = 0, fixedArgumentCount = 0;
-    unsigned int operator;
+    unsigned int oper;
     SpkOpcode *oldIP;
     
     /* unwinding */
@@ -1056,34 +1068,34 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
 
             /*** send opcodes -- operators ***/
         case Spk_OPCODE_OPER:
-            operator = (unsigned int)(*instructionPointer++);
-            argumentCount = Spk_operSelectors[operator].argumentCount;
+            oper = (unsigned int)(*instructionPointer++);
+            argumentCount = Spk_operSelectors[oper].argumentCount;
             varArg = 0;
             receiver = stackPointer[argumentCount];
             methodClass = GET_CLASS(receiver);
             goto oper;
         case Spk_OPCODE_OPER_SUPER:
-            operator = (unsigned int)(*instructionPointer++);
-            argumentCount = Spk_operSelectors[operator].argumentCount;
+            oper = (unsigned int)(*instructionPointer++);
+            argumentCount = Spk_operSelectors[oper].argumentCount;
             varArg = 0;
             methodClass = methodClass->superclass;
  oper:
             for (mc = methodClass; mc; mc = mc->superclass) {
-                method = mc->ns[Spk_METHOD_NAMESPACE_RVALUE].operTable[operator];
+                method = mc->ns[Spk_METHOD_NAMESPACE_RVALUE].operTable[oper];
                 if (method) {
                     methodClass = mc;
                     goto callNewMethod;
                 }
             }
             oldIP = instructionPointer - 2;
-            namespace = Spk_METHOD_NAMESPACE_RVALUE;
-            messageSelector = *Spk_operSelectors[operator].selector;
+            ns = Spk_METHOD_NAMESPACE_RVALUE;
+            messageSelector = *Spk_operSelectors[oper].selector;
             Spk_INCREF(messageSelector);
             goto createActualMessage;
         case Spk_OPCODE_CALL:
             oldIP = instructionPointer - 1;
-            namespace = (unsigned int)(*instructionPointer++);
-            operator = (unsigned int)(*instructionPointer++);
+            ns = (SpkMethodNamespace)(*instructionPointer++);
+            oper = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
             varArg = 0;
             receiver = stackPointer[argumentCount];
@@ -1091,8 +1103,8 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             goto call;
         case Spk_OPCODE_CALL_VAR:
             oldIP = instructionPointer - 1;
-            namespace = (unsigned int)(*instructionPointer++);
-            operator = (unsigned int)(*instructionPointer++);
+            ns = (SpkMethodNamespace)(*instructionPointer++);
+            oper = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
             varArg = 1;
             receiver = stackPointer[argumentCount + 1];
@@ -1100,39 +1112,39 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             goto call;
         case Spk_OPCODE_CALL_SUPER:
             oldIP = instructionPointer - 1;
-            namespace = (unsigned int)(*instructionPointer++);
-            operator = (unsigned int)(*instructionPointer++);
+            ns = (SpkMethodNamespace)(*instructionPointer++);
+            oper = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
             varArg = 0;
             methodClass = methodClass->superclass;
             goto call;
         case Spk_OPCODE_CALL_SUPER_VAR:
             oldIP = instructionPointer - 1;
-            operator = (unsigned int)(*instructionPointer++);
-            namespace = (unsigned int)(*instructionPointer++);
+            oper = (unsigned int)(*instructionPointer++);
+            ns = (SpkMethodNamespace)(*instructionPointer++);
             DECODE_UINT(argumentCount);
             varArg = 1;
             methodClass = methodClass->superclass;
  call:
             for (mc = methodClass; mc; mc = mc->superclass) {
-                method = methodClass->ns[namespace].operCallTable[operator];
+                method = methodClass->ns[ns].operCallTable[oper];
                 if (method) {
                     methodClass = mc;
                     goto callNewMethod;
                 }
             }
-            messageSelector = *Spk_operCallSelectors[operator].selector;
+            messageSelector = *Spk_operCallSelectors[oper].selector;
             Spk_INCREF(messageSelector);
             goto createActualMessage;
 
             /*** send opcodes -- "obj.attr" ***/
         case Spk_OPCODE_SET_ATTR:
-            namespace = Spk_METHOD_NAMESPACE_LVALUE;
+            ns = Spk_METHOD_NAMESPACE_LVALUE;
             argumentCount = 1;
             varArg = 0;
             goto attr;
         case Spk_OPCODE_GET_ATTR:
-            namespace = Spk_METHOD_NAMESPACE_RVALUE;
+            ns = Spk_METHOD_NAMESPACE_RVALUE;
             argumentCount = varArg = 0;
  attr:
             oldIP = instructionPointer - 1;
@@ -1143,12 +1155,12 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             Spk_INCREF(messageSelector);
             goto lookupMethodInClass;
         case Spk_OPCODE_SET_ATTR_SUPER:
-            namespace = Spk_METHOD_NAMESPACE_LVALUE;
+            ns = Spk_METHOD_NAMESPACE_LVALUE;
             argumentCount = 1;
             varArg = 0;
             goto superAttr;
         case Spk_OPCODE_GET_ATTR_SUPER:
-            namespace = Spk_METHOD_NAMESPACE_RVALUE;
+            ns = Spk_METHOD_NAMESPACE_RVALUE;
             argumentCount = varArg = 0;
  superAttr:
             oldIP = instructionPointer - 1;
@@ -1158,7 +1170,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             Spk_INCREF(messageSelector);
  lookupMethodInClass:
             for (mc = methodClass; mc; mc = mc->superclass) {
-                method = SpkBehavior_LookupMethod(mc, namespace, messageSelector);
+                method = SpkBehavior_LookupMethod(mc, ns, messageSelector);
                 if (method) {
                     Spk_DECREF(method);
                     methodClass = mc;
@@ -1196,7 +1208,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                     varArgTuple = 0;
                 }
                 message = SpkMessage_New();
-                message->namespace = namespace;
+                message->ns = ns;
                 message->selector = messageSelector; /* steal reference */
                 message->arguments
                     = SpkHost_GetArgs(
@@ -1208,7 +1220,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 PUSH(message);  /* XXX: doesNotUnderstand overhead  -- see SpkContext_new() */
                 argumentCount = 1;
                 varArg = 0;
-                namespace = Spk_METHOD_NAMESPACE_RVALUE;
+                ns = Spk_METHOD_NAMESPACE_RVALUE;
             } while (0);
             
             messageSelector = Spk_doesNotUnderstand;
@@ -1217,12 +1229,12 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             
             /*** send opcodes -- "obj.*attr" ***/
         case Spk_OPCODE_SET_ATTR_VAR:
-            namespace = Spk_METHOD_NAMESPACE_LVALUE;
+            ns = Spk_METHOD_NAMESPACE_LVALUE;
             argumentCount = 1;
             varArg = 0;
             goto attrVar;
         case Spk_OPCODE_GET_ATTR_VAR:
-            namespace = Spk_METHOD_NAMESPACE_RVALUE;
+            ns = Spk_METHOD_NAMESPACE_RVALUE;
             argumentCount = varArg = 0;
  attrVar:
             receiver = stackPointer[argumentCount + 1];
@@ -1240,12 +1252,12 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             oldIP = instructionPointer - 1;
             goto lookupMethodInClass;
         case Spk_OPCODE_SET_ATTR_VAR_SUPER:
-            namespace = Spk_METHOD_NAMESPACE_LVALUE;
+            ns = Spk_METHOD_NAMESPACE_LVALUE;
             argumentCount = 1;
             varArg = 0;
             goto superSetAttr;
         case Spk_OPCODE_GET_ATTR_VAR_SUPER:
-            namespace = Spk_METHOD_NAMESPACE_RVALUE;
+            ns = Spk_METHOD_NAMESPACE_RVALUE;
             argumentCount = varArg = 0;
  superSetAttr:
             methodClass = methodClass->superclass;
@@ -1259,7 +1271,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             receiver = stackPointer[argumentCount];
             methodClass = GET_CLASS(receiver);
  send:
-            namespace = Spk_METHOD_NAMESPACE_RVALUE;
+            ns = Spk_METHOD_NAMESPACE_RVALUE;
             messageSelector = literalPointer[index];
             Spk_INCREF(messageSelector);
             varArg = 0;
@@ -1281,8 +1293,8 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             if (!SpkHost_IsInteger(namespaceObj)) {
                 assert(XXX); /* trap */
             }
-            namespace = SpkHost_IntegerAsCLong(namespaceObj);
-            assert(0 <= namespace && namespace < Spk_NUM_METHOD_NAMESPACES);
+            ns = (SpkMethodNamespace)SpkHost_IntegerAsCLong(namespaceObj);
+            assert(0 <= ns && ns < Spk_NUM_METHOD_NAMESPACES);
             messageSelector = stackPointer[1]; /* steal reference */
             if (0 /*!SpkHost_IsSelector(messageSelector)*/ ) {
                 --instructionPointer;
@@ -1516,7 +1528,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             break; }
             
         case Spk_OPCODE_NATIVE_PUSH_INST_VAR: {
-            SpkInstVarType type;
+            unsigned int type;
             size_t offset;
             char *addr;
             
@@ -1542,7 +1554,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             break; }
             
         case Spk_OPCODE_NATIVE_STORE_INST_VAR: {
-            SpkInstVarType type;
+            unsigned int type;
             size_t offset;
             char *addr;
             
@@ -1741,7 +1753,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
 SpkUnknown *SpkInterpreter_SendMessage(
     SpkInterpreter *interpreter,
     SpkUnknown *obj,
-    unsigned int namespace,
+    unsigned int ns,
     SpkUnknown *selector,
     SpkUnknown *argumentArray
     )
@@ -1802,7 +1814,7 @@ SpkUnknown *SpkInterpreter_SendMessage(
     Spk_DECREF(thisContext->stackp[-3]);
     Spk_DECREF(thisContext->stackp[-4]);
     *--thisContext->stackp = obj;
-    *--thisContext->stackp = SpkHost_IntegerFromCLong(namespace);
+    *--thisContext->stackp = SpkHost_IntegerFromCLong(ns);
     *--thisContext->stackp = selector;
     *--thisContext->stackp = argumentArray;
     assert(thisContext->stackp >= &SpkContext_VARIABLES(thisContext)[0]);

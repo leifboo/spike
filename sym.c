@@ -47,11 +47,11 @@ static SpkUnknown *Symbol_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUn
 
 
 /*------------------------------------------------------------------------*/
-/* class template */
+/* class tmpl */
 
 static SpkMethodTmpl methods[] = {
     { "printString", SpkNativeCode_ARGS_0, &Symbol_printString },
-    { 0, 0, 0}
+    { 0 }
 };
 
 SpkClassTmpl Spk_ClassSymbolTmpl = {
@@ -62,6 +62,7 @@ SpkClassTmpl Spk_ClassSymbolTmpl = {
         /*offsetof(SpkSymbolSubclass, variables)*/ 0,
         sizeof(char)
     }, /*meta*/ {
+        0
     }
 };
 

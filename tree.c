@@ -314,7 +314,7 @@ typedef struct SpkExprSubclass {
 } SpkExprSubclass;
 
 static SpkMethodTmpl ExprMethods[] = {
-    { 0, 0, 0}
+    { 0 }
 };
 
 static SpkTraverse Expr_traverse = {
@@ -334,6 +334,7 @@ SpkClassTmpl Spk_ClassExprTmpl = {
         /*dealloc*/ 0,
         &Expr_traverse
     }, /*meta*/ {
+        0
     }
 };
 
@@ -348,7 +349,7 @@ static SpkMethodTmpl StmtMethods[] = {
     { "check",        SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Stmt_check },
     { "generateCode", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Stmt_generateCode },
     { "source",       SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &Stmt_source },
-    { 0, 0, 0}
+    { 0 }
 };
 
 static SpkTraverse Stmt_traverse = {
@@ -368,5 +369,6 @@ SpkClassTmpl Spk_ClassStmtTmpl = {
         /*dealloc*/ 0,
         &Stmt_traverse
     }, /*meta*/ {
+        0
     }
 };

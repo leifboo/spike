@@ -20,7 +20,7 @@ extern struct SpkClassTmpl Spk_ClassMetaclassTmpl;
 
 
 SpkMetaclass *SpkMetaclass_New(SpkMetaclass *superMeta, size_t instVarCount);
-SpkMetaclass *SpkMetaclass_FromTemplate(struct SpkBehaviorTmpl *template, SpkMetaclass *superMeta, struct SpkModule *module);
+SpkMetaclass *SpkMetaclass_FromTemplate(struct SpkBehaviorTmpl *tmpl, SpkMetaclass *superMeta, struct SpkModule *module);
 
 
 #endif /* __spk_metaclass_h__ */

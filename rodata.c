@@ -22,7 +22,6 @@ SpkUnknown *Spk_self;
 SpkUnknown *Spk___add__;
 SpkUnknown *Spk___addr__;
 SpkUnknown *Spk___apply__;
-SpkUnknown *Spk___apply__;
 SpkUnknown *Spk___band__;
 SpkUnknown *Spk___bneg__;
 SpkUnknown *Spk___bor__;
@@ -126,7 +125,7 @@ SpkUnknown *Spk_emptyArgs;
 
 static SymbolTableEntry symbolTable[] = {
     { &Spk_self, "self" },
-    { 0, 0 }
+    { 0 }
 };
 
 static SymbolTableEntry selectorTable[] = {
@@ -188,19 +187,19 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_False,                         "False"                       },
     { &Spk_True,                          "True"                        },
     
-    { 0, 0 }
+    { 0 }
 };
 
 static IntegerTableEntry integerTable[] = {
     { &Spk_1, 1 },
-    { 0, 0 }
+    { 0 }
 };
 
 static StringTableEntry stringTable[] = {
     { &Spk_emptyString, emptyString, sizeof(emptyString) },
     { &Spk_unknownSelector, unknownSelector, sizeof(unknownSelector) },
     { &Spk_unknownSourcePathname, unknownSourcePathname, sizeof(unknownSourcePathname) },
-    { 0, 0, 0 }
+    { 0 }
 };
 
 
