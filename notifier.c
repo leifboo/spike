@@ -63,8 +63,8 @@ static SpkUnknown *Notifier_badExpr(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkn
             source, expr->lineNo, desc);
     ++self->errorTally;
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 static SpkUnknown *Notifier_redefinedSymbol(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
@@ -93,8 +93,8 @@ static SpkUnknown *Notifier_redefinedSymbol(SpkUnknown *_self, SpkUnknown *arg0,
             name);
     ++self->errorTally;
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 static SpkUnknown *Notifier_undefinedSymbol(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
@@ -117,8 +117,8 @@ static SpkUnknown *Notifier_undefinedSymbol(SpkUnknown *_self, SpkUnknown *arg0,
             SpkHost_SymbolAsCString(expr->sym->sym));
     ++self->errorTally;
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 static SpkUnknown *Notifier_failOnError(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
@@ -129,8 +129,8 @@ static SpkUnknown *Notifier_failOnError(SpkUnknown *_self, SpkUnknown *arg0, Spk
         Spk_Halt(Spk_HALT_ERROR, "errors");
         return 0;
     }
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 
@@ -140,11 +140,11 @@ static SpkUnknown *Notifier_failOnError(SpkUnknown *_self, SpkUnknown *arg0, Spk
 static SpkUnknown *ClassNotifier_new(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkUnknown *newNotifier, *tmp;
     
-    newNotifier = Spk_CallAttr(theInterpreter, Spk_SUPER, Spk_new, 0);
+    newNotifier = Spk_CallAttr(Spk_GLOBAL(theInterpreter), Spk_SUPER, Spk_new, 0);
     if (!newNotifier)
         return 0;
     tmp = newNotifier;
-    newNotifier = Spk_CallAttr(theInterpreter, newNotifier, Spk_init, arg0, 0);
+    newNotifier = Spk_CallAttr(Spk_GLOBAL(theInterpreter), newNotifier, Spk_init, arg0, 0);
     Spk_DECREF(tmp);
     return newNotifier;
 }

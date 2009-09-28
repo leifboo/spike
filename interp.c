@@ -114,13 +114,6 @@ struct SpkInterpreter {
 #define sender caller
 
 
-SpkUnknown *Spk_null;
-SpkUnknown *Spk_uninit;
-SpkUnknown *Spk_void;
-
-SpkInterpreter *theInterpreter; /* XXX */
-
-
 /*------------------------------------------------------------------------*/
 /* class templates */
 
@@ -570,8 +563,8 @@ SpkContext *SpkContext_New(size_t size) {
     }
     
     for (count = 0, p = SpkContext_VARIABLES(newContext); count < size; ++count, ++p) {
-        Spk_INCREF(Spk_uninit);
-        *p = Spk_uninit;
+        Spk_INCREF(Spk_GLOBAL(uninit));
+        *p = Spk_GLOBAL(uninit);
     }
     
     newContext->mark = 0;
@@ -658,7 +651,7 @@ static SpkUnknown *Context_blockCopy(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
 
 static SpkUnknown *Context_compoundExpression(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkContext *self = (SpkContext *)_self;
-    return Spk_CallAttrWithArguments(theInterpreter,
+    return Spk_CallAttrWithArguments(Spk_GLOBAL(theInterpreter),
                                      self->homeContext->u.m.receiver,
                                      Spk_compoundExpression,
                                      arg0);
@@ -762,8 +755,8 @@ static void addTraceback(SpkContext *ctxt) {
 /* stackPointer */
 static SpkUnknown *popObject(SpkUnknown **stackPointer) {
     SpkUnknown *tmp = stackPointer[-1];
-    Spk_INCREF(Spk_uninit);
-    stackPointer[-1] = Spk_uninit;
+    Spk_INCREF(Spk_GLOBAL(uninit));
+    stackPointer[-1] = Spk_GLOBAL(uninit);
     return tmp;
 }
 
@@ -772,15 +765,15 @@ static SpkUnknown *popObject(SpkUnknown **stackPointer) {
 #define POP(nItems) \
 do { SpkUnknown **end = stackPointer + (nItems); \
      while (stackPointer < end) { \
-         Spk_INCREF(Spk_uninit); \
-         *stackPointer++ = Spk_uninit; } } while (0)
+         Spk_INCREF(Spk_GLOBAL(uninit)); \
+         *stackPointer++ = Spk_GLOBAL(uninit); } } while (0)
 
 #define CLEAN(nItems) \
 do { SpkUnknown **end = stackPointer + (nItems); \
      while (stackPointer < end) { \
          SpkUnknown *op = *stackPointer; \
-         Spk_INCREF(Spk_uninit); \
-         *stackPointer++ = Spk_uninit; \
+         Spk_INCREF(Spk_GLOBAL(uninit)); \
+         *stackPointer++ = Spk_GLOBAL(uninit); \
          Spk_DECREF(op); } } while (0)
 
 #define PUSH(object) \
@@ -957,10 +950,10 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
              * have to distinguish between sends and super-sends.
              */
         case Spk_OPCODE_PUSH_SELF:     PUSH(receiver);             Spk_INCREF(receiver);             break;
-        case Spk_OPCODE_PUSH_FALSE:    PUSH(Spk_false);            Spk_INCREF(Spk_false);            break;
-        case Spk_OPCODE_PUSH_TRUE:     PUSH(Spk_true);             Spk_INCREF(Spk_true);             break;
-        case Spk_OPCODE_PUSH_NULL:     PUSH(Spk_null);             Spk_INCREF(Spk_null);             break;
-        case Spk_OPCODE_PUSH_VOID:     PUSH(Spk_void);             Spk_INCREF(Spk_void);             break;
+        case Spk_OPCODE_PUSH_FALSE:    PUSH(Spk_GLOBAL(xfalse));   Spk_INCREF(Spk_GLOBAL(xfalse));   break;
+        case Spk_OPCODE_PUSH_TRUE:     PUSH(Spk_GLOBAL(xtrue));    Spk_INCREF(Spk_GLOBAL(xtrue));    break;
+        case Spk_OPCODE_PUSH_NULL:     PUSH(Spk_GLOBAL(null));     Spk_INCREF(Spk_GLOBAL(null));     break;
+        case Spk_OPCODE_PUSH_VOID:     PUSH(Spk_GLOBAL(xvoid));    Spk_INCREF(Spk_GLOBAL(xvoid));    break;
         case Spk_OPCODE_PUSH_CONTEXT:  PUSH(self->activeContext);  Spk_INCREF(self->activeContext);  break;
                 
             /*** store opcodes ***/
@@ -1027,12 +1020,12 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
         case Spk_OPCODE_BRANCH_IF_FALSE: {
             ptrdiff_t displacement;
             SpkUnknown *x, *o, *boolean;
-            x = Spk_false;
-            o = Spk_true;
+            x = Spk_GLOBAL(xfalse);
+            o = Spk_GLOBAL(xtrue);
             goto branch;
         case Spk_OPCODE_BRANCH_IF_TRUE:
-            x = Spk_true;
-            o = Spk_false;
+            x = Spk_GLOBAL(xtrue);
+            o = Spk_GLOBAL(xfalse);
  branch:
             boolean = POP_OBJECT();
             if (boolean == x) {
@@ -1059,7 +1052,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             SpkUnknown *x, *y, *boolean;
             x = POP_OBJECT();
             y = POP_OBJECT();
-            boolean = x == y ? Spk_true : Spk_false;
+            boolean = x == y ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse);
             PUSH(boolean);
             Spk_INCREF(boolean);
             Spk_DECREF(x);
@@ -1600,7 +1593,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             case Spk_T_OBJECT:
                 tmp = *(SpkUnknown **)addr;
                 if (!tmp)
-                    tmp = Spk_null;
+                    tmp = Spk_GLOBAL(null);
                 Spk_INCREF(tmp);
                 break;
             case Spk_T_SIZE:
@@ -1608,7 +1601,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 break;
             default:
                 unknownOpcode(self);
-                tmp = Spk_uninit;
+                tmp = Spk_GLOBAL(uninit);
                 Spk_INCREF(tmp);
             }
             PUSH(tmp);

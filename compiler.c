@@ -18,7 +18,7 @@
 
 
 static SpkUnknown *defaultNotifier(void) {
-    return Spk_CallAttr(theInterpreter, (SpkUnknown *)Spk_CLASS(Notifier), Spk_new, Spk_stderr, 0);
+    return Spk_CallAttr(Spk_GLOBAL(theInterpreter), (SpkUnknown *)Spk_CLASS(Notifier), Spk_new, Spk_GLOBAL(xstderr), 0);
 }
 
 
@@ -42,7 +42,7 @@ static SpkModule *compileTree(SpkStmt **pTree, /* destroys reference */
     if (!tmp)
         goto unwind;
     
-    tmp = Spk_Keyword(theInterpreter, notifier, Spk_failOnError, 0);
+    tmp = Spk_Keyword(Spk_GLOBAL(theInterpreter), notifier, Spk_failOnError, 0);
     if (!tmp)
         goto unwind;
     

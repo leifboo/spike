@@ -23,7 +23,7 @@
 static SpkUnknown *Object_eq(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkUnknown *result;
 
-    result = (self == arg0 ? Spk_true : Spk_false);
+    result = (self == arg0 ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse));
     Spk_INCREF(result);
     return result;
 }
@@ -31,8 +31,8 @@ static SpkUnknown *Object_eq(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg
 static SpkUnknown *Object_ne(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkUnknown *temp, *result;
     
-    temp = Spk_Oper(theInterpreter, self, Spk_OPER_EQ, arg0, 0);
-    result = Spk_Oper(theInterpreter, temp, Spk_OPER_LNEG, 0);
+    temp = Spk_Oper(Spk_GLOBAL(theInterpreter), self, Spk_OPER_EQ, arg0, 0);
+    result = Spk_Oper(Spk_GLOBAL(theInterpreter), temp, Spk_OPER_LNEG, 0);
     Spk_DECREF(temp);
     return result;
 }
@@ -104,8 +104,8 @@ static void Object_zero(SpkObject *self) {
     instVarTotal = klass->instVarBaseIndex + klass->instVarCount;
     
     for (i = 0; i < instVarTotal; ++i) {
-        Spk_INCREF(Spk_uninit);
-        variables[i] = Spk_uninit;
+        Spk_INCREF(Spk_GLOBAL(uninit));
+        variables[i] = Spk_GLOBAL(uninit);
     }
 }
 

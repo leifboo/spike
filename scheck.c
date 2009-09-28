@@ -52,7 +52,7 @@ static SpkUnknown *badExpr(Expr *expr, const char *desc, StaticChecker *checker)
     descStr = SpkHost_StringFromCString(desc);
     if (!descStr)
         return 0;
-    tmp = Spk_Keyword(theInterpreter,
+    tmp = Spk_Keyword(Spk_GLOBAL(theInterpreter),
                       checker->requestor,
                       Spk_badExpr,
                       expr,
@@ -62,8 +62,8 @@ static SpkUnknown *badExpr(Expr *expr, const char *desc, StaticChecker *checker)
     if (!tmp)
         return 0;
     Spk_DECREF(tmp);
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 
@@ -94,8 +94,8 @@ static SpkUnknown *checkVarDefList(Expr *defList,
         if (pass == 1)
             _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
     }
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -107,8 +107,8 @@ static SpkUnknown *checkExpr(Expr *expr, Stmt *stmt, StaticChecker *checker,
     for ( ; expr; expr = expr->next) {
         _(checkOneExpr(expr, stmt, checker, pass));
     }
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -168,8 +168,8 @@ static SpkUnknown *checkBlock(Expr *expr, Stmt *stmt, StaticChecker *checker,
     SpkSymbolTable_ExitScope(checker->st);
     
  leave:
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -233,8 +233,8 @@ static SpkUnknown *checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker,
         break;
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -421,8 +421,8 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
         break;
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -452,8 +452,8 @@ static SpkUnknown *registerSubclass(Stmt *subclassDef, StaticChecker *checker) {
         checker->rootClassList->last = subclassDef;
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 static SpkUnknown *checkForSuperclassCycle(Stmt *aClassDef,
@@ -483,8 +483,8 @@ static SpkUnknown *checkForSuperclassCycle(Stmt *aClassDef,
     }
     
  leave:
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -508,8 +508,8 @@ static SpkUnknown *checkClassBody(Stmt *body, Stmt *stmt, Stmt *outer,
     *varCount = checker->st->currentScope->context->nDefs;
     SpkSymbolTable_ExitScope(checker->st);
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -561,8 +561,8 @@ static SpkUnknown *checkClassDef(Stmt *stmt, Stmt *outer, StaticChecker *checker
         break;
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -649,8 +649,8 @@ static SpkUnknown *checkImport(Stmt *stmt, StaticChecker *checker,
     }
     
  leave:
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -745,7 +745,7 @@ static SpkUnknown *checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker,
 #endif /* MALTIPY */
         break;
     case Spk_STMT_PRAGMA_SOURCE:
-        _(Spk_SetAttr(theInterpreter, checker->requestor, Spk_source, stmt->u.source));
+        _(Spk_SetAttr(Spk_GLOBAL(theInterpreter), checker->requestor, Spk_source, stmt->u.source));
         break;
     case Spk_STMT_RETURN:
     case Spk_STMT_YIELD:
@@ -759,8 +759,8 @@ static SpkUnknown *checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker,
         break;
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -827,8 +827,8 @@ static SpkUnknown *addPredef(StmtList *predefList, Stmt *def) {
     }
     predefList->last = def;
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 static SpkUnknown *declareClass(SpkBehavior *aClass,
@@ -840,8 +840,8 @@ static SpkUnknown *declareClass(SpkBehavior *aClass,
     classDef->expr->u.def.initValue = (SpkUnknown *)aClass;
     _(addPredef(predefList, classDef));
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -858,7 +858,7 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     struct PseudoVariable *pv;
     unsigned int pass;
     SpkClassBootRec *classBootRec; SpkBehavior **classVar;
-    SpkVarBootRec *varBootRec;
+    SpkVarBootRec *varBootRec; SpkUnknown **var;
     
     ASSERT(tree->kind == Spk_STMT_DEF_MODULE, "module node expected");
     ASSERT(tree->top->kind == Spk_STMT_COMPOUND, "compound statement expected");
@@ -885,10 +885,11 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
         classVar = (SpkBehavior **)((char *)Spk_heart + (*classBootRec)->classVarOffset);
         _(declareClass(*classVar, predefList, &checker));
     }
-    for (varBootRec = Spk_globalVarBootRec; varBootRec->var; ++varBootRec) {
+    for (varBootRec = Spk_globalVarBootRec; varBootRec->varOffset; ++varBootRec) {
         Stmt *varDef = globalVarDef(varBootRec->name, &checker);
         _(SpkSymbolTable_Insert(checker.st, varDef->expr, checker.requestor));
-        varDef->expr->u.def.initValue = (SpkUnknown *)*varBootRec->var;
+        var = (SpkUnknown **)((char *)Spk_heart + varBootRec->varOffset);
+        varDef->expr->u.def.initValue = (SpkUnknown *)*var;
         _(addPredef(predefList, varDef));
     }
     
@@ -906,8 +907,8 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     SpkSymbolTable_ExitScope(checker.st); /* global */
     SpkSymbolTable_ExitScope(checker.st); /* built-in */
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;

@@ -46,8 +46,8 @@ static const char *haltDesc(int code) {
 
 
 /****/ void SpkHost_Halt(int code, const char *message) {
-    if (theInterpreter)
-        SpkInterpreter_PrintCallStack(theInterpreter);
+    if (Spk_GLOBAL(theInterpreter))
+        SpkInterpreter_PrintCallStack(Spk_GLOBAL(theInterpreter));
     fprintf(stderr, "halt: %s: %s\n", haltDesc(code), message);
     abort(); /* XXX: The proper thing to do is unwind. */
 }
@@ -154,7 +154,7 @@ SpkUnknown *SpkHost_NewKeywordSelectorBuilder(void) {
     size = SpkArray_Size(kwArray);
     for (i = 0; i < size; ++i) {
         SpkUnknown *item = SpkArray_GetItem(kwArray, i);
-        if (item == Spk_uninit) {
+        if (item == Spk_GLOBAL(uninit)) {
             Spk_DECREF(item);
             break;
         }
@@ -218,7 +218,7 @@ SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
     }
     for (i = 0; i < size; ++i) {
         SpkUnknown *item = SpkArray_GetItem(kwArray, i);
-        if (item == Spk_uninit) {
+        if (item == Spk_GLOBAL(uninit)) {
             Spk_DECREF(item);
             break;
         }
@@ -242,7 +242,7 @@ SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
     }
     for (i = 0; i < size; ++i) {
         SpkUnknown *item = SpkArray_GetItem(kwArray, i);
-        if (item == Spk_uninit) {
+        if (item == Spk_GLOBAL(uninit)) {
             Spk_DECREF(item);
             break;
         }
@@ -379,7 +379,7 @@ SpkUnknown *SpkHost_GetArgs(SpkUnknown **stackPointer,
 
 SpkUnknown *SpkHost_ObjectAsString(SpkUnknown *obj) {
     return Spk_SendMessage(
-        theInterpreter,
+        Spk_GLOBAL(theInterpreter),
         obj,
         Spk_METHOD_NAMESPACE_RVALUE,
         Spk_printString,

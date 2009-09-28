@@ -352,8 +352,8 @@ static SpkUnknown *Parser_parse(SpkUnknown *_self,
     if (token.id == -1) {
         SpkParser_ParseFree(parser, &free);
         SpkLexer_lex_destroy(lexer);
-        Spk_INCREF(Spk_null);
-        return Spk_null;
+        Spk_INCREF(Spk_GLOBAL(null));
+        return Spk_GLOBAL(null);
     }
     SpkParser_Parse(parser, 0, token, self);
     SpkParser_ParseFree(parser, &free);
@@ -361,8 +361,8 @@ static SpkUnknown *Parser_parse(SpkUnknown *_self,
     SpkLexer_lex_destroy(lexer);
     
     if (self->error) {
-        Spk_INCREF(Spk_null);
-        return Spk_null;
+        Spk_INCREF(Spk_GLOBAL(null));
+        return Spk_GLOBAL(null);
     }
     return (SpkUnknown *)self->root;
     

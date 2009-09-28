@@ -247,8 +247,8 @@ static SpkUnknown *fixUpBranch(size_t target, OpcodeGen *cgen) {
         EMIT_OPCODE(Spk_OPCODE_NOP);
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -269,8 +269,8 @@ static SpkUnknown *emitBranch(SpkOpcode opcode, size_t target, OpcodeGen *cgen) 
         --cgen->stackPointer;
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -326,8 +326,8 @@ static SpkUnknown *emitCodeForName(Expr *expr, int *super, OpcodeGen *cgen) {
     tallyPush(cgen);
     
  leave:
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -364,8 +364,8 @@ static SpkUnknown *emitLiteralIndex(SpkUnknown *literal, OpcodeGen *cgen) {
         }
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -376,8 +376,8 @@ static SpkUnknown *emitCodeForLiteral(SpkUnknown *literal, OpcodeGen *cgen) {
     _(emitLiteralIndex(literal, cgen));
     tallyPush(cgen);
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -484,8 +484,8 @@ static SpkUnknown *emitCodeForInt(int intValue, OpcodeGen *cgen) {
     }
     _(emitCodeForLiteral(intObj, cgen));
     Spk_DECREF(intObj);
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     Spk_XDECREF(intObj);
@@ -514,8 +514,8 @@ static SpkUnknown *emitCodeForExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     }
     _(emitCodeForOneExpr(expr, super, cgen));
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -746,8 +746,8 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     
     SET_EXPR_END(expr);
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -781,8 +781,8 @@ static SpkUnknown *inPlaceOp(Expr *expr, size_t resultDepth, OpcodeGen *cgen) {
         squirrel(resultDepth, cgen);
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -850,8 +850,8 @@ static SpkUnknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
     EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
     CHECK_STACKP();
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -899,8 +899,8 @@ static SpkUnknown *inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
     EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
     CHECK_STACKP();
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -917,8 +917,8 @@ static SpkUnknown *emitBranchForExpr(Expr *expr, int cond,
     }
     _(emitBranchForOneExpr(expr, cond, label, fallThroughLabel, dup, cgen));
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1012,8 +1012,8 @@ static SpkUnknown *emitBranchForOneExpr(Expr *expr, int cond,
         break;
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1036,8 +1036,8 @@ static SpkUnknown *emitCodeForBlockBody(Stmt *body, Expr *valueExpr,
     EMIT_OPCODE(Spk_OPCODE_RET);
     _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, start, cgen));
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1139,8 +1139,8 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
         home->u.o.stackSize = cgen->stackPointer;
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1162,8 +1162,8 @@ static SpkUnknown *emitCodeForVarDefList(Expr *defList, OpcodeGen *cgen) {
             CHECK_STACKP();
         }
     }
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1318,8 +1318,8 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
     ASSERT(cgen->stackPointer == 0, "garbage on stack at end of statement");
     CHECK_STACKP();
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1474,8 +1474,8 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         ASSERT(0, "method not allowed here");
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1515,8 +1515,8 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, CodeGen *cgen) {
         }
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1572,8 +1572,8 @@ static SpkUnknown *emitCodeForClass(Stmt *stmt, CodeGen *outer) {
         ASSERT(0, "class definition not allowed here");
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1599,8 +1599,8 @@ static SpkUnknown *storeImport(Expr *expr, OpcodeGen *cgen) {
         ASSERT(0, "invalid import statement");
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1650,8 +1650,8 @@ static SpkUnknown *getImportedName(SpkUnknown **pName, Expr **pPkg, Expr *expr) 
     *pName = name;
     *pPkg = pkg;
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1680,8 +1680,8 @@ static SpkUnknown *generateImport(SpkUnknown *import, SpkUnknown *name,
     encodeUnsignedInt(1, cgen);
     cgen->stackPointer -= 1;
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1822,8 +1822,8 @@ static SpkUnknown *generateImports(Stmt *stmtList, CodeGen *outer) {
     
     Spk_DECREF(mcg->methodInstance);
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1850,8 +1850,8 @@ static SpkUnknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
     _(generateImports(stmt->top->top, cgen->generic));
 #endif /* MALTIPY */
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1897,8 +1897,8 @@ static SpkUnknown *createClass(Stmt *classDef, ModuleCodeGen *cgen) {
     
     classDef->expr->u.def.initValue = (SpkUnknown *)theClass;
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1915,8 +1915,8 @@ static SpkUnknown *createClassTree(Stmt *classDef, ModuleCodeGen *cgen) {
         _(createClassTree(subclassDef, cgen));
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1947,8 +1947,8 @@ static SpkUnknown *initGlobalVars(SpkUnknown **globals, Stmt *stmtList) {
         }
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1985,8 +1985,8 @@ static SpkUnknown *initThunks(SpkUnknown **globals, SpkModule *module,
         }
     }
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -2043,8 +2043,8 @@ SpkModule *SpkCodeGen_GenerateCode(Stmt *tree) {
     module->literalCount = cgen->rodataSize;
     globals = SpkModule_VARIABLES(module);
     for (index = 0; index < dataSize; ++index) {
-        globals[index] = Spk_uninit; /* XXX: null? */
-        Spk_INCREF(Spk_uninit);
+        globals[index] = Spk_GLOBAL(uninit); /* XXX: null? */
+        Spk_INCREF(Spk_GLOBAL(uninit));
     }
     /* XXX: This stuff should happen at runtime, with binding! */
     _(initGlobalVars(globals, predefList));

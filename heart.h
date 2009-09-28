@@ -9,7 +9,11 @@
 typedef struct SpkHeart {
     SpkModule base;
 
-    /* class variables */
+
+    /*
+     * class variables
+     */
+
     struct SpkBehavior *Behavior;
     struct SpkBehavior *BlockContext;
     struct SpkBehavior *Char;
@@ -53,6 +57,19 @@ typedef struct SpkHeart {
     struct SpkBehavior *Symbol;
     struct SpkBehavior *True;
 #endif
+
+
+    /*
+     * global variables
+     */
+    
+    struct SpkInterpreter *theInterpreter;
+    SpkUnknown *xfalse, *xtrue;
+    SpkUnknown *null, *uninit, *xvoid;
+    
+    /* sometimes std* are macros */
+    struct SpkFileStream *xstdin, *xstdout, *xstderr;
+
 
 } SpkHeart;
 

@@ -11,7 +11,6 @@ typedef struct SpkFileStream SpkFileStream;
 
 
 extern struct SpkClassTmpl Spk_ClassFileStreamTmpl;
-extern SpkFileStream *Spk_stdin, *Spk_stdout, *Spk_stderr;
 
 
 int SpkIO_Boot(void);

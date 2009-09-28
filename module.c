@@ -24,15 +24,15 @@ static SpkUnknown *Module__initPythonModule(SpkUnknown *_self, SpkUnknown *modul
     methodDict = self->klass->ns[Spk_METHOD_NAMESPACE_RVALUE].methodDict;
     pos = 0;
     while (PyDict_Next(methodDict, &pos, &messageSelector, &value)) {
-        thunk = Spk_SendMessage(theInterpreter, _self, Spk_METHOD_NAMESPACE_RVALUE, messageSelector, args);
+        thunk = Spk_SendMessage(Spk_GLOBAL(theInterpreter), _self, Spk_METHOD_NAMESPACE_RVALUE, messageSelector, args);
         if (!thunk) {
             goto error;
         }
         PyObject_SetAttr(module, messageSelector, thunk);
     }
     Spk_DECREF(args);
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 
  error:
     Spk_DECREF(args);

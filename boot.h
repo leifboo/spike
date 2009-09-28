@@ -15,12 +15,12 @@ typedef struct SpkClassTmpl *SpkClassBootRec;
 
 typedef struct SpkObjectBootRec {
     size_t classVarOffset;
-    struct SpkObject **var;
+    size_t varOffset;
 } SpkObjectBootRec;
 
 typedef struct SpkVarBootRec {
     size_t classVarOffset;
-    struct SpkObject **var;
+    size_t varOffset;
     const char *name;
 } SpkVarBootRec;
 

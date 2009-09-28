@@ -133,12 +133,9 @@ struct SpkMessage {
 };
 
 
-extern SpkUnknown *Spk_null, *Spk_uninit, *Spk_void;
-
 extern struct SpkClassTmpl Spk_ClassMessageTmpl, Spk_ClassMethodTmpl, Spk_ClassThunkTmpl, Spk_ClassContextTmpl, Spk_ClassMethodContextTmpl, Spk_ClassBlockContextTmpl;
 extern struct SpkClassTmpl Spk_ClassInterpreterTmpl, Spk_ClassProcessorSchedulerTmpl, Spk_ClassFiberTmpl;
 extern struct SpkClassTmpl Spk_ClassNullTmpl, Spk_ClassUninitTmpl, Spk_ClassVoidTmpl;
-extern SpkInterpreter *theInterpreter; /* XXX */
 
 
 SpkMessage *SpkMessage_New(void);

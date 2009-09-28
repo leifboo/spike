@@ -10,7 +10,7 @@
 #include <string.h>
 
 
-#define BOOL(cond) ((cond) ? Spk_true : Spk_false)
+#define BOOL(cond) ((cond) ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse))
 #define STR(op) ((char *)SpkVariableObject_ITEM_BASE(op))
 #define LEN(op) ((op)->size - 1)
 
@@ -26,11 +26,11 @@ static SpkUnknown *String_binaryLogicalOper(SpkString *self, SpkUnknown *arg0, S
     if (!arg) switch (oper) {
     case Spk_OPER_EQ:
         /* XXX: 0 == 0.0 */
-        Spk_INCREF(Spk_false);
-        return Spk_false;
+        Spk_INCREF(Spk_GLOBAL(xfalse));
+        return Spk_GLOBAL(xfalse);
     case Spk_OPER_NE:
-        Spk_INCREF(Spk_true);
-        return Spk_true;
+        Spk_INCREF(Spk_GLOBAL(xtrue));
+        return Spk_GLOBAL(xtrue);
     default:
         Spk_Halt(Spk_HALT_ASSERTION_ERROR, "XXX");
         return 0;
@@ -145,14 +145,14 @@ static SpkUnknown *String_do(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *ar
     self = (SpkString *)_self;
     for (i = 0; i < LEN(self); ++i) {
         c = SpkChar_FromCChar(STR(self)[i]);
-        result = Spk_Call(theInterpreter, arg0, Spk_OPER_APPLY, c, 0);
+        result = Spk_Call(Spk_GLOBAL(theInterpreter), arg0, Spk_OPER_APPLY, c, 0);
         Spk_DECREF(c);
         if (!result)
             return 0; /* unwind */
         Spk_DECREF(result);
     }
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 

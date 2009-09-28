@@ -55,8 +55,8 @@ static SpkUnknown *Array_setItem(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown
     Spk_INCREF(arg1);
     Spk_DECREF(ARRAY(self)[index]);
     ARRAY(self)[index] = arg1;
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 
@@ -70,12 +70,12 @@ static SpkUnknown *Array_do(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg
     
     self = (SpkArray *)_self;
     for (i = 0; i < self->size; ++i) {
-        result = Spk_Call(theInterpreter, arg0, Spk_OPER_APPLY, ARRAY(self)[i], 0);
+        result = Spk_Call(Spk_GLOBAL(theInterpreter), arg0, Spk_OPER_APPLY, ARRAY(self)[i], 0);
         if (!result)
             return 0; /* unwind */
     }
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 
@@ -89,8 +89,8 @@ static void Array_zero(SpkObject *_self) {
     self = (SpkArray *)_self;
     (*Spk_CLASS(Array)->superclass->zero)(_self);
     for (i = 0; i < self->size; ++i) {
-        Spk_INCREF(Spk_uninit);
-        ARRAY(self)[i] = Spk_uninit;
+        Spk_INCREF(Spk_GLOBAL(uninit));
+        ARRAY(self)[i] = Spk_GLOBAL(uninit);
     }
 }
 
@@ -269,8 +269,8 @@ SpkUnknown *SpkArray_SetItem(SpkArray *self, size_t index, SpkUnknown *value) {
     Spk_INCREF(value);
     Spk_DECREF(ARRAY(self)[index]);
     ARRAY(self)[index] = value;
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 void SpkArray_Sort(SpkArray *self,

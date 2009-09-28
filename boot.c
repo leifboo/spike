@@ -78,23 +78,23 @@ SpkClassBootRec Spk_classBootRec[] = {
 };
 
 
-#define OBJECT(c, v) { offsetof(SpkHeart, c), (SpkObject **)&v }
+#define OBJECT(c, v) { offsetof(SpkHeart, c), offsetof(SpkHeart, v) }
 
 SpkObjectBootRec Spk_objectBootRec[] = {
-    OBJECT(Null,   Spk_null),
-    OBJECT(Uninit, Spk_uninit),
-    OBJECT(Void,   Spk_void),
+    OBJECT(Null,   null),
+    OBJECT(Uninit, uninit),
+    OBJECT(Void,   xvoid),
     {0, 0}
 };
 
 
-#define VAR(c, v, n) { offsetof(SpkHeart, c), (SpkObject **)&v, n }
+#define VAR(c, v, n) { offsetof(SpkHeart, c), offsetof(SpkHeart, v), n }
 
 SpkVarBootRec Spk_globalVarBootRec[] = {
 #ifndef MALTIPY
-    VAR(FileStream, Spk_stdin,  "stdin"),
-    VAR(FileStream, Spk_stdout, "stdout"),
-    VAR(FileStream, Spk_stderr, "stderr"),
+    VAR(FileStream, xstdin,  "stdin"),
+    VAR(FileStream, xstdout, "stdout"),
+    VAR(FileStream, xstderr, "stderr"),
 #endif /* !MALTIPY */
     {0, 0}
 };
@@ -326,9 +326,9 @@ static void initCoreClasses(void) {
     /******/Spk_CLASS(Array) = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassArrayTmpl, Spk_CLASS(VariableObject), Metaclass, Spk_heart);
     
     /* Stand-in until initGlobalObjects() is called. */
-    Spk_null   = (SpkUnknown *)Spk_CLASS(Object);
-    Spk_uninit = (SpkUnknown *)Spk_CLASS(Object);
-    Spk_void   = (SpkUnknown *)Spk_CLASS(Object);
+    Spk_GLOBAL(null)   = (SpkUnknown *)Spk_CLASS(Object);
+    Spk_GLOBAL(uninit) = (SpkUnknown *)Spk_CLASS(Object);
+    Spk_GLOBAL(xvoid)   = (SpkUnknown *)Spk_CLASS(Object);
 #endif /* !MALTIPY */
     
     /*
@@ -396,13 +396,14 @@ static void initBuiltInClasses(void) {
 static void initGlobalObjects(void) {
     SpkObjectBootRec *r;
     SpkBehavior **classVar;
-    SpkObject *obj;
+    SpkObject **var, *obj;
     
-    for (r = Spk_objectBootRec; r->var; ++r) {
+    for (r = Spk_objectBootRec; r->varOffset; ++r) {
         classVar = (SpkBehavior **)((char *)Spk_heart + r->classVarOffset);
+        var = (SpkObject **)((char *)Spk_heart + r->varOffset);
         obj = SpkObject_New(*classVar);
         assert(!Spk_CAST(VariableObject, obj));
-        *r->var = obj;
+        *var = obj;
     }
 }
 
@@ -410,13 +411,14 @@ static void initGlobalObjects(void) {
 static void initGlobalVars(void) {
     SpkVarBootRec *r;
     SpkBehavior **classVar;
-    SpkObject *obj;
+    SpkObject **var, *obj;
     
-    for (r = Spk_globalVarBootRec; r->var; ++r) {
+    for (r = Spk_globalVarBootRec; r->varOffset; ++r) {
         classVar = (SpkBehavior **)((char *)Spk_heart + r->classVarOffset);
+        var = (SpkObject **)((char *)Spk_heart + r->varOffset);
         obj = SpkObject_New(*classVar);
         assert(!Spk_CAST(VariableObject, obj));
-        *r->var = obj;
+        *var = obj;
     }
 }
 
@@ -443,7 +445,7 @@ int Spk_Boot(void) {
     
     SpkInterpreter_Boot();
     
-    theInterpreter = SpkInterpreter_New();
+    Spk_GLOBAL(theInterpreter) = SpkInterpreter_New();
     
 #ifdef MALTIPY
     /* XXX: Do this cleanly! */

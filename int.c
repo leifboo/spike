@@ -16,7 +16,7 @@ struct SpkInteger {
 };
 
 
-#define BOOL(cond) ((cond) ? Spk_true : Spk_false)
+#define BOOL(cond) ((cond) ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse))
 
 
 /*------------------------------------------------------------------------*/
@@ -74,11 +74,11 @@ static SpkUnknown *Integer_binaryLogicalOper(SpkInteger *self, SpkUnknown *arg0,
     if (!arg) switch (oper) {
     case Spk_OPER_EQ:
         /* XXX: 0 == 0.0 */
-        Spk_INCREF(Spk_false);
-        return Spk_false;
+        Spk_INCREF(Spk_GLOBAL(xfalse));
+        return Spk_GLOBAL(xfalse);
     case Spk_OPER_NE:
-        Spk_INCREF(Spk_true);
-        return Spk_true;
+        Spk_INCREF(Spk_GLOBAL(xtrue));
+        return Spk_GLOBAL(xtrue);
     default:
         Spk_Halt(Spk_HALT_ASSERTION_ERROR, "XXX");
         return 0;

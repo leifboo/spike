@@ -9,9 +9,6 @@
 #include "rodata.h"
 
 
-SpkUnknown *Spk_false, *Spk_true;
-
-
 static const char *source =
 "\n"
 "class Boolean {\n"
@@ -53,17 +50,17 @@ int SpkBoolean_Boot(void) {
         return 0;
     
     /* Get the classes. */
-    tmp = Spk_Attr(theInterpreter, (SpkUnknown *)module, Spk_Boolean);
+    tmp = Spk_Attr(Spk_GLOBAL(theInterpreter), (SpkUnknown *)module, Spk_Boolean);
     if (!tmp)
         return 0;
     Spk_CLASS(Boolean) = Spk_CAST(Behavior, tmp);
     
-    tmp = Spk_Attr(theInterpreter, (SpkUnknown *)module, Spk_False);
+    tmp = Spk_Attr(Spk_GLOBAL(theInterpreter), (SpkUnknown *)module, Spk_False);
     if (!tmp)
         return 0;
     Spk_CLASS(False) = Spk_CAST(Behavior, tmp);
     
-    tmp = Spk_Attr(theInterpreter, (SpkUnknown *)module, Spk_True);
+    tmp = Spk_Attr(Spk_GLOBAL(theInterpreter), (SpkUnknown *)module, Spk_True);
     if (!tmp)
         return 0;
     Spk_CLASS(True) = Spk_CAST(Behavior, tmp);
@@ -74,10 +71,10 @@ int SpkBoolean_Boot(void) {
         return 0;
     
     /* Create 'true' and 'false'. */
-    Spk_false = Spk_CallAttr(theInterpreter,
-                             (SpkUnknown *)Spk_CLASS(False), Spk_new, 0);
-    Spk_true = Spk_CallAttr(theInterpreter,
-                            (SpkUnknown *)Spk_CLASS(True), Spk_new, 0);
+    Spk_GLOBAL(xfalse) = Spk_CallAttr(Spk_GLOBAL(theInterpreter),
+                                      (SpkUnknown *)Spk_CLASS(False), Spk_new, 0);
+    Spk_GLOBAL(xtrue) = Spk_CallAttr(Spk_GLOBAL(theInterpreter),
+                                     (SpkUnknown *)Spk_CLASS(True), Spk_new, 0);
     
     return 1;
 }

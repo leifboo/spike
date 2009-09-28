@@ -22,9 +22,6 @@ struct SpkFileStream {
 };
 
 
-SpkFileStream *Spk_stdin, *Spk_stdout, *Spk_stderr;
-
-
 /*------------------------------------------------------------------------*/
 /* attributes */
 
@@ -34,8 +31,8 @@ static SpkUnknown *FileStream_eof(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknow
     
     self = (SpkFileStream *)_self;
     result = self->stream
-             ? (feof(self->stream) ? Spk_true : Spk_false)
-             : Spk_true;
+             ? (feof(self->stream) ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse))
+             : Spk_GLOBAL(xtrue);
     Spk_INCREF(result);
     return result;
 }
@@ -52,8 +49,8 @@ static SpkUnknown *FileStream_close(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkn
         fclose(self->stream);
         self->stream = 0;
     }
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 static SpkUnknown *FileStream_flush(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
@@ -62,8 +59,8 @@ static SpkUnknown *FileStream_flush(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkn
     self = (SpkFileStream *)_self;
     if (self->stream)
         fflush(self->stream);
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 static SpkUnknown *FileStream_getc(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
@@ -72,13 +69,13 @@ static SpkUnknown *FileStream_getc(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkno
     
     self = (SpkFileStream *)_self;
     if (!self->stream) {
-        Spk_INCREF(Spk_null);
-        return Spk_null;
+        Spk_INCREF(Spk_GLOBAL(null));
+        return Spk_GLOBAL(null);
     }
     c = fgetc(self->stream);
     if (c == EOF) {
-        Spk_INCREF(Spk_null);
-        return Spk_null;
+        Spk_INCREF(Spk_GLOBAL(null));
+        return Spk_GLOBAL(null);
     }
     return (SpkUnknown *)SpkChar_FromCChar((char)c);
 }
@@ -96,11 +93,11 @@ static SpkUnknown *FileStream_gets(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkno
         return 0;
     }
     if (!self->stream) {
-        Spk_INCREF(Spk_null);
-        return Spk_null;
+        Spk_INCREF(Spk_GLOBAL(null));
+        return Spk_GLOBAL(null);
     }
     s = SpkString_FromCStream(self->stream, (size_t)SpkInteger_AsCPtrdiff(size));
-    result = s ? (SpkUnknown *)s : Spk_null;
+    result = s ? (SpkUnknown *)s : Spk_GLOBAL(null);
     Spk_INCREF(result);
     return result;
 }
@@ -229,8 +226,8 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
     free(format);
     Spk_DECREF(formatObj);
     Spk_XDECREF(arg);
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
     
  unwind:
     free(format);
@@ -251,8 +248,8 @@ static SpkUnknown *FileStream_putc(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkno
     }
     if (self->stream)
         fputc(SpkChar_AsCChar(c), self->stream);
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 static SpkUnknown *FileStream_puts(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
@@ -267,8 +264,8 @@ static SpkUnknown *FileStream_puts(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkno
     }
     if (self->stream)
         fputs(SpkString_AsCString(s), self->stream);
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 static SpkUnknown *FileStream_reopen(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
@@ -294,7 +291,7 @@ static SpkUnknown *FileStream_reopen(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
         self->stream = freopen(pathname, mode, self->stream);
     else
         self->stream = fopen(pathname, mode);
-    result = self->stream ? (SpkUnknown *)self : Spk_null;
+    result = self->stream ? (SpkUnknown *)self : Spk_GLOBAL(null);
     Spk_INCREF(result);
     return result;
 }
@@ -305,8 +302,8 @@ static SpkUnknown *FileStream_rewind(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
     self = (SpkFileStream *)_self;
     if (self->stream)
         rewind(self->stream);
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 
@@ -335,11 +332,11 @@ static SpkUnknown *ClassFileStream_open(SpkUnknown *self, SpkUnknown *arg0, SpkU
     
     stream = fopen(pathname, mode);
     if (!stream) {
-        Spk_INCREF(Spk_null);
-        return Spk_null;
+        Spk_INCREF(Spk_GLOBAL(null));
+        return Spk_GLOBAL(null);
     }
     
-    tmp = Spk_CallAttr(theInterpreter, self, Spk_new, 0);
+    tmp = Spk_CallAttr(Spk_GLOBAL(theInterpreter), self, Spk_new, 0);
     if (!tmp)
         return 0;
     newStream = Spk_CAST(FileStream, tmp);
@@ -430,9 +427,9 @@ SpkClassTmpl Spk_ClassFileStreamTmpl = {
 /* C API */
 
 int SpkIO_Boot(void) {
-    Spk_stdin->stream = stdin;
-    Spk_stdout->stream = stdout;
-    Spk_stderr->stream = stderr;
+    Spk_GLOBAL(xstdin)->stream = stdin;
+    Spk_GLOBAL(xstdout)->stream = stdout;
+    Spk_GLOBAL(xstderr)->stream = stderr;
     return 1;
 }
 

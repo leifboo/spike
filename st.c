@@ -168,15 +168,15 @@ SpkUnknown *SpkSymbolTable_Insert(SpkSymbolTable *st, SpkExpr *def,
             def->u.def.pushOpcode  = oldEntry->def->u.def.pushOpcode;
             def->u.def.storeOpcode = oldEntry->def->u.def.storeOpcode;
             def->u.def.index       = oldEntry->def->u.def.index;
-            Spk_INCREF(Spk_void);
-            return Spk_void;
+            Spk_INCREF(Spk_GLOBAL(xvoid));
+            return Spk_GLOBAL(xvoid);
         }
-        tmp = Spk_Keyword(theInterpreter, requestor, Spk_redefinedSymbol, def, 0);
+        tmp = Spk_Keyword(Spk_GLOBAL(theInterpreter), requestor, Spk_redefinedSymbol, def, 0);
         if (!tmp)
             return 0;
         Spk_DECREF(tmp);
-        Spk_INCREF(Spk_void);
-        return Spk_void;
+        Spk_INCREF(Spk_GLOBAL(xvoid));
+        return Spk_GLOBAL(xvoid);
     }
     
     newEntry = (SpkSTEntry *)SpkObject_New(Spk_CLASS(STEntry));
@@ -208,8 +208,8 @@ SpkUnknown *SpkSymbolTable_Insert(SpkSymbolTable *st, SpkExpr *def,
        opcode. */
     def->u.def.index = cs->context->nDefs++;
     
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 SpkExpr *SpkSymbolTable_Lookup(SpkSymbolTable *st, SpkSymbolNode *sym) {
@@ -234,17 +234,17 @@ SpkUnknown *SpkSymbolTable_Bind(SpkSymbolTable *st, SpkExpr *expr,
     if (entry) {
         expr->u.ref.def = entry->def;  Spk_INCREF(entry->def);
         expr->u.ref.level = st->currentScope->context->level;
-        Spk_INCREF(Spk_void);
-        return Spk_void;
+        Spk_INCREF(Spk_GLOBAL(xvoid));
+        return Spk_GLOBAL(xvoid);
     }
     
     /* undefined */
-    tmp = Spk_Keyword(theInterpreter, requestor, Spk_undefinedSymbol, expr, 0);
+    tmp = Spk_Keyword(Spk_GLOBAL(theInterpreter), requestor, Spk_undefinedSymbol, expr, 0);
     if (!tmp)
         return 0;
     Spk_DECREF(tmp);
-    Spk_INCREF(Spk_void);
-    return Spk_void;
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 
@@ -268,11 +268,11 @@ static SpkUnknown *SymbolTable_init(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkn
 static SpkUnknown *ClassSymbolTable_new(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkUnknown *newSymbolTable, *tmp;
     
-    newSymbolTable = Spk_CallAttr(theInterpreter, Spk_SUPER, Spk_new, 0);
+    newSymbolTable = Spk_CallAttr(Spk_GLOBAL(theInterpreter), Spk_SUPER, Spk_new, 0);
     if (!newSymbolTable)
         return 0;
     tmp = newSymbolTable;
-    newSymbolTable = Spk_CallAttr(theInterpreter, newSymbolTable, Spk_init, 0);
+    newSymbolTable = Spk_CallAttr(Spk_GLOBAL(theInterpreter), newSymbolTable, Spk_init, 0);
     Spk_DECREF(tmp);
     return newSymbolTable;
 }

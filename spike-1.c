@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
     Spk_DECREF(argvObj);
     
     entry = Spk_SendMessage(
-        theInterpreter,
+        Spk_GLOBAL(theInterpreter),
         (SpkUnknown *)module,
         Spk_METHOD_NAMESPACE_RVALUE,
         Spk_main,
@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     result = Spk_SendMessage(
-        theInterpreter,
+        Spk_GLOBAL(theInterpreter),
         entry,
         Spk_METHOD_NAMESPACE_RVALUE,
         Spk___apply__,

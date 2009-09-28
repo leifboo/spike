@@ -18,7 +18,7 @@ struct SpkChar {
 };
 
 
-#define BOOL(cond) ((cond) ? Spk_true : Spk_false)
+#define BOOL(cond) ((cond) ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse))
 
 
 /* XXX: There are only 256 of these objects... */
@@ -80,11 +80,11 @@ static SpkUnknown *Char_binaryLogicalOper(SpkChar *self, SpkUnknown *arg0, SpkOp
     arg = Spk_CAST(Char, arg0);
     if (!arg) switch (oper) {
     case Spk_OPER_EQ:
-        Spk_INCREF(Spk_false);
-        return Spk_false;
+        Spk_INCREF(Spk_GLOBAL(xfalse));
+        return Spk_GLOBAL(xfalse);
     case Spk_OPER_NE:
-        Spk_INCREF(Spk_true);
-        return Spk_true;
+        Spk_INCREF(Spk_GLOBAL(xtrue));
+        return Spk_GLOBAL(xtrue);
     default:
         Spk_Halt(Spk_HALT_TYPE_ERROR, "a Char object is required");
         return 0;
