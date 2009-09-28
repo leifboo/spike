@@ -111,7 +111,7 @@ static void disassembleMethod(SpkMethod *method,
         size_t argumentCount = 0, *pArgumentCount = 0;
         size_t localCount = 0, stackSize = 0;
         size_t count = 0, *pCount = 0;
-        unsigned int ns = 0, oper = 0;
+        unsigned int oper = 0;
         size_t label = 0, *pLabel = 0;
         int i;
         SpkUnknown *literal = 0;
@@ -189,9 +189,20 @@ static void disassembleMethod(SpkMethod *method,
         case Spk_OPCODE_CALL_SUPER:     mnemonic = "scall";  goto call;
         case Spk_OPCODE_CALL_SUPER_VAR: mnemonic = "scallv"; goto call;
  call:
-            ns = (unsigned int)(*instructionPointer++);
             oper = (unsigned int)(*instructionPointer++);
             selector = *Spk_operCallSelectors[oper].selector;
+            DECODE_UINT(argumentCount);
+            pArgumentCount = &argumentCount;
+            break;
+
+        case Spk_OPCODE_SET_IND:        mnemonic = "ind";  break;
+        case Spk_OPCODE_SET_IND_SUPER:  mnemonic = "sind"; break;
+        
+        case Spk_OPCODE_SET_INDEX:           mnemonic = "index";   goto index;
+        case Spk_OPCODE_SET_INDEX_VAR:       mnemonic = "indexv";  goto index;
+        case Spk_OPCODE_SET_INDEX_SUPER:     mnemonic = "sindex";  goto index;
+        case Spk_OPCODE_SET_INDEX_SUPER_VAR: mnemonic = "sindexv"; goto index;
+ index:
             DECODE_UINT(argumentCount);
             pArgumentCount = &argumentCount;
             break;
@@ -276,14 +287,16 @@ static void disassembleMethod(SpkMethod *method,
             fprintf(out, "\t%lu", (unsigned long)*pCount);
         } else if (keyword) {
             fprintf(out, "\t%s", keyword);
-        } else if (pArgumentCount) {
+        } else if (pArgumentCount && selector) {
             SpkUnknown *s = SpkHost_ObjectAsString(selector);
-            fprintf(out, "\t[%u].%s %lu", ns, SpkHost_StringAsCString(s),
+            fprintf(out, "\t%s %lu", SpkHost_StringAsCString(s),
                     (unsigned long)*pArgumentCount);
             Spk_DECREF(s);
+        } else if (pArgumentCount) {
+            fprintf(out, "\t%lu", (unsigned long)*pArgumentCount);
         } else if (selector) {
             SpkUnknown *s = SpkHost_ObjectAsString(selector);
-            fprintf(out, "\t$%s", SpkHost_StringAsCString(s));
+            fprintf(out, "\t%s", SpkHost_StringAsCString(s));
             Spk_DECREF(s);
         } else if (pLabel) {
             fprintf(out, "\t%04lx", (unsigned long)*pLabel);
@@ -486,7 +499,7 @@ static void traverseClassBody(SpkBehavior *aClass, const char *name, Level *oute
         (*visitor->preClassBody)(aClass, &level, closure);
     
     for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
-        traverseMethodDict(aClass->ns[ns].methodDict, ns,
+        traverseMethodDict(aClass->methodDict[ns], ns,
                            aClass->module->literals, &level,
                            visitor, closure);
     }
@@ -542,7 +555,7 @@ static void traverseModule(SpkModule *module,
     }
     
     for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
-        traverseMethodDict(module->base.klass->ns[ns].methodDict,
+        traverseMethodDict(module->base.klass->methodDict[ns],
                            ns,
                            module->literals,
                            &level,
@@ -589,6 +602,12 @@ static const char *opcodeName(SpkOpcode opcode) {
     case Spk_OPCODE_CALL_VAR: return "Spk_OPCODE_CALL_VAR";
     case Spk_OPCODE_CALL_SUPER: return "Spk_OPCODE_CALL_SUPER";
     case Spk_OPCODE_CALL_SUPER_VAR: return "Spk_OPCODE_CALL_SUPER_VAR";
+    case Spk_OPCODE_SET_IND: return "Spk_OPCODE_SET_IND";
+    case Spk_OPCODE_SET_IND_SUPER: return "Spk_OPCODE_SET_IND_SUPER";
+    case Spk_OPCODE_SET_INDEX: return "Spk_OPCODE_SET_INDEX";
+    case Spk_OPCODE_SET_INDEX_VAR: return "Spk_OPCODE_SET_INDEX_VAR";
+    case Spk_OPCODE_SET_INDEX_SUPER: return "Spk_OPCODE_SET_INDEX_SUPER";
+    case Spk_OPCODE_SET_INDEX_SUPER_VAR: return "Spk_OPCODE_SET_INDEX_SUPER_VAR";
     case Spk_OPCODE_GET_ATTR: return "Spk_OPCODE_GET_ATTR";
     case Spk_OPCODE_GET_ATTR_SUPER: return "Spk_OPCODE_GET_ATTR_SUPER";
     case Spk_OPCODE_GET_ATTR_VAR: return "Spk_OPCODE_GET_ATTR_VAR";
@@ -619,16 +638,6 @@ static const char *opcodeName(SpkOpcode opcode) {
     case Spk_OPCODE_CHECK_STACKP: return "Spk_OPCODE_CHECK_STACKP";
     
     case Spk_NUM_OPCODES: break;
-    }
-    return 0;
-}
-
-static const char *namespaceName(SpkMethodNamespace ns) {
-    switch (ns) {
-    case Spk_METHOD_NAMESPACE_RVALUE: return "Spk_METHOD_NAMESPACE_RVALUE";
-    case Spk_METHOD_NAMESPACE_LVALUE: return "Spk_METHOD_NAMESPACE_LVALUE";
-    
-    case Spk_NUM_METHOD_NAMESPACES: break;
     }
     return 0;
 }
@@ -704,7 +713,6 @@ static void genCCodeForMethodOpcodes(SpkMethod *method,
         size_t argumentCount = 0;
         size_t localCount = 0, stackSize = 0;
         size_t count = 0;
-        SpkMethodNamespace ns = 0;
         SpkOper oper = 0;
         SpkCallOper callOperator = 0;
         SpkUnknown *literal = 0;
@@ -779,10 +787,20 @@ static void genCCodeForMethodOpcodes(SpkMethod *method,
         case Spk_OPCODE_CALL_VAR:
         case Spk_OPCODE_CALL_SUPER:
         case Spk_OPCODE_CALL_SUPER_VAR:
-            ns = (SpkMethodNamespace)(*instructionPointer++);
             callOperator = (SpkCallOper)(*instructionPointer++);
-            fprintf(out, "%s, ", namespaceName(ns));
             fprintf(out, "%s, ", callOperName(callOperator));
+            ip = instructionPointer;
+            DECODE_UINT(argumentCount);
+            break;
+
+        case Spk_OPCODE_SET_IND:
+        case Spk_OPCODE_SET_IND_SUPER:
+            break;
+        
+        case Spk_OPCODE_SET_INDEX:
+        case Spk_OPCODE_SET_INDEX_VAR:
+        case Spk_OPCODE_SET_INDEX_SUPER:
+        case Spk_OPCODE_SET_INDEX_SUPER_VAR:
             ip = instructionPointer;
             DECODE_UINT(argumentCount);
             break;
@@ -897,7 +915,7 @@ static void genCCodeClassTemplate(SpkBehavior *aClass,
             "SpkClassTmpl ");
     nest(level, out);
     fprintf(out, "classTmpl = {\n"
-            "    \"%s\", {\n"
+            "    \"%s\", 0, 0, {\n"
             "        /*accessors*/ 0,\n"
             "        ",
             level->name);

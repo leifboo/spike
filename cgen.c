@@ -551,7 +551,6 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         _(emitCodeForInt(expr->u.def.index, cgen));
         _(emitCodeForInt(expr->aux.block.argumentCount, cgen));
         EMIT_OPCODE(Spk_OPCODE_CALL);
-        encodeUnsignedInt(Spk_METHOD_NAMESPACE_RVALUE, cgen);
         encodeUnsignedInt(Spk_OPER_APPLY, cgen);
         encodeUnsignedInt(2, cgen);
         cgen->stackPointer -= 2;
@@ -575,7 +574,6 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         }
         ++cgen->nMessageSends;
         EMIT_OPCODE(Spk_OPCODE_CALL);
-        encodeUnsignedInt(Spk_METHOD_NAMESPACE_RVALUE, cgen);
         encodeUnsignedInt(Spk_OPER_APPLY, cgen);
         encodeUnsignedInt(argumentCount, cgen);
         cgen->stackPointer -= argumentCount + 1;
@@ -600,7 +598,6 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
                     : (expr->var
                        ? Spk_OPCODE_CALL_VAR
                        : Spk_OPCODE_CALL));
-        encodeUnsignedInt(Spk_METHOD_NAMESPACE_RVALUE, cgen);
         encodeUnsignedInt((unsigned int)expr->oper, cgen);
         encodeUnsignedInt(argumentCount, cgen);
         cgen->stackPointer -= (expr->var ? 1 : 0) + argumentCount + 1;
@@ -883,7 +880,6 @@ static SpkUnknown *inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
         dupN(argumentCount + 1, cgen);
         ++cgen->nMessageSends;
         EMIT_OPCODE(isSuper ? Spk_OPCODE_CALL_SUPER : Spk_OPCODE_CALL);
-        encodeUnsignedInt(Spk_METHOD_NAMESPACE_RVALUE, cgen);
         encodeUnsignedInt((unsigned int)expr->left->oper, cgen);
         encodeUnsignedInt(argumentCount, cgen);
         cgen->stackPointer -= argumentCount + 1;
@@ -894,9 +890,7 @@ static SpkUnknown *inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
     }
     ++argumentCount; /* new item value */
     ++cgen->nMessageSends;
-    EMIT_OPCODE(isSuper ? Spk_OPCODE_CALL_SUPER : Spk_OPCODE_CALL);
-    encodeUnsignedInt(Spk_METHOD_NAMESPACE_LVALUE, cgen);
-    encodeUnsignedInt((unsigned int)Spk_OPER_INDEX, cgen);
+    EMIT_OPCODE(isSuper ? Spk_OPCODE_SET_INDEX_SUPER : Spk_OPCODE_SET_INDEX);
     encodeUnsignedInt(argumentCount, cgen);
     cgen->stackPointer -= argumentCount + 1;
     tallyPush(cgen); /* result */
@@ -1682,7 +1676,6 @@ static SpkUnknown *generateImport(SpkUnknown *import, SpkUnknown *name,
     /* call __apply__ */
     ++cgen->nMessageSends;
     EMIT_OPCODE(Spk_OPCODE_CALL);
-    encodeUnsignedInt(Spk_METHOD_NAMESPACE_RVALUE, cgen);
     encodeUnsignedInt(Spk_OPER_APPLY, cgen);
     encodeUnsignedInt(1, cgen);
     cgen->stackPointer -= 1;

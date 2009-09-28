@@ -192,14 +192,14 @@ static void initCoreClasses(void) {
        It must be handled as a special case. */
     Object->superclass = 0;
     Object->module = 0;
-    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
-        for (i = 0; i < Spk_NUM_OPER; ++i) {
-            Object->ns[ns].operTable[i] = 0;
-        }
-        for (i = 0; i < Spk_NUM_CALL_OPER; ++i) {
-            Object->ns[ns].operCallTable[i] = 0;
-        }
+    for (i = 0; i < Spk_NUM_OPER; ++i) {
+        Object->operTable[i] = 0;
     }
+    for (i = 0; i < Spk_NUM_CALL_OPER; ++i) {
+        Object->operCallTable[i] = 0;
+    }
+    Object->assignInd = 0;
+    Object->assignIndex = 0;
     Object->zero = Spk_ClassObjectTmpl.thisClass.zero;
     Object->dealloc = Spk_ClassObjectTmpl.thisClass.dealloc;
     Object->traverse = *Spk_ClassObjectTmpl.thisClass.traverse;
@@ -233,7 +233,7 @@ static void initCoreClasses(void) {
     Spk_ClassSymbol = Symbol;
     Spk_ClassIdentityDictionary = IdentityDictionary;
     for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
-        Object->ns[ns].methodDict = SpkHost_NewSymbolDict();
+        Object->methodDict[ns] = SpkHost_NewSymbolDict();
     }
     ((SpkClass *)Object)->name = SpkHost_SymbolFromCString(Spk_ClassObjectTmpl.name);
     

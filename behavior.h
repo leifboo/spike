@@ -85,12 +85,12 @@ struct SpkBehavior {
     SpkObject base;
     SpkBehavior *superclass;
     struct SpkModule *module;
-    /* XXX: lvalue oper tables are wasteful; only two alternatives: *x, a[i] */
-    struct {
-        SpkUnknown *methodDict;
-        SpkOperTable operTable;
-        SpkOperCallTable operCallTable;
-    } ns[Spk_NUM_METHOD_NAMESPACES];
+    
+    SpkUnknown *methodDict[Spk_NUM_METHOD_NAMESPACES];
+    SpkOperTable operTable;
+    SpkOperCallTable operCallTable;
+    SpkMethod *assignInd;   /*  "*p = v"    */
+    SpkMethod *assignIndex; /*  "a[i] = v"  */
     
     /* low-level hooks */
     void (*zero)(SpkObject *);

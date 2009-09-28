@@ -1081,7 +1081,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             methodClass = methodClass->superclass;
  oper:
             for (mc = methodClass; mc; mc = mc->superclass) {
-                method = mc->ns[Spk_METHOD_NAMESPACE_RVALUE].operTable[oper];
+                method = mc->operTable[oper];
                 if (method) {
                     methodClass = mc;
                     goto callNewMethod;
@@ -1094,7 +1094,6 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             goto createActualMessage;
         case Spk_OPCODE_CALL:
             oldIP = instructionPointer - 1;
-            ns = (SpkMethodNamespace)(*instructionPointer++);
             oper = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
             varArg = 0;
@@ -1103,7 +1102,6 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             goto call;
         case Spk_OPCODE_CALL_VAR:
             oldIP = instructionPointer - 1;
-            ns = (SpkMethodNamespace)(*instructionPointer++);
             oper = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
             varArg = 1;
@@ -1112,7 +1110,6 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             goto call;
         case Spk_OPCODE_CALL_SUPER:
             oldIP = instructionPointer - 1;
-            ns = (SpkMethodNamespace)(*instructionPointer++);
             oper = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
             varArg = 0;
@@ -1121,19 +1118,81 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
         case Spk_OPCODE_CALL_SUPER_VAR:
             oldIP = instructionPointer - 1;
             oper = (unsigned int)(*instructionPointer++);
-            ns = (SpkMethodNamespace)(*instructionPointer++);
             DECODE_UINT(argumentCount);
             varArg = 1;
             methodClass = methodClass->superclass;
  call:
             for (mc = methodClass; mc; mc = mc->superclass) {
-                method = methodClass->ns[ns].operCallTable[oper];
+                method = methodClass->operCallTable[oper];
                 if (method) {
                     methodClass = mc;
                     goto callNewMethod;
                 }
             }
+            ns = Spk_METHOD_NAMESPACE_RVALUE;
             messageSelector = *Spk_operCallSelectors[oper].selector;
+            Spk_INCREF(messageSelector);
+            goto createActualMessage;
+            
+            /*** send opcodes -- "*p = v" ***/
+        case Spk_OPCODE_SET_IND:
+            receiver = stackPointer[1];
+            methodClass = GET_CLASS(receiver);
+            goto ind;
+        case Spk_OPCODE_SET_IND_SUPER:
+            methodClass = methodClass->superclass;
+ ind:
+            argumentCount = 1;
+            varArg = 0;
+            for (mc = methodClass; mc; mc = mc->superclass) {
+                method = mc->assignInd;
+                if (method) {
+                    methodClass = mc;
+                    goto callNewMethod;
+                }
+            }
+            oldIP = instructionPointer - 1;
+            ns = Spk_METHOD_NAMESPACE_LVALUE;
+            messageSelector = *Spk_operSelectors[Spk_OPER_IND].selector;
+            Spk_INCREF(messageSelector);
+            goto createActualMessage;
+            
+            /*** send opcodes -- "a[i] = v" ***/
+        case Spk_OPCODE_SET_INDEX:
+            oldIP = instructionPointer - 1;
+            DECODE_UINT(argumentCount);
+            varArg = 0;
+            receiver = stackPointer[argumentCount];
+            methodClass = GET_CLASS(receiver);
+            goto index;
+        case Spk_OPCODE_SET_INDEX_VAR:
+            oldIP = instructionPointer - 1;
+            DECODE_UINT(argumentCount);
+            varArg = 1;
+            receiver = stackPointer[argumentCount + 1];
+            methodClass = GET_CLASS(receiver);
+            goto index;
+        case Spk_OPCODE_SET_INDEX_SUPER:
+            oldIP = instructionPointer - 1;
+            DECODE_UINT(argumentCount);
+            varArg = 0;
+            methodClass = methodClass->superclass;
+            goto index;
+        case Spk_OPCODE_SET_INDEX_SUPER_VAR:
+            oldIP = instructionPointer - 1;
+            DECODE_UINT(argumentCount);
+            varArg = 1;
+            methodClass = methodClass->superclass;
+ index:
+            for (mc = methodClass; mc; mc = mc->superclass) {
+                method = methodClass->assignIndex;
+                if (method) {
+                    methodClass = mc;
+                    goto callNewMethod;
+                }
+            }
+            ns = Spk_METHOD_NAMESPACE_LVALUE;
+            messageSelector = *Spk_operCallSelectors[Spk_OPER_INDEX].selector;
             Spk_INCREF(messageSelector);
             goto createActualMessage;
 
@@ -1167,63 +1226,6 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             methodClass = methodClass->superclass;
             DECODE_UINT(index);
             messageSelector = literalPointer[index];
-            Spk_INCREF(messageSelector);
- lookupMethodInClass:
-            for (mc = methodClass; mc; mc = mc->superclass) {
-                method = SpkBehavior_LookupMethod(mc, ns, messageSelector);
-                if (method) {
-                    Spk_DECREF(method);
-                    methodClass = mc;
-                    Spk_DECREF(messageSelector);
-                    messageSelector = 0;
- callNewMethod:
-                    /* call */
-                    self->activeContext->pc = instructionPointer;
-                    instructionPointer = SpkMethod_OPCODES(method);
- jump:
-                    instVarPointer = INSTANCE_VARS(receiver, methodClass);
-                    globalPointer = SpkModule_VARIABLES(methodClass->module);
-                    literalPointer = SpkModule_LITERALS(methodClass->module);
-                    goto loop;
-                }
-            }
-            
-            if (messageSelector == Spk_doesNotUnderstand) {
-                /* recursive doesNotUnderstand: */
-                instructionPointer = oldIP;
-                TRAP(Spk_recursiveDoesNotUnderstand, STACK_TOP());
-            }
-            
- createActualMessage:
-            do {
-                SpkMessage *message;
-                SpkUnknown *varArgTuple;
-                
-                if (varArg) {
-                    varArgTuple = stackPointer[0];
-                    if (!Spk_IsArgs(varArgTuple)) {
-                        TRAP(Spk_mustBeTuple, 0);
-                    }
-                } else {
-                    varArgTuple = 0;
-                }
-                message = SpkMessage_New();
-                message->ns = ns;
-                message->selector = messageSelector; /* steal reference */
-                message->arguments
-                    = SpkHost_GetArgs(
-                        stackPointer + varArg, argumentCount,
-                        varArgTuple, 0
-                        );
-                
-                CLEAN(varArg + argumentCount);
-                PUSH(message);  /* XXX: doesNotUnderstand overhead  -- see SpkContext_new() */
-                argumentCount = 1;
-                varArg = 0;
-                ns = Spk_METHOD_NAMESPACE_RVALUE;
-            } while (0);
-            
-            messageSelector = Spk_doesNotUnderstand;
             Spk_INCREF(messageSelector);
             goto lookupMethodInClass;
             
@@ -1310,6 +1312,65 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
         case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR:
             methodClass = methodClass->superclass;
             goto sendVar;
+
+ lookupMethodInClass:
+            for (mc = methodClass; mc; mc = mc->superclass) {
+                method = SpkBehavior_LookupMethod(mc, ns, messageSelector);
+                if (method) {
+                    Spk_DECREF(method);
+                    methodClass = mc;
+                    Spk_DECREF(messageSelector);
+                    messageSelector = 0;
+ callNewMethod:
+                    /* call */
+                    self->activeContext->pc = instructionPointer;
+                    instructionPointer = SpkMethod_OPCODES(method);
+ jump:
+                    instVarPointer = INSTANCE_VARS(receiver, methodClass);
+                    globalPointer = SpkModule_VARIABLES(methodClass->module);
+                    literalPointer = SpkModule_LITERALS(methodClass->module);
+                    goto loop;
+                }
+            }
+            
+            if (messageSelector == Spk_doesNotUnderstand) {
+                /* recursive doesNotUnderstand: */
+                instructionPointer = oldIP;
+                TRAP(Spk_recursiveDoesNotUnderstand, STACK_TOP());
+            }
+            
+ createActualMessage:
+            do {
+                SpkMessage *message;
+                SpkUnknown *varArgTuple;
+                
+                if (varArg) {
+                    varArgTuple = stackPointer[0];
+                    if (!Spk_IsArgs(varArgTuple)) {
+                        TRAP(Spk_mustBeTuple, 0);
+                    }
+                } else {
+                    varArgTuple = 0;
+                }
+                message = SpkMessage_New();
+                message->ns = ns;
+                message->selector = messageSelector; /* steal reference */
+                message->arguments
+                    = SpkHost_GetArgs(
+                        stackPointer + varArg, argumentCount,
+                        varArgTuple, 0
+                        );
+                
+                CLEAN(varArg + argumentCount);
+                PUSH(message);  /* XXX: doesNotUnderstand overhead  -- see SpkContext_new() */
+                argumentCount = 1;
+                varArg = 0;
+                ns = Spk_METHOD_NAMESPACE_RVALUE;
+            } while (0);
+            
+            messageSelector = Spk_doesNotUnderstand;
+            Spk_INCREF(messageSelector);
+            goto lookupMethodInClass;
             
 #ifdef MALTIPY
         case Spk_OPCODE_RAISE: {

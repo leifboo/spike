@@ -56,14 +56,16 @@ void SpkBehavior_Init(SpkBehavior *self, SpkBehavior *superclass, SpkModule *mod
     self->module = module;
     
     for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
-        self->ns[ns].methodDict = SpkHost_NewSymbolDict();
-        for (i = 0; i < Spk_NUM_OPER; ++i) {
-            self->ns[ns].operTable[i] = 0;
-        }
-        for (i = 0; i < Spk_NUM_CALL_OPER; ++i) {
-            self->ns[ns].operCallTable[i] = 0;
-        }
+        self->methodDict[ns] = SpkHost_NewSymbolDict();
     }
+    for (i = 0; i < Spk_NUM_OPER; ++i) {
+        self->operTable[i] = 0;
+    }
+    for (i = 0; i < Spk_NUM_CALL_OPER; ++i) {
+        self->operCallTable[i] = 0;
+    }
+    self->assignInd = 0;
+    self->assignIndex = 0;
     
     /* low-level hooks */
     self->zero = superclass->zero;
@@ -180,38 +182,51 @@ static void maybeAccelerateMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkU
     }
     if (name[0] == '_' && name[1] == '_') {
         /* special selector */
-        for (oper = 0; oper < Spk_NUM_CALL_OPER; ++oper) {
-            if (messageSelector == *Spk_operCallSelectors[oper].selector) {
-                Spk_INCREF(method);
-                Spk_INCREF(self);
-                Spk_XDECREF(self->ns[ns].operCallTable[oper]);
-                self->ns[ns].operCallTable[oper] = method;
-                break;
-            }
-        }
-        if (oper >= Spk_NUM_CALL_OPER) {
-            for (oper = 0; oper < Spk_NUM_OPER; ++oper) {
-                if (messageSelector == *Spk_operSelectors[oper].selector) {
+        switch (ns) {
+        case Spk_METHOD_NAMESPACE_RVALUE:
+            for (oper = 0; oper < Spk_NUM_CALL_OPER; ++oper) {
+                if (messageSelector == *Spk_operCallSelectors[oper].selector) {
                     Spk_INCREF(method);
-                    Spk_INCREF(self);
-                    Spk_XDECREF(self->ns[ns].operTable[oper]);
-                    self->ns[ns].operTable[oper] = method;
+                    Spk_XDECREF(self->operCallTable[oper]);
+                    self->operCallTable[oper] = method;
                     break;
                 }
             }
+            if (oper >= Spk_NUM_CALL_OPER) {
+                for (oper = 0; oper < Spk_NUM_OPER; ++oper) {
+                    if (messageSelector == *Spk_operSelectors[oper].selector) {
+                        Spk_INCREF(method);
+                        Spk_XDECREF(self->operTable[oper]);
+                        self->operTable[oper] = method;
+                        break;
+                    }
+                }
+            }
+            break;
+        case Spk_METHOD_NAMESPACE_LVALUE:
+            if (messageSelector == *Spk_operSelectors[Spk_OPER_IND].selector) {
+                Spk_INCREF(method);
+                Spk_XDECREF(self->assignInd);
+                self->assignInd = method;
+            } else if (messageSelector == *Spk_operCallSelectors[Spk_OPER_INDEX].selector) {
+                Spk_INCREF(method);
+                Spk_XDECREF(self->assignIndex);
+                self->assignIndex = method;
+            }
+            break;
         }
     }
 }
 
 void SpkBehavior_InsertMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkUnknown *messageSelector, SpkMethod *method) {
-    SpkHost_DefineSymbol(self->ns[ns].methodDict, messageSelector, (SpkUnknown *)method);
+    SpkHost_DefineSymbol(self->methodDict[ns], messageSelector, (SpkUnknown *)method);
     maybeAccelerateMethod(self, ns, messageSelector, method);
 }
 
 SpkMethod *SpkBehavior_LookupMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkUnknown *messageSelector) {
     SpkUnknown *value;
     
-    value = SpkHost_SymbolValue(self->ns[ns].methodDict, messageSelector);
+    value = SpkHost_SymbolValue(self->methodDict[ns], messageSelector);
     if (value) {
         return Spk_CAST(Method, value);
     }
@@ -223,7 +238,7 @@ SpkUnknown *SpkBehavior_FindSelectorOfMethod(SpkBehavior *self, SpkMethod *metho
     SpkUnknown *messageSelector;
     
     for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
-        messageSelector = SpkHost_FindSymbol(self->ns[ns].methodDict, (SpkUnknown *)method);
+        messageSelector = SpkHost_FindSymbol(self->methodDict[ns], (SpkUnknown *)method);
         if (messageSelector) {
             return messageSelector;
         }
