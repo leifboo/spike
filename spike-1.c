@@ -10,6 +10,7 @@
 #include "module.h"
 #include "native.h"
 #include "rodata.h"
+#include "scheck.h"
 #include "str.h"
 
 #include <stdio.h>
@@ -19,7 +20,7 @@
 SpkModule *Spk_heart;
 
 
-int main(int argc, char **argv) {
+int Spk_Main(int argc, char **argv) {
     int i, showHelp, error, disassemble;
     char *arg, *sourceFilename;
     SpkModule *module;
@@ -48,6 +49,7 @@ int main(int argc, char **argv) {
             }
             if (strcmp(arg, "gen-c-code") == 0) {
                 disassemble = 2;
+                Spk_declareBuiltIn = 0;
                 continue;
             }
             fprintf(stderr, "%s: unrecognized option %s\n", argv[0], argv[i]);
@@ -135,4 +137,9 @@ int main(int argc, char **argv) {
         return SpkInteger_AsCLong(resultInt);
     }
     return 0;
+}
+
+
+int main(int argc, char **argv) {
+    return Spk_Main(argc, argv);
 }

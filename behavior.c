@@ -112,6 +112,21 @@ void SpkBehavior_InitFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl, SpkB
         self->traverse = *tmpl->traverse;
 }
 
+static SpkMethod *methodFromTemplate(SpkMethodTmpl *methodTmpl) {
+    SpkMethod *method;
+    
+    if (methodTmpl->bytecode) {
+        method = SpkMethod_New(methodTmpl->bytecodeSize);
+        memcpy(SpkMethod_OPCODES(method),
+               methodTmpl->bytecode,
+               methodTmpl->bytecodeSize);
+        method->nativeCode = methodTmpl->nativeCode;
+    } else {
+        method = Spk_NewNativeMethod(methodTmpl->nativeFlags, methodTmpl->nativeCode);
+    }
+    return method;
+}
+
 void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl) {
     
     if (tmpl->accessors) {
@@ -150,7 +165,7 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl
             SpkMethod *method;
             
             messageSelector = Spk_ParseSelector(methodTmpl->name);
-            method = Spk_NewNativeMethod(methodTmpl->nativeFlags, methodTmpl->nativeCode);
+            method = methodFromTemplate(methodTmpl);
             SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_RVALUE, messageSelector, method);
             Spk_DECREF(method);
             Spk_DECREF(messageSelector);
@@ -164,7 +179,7 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl
             SpkMethod *method;
             
             messageSelector = Spk_ParseSelector(methodTmpl->name);
-            method = Spk_NewNativeMethod(methodTmpl->nativeFlags, methodTmpl->nativeCode);
+            method = methodFromTemplate(methodTmpl);
             SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_LVALUE, messageSelector, method);
             Spk_DECREF(method);
             Spk_DECREF(messageSelector);

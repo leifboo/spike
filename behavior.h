@@ -66,7 +66,8 @@ typedef struct SpkMethodTmpl {
     const char *name;
     SpkNativeCodeFlags nativeFlags;
     SpkNativeCode nativeCode;
-    SpkOpcode *code;
+    SpkOpcode *bytecode;
+    size_t bytecodeSize;
 } SpkMethodTmpl;
 
 typedef struct SpkBehaviorTmpl {

@@ -70,6 +70,9 @@ SpkClassBootRec Spk_classBootRec[] = {
 #else /* !MALTIPY */
     /***CLASS(VariableObject, Object),*/
     /******/CLASS(String,  VariableObject),
+    /**/CLASS(Boolean,    Object),
+    /******/CLASS(False,  Object),
+    /******/CLASS(True,   Object),
     /**/CLASS(Integer,    Object),
     /**/CLASS(Float,      Object),
     /**/CLASS(FileStream, Object),
@@ -452,9 +455,10 @@ int Spk_Boot(void) {
     Spk_DECREF(Spk_CLASS(PythonObject)->superclass);
     Spk_CLASS(PythonObject)->superclass = 0;
 #else
-    /* Create true, false, True, False, and Boolean. */
-    if (!SpkBoolean_Boot())
-        return 0;
+    /* create true and false */
+    Spk_GLOBAL(xfalse) = (SpkUnknown *)SpkObject_New(Spk_CLASS(False));
+    Spk_GLOBAL(xtrue) = (SpkUnknown *)SpkObject_New(Spk_CLASS(True));
+    
     /* init I/O */
     if (!SpkIO_Boot())
         return 0;

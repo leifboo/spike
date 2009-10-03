@@ -8,7 +8,7 @@
 
 #ifndef MALTIPY
 
-int SpkBoolean_Boot(void);
+extern struct SpkClassTmpl Spk_ClassBooleanTmpl, Spk_ClassFalseTmpl, Spk_ClassTrueTmpl;
 
 #endif /* !MALTIPY */
 

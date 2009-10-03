@@ -20,6 +20,9 @@
 #include <string.h>
 
 
+int Spk_declareBuiltIn = 1;
+
+
 #define ASSERT(c, msg) \
 do if (!(c)) { Spk_Halt(Spk_HALT_ASSERTION_ERROR, (msg)); goto unwind; } \
 while (0)
@@ -876,14 +879,17 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     SpkSymbolTable_EnterScope(checker.st, 1); /* global scope */
     
     predefList->first = predefList->last = 0;
-    /* XXX: What about the other core classes? */
+    /* 'Object' is always needed -- see SpkParser_NewClassDef() */
     _(declareClass(Spk_CLASS(Object), predefList, &checker));
+    if (Spk_declareBuiltIn) {
+        /* XXX: What about the other core classes? */
 #ifndef MALTIPY
-    _(declareClass(Spk_CLASS(Array), predefList, &checker));
+        _(declareClass(Spk_CLASS(Array), predefList, &checker));
 #endif /* !MALTIPY */
-    for (classBootRec = Spk_classBootRec; *classBootRec; ++classBootRec) {
-        classVar = (SpkBehavior **)((char *)Spk_heart + (*classBootRec)->classVarOffset);
-        _(declareClass(*classVar, predefList, &checker));
+        for (classBootRec = Spk_classBootRec; *classBootRec; ++classBootRec) {
+            classVar = (SpkBehavior **)((char *)Spk_heart + (*classBootRec)->classVarOffset);
+            _(declareClass(*classVar, predefList, &checker));
+        }
     }
     for (varBootRec = Spk_globalVarBootRec; varBootRec->varOffset; ++varBootRec) {
         Stmt *varDef = globalVarDef(varBootRec->name, &checker);

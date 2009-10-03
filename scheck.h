@@ -16,4 +16,7 @@ SpkUnknown *SpkStaticChecker_Check(struct SpkStmt *tree,
                                    SpkUnknown *requestor);
 
 
+extern int Spk_declareBuiltIn; /* XXX */
+
+
 #endif /* __spk_scheck_h__ */

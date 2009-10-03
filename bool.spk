@@ -1,0 +1,30 @@
+
+class Boolean {
+    !self    { self subclassResponsibility; }
+    ~self    { self subclassResponsibility; }
+    self & x { self subclassResponsibility; }
+    self ^ x { self subclassResponsibility; }
+    self | x { self subclassResponsibility; }
+}
+
+class False : Boolean {
+    !self    { return true; }
+    ~self    { return true; }
+    self & x { return false; }
+    self ^ x { return x; }
+    self | x { return x; }
+}
+
+class True : Boolean {
+    !self    { return false; }
+    ~self    { return false; }
+    self & x { return x; }
+    self ^ x { return !x; }
+    self | x { return true; }
+}
+
+(Boolean) { return (Boolean); }
+(False)   { return (False); }
+(True)    { return (True); }
+
+
