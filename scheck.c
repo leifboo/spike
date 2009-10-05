@@ -886,6 +886,10 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
 #ifndef MALTIPY
         _(declareClass(Spk_CLASS(Array), predefList, &checker));
 #endif /* !MALTIPY */
+        for (classBootRec = Spk_essentialClassBootRec; *classBootRec; ++classBootRec) {
+            classVar = (SpkBehavior **)((char *)Spk_heart + (*classBootRec)->classVarOffset);
+            _(declareClass(*classVar, predefList, &checker));
+        }
         for (classBootRec = Spk_classBootRec; *classBootRec; ++classBootRec) {
             classVar = (SpkBehavior **)((char *)Spk_heart + (*classBootRec)->classVarOffset);
             _(declareClass(*classVar, predefList, &checker));

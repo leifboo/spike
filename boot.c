@@ -22,12 +22,8 @@
 #include "bridge.h"
 #else /* !MALTIPY */
 #include "array.h"
-#include "bool.h"
 #include "dict.h"
-#include "float.h"
-#include "int.h"
 #include "io.h"
-#include "str.h"
 #include "sym.h"
 #endif /* !MALTIPY */
 
@@ -36,11 +32,9 @@
 
 
 #define CLASS_TMPL(c) Spk_Class ## c ## Tmpl
-
-
 #define CLASS(c, s) &CLASS_TMPL(c)
 
-SpkClassBootRec Spk_classBootRec[] = {
+SpkClassBootRec Spk_essentialClassBootRec[] = {
     /***CLASS(VariableObject, Object),*/
     /******/CLASS(Context, VariableObject),
     /**********/CLASS(MethodContext, Context),
@@ -64,19 +58,6 @@ SpkClassBootRec Spk_classBootRec[] = {
     /**/CLASS(SymbolTable,  Object),
     /**/CLASS(Parser,       Object),
     /**/CLASS(Notifier,     Object),
-#ifdef MALTIPY
-    /**** bridge ****/
-    CLASS(PythonObject, Object /*NULL_CLASS*/),
-#else /* !MALTIPY */
-    /***CLASS(VariableObject, Object),*/
-    /******/CLASS(String,  VariableObject),
-    /**/CLASS(Boolean,    Object),
-    /******/CLASS(False,  Object),
-    /******/CLASS(True,   Object),
-    /**/CLASS(Integer,    Object),
-    /**/CLASS(Float,      Object),
-    /**/CLASS(FileStream, Object),
-#endif /* !MALTIPY */
     0
 };
 
@@ -387,6 +368,12 @@ static void initBuiltInClasses(void) {
     SpkBehavior **classVar, **superclassVar;
     SpkClassTmpl *t;
     
+    for (r = Spk_essentialClassBootRec; *r; ++r) {
+        t = *r;
+        classVar = (SpkBehavior **)((char *)Spk_heart + t->classVarOffset);
+        superclassVar = (SpkBehavior **)((char *)Spk_heart + t->superclassVarOffset);
+        *classVar = (SpkBehavior *)SpkClass_FromTemplate(t, *superclassVar, Spk_heart);
+    }
     for (r = Spk_classBootRec; *r; ++r) {
         t = *r;
         classVar = (SpkBehavior **)((char *)Spk_heart + t->classVarOffset);
@@ -431,6 +418,9 @@ int Spk_Boot(void) {
     initCoreClasses();
     if (Spk_InitSymbols() < 0)
         return 0;
+    
+    Spk_CLASS(False) = Spk_CLASS(True) = 0; /* XXX: Heart_zero */
+    
     initBuiltInClasses();
     if (Spk_InitReadOnlyData() < 0)
         return 0;
@@ -455,9 +445,11 @@ int Spk_Boot(void) {
     Spk_DECREF(Spk_CLASS(PythonObject)->superclass);
     Spk_CLASS(PythonObject)->superclass = 0;
 #else
-    /* create true and false */
-    Spk_GLOBAL(xfalse) = (SpkUnknown *)SpkObject_New(Spk_CLASS(False));
-    Spk_GLOBAL(xtrue) = (SpkUnknown *)SpkObject_New(Spk_CLASS(True));
+    if (Spk_CLASS(False) && Spk_CLASS(True)) {
+        /* create true and false */
+        Spk_GLOBAL(xfalse) = (SpkUnknown *)SpkObject_New(Spk_CLASS(False));
+        Spk_GLOBAL(xtrue) = (SpkUnknown *)SpkObject_New(Spk_CLASS(True));
+    }
     
     /* init I/O */
     if (!SpkIO_Boot())

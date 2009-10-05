@@ -1001,7 +1001,7 @@ void SpkDisassembler_DisassembleModuleAsCCode(SpkModule *module, FILE *out) {
             "#include \"class.h\"\n"
             "#include \"heart.h\"\n"
             "\n",
-            strlen(timestamp) - 1, /* strip newline */
+            (int)(strlen(timestamp) - 1), /* strip newline */
             timestamp);
     traverseModule(module, &cCodeGenOpcodes, (void *)out);
     traverseModule(module, &cCodeGenClassTemplates, (void *)out);

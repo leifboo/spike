@@ -28,6 +28,7 @@ typedef struct SpkVarBootRec {
 int Spk_Boot(void);
 
 
+extern SpkClassBootRec Spk_essentialClassBootRec[];
 extern SpkClassBootRec Spk_classBootRec[];
 extern SpkObjectBootRec Spk_objectBootRec[];
 extern SpkVarBootRec Spk_globalVarBootRec[];

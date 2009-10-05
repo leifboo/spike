@@ -1,10 +1,9 @@
 
 CFLAGS = -g -ansi -Iinclude -Wall -Wstrict-prototypes
 
-obj = \
+boot_obj = \
 	array.o \
 	behavior.o \
-	bool.o \
 	boot.o \
 	cgen.o \
 	char.o \
@@ -28,17 +27,31 @@ obj = \
 	parser.o \
 	rodata.o \
 	scheck.o \
-	spike-1.o \
 	st.o \
 	str.o \
 	sym.o \
 	tree.o \
 	$(empty)
 
+obj = \
+	xgenerated.o \
+	$(boot_obj)
+
+spk = \
+	bool.spk \
+	$(empty)
+
+
 all: spike-1
 
-spike-1: $(obj)
-	$(CC) -o $@ $(obj)
+spike-1: spike-1.o $(obj)
+	$(CC) -o $@ spike-1.o $(obj)
+
+xcspk: xcspk.o $(boot_obj)
+	$(CC) -o $@ xcspk.o $(boot_obj)
+
+xgenerated.c: xcspk
+	./xcspk $(spk)
 
 gram.c: gram.y lemon
 	./lemon $<
@@ -49,5 +62,6 @@ lexer.c: lexer.l gram.c
 lemon: lemon.c
 	$(CC) -o $@ lemon.c
 
+
 clean:
-	rm -f spike-1 lemon $(obj) gram.c gram.h gram.out lexer.c
+	rm -f spike-1 xcspk lemon $(obj) gram.c gram.h gram.out lexer.c xgenerated.c
