@@ -21,7 +21,7 @@ static SpkUnknown *Module__initPythonModule(SpkUnknown *_self, SpkUnknown *modul
     args = Spk_emptyArgs;
     Spk_INCREF(args);
     
-    methodDict = self->klass->ns[Spk_METHOD_NAMESPACE_RVALUE].methodDict;
+    methodDict = self->klass->methodDict[Spk_METHOD_NAMESPACE_RVALUE];
     pos = 0;
     while (PyDict_Next(methodDict, &pos, &messageSelector, &value)) {
         thunk = Spk_SendMessage(Spk_GLOBAL(theInterpreter), _self, Spk_METHOD_NAMESPACE_RVALUE, messageSelector, args);

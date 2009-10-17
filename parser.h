@@ -3,12 +3,13 @@
 #define __spk_parser_h__
 
 
+#include "lexer.h"
 #include "tree.h"
+
 #include <stdio.h>
 
 
 struct SpkSymbolNode;
-struct SpkToken;
 
 
 typedef struct SpkParser {

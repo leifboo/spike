@@ -212,10 +212,10 @@ static void initCoreClasses(void) {
     if (Spk_ClassSymbolTmpl.thisClass.zero) {
         Symbol->zero = Spk_ClassSymbolTmpl.thisClass.zero;
     }
-#endif /* !MALTIPY */
     /* XXX: These two cannot be module-ized. */
     Spk_ClassSymbol = Symbol;
     Spk_ClassIdentityDictionary = IdentityDictionary;
+#endif /* !MALTIPY */
     for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
         Object->methodDict[ns] = SpkHost_NewSymbolDict();
     }
@@ -414,12 +414,14 @@ static void initGlobalVars(void) {
 
 
 int Spk_Boot(void) {
-    SpkHost_Init();
     initCoreClasses();
     if (Spk_InitSymbols() < 0)
         return 0;
+    SpkHost_Init();
     
+#ifndef MALTIPY
     Spk_CLASS(False) = Spk_CLASS(True) = 0; /* XXX: Heart_zero */
+#endif /* !MALTIPY */
     
     initBuiltInClasses();
     if (Spk_InitReadOnlyData() < 0)

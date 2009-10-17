@@ -13,15 +13,11 @@
 #include "scheck.h"
 #include "str.h"
 
-#ifdef MALTIPY
-#include "bridge.h"
-#else /* !MALTIPY */
 #include "bool.h"
 #include "float.h"
 #include "int.h"
 #include "io.h"
 #include "str.h"
-#endif /* !MALTIPY */
 
 #include <stdio.h>
 #include <string.h>
@@ -31,10 +27,6 @@
 #define CLASS(c, s) &CLASS_TMPL(c)
 
 SpkClassBootRec Spk_classBootRec[] = {
-#ifdef MALTIPY
-    /**** bridge ****/
-    CLASS(PythonObject, Object /*NULL_CLASS*/),
-#else /* !MALTIPY */
     /***CLASS(VariableObject, Object),*/
     /******/CLASS(String,  VariableObject),
     /**/CLASS(Boolean,    Object),
@@ -43,7 +35,6 @@ SpkClassBootRec Spk_classBootRec[] = {
     /**/CLASS(Integer,    Object),
     /**/CLASS(Float,      Object),
     /**/CLASS(FileStream, Object),
-#endif /* !MALTIPY */
     0
 };
 
