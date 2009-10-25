@@ -249,7 +249,7 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
                                   unsigned int outerPass)
 {
     Stmt *body, *s;
-    Expr *expr, *arg;
+    Expr *expr, *arg, *def;
     SpkMethodNamespace ns;
     SpkSymbolNode *name;
     SpkOper oper;
@@ -390,12 +390,29 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
         
         /* declare function arguments */
         for (arg = stmt->u.method.argList.fixed; arg; arg = arg->nextArg) {
-            if (arg->kind != Spk_EXPR_NAME) {
+            def = arg;
+            if (def->kind != Spk_EXPR_NAME)
+                break;
+            _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
+            ++stmt->u.method.minArgumentCount;
+            ++stmt->u.method.maxArgumentCount;
+        }
+        for ( ; arg; arg = arg->nextArg) {
+            if (arg->kind == Spk_EXPR_ASSIGN) {
+                def = arg->left;
+            } else {
+                def = arg;
+                if (def->kind == Spk_EXPR_NAME) {
+                    _(badExpr(arg, "non-default argument follows default argument", checker));
+                    /* fall though and define it, to reduce the number of errors */
+                }
+            }
+            if (def->kind != Spk_EXPR_NAME) {
                 _(badExpr(arg, "invalid argument definition", checker));
                 continue;
             }
-            _(SpkSymbolTable_Insert(checker->st, arg, checker->requestor));
-            ++stmt->u.method.argumentCount;
+            _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
+            ++stmt->u.method.maxArgumentCount;
         }
         arg = stmt->u.method.argList.var;
         if (arg) {
@@ -407,13 +424,18 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
         }
 
         for (innerPass = 1; innerPass <= 3; ++innerPass) {
+            for (arg = stmt->u.method.argList.fixed; arg; arg = arg->nextArg) {
+                if (arg->kind == Spk_EXPR_ASSIGN) {
+                    _(checkExpr(arg->right, stmt, checker, innerPass));
+                }
+            }
             for (s = body->top; s; s = s->next) {
                 _(checkStmt(s, stmt, checker, innerPass));
             }
         }
         
         stmt->u.method.localCount = checker->st->currentScope->context->nDefs -
-                                    stmt->u.method.argumentCount -
+                                    stmt->u.method.maxArgumentCount -
                                     (stmt->u.method.argList.var ? 1 : 0);
         
         SpkSymbolTable_ExitScope(checker->st);

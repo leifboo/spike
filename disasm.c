@@ -112,11 +112,12 @@ static void disassembleMethod(SpkMethod *method,
         ptrdiff_t displacement = 0;
         size_t contextSize = 0;
         size_t argumentCount = 0, *pArgumentCount = 0;
-        size_t localCount = 0, stackSize = 0;
+        size_t minArgumentCount = 0, maxArgumentCount = 0;
+        size_t stackSize = 0;
         size_t count = 0, *pCount = 0;
         unsigned int oper = 0;
         size_t label = 0, *pLabel = 0;
-        int i;
+        size_t i;
         SpkUnknown *literal = 0;
         
         ip = instructionPointer;
@@ -247,14 +248,19 @@ static void disassembleMethod(SpkMethod *method,
         case Spk_OPCODE_SAVE:
             mnemonic = "save";
             DECODE_UINT(contextSize);
+            DECODE_UINT(stackSize);
             break;
             
-        case Spk_OPCODE_ARG:     mnemonic = "arg";  goto save;
-        case Spk_OPCODE_ARG_VAR: mnemonic = "argv"; goto save;
- save:
-            DECODE_UINT(argumentCount);
-            DECODE_UINT(localCount);
-            DECODE_UINT(stackSize);
+        case Spk_OPCODE_ARG:     mnemonic = "arg";  goto arg;
+        case Spk_OPCODE_ARG_VAR: mnemonic = "argv"; goto arg;
+ arg:
+            DECODE_UINT(minArgumentCount);
+            DECODE_UINT(maxArgumentCount);
+            if (minArgumentCount < maxArgumentCount) {
+                for (i = 0; i < maxArgumentCount - minArgumentCount + 1; ++i) {
+                    DECODE_SINT(displacement);
+                }
+            }
             break;
             
         case Spk_OPCODE_NATIVE: mnemonic = "ntv"; break;
@@ -308,14 +314,15 @@ static void disassembleMethod(SpkMethod *method,
         } else {
             switch (opcode) {
             case Spk_OPCODE_SAVE:
-                fprintf(out, "\t%lu", (unsigned long)contextSize);
+                fprintf(out, "\t%lu,%lu",
+                        (unsigned long)contextSize,
+                        (unsigned long)stackSize);
                 break;
             case Spk_OPCODE_ARG:
             case Spk_OPCODE_ARG_VAR:
-                fprintf(out, "\t%lu,%lu,%lu",
-                        (unsigned long)argumentCount,
-                        (unsigned long)localCount,
-                        (unsigned long)stackSize);
+                fprintf(out, "\t%lu,%lu",
+                        (unsigned long)minArgumentCount,
+                        (unsigned long)maxArgumentCount);
                 break;
             }
         }
@@ -713,12 +720,13 @@ static void genCCodeForMethodOpcodes(SpkMethod *method,
         size_t index = 0;
         ptrdiff_t displacement = 0;
         size_t contextSize = 0;
-        size_t argumentCount = 0;
-        size_t localCount = 0, stackSize = 0;
+        size_t argumentCount = 0, minArgumentCount = 0, maxArgumentCount = 0;
+        size_t stackSize = 0;
         size_t count = 0;
         SpkOper oper = 0;
         SpkCallOper callOperator = 0;
         SpkUnknown *literal = 0;
+        size_t i;
         
         if (0) spaces(level, out); else fprintf(out, "    ");
         
@@ -841,13 +849,18 @@ static void genCCodeForMethodOpcodes(SpkMethod *method,
             
         case Spk_OPCODE_SAVE:
             DECODE_UINT(contextSize);
+            DECODE_UINT(stackSize);
             break;
             
         case Spk_OPCODE_ARG:
         case Spk_OPCODE_ARG_VAR:
-            DECODE_UINT(argumentCount);
-            DECODE_UINT(localCount);
-            DECODE_UINT(stackSize);
+            DECODE_UINT(minArgumentCount);
+            DECODE_UINT(maxArgumentCount);
+            if (minArgumentCount < maxArgumentCount) {
+                for (i = 0; i < maxArgumentCount - minArgumentCount + 1; ++i) {
+                    DECODE_SINT(displacement);
+                }
+            }
             break;
             
         case Spk_OPCODE_NATIVE:

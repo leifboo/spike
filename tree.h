@@ -128,7 +128,8 @@ struct SpkStmt {
             unsigned int ns;
             struct SpkSymbolNode *name;
             struct { SpkExpr *fixed, *var; } argList;
-            size_t argumentCount;
+            size_t minArgumentCount;
+            size_t maxArgumentCount;
             size_t localCount;
         } method;
         struct {

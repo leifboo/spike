@@ -768,12 +768,12 @@ do { SpkUnknown **end = stackPointer + (nItems); \
          Spk_INCREF(Spk_GLOBAL(uninit)); \
          *stackPointer++ = Spk_GLOBAL(uninit); } } while (0)
 
-#define CLEAN(nItems) \
-do { SpkUnknown **end = stackPointer + (nItems); \
-     while (stackPointer < end) { \
-         SpkUnknown *op = *stackPointer; \
+#define CLEAN(sp, nItems) \
+do { SpkUnknown **end = sp + (nItems); \
+     while (sp < end) { \
+         SpkUnknown *op = *sp; \
          Spk_INCREF(Spk_GLOBAL(uninit)); \
-         *stackPointer++ = Spk_GLOBAL(uninit); \
+         *sp++ = Spk_GLOBAL(uninit); \
          Spk_DECREF(op); } } while (0)
 
 #define PUSH(object) \
@@ -1354,7 +1354,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                         varArgTuple, 0
                         );
                 
-                CLEAN(varArg + argumentCount);
+                CLEAN(stackPointer, varArg + argumentCount);
                 PUSH(message);  /* XXX: doesNotUnderstand overhead  -- see SpkContext_new() */
                 argumentCount = 1;
                 varArg = 0;
@@ -1422,65 +1422,76 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             
             leafContext->mark = &mark;
             
+            self->activeContext->stackp = stackPointer;
             Spk_INCREF(leafContext);
             Spk_DECREF(self->activeContext);
             self->activeContext = homeContext = leafContext;
+            
+            stackPointer = framePointer = SpkContext_VARIABLES(leafContext) + Spk_LEAF_MAX_STACK_SIZE;
             break;
             
         case Spk_OPCODE_SAVE: {
-            size_t contextSize;
+            size_t contextSize, stackSize;
             SpkContext *newContext;
             
             /* Create a new context for the currently
              * executing method (cf. activateNewMethod).
              */
             DECODE_UINT(contextSize);
+            DECODE_UINT(stackSize);
             
-            ++contextSize; /* XXX: doesNotUnderstand overhead */
+            /* XXX: doesNotUnderstand overhead */
+            ++contextSize;
+            ++stackSize;
             
             newContext = SpkContext_New(contextSize);
             
             newContext->sender = self->activeContext;   Spk_INCREF(self->activeContext);
             newContext->pc = instructionPointer;
-            newContext->stackp = 0;
             newContext->homeContext = newContext;       Spk_INCREF(newContext); /* note cycle */
             newContext->u.m.method = method;            Spk_INCREF(method);
             newContext->u.m.methodClass = methodClass;  Spk_INCREF(methodClass);
             newContext->u.m.receiver = receiver;        Spk_INCREF(receiver);
-            newContext->u.m.framep = 0;
             newContext->mark = &mark;
             
+            newContext->stackp = newContext->u.m.framep = SpkContext_VARIABLES(newContext) + stackSize;
+            
+            self->activeContext->stackp = stackPointer;
             Spk_DECREF(self->activeContext);
             self->activeContext = homeContext = newContext;
+            
+            stackPointer = newContext->stackp;
+            framePointer = newContext->u.m.framep;
             break; }
             
         case Spk_OPCODE_ARG_VAR:
             variadic = 1;
             goto args;
         case Spk_OPCODE_ARG: {
-            size_t localCount, stackSize;
             size_t i, varArgTupleSize;
+            size_t argc, minFixedArgumentCount, maxFixedArgumentCount;
             size_t excessStackArgCount, consumedArrayArgCount;
             SpkContext *newContext;
             SpkUnknown *varArgTuple;
-            SpkUnknown **p;
+            SpkUnknown **p, **csp;
+            SpkOpcode *base;
             
             variadic = 0;
  args:
-            DECODE_UINT(fixedArgumentCount);
-            DECODE_UINT(localCount);
-            DECODE_UINT(stackSize);
-            
-            ++stackSize; /* XXX: doesNotUnderstand overhead */
+            base = instructionPointer - 1;
+            DECODE_UINT(minFixedArgumentCount);
+            DECODE_UINT(maxFixedArgumentCount);
+            /* XXX: this is a rogue register; there may be others... */
+            fixedArgumentCount = maxFixedArgumentCount;
             
             newContext = self->activeContext;
             
-            p = SpkContext_VARIABLES(newContext) + stackSize;
-            newContext->stackp = newContext->u.m.framep = p;
+            p = framePointer;
+            csp = newContext->caller->stackp; /* caller's stack pointer */
             
             /* process arguments */
             if (varArg) {
-                varArgTuple = stackPointer[0];
+                varArgTuple = csp[0];
                 if (!Spk_IsArgs(varArgTuple)) {
                     TRAP(Spk_mustBeTuple, 0);
                 }
@@ -1489,23 +1500,26 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 varArgTuple = 0;
                 varArgTupleSize = 0;
             }
-                
+            
+            argc = argumentCount + varArgTupleSize;
             if (variadic
-                ? argumentCount + varArgTupleSize < fixedArgumentCount
-                : argumentCount + varArgTupleSize != fixedArgumentCount) {
+                ? argc < minFixedArgumentCount
+                : argc < minFixedArgumentCount || maxFixedArgumentCount < argc) {
                 TRAP(Spk_wrongNumberOfArguments, 0);
             }
-            if (fixedArgumentCount > argumentCount) {
+            if (argumentCount < maxFixedArgumentCount) {
                 /* copy & reverse fixed arguments from stack */
                 for (i = 0; i < argumentCount; ++p, ++i) {
                     tmp = *p;
-                    *p = stackPointer[varArg + argumentCount - i - 1];
+                    *p = csp[varArg + argumentCount - i - 1];
                     Spk_INCREF(*p);
                     Spk_DECREF(tmp);
                 }
                 excessStackArgCount = 0;
                 /* copy fixed arguments from array */
-                consumedArrayArgCount = fixedArgumentCount - argumentCount;
+                consumedArrayArgCount = maxFixedArgumentCount - argumentCount;
+                if (varArgTupleSize < consumedArrayArgCount)
+                    consumedArrayArgCount = varArgTupleSize; /* the rest default */
                 for (i = 0; i < consumedArrayArgCount; ++p, ++i) {
                     tmp = *p;
                     *p = Spk_GetArg(varArgTuple, i);
@@ -1513,31 +1527,46 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 }
             } else {
                 /* copy & reverse fixed arguments from stack */
-                for (i = 0; i < fixedArgumentCount; ++p, ++i) {
+                for (i = 0; i < maxFixedArgumentCount; ++p, ++i) {
                     tmp = *p;
-                    *p = stackPointer[varArg + argumentCount - i - 1];
+                    *p = csp[varArg + argumentCount - i - 1];
                     Spk_INCREF(*p);
                     Spk_DECREF(tmp);
                 }
-                excessStackArgCount = argumentCount - fixedArgumentCount;
+                excessStackArgCount = argumentCount - maxFixedArgumentCount;
                 consumedArrayArgCount = 0;
             }
             if (variadic) {
-                tmp = *p;
                 /* initialize the argument array variable */
-                *p++ = SpkHost_GetArgs(
-                    stackPointer + varArg, excessStackArgCount,
+                p = framePointer + maxFixedArgumentCount;
+                tmp = *p;
+                *p = SpkHost_GetArgs(
+                    csp + varArg, excessStackArgCount,
                     varArgTuple, consumedArrayArgCount
                     );
                 Spk_DECREF(tmp);
             }
             
             /* clean up the caller's stack */
-            CLEAN(varArg + argumentCount + 1);
-            newContext->caller->stackp = stackPointer;
+            CLEAN(csp, varArg + argumentCount + 1);
+            newContext->caller->stackp = csp;
             
-            stackPointer = newContext->stackp;
-            framePointer = newContext->u.m.framep;
+            if (minFixedArgumentCount < maxFixedArgumentCount) {
+                /* default arguments */
+                ptrdiff_t displacement;
+                
+                for (i = minFixedArgumentCount; i < maxFixedArgumentCount; ++i) {
+                    DECODE_SINT(displacement);
+                    if (i == argumentCount) {
+                        instructionPointer = base + displacement;
+                        goto loop;
+                    }
+                }
+                /* skip default arg code */
+                DECODE_SINT(displacement);
+                instructionPointer = base + displacement;
+            }
+            
             break; }
             
         case Spk_OPCODE_NATIVE: {
@@ -1778,7 +1807,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             }
             
             /* clean up the caller's stack */
-            CLEAN(varArg + argumentCount + 1);
+            CLEAN(stackPointer, varArg + argumentCount + 1);
             self->activeContext->stackp = stackPointer;
             
             blockContext->caller = self->activeContext;  Spk_INCREF(self->activeContext);

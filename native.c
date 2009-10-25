@@ -21,9 +21,9 @@ SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
         size += 1; /* thunk */
     }
     if (flags & SpkNativeCode_LEAF) {
-        size += 6; /* leaf, arg, native */
+        size += 5; /* leaf, arg, native */
     } else {
-        size += 13; /* save, ... restore */
+        size += 13; /* save, ... rett */
     }
     size += 2; /* restore, ret */
     
@@ -53,21 +53,19 @@ SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
         *ip++ = Spk_OPCODE_LEAF;
         *ip++ = Spk_OPCODE_ARG;
         *ip++ = (SpkOpcode)argumentCount;
-        *ip++ = (SpkOpcode)0; /* localCount */
-        *ip++ = (SpkOpcode)Spk_LEAF_MAX_STACK_SIZE; /*stackSize*/
+        *ip++ = (SpkOpcode)argumentCount;
         *ip++ = Spk_OPCODE_NATIVE;
     } else {
         size_t stackSize = 4;
         size_t contextSize =
             stackSize +
-            argumentCount + variadic +
-            0 /*localCount*/ ;
+            argumentCount + variadic;
         *ip++ = Spk_OPCODE_SAVE;
         *ip++ = (SpkOpcode)contextSize;
+        *ip++ = (SpkOpcode)stackSize;
         *ip++ = variadic ? Spk_OPCODE_ARG_VAR : Spk_OPCODE_ARG;
         *ip++ = (SpkOpcode)argumentCount;
-        *ip++ = (SpkOpcode)0; /* localCount */
-        *ip++ = (SpkOpcode)stackSize;
+        *ip++ = (SpkOpcode)argumentCount;
         *ip++ = Spk_OPCODE_NATIVE;
         
         /* skip trampoline code */

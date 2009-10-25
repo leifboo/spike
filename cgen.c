@@ -75,7 +75,7 @@ typedef struct MethodCodeGen {
 typedef struct OpcodeGen {
     struct CodeGen *generic;
     
-    size_t argumentCount; int varArgList;
+    size_t minArgumentCount, maxArgumentCount; int varArgList;
     size_t localCount;
 
     size_t currentOffset;
@@ -230,21 +230,48 @@ static int setExprOffset(Expr *expr, OpcodeGen *cgen) {
     return 0;
 }
 
-static SpkUnknown *fixUpBranch(size_t target, OpcodeGen *cgen) {
-    ptrdiff_t base, displacement, filler;
+static SpkUnknown *fixUpBranch(ptrdiff_t base, size_t target, OpcodeGen *cgen) {
+    ptrdiff_t start, displacement, filler;
     
-    /* offset of branch instruction */
-    base = (ptrdiff_t)(cgen->currentOffset - 1);
-    
+    start = (ptrdiff_t)cgen->currentOffset;
     displacement = (ptrdiff_t)target - base;
     encodeSignedInt(displacement, cgen);
     
     /* XXX: Don't do this.  Write a real assembler. */
-    filler = (1 + BRANCH_DISPLACEMENT_SIZE) - (cgen->currentOffset - base);
+    filler = BRANCH_DISPLACEMENT_SIZE - ((ptrdiff_t)cgen->currentOffset - start);
     ASSERT(0 <= filler && filler < BRANCH_DISPLACEMENT_SIZE,
            "invalid jump");
-    for ( ; filler > 0; --filler) {
-        EMIT_OPCODE(Spk_OPCODE_NOP);
+    if (filler) {
+        cgen->opcodesEnd[-1] |= 0x80;
+        if (cgen->opcodesEnd[-1] & 0x40) {
+            for ( ; filler > 1; --filler) {
+                EMIT_OPCODE(0xFF);
+            }
+            EMIT_OPCODE(0x7F);
+        } else {
+            for ( ; filler > 1; --filler) {
+                EMIT_OPCODE(0x80);
+            }
+            EMIT_OPCODE(0x00);
+        }
+    }
+    
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
+    
+ unwind:
+    return 0;
+}
+
+static SpkUnknown *emitBranchDisplacement(ptrdiff_t base, size_t target, OpcodeGen *cgen) {
+    size_t i;
+    
+    if (cgen->opcodesEnd) {
+        _(fixUpBranch(base, target, cgen));
+    } else {
+        for (i = 0; i < BRANCH_DISPLACEMENT_SIZE; ++i) {
+            EMIT_OPCODE(Spk_OPCODE_NOP);
+        }
     }
     
     Spk_INCREF(Spk_GLOBAL(xvoid));
@@ -255,25 +282,14 @@ static SpkUnknown *fixUpBranch(size_t target, OpcodeGen *cgen) {
 }
 
 static SpkUnknown *emitBranch(SpkOpcode opcode, size_t target, OpcodeGen *cgen) {
-    size_t i;
+    ptrdiff_t base;
     
+    base = (ptrdiff_t)cgen->currentOffset; /* offset of branch instruction */
     EMIT_OPCODE(opcode);
-    if (cgen->opcodesEnd) {
-        _(fixUpBranch(target, cgen));
-    } else {
-        for (i = 0; i < BRANCH_DISPLACEMENT_SIZE; ++i) {
-            EMIT_OPCODE(Spk_OPCODE_NOP);
-        }
-    }
     if (opcode != Spk_OPCODE_BRANCH_ALWAYS) {
         --cgen->stackPointer;
     }
-    
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
-    
- unwind:
-    return 0;
+    return emitBranchDisplacement(base, target, cgen);
 }
 
 static void tallyPush(OpcodeGen *cgen) {
@@ -393,29 +409,22 @@ static void save(OpcodeGen *cgen) {
     size_t variadic = cgen->varArgList ? 1 : 0;
     size_t contextSize =
         cgen->stackSize +
-        cgen->argumentCount + variadic +
+        cgen->maxArgumentCount + variadic +
         cgen->localCount;
     EMIT_OPCODE(Spk_OPCODE_SAVE);
     encodeUnsignedInt(contextSize, cgen);
-    EMIT_OPCODE(variadic ? Spk_OPCODE_ARG_VAR : Spk_OPCODE_ARG);
-    encodeUnsignedInt(cgen->argumentCount, cgen);
-    encodeUnsignedInt(cgen->localCount, cgen);
     encodeUnsignedInt(cgen->stackSize, cgen);
 }
 
 static void leaf(OpcodeGen *cgen) {
     EMIT_OPCODE(Spk_OPCODE_LEAF);
-    EMIT_OPCODE(Spk_OPCODE_ARG);
-    encodeUnsignedInt(cgen->argumentCount, cgen);
-    encodeUnsignedInt(0, cgen);
-    encodeUnsignedInt(Spk_LEAF_MAX_STACK_SIZE, cgen);
 }
 
 static int inLeaf(OpcodeGen *cgen) {
     return
         cgen->nMessageSends == 0 &&
         cgen->nContextRefs == 0 &&
-        cgen->argumentCount <= Spk_LEAF_MAX_ARGUMENT_COUNT &&
+        cgen->maxArgumentCount <= Spk_LEAF_MAX_ARGUMENT_COUNT &&
         cgen->stackSize <= Spk_LEAF_MAX_STACK_SIZE &&
         cgen->localCount == 0 &&
         !cgen->varArgList;
@@ -1073,7 +1082,8 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     bcg = &gcgen.u.o.u.block;
     bcg->opcodeGen = &cgen->generic->u.o;
     bcg->opcodeGen->generic = cgen->generic;
-    cgen->argumentCount = expr->aux.block.argumentCount;
+    cgen->minArgumentCount = expr->aux.block.argumentCount;
+    cgen->maxArgumentCount = expr->aux.block.argumentCount;
     cgen->varArgList = 0;
     cgen->localCount = expr->aux.block.localCount;
     
@@ -1146,20 +1156,36 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     return 0;
 }
 
+static SpkUnknown *emitCodeForInitializer(Expr *expr, OpcodeGen *cgen) {
+    Expr *def;
+    
+    SET_EXPR_OFFSET(expr);
+    
+    _(emitCodeForExpr(expr->right, 0, cgen));
+    /* similar to store(), but with a definition instead of a
+       reference */
+    def = expr->left;
+    ASSERT(def->kind == Spk_EXPR_NAME, "name expected");
+    EMIT_OPCODE(def->u.def.storeOpcode);
+    encodeUnsignedInt(def->u.def.index, cgen);
+    EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
+    CHECK_STACKP();
+    
+    SET_EXPR_END(expr);
+    
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
+    
+ unwind:
+    return 0;
+}
+
 static SpkUnknown *emitCodeForVarDefList(Expr *defList, OpcodeGen *cgen) {
-    Expr *expr, *def;
+    Expr *expr;
     
     for (expr = defList; expr; expr = expr->next) {
         if (expr->kind == Spk_EXPR_ASSIGN) {
-            _(emitCodeForExpr(expr->right, 0, cgen));
-            /* similar to store(), but with a definition instead of a
-               reference */
-            def = expr->left;
-            ASSERT(def->kind == Spk_EXPR_NAME, "name expected");
-            EMIT_OPCODE(def->u.def.storeOpcode);
-            encodeUnsignedInt(def->u.def.index, cgen);
-            EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
-            CHECK_STACKP();
+            _(emitCodeForInitializer(expr, cgen));
         }
     }
     Spk_INCREF(Spk_GLOBAL(xvoid));
@@ -1325,6 +1351,49 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
     return 0;
 }
 
+static SpkUnknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
+    ptrdiff_t base;
+    
+    base = (ptrdiff_t)cgen->currentOffset; /* offset of 'arg' instruction */
+    EMIT_OPCODE(cgen->varArgList ? Spk_OPCODE_ARG_VAR : Spk_OPCODE_ARG);
+    encodeUnsignedInt(cgen->minArgumentCount, cgen);
+    encodeUnsignedInt(cgen->maxArgumentCount, cgen);
+    
+    if (cgen->minArgumentCount < cgen->maxArgumentCount) {
+        /* generate code for default argument initializers */
+        Expr *arg, *optionalArgList;
+        size_t tally, endLabel = 0;
+    
+        for (arg = stmt->u.method.argList.fixed;
+             arg->kind != Spk_EXPR_ASSIGN;
+             arg = arg->nextArg)
+            ;
+        optionalArgList = arg;
+        
+        /* table of branch displacements */
+        for (arg = optionalArgList, tally = 0; arg; arg = arg->nextArg, ++tally) {
+            ASSERT(arg->kind == Spk_EXPR_ASSIGN, "assignment expected");
+            _(emitBranchDisplacement(base, arg->codeOffset, cgen));
+            endLabel = arg->endLabel;
+        }
+        /* skip label */
+        _(emitBranchDisplacement(base, endLabel, cgen));
+        ASSERT(tally == cgen->maxArgumentCount - cgen->minArgumentCount,
+               "wrong number of default arguments");
+        
+        /* assignments */
+        for (arg = optionalArgList; arg; arg = arg->nextArg) {
+            _(emitCodeForInitializer(arg, cgen));
+        }
+    }
+    
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
+    
+ unwind:
+    return 0;
+}
+
 static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     CodeGen gcgen;
     OpcodeGen *cgen; MethodCodeGen *mcg;
@@ -1350,7 +1419,8 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     mcg->opcodeGen = &cgen->generic->u.o;
     mcg->opcodeGen->generic = cgen->generic;
     mcg->methodInstance = 0;
-    cgen->argumentCount = stmt->u.method.argumentCount;
+    cgen->minArgumentCount = stmt->u.method.minArgumentCount;
+    cgen->maxArgumentCount = stmt->u.method.maxArgumentCount;
     cgen->varArgList = stmt->u.method.argList.var ? 1 : 0;
     cgen->localCount = stmt->u.method.localCount;
     rewindOpcodes(cgen, 0, 0);
@@ -1369,6 +1439,8 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     if (thunk) EMIT_OPCODE(Spk_OPCODE_THUNK);
     save(cgen); /* XXX: 'stackSize' is zero here */
     
+    _(emitCodeForArgList(stmt, cgen)); /* XXX: 'stackSize' is invalid here */
+    
     _(emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen));
     _(emitCodeForStmt(&sentinel, 0, 0, 0, cgen));
     
@@ -1380,6 +1452,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         cgen->inLeaf = 1;
         if (thunk) EMIT_OPCODE(Spk_OPCODE_THUNK);
         leaf(cgen);
+        _(emitCodeForArgList(stmt, cgen));
         _(emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen));
         _(emitCodeForStmt(&sentinel, 0, 0, 0, cgen));
         
@@ -1394,6 +1467,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
                       mcg->methodInstance->debug.lineCodes);
         if (thunk) EMIT_OPCODE(Spk_OPCODE_THUNK);
         leaf(cgen);
+        _(emitCodeForArgList(stmt, cgen));
         _(emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen));
         _(emitCodeForStmt(&sentinel, 0, 0, 0, cgen));
 
@@ -1414,6 +1488,8 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         cgen->stackSize = stackSize;
         save(cgen);
         cgen->stackSize = 0;
+        
+        _(emitCodeForArgList(stmt, cgen));
         
         _(emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen));
         _(emitCodeForStmt(&sentinel, 0, 0, 0, cgen));
@@ -1731,6 +1807,10 @@ static SpkUnknown *generateImports(Stmt *stmtList, CodeGen *outer) {
         cgen->stackSize = stackSize;
         save(cgen);
         cgen->stackSize = 0;
+
+        EMIT_OPCODE(Spk_OPCODE_ARG);
+        encodeUnsignedInt(1, cgen);
+        encodeUnsignedInt(1, cgen);
         
         for (s = stmtList; s; s = s->next) {
             if (s->kind == Spk_STMT_IMPORT) {
@@ -2100,10 +2180,12 @@ SpkMethod *SpkCodeGen_NewNativeAccessor(unsigned int kind,
     
     switch (kind) {
     case SpkAccessor_READ:
-        cgen->argumentCount = 0;
+        cgen->minArgumentCount = 0;
+        cgen->maxArgumentCount = 0;
         break;
     case SpkAccessor_WRITE:
-        cgen->argumentCount = 1;
+        cgen->minArgumentCount = 1;
+        cgen->maxArgumentCount = 1;
         break;
     }
     
@@ -2129,12 +2211,9 @@ SpkMethod *SpkCodeGen_NewNativeAccessor(unsigned int kind,
         EMIT_OPCODE(Spk_OPCODE_LEAF);
         
         /* arg */
-        cgen->stackSize = stackSize;
         EMIT_OPCODE(Spk_OPCODE_ARG);
-        encodeUnsignedInt(cgen->argumentCount, cgen);
-        encodeUnsignedInt(cgen->localCount, cgen);
-        encodeUnsignedInt(cgen->stackSize, cgen);
-        cgen->stackSize = 0;
+        encodeUnsignedInt(cgen->minArgumentCount, cgen);
+        encodeUnsignedInt(cgen->maxArgumentCount, cgen);
         
         switch (kind) {
         case SpkAccessor_READ:
