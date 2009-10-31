@@ -386,12 +386,15 @@ static void disassemblePreModule(SpkModule *module,
                                  Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
+    SpkModuleClass *moduleClass;
     size_t i;
     
+    moduleClass = (SpkModuleClass *)Spk_Cast(Spk_CLASS(Module)->base.klass,
+                                             (SpkUnknown *)module->base.klass);
     fprintf(out, "literal table\n");
-    for (i = 0; i < module->literalCount; ++i) {
+    for (i = 0; i < moduleClass->literalCount; ++i) {
         fprintf(out, "    %04lu: ", (unsigned long)i);
-        SpkHost_PrintObject(module->literals[i], out);
+        SpkHost_PrintObject(moduleClass->literals[i], out);
         fprintf(out, "\n");
     }
     fprintf(out, "\n");
@@ -502,16 +505,20 @@ static void traverseClassBody(SpkBehavior *aClass, const char *name, Level *oute
 {
     SpkMethodNamespace ns;
     Level level;
+    SpkModuleClass *moduleClass;
     
     level.outer = outer;
     level.name = name;
+    
+    moduleClass = (SpkModuleClass *)Spk_Cast(Spk_CLASS(Module)->base.klass,
+                                             (SpkUnknown *)aClass->module->base.klass);
     
     if (visitor->preClassBody)
         (*visitor->preClassBody)(aClass, &level, closure);
     
     for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
         traverseMethodDict(aClass->methodDict[ns], ns,
-                           aClass->module->literals, &level,
+                           moduleClass->literals, &level,
                            visitor, closure);
     }
     
@@ -551,9 +558,13 @@ static void traverseModule(SpkModule *module,
     SpkBehavior *nestedClass;
     SpkMethodNamespace ns;
     Level level;
+    SpkModuleClass *moduleClass;
     
     level.outer = 0;
     level.name = "module";
+    
+    moduleClass = (SpkModuleClass *)Spk_Cast(Spk_CLASS(Module)->base.klass,
+                                             (SpkUnknown *)module->base.klass);
     
     if (visitor->preModule)
         (*visitor->preModule)(module, &level, closure);
@@ -568,7 +579,7 @@ static void traverseModule(SpkModule *module,
     for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
         traverseMethodDict(module->base.klass->methodDict[ns],
                            ns,
-                           module->literals,
+                           moduleClass->literals,
                            &level,
                            visitor,
                            closure);
@@ -974,12 +985,15 @@ static void genCCodeLiteralTable(SpkModule *module,
     size_t i;
     SpkUnknown *literal;
     SpkBehavior *klass;
+    SpkModuleClass *moduleClass;
     
+    moduleClass = (SpkModuleClass *)Spk_Cast(Spk_CLASS(Module)->base.klass,
+                                             (SpkUnknown *)module->base.klass);
     fprintf(out, "static SpkLiteralTmpl ");
     nest(level, out);
     fprintf(out, "literals[] = {\n");
-    for (i = 0; i < module->literalCount; ++i) {
-        literal = module->literals[i];
+    for (i = 0; i < moduleClass->literalCount; ++i) {
+        literal = moduleClass->literals[i];
         fprintf(out, "    { ");
         /* XXX: It would be nice if there separate tables -- separate
            "data segments" -- for each type of literal. */
@@ -1007,7 +1021,10 @@ static void genCCodeModuleTemplate(SpkModule *module,
                                    Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
+    SpkModuleClass *moduleClass;
     
+    moduleClass = (SpkModuleClass *)Spk_Cast(Spk_CLASS(Module)->base.klass,
+                                             (SpkUnknown *)module->base.klass);
     fprintf(out,
             "SpkModuleTmpl Spk_Module%sTmpl = {\n"
             "    {\n"
@@ -1038,7 +1055,7 @@ static void genCCodeModuleTemplate(SpkModule *module,
             "    /*literalCount*/ %lu,\n"
             "    ",
             (unsigned long)module->base.klass->instVarCount,
-            (unsigned long)module->literalCount);
+            (unsigned long)moduleClass->literalCount);
     nest(level, out);
     fprintf(out,
             "literals\n"

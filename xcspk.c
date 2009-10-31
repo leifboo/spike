@@ -26,7 +26,7 @@ SpkClassBootRec Spk_classBootRec[] = {
 };
 
 
-SpkModuleTmpl Spk_ModulemoduleTmpl;
+SpkModuleTmpl Spk_ModulemoduleTmpl = { { "heart" } };;
 
 struct SpkModule *Spk_heart;
 

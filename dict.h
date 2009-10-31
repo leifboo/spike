@@ -9,7 +9,6 @@
 typedef struct SpkIdentityDictionary SpkIdentityDictionary;
 
 
-extern struct SpkBehavior *Spk_ClassIdentityDictionary;
 extern struct SpkClassTmpl Spk_ClassIdentityDictionaryTmpl;
 
 

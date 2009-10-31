@@ -207,10 +207,19 @@ static void initCoreClasses(void) {
     if (Spk_ClassSymbolTmpl.thisClass.zero) {
         Symbol->zero = Spk_ClassSymbolTmpl.thisClass.zero;
     }
-    /* XXX: These two cannot be module-ized. */
-    Spk_ClassSymbol = Symbol;
-    Spk_ClassIdentityDictionary = IdentityDictionary;
+
+    /*
+     * Certain 'heart' variables are accessed very early;
+     * before we proceed, set up some scaffolding so that we don't crash.
+     */
+    Spk_heart = (SpkModule *)&scaffold;
+    Spk_CLASS(Class) = Class;
+    Spk_CLASS(IdentityDictionary) = IdentityDictionary;
+    Spk_CLASS(Symbol) = Symbol;
+    Spk_GLOBAL(uninit) = (SpkUnknown *)Object;
 #endif /* !MALTIPY */
+
+    /* Finish initializing 'Object'. */
     for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
         Object->methodDict[ns] = SpkHost_NewSymbolDict();
     }
@@ -251,13 +260,11 @@ static void initCoreClasses(void) {
      * the built-in "heart" module.
      */
     Module = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassModuleTmpl, Object, Metaclass, 0);
+    Spk_CLASS(Module) = Module;
     
-    Heart = (SpkBehavior *)SpkObject_New(Behavior);
     Spk_ModulemoduleTmpl.moduleClass.thisClass.instVarOffset = offsetof(SpkHeartSubclass, variables);
-    SpkModule_InitFromTemplate(Heart, &Spk_ModulemoduleTmpl, Module);
-    Spk_heart = &scaffold;;
-    Spk_GLOBAL(uninit) = Object;
-    Spk_heart = (SpkModule *)SpkModule_New(Heart);
+    Heart = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ModulemoduleTmpl.moduleClass, Module, Metaclass, 0);
+    Spk_heart = (SpkModule *)SpkObject_New(Heart);
     
     /*
      * Initialize the class variables for existing classes.
@@ -424,7 +431,7 @@ int Spk_Boot(void) {
     initBuiltInClasses();
     if (Spk_InitReadOnlyData() < 0)
         return 0;
-    SpkModule_InitLiteralsFromTemplate(Spk_heart, &Spk_ModulemoduleTmpl);
+    SpkModule_InitLiteralsFromTemplate(Spk_heart->base.klass, &Spk_ModulemoduleTmpl);
     
     /* XXX: There is an order-of-init problem that prevents core
        classes from defining operators.  As a work-around, simply

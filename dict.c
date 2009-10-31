@@ -19,9 +19,6 @@ struct SpkIdentityDictionary {
 #define HASH(key) (mask & ((size_t)(key) / sizeof(SpkUnknown *)))
 
 
-SpkBehavior *Spk_ClassIdentityDictionary;
-
-
 /*------------------------------------------------------------------------*/
 /* methods */
 
@@ -141,7 +138,7 @@ void SpkIdentityDictionary_SetItem(SpkIdentityDictionary *self, SpkUnknown *key,
 }
 
 SpkIdentityDictionary *SpkIdentityDictionary_New(void) {
-    return (SpkIdentityDictionary *)SpkObject_New(Spk_ClassIdentityDictionary);
+    return (SpkIdentityDictionary *)SpkObject_New(Spk_CLASS(IdentityDictionary));
 }
 
 int SpkIdentityDictionary_Next(SpkIdentityDictionary *self,
@@ -177,7 +174,7 @@ size_t SpkIdentityDictionary_Size(SpkIdentityDictionary *self) {
 
 static void IdentityDictionary_zero(SpkObject *_self) {
     SpkIdentityDictionary *self = (SpkIdentityDictionary *)_self;
-    (*Spk_ClassIdentityDictionary->superclass->zero)(_self);
+    (*Spk_CLASS(IdentityDictionary)->superclass->zero)(_self);
     self->size = 2; /* must be a power of 2 */
     self->tally = 0;
     self->keyArray = (SpkUnknown **)calloc(self->size, sizeof(SpkUnknown *));

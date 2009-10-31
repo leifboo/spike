@@ -9,7 +9,6 @@
 typedef struct SpkSymbol SpkSymbol;
 
 
-extern struct SpkBehavior *Spk_ClassSymbol;
 extern struct SpkClassTmpl Spk_ClassSymbolTmpl;
 
 

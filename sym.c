@@ -17,8 +17,6 @@ struct SpkSymbol {
 };
 
 
-SpkBehavior *Spk_ClassSymbol;
-
 static struct {
     size_t size, mask, tally;
     SpkSymbol **array;
@@ -135,7 +133,7 @@ static SpkSymbol *newSymbol(const char *str, size_t len, size_t hash) {
  insert:
     sym = (SpkSymbol *)malloc(sizeof(SpkSymbol) + len);
     sym->base.base.refCount = 1;
-    sym->base.klass = Spk_ClassSymbol;
+    sym->base.klass = Spk_CLASS(Symbol);
     sym->hash = hash;
     memcpy(sym->str, str, len);
     sym->str[len] = '\0';

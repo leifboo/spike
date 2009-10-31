@@ -32,22 +32,25 @@ typedef struct SpkModuleTmpl {
 
 typedef struct SpkModule {
     SpkObject base;
-    size_t literalCount;
-    SpkUnknown **literals;
     struct SpkBehavior *firstClass;
 } SpkModule;
 
 
+typedef struct SpkModuleClass {
+    SpkClass base;
+    size_t literalCount;
+    SpkUnknown **literals;
+} SpkModuleClass;
+
+
 #define SpkModule_VARIABLES(op) ((SpkUnknown **)((char *)(op) + ((SpkObject *)(op))->klass->instVarOffset) + Spk_CLASS(Module)->instVarBaseIndex)
-#define SpkModule_LITERALS(op) (((SpkModule *)(op))->literals)
+#define SpkModule_LITERALS(op) (((SpkModuleClass *)(op->base.klass))->literals)
 
 
 extern struct SpkClassTmpl Spk_ClassModuleTmpl;
 
 
-SpkModule *SpkModule_New(struct SpkBehavior *);
-void SpkModule_InitFromTemplate(SpkBehavior *, SpkModuleTmpl *, SpkBehavior *);
-void SpkModule_InitLiteralsFromTemplate(SpkModule *, SpkModuleTmpl *);
+void SpkModule_InitLiteralsFromTemplate(SpkBehavior *, SpkModuleTmpl *);
 
 
 #endif /* __spk_module_h__ */

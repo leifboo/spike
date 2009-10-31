@@ -105,7 +105,7 @@ typedef struct ClassCodeGen {
 
 typedef struct ModuleCodeGen {
     struct CodeGen *generic;
-    SpkBehavior *moduleClassInstance;
+    SpkModuleClass *moduleClass;
     
     SpkBehavior *firstClass, *lastClass;
     
@@ -1921,7 +1921,7 @@ static SpkUnknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
     cgen->generic->outer = 0;
     cgen->generic->module = moduleCodeGen;
     cgen->classDef = stmt;
-    cgen->classInstance = moduleCodeGen->moduleClassInstance;
+    cgen->classInstance = (SpkBehavior *)moduleCodeGen->moduleClass;
     cgen->source = 0;
     cgen->generic->level = 1;
     
@@ -2096,14 +2096,17 @@ SpkModule *SpkCodeGen_GenerateCode(Stmt *tree) {
     cgen->generic->kind = CODE_GEN_MODULE;
     
     cgen->rodataMap = SpkHost_NewLiteralDict();
-    /* Create a 'Module' subclass to represent this module. */
-    cgen->moduleClassInstance
-        = (SpkBehavior *)SpkObject_New(Spk_CLASS(Behavior));
-    if (!cgen->rodataMap || !cgen->rodataMap) {
+    if (!cgen->rodataMap) {
         goto unwind;
     }
     
-    SpkBehavior_Init(cgen->moduleClassInstance, Spk_CLASS(Module), 0, dataSize);
+    /* Create a 'Module' subclass to represent this module. */
+    cgen->moduleClass
+        = (SpkModuleClass *)SpkClass_New(((SpkClass *)Spk_CLASS(Module))->name,
+                                         Spk_CLASS(Module),
+                                         dataSize,
+                                         /* XXX: unknown at this time */
+                                         0 /*cgen->rodataSize*/ );
     
     /* Create all classes. */
     for (s = rootClassList; s; s = s->u.klass.nextRootClassDef) {
@@ -2113,14 +2116,16 @@ SpkModule *SpkCodeGen_GenerateCode(Stmt *tree) {
     /* Generate code. */
     _(emitCodeForModule(tree, cgen));
     
+    /* Initialize the module class. */
+    cgen->moduleClass->literals = cgen->rodata;
+    cgen->moduleClass->literalCount = cgen->rodataSize;
+    
     /* Create and initialize the module. */
-    module = SpkModule_New(cgen->moduleClassInstance);
+    module = (SpkModule *)SpkObject_New((SpkBehavior *)cgen->moduleClass);
     if (!module) {
         goto unwind;
     }
     module->firstClass = cgen->firstClass;
-    module->literals = cgen->rodata;
-    module->literalCount = cgen->rodataSize;
     globals = SpkModule_VARIABLES(module);
     for (index = 0; index < dataSize; ++index) {
         globals[index] = Spk_GLOBAL(uninit); /* XXX: null? */
@@ -2139,12 +2144,12 @@ SpkModule *SpkCodeGen_GenerateCode(Stmt *tree) {
     module->base.klass->module = module;
     
     Spk_DECREF(cgen->rodataMap);
-    Spk_DECREF(cgen->moduleClassInstance);
+    Spk_DECREF(cgen->moduleClass);
     return module;
     
  unwind:
     Spk_XDECREF(cgen->rodataMap);
-    Spk_XDECREF(cgen->moduleClassInstance);
+    Spk_XDECREF(cgen->moduleClass);
     Spk_XDECREF(module);
     return 0;
 }

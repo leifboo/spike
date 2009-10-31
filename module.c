@@ -49,12 +49,38 @@ static SpkUnknown *Module__initPythonModule(SpkUnknown *_self, SpkUnknown *modul
 
 
 /*------------------------------------------------------------------------*/
+/* low-level hooks */
+
+static void Module_zero(SpkObject *_self) {
+    SpkModule *self;
+    
+    self = (SpkModule *)_self;
+    (*Spk_CLASS(Module)->superclass->zero)(_self);
+    self->firstClass = 0;
+}
+
+static void ModuleClass_zero(SpkObject *_self) {
+    SpkModuleClass *self;
+    
+    self = (SpkModuleClass *)_self;
+    (*Spk_CLASS(Class)->zero)(_self);
+    self->literalCount = 0;
+    self->literals = 0;
+}
+
+
+/*------------------------------------------------------------------------*/
 /* class tmpl */
 
 typedef struct SpkModuleSubclass {
     SpkModule base;
     SpkUnknown *variables[1]; /* stretchy */
 } SpkModuleSubclass;
+
+typedef struct SpkModuleClassSubclass {
+    SpkModuleClass base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkModuleClassSubclass;
 
 static SpkMethodTmpl methods[] = {
 #ifdef MALTIPY
@@ -68,9 +94,16 @@ SpkClassTmpl Spk_ClassModuleTmpl = {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkModuleSubclass, variables)
+        offsetof(SpkModuleSubclass, variables),
+        /*itemSize*/ 0,
+        &Module_zero
     }, /*meta*/ {
-        0
+        /*accessors*/ 0,
+        /*methods*/ 0,
+        /*lvalueMethods*/ 0,
+        offsetof(SpkModuleClassSubclass, variables),
+        /*itemSize*/ 0,
+        &ModuleClass_zero
     }
 };
 
@@ -78,29 +111,18 @@ SpkClassTmpl Spk_ClassModuleTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SpkModule *SpkModule_New(SpkBehavior *moduleSubclass) {
-    SpkModule *newModule;
-    
-    newModule = (SpkModule *)SpkObject_New(moduleSubclass);
-    newModule->literalCount = 0;
-    newModule->literals = 0;
-    newModule->firstClass = 0;
-    return newModule;
-}
-
-void SpkModule_InitFromTemplate(SpkBehavior *moduleSubclass, SpkModuleTmpl *tmpl, SpkBehavior *superclass) {
-    SpkBehavior_InitFromTemplate(moduleSubclass, &tmpl->moduleClass.thisClass, superclass, 0);
-}
-
-void SpkModule_InitLiteralsFromTemplate(SpkModule *module, SpkModuleTmpl *tmpl) {
+void SpkModule_InitLiteralsFromTemplate(SpkBehavior *moduleClass, SpkModuleTmpl *tmpl) {
+    SpkModuleClass *self;
     size_t i;
     SpkUnknown *literal;
     
+    self = (SpkModuleClass *)Spk_Cast(Spk_CLASS(Module)->base.klass,
+                                      (SpkUnknown *)moduleClass);
     if (!tmpl->literalCount)
         return;
-    module->literals = (SpkUnknown **)malloc(tmpl->literalCount * sizeof(SpkUnknown *));
-    module->literalCount = tmpl->literalCount;
-    for (i = 0; i < module->literalCount; ++i) {
+    self->literals = (SpkUnknown **)malloc(tmpl->literalCount * sizeof(SpkUnknown *));
+    self->literalCount = tmpl->literalCount;
+    for (i = 0; i < self->literalCount; ++i) {
         switch (tmpl->literals[i].kind) {
         case Spk_LITERAL_SYMBOL:
             literal = (SpkUnknown *)SpkSymbol_FromCString(tmpl->literals[i].stringValue);
@@ -118,6 +140,6 @@ void SpkModule_InitLiteralsFromTemplate(SpkModule *module, SpkModuleTmpl *tmpl) 
             literal = (SpkUnknown *)SpkString_FromCString(tmpl->literals[i].stringValue);
             break;
         }
-        module->literals[i] = literal;
+        self->literals[i] = literal;
     }
 }
