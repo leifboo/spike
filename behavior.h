@@ -79,6 +79,7 @@ typedef struct SpkBehaviorTmpl {
     void (*zero)(SpkObject *);
     void (*dealloc)(SpkObject *);
     SpkTraverse *traverse;
+    size_t instVarCount;
 } SpkBehaviorTmpl;
 
 

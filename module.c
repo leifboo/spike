@@ -4,6 +4,13 @@
 #include "class.h"
 #include "heart.h"
 #include "rodata.h"
+
+#include "char.h"
+#include "float.h"
+#include "int.h"
+#include "str.h"
+#include "sym.h"
+
 #include <stdlib.h>
 
 
@@ -79,4 +86,38 @@ SpkModule *SpkModule_New(SpkBehavior *moduleSubclass) {
     newModule->literals = 0;
     newModule->firstClass = 0;
     return newModule;
+}
+
+void SpkModule_InitFromTemplate(SpkBehavior *moduleSubclass, SpkModuleTmpl *tmpl, SpkBehavior *superclass) {
+    SpkBehavior_InitFromTemplate(moduleSubclass, &tmpl->moduleClass.thisClass, superclass, 0);
+}
+
+void SpkModule_InitLiteralsFromTemplate(SpkModule *module, SpkModuleTmpl *tmpl) {
+    size_t i;
+    SpkUnknown *literal;
+    
+    if (!tmpl->literalCount)
+        return;
+    module->literals = (SpkUnknown **)malloc(tmpl->literalCount * sizeof(SpkUnknown *));
+    module->literalCount = tmpl->literalCount;
+    for (i = 0; i < module->literalCount; ++i) {
+        switch (tmpl->literals[i].kind) {
+        case Spk_LITERAL_SYMBOL:
+            literal = (SpkUnknown *)SpkSymbol_FromCString(tmpl->literals[i].stringValue);
+            break;
+        case Spk_LITERAL_INTEGER:
+            literal = (SpkUnknown *)SpkInteger_FromCLong(tmpl->literals[i].intValue);
+            break;
+        case Spk_LITERAL_FLOAT:
+            literal = (SpkUnknown *)SpkFloat_FromCDouble(tmpl->literals[i].floatValue);
+            break;
+        case Spk_LITERAL_CHAR:
+            literal = (SpkUnknown *)SpkChar_FromCChar(tmpl->literals[i].intValue);
+            break;
+        case Spk_LITERAL_STRING:
+            literal = (SpkUnknown *)SpkString_FromCString(tmpl->literals[i].stringValue);
+            break;
+        }
+        module->literals[i] = literal;
+    }
 }

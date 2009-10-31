@@ -3,6 +3,7 @@
 
 #include "array.h"
 #include "behavior.h"
+#include "char.h"
 #include "dict.h"
 #include "float.h"
 #include "heart.h"
@@ -84,8 +85,20 @@ SpkUnknown *SpkHost_IntegerFromCLong(long value) {
     return (SpkUnknown *)SpkInteger_FromCLong(value);
 }
 
+/**/ double SpkHost_FloatAsCDouble(SpkUnknown *op) {
+    return SpkFloat_AsCDouble(Spk_CAST(Float, op));
+}
+
 SpkUnknown *SpkHost_FloatFromCDouble(double value) {
     return (SpkUnknown *)SpkFloat_FromCDouble(value);
+}
+
+/****/ char SpkHost_CharAsCChar(SpkUnknown *op) {
+    return SpkChar_AsCChar(Spk_CAST(Char, op));
+}
+
+SpkUnknown *SpkHost_CharFromCChar(char value) {
+    return (SpkUnknown *)SpkChar_FromCChar(value);
 }
 
 /***/ char *SpkHost_StringAsCString(SpkUnknown *op) {

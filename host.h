@@ -22,7 +22,10 @@
 /*****/ int SpkHost_IsString(SpkUnknown *);
 /****/ long SpkHost_IntegerAsCLong(SpkUnknown *);
 SpkUnknown *SpkHost_IntegerFromCLong(long);
+/**/ double SpkHost_FloatAsCDouble(SpkUnknown *);
 SpkUnknown *SpkHost_FloatFromCDouble(double);
+/****/ char SpkHost_CharAsCChar(SpkUnknown *);
+SpkUnknown *SpkHost_CharFromCChar(char);
 /***/ char *SpkHost_StringAsCString(SpkUnknown *);
 SpkUnknown *SpkHost_StringFromCString(const char *);
 SpkUnknown *SpkHost_StringFromCStringAndLength(const char *, size_t);

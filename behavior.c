@@ -90,7 +90,7 @@ void SpkBehavior_Init(SpkBehavior *self, SpkBehavior *superclass, SpkModule *mod
 
 void SpkBehavior_InitFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl, SpkBehavior *superclass, SpkModule *module) {
     
-    SpkBehavior_Init(self, superclass, module, 0);
+    SpkBehavior_Init(self, superclass, module, tmpl->instVarCount);
     
     if (tmpl->instVarOffset != 0) {
         assert(tmpl->instVarOffset >= self->instVarOffset);

@@ -74,7 +74,7 @@ typedef struct SpkHeart {
 } SpkHeart;
 
 
-extern struct SpkBehaviorTmpl Spk_ModuleHeartTmpl;
+extern SpkModuleTmpl Spk_ModulemoduleTmpl;
 
 extern SpkModule *Spk_heart;
 

@@ -89,12 +89,7 @@ typedef struct SpkHeartSubclass {
     SpkUnknown *variables[1]; /* stretchy */
 } SpkHeartSubclass;
 
-SpkBehaviorTmpl Spk_ModuleHeartTmpl = {
-    /*accessors*/ 0,
-    /*methods*/ 0,
-    /*lvalueMethods*/ 0,
-    offsetof(SpkHeartSubclass, variables)
-};
+SpkHeart scaffold;
 
 
 static void initCoreClasses(void) {
@@ -258,7 +253,10 @@ static void initCoreClasses(void) {
     Module = (SpkBehavior *)SpkClass_EmptyFromTemplate(&Spk_ClassModuleTmpl, Object, Metaclass, 0);
     
     Heart = (SpkBehavior *)SpkObject_New(Behavior);
-    SpkBehavior_InitFromTemplate(Heart, &Spk_ModuleHeartTmpl, Module, 0);
+    Spk_ModulemoduleTmpl.moduleClass.thisClass.instVarOffset = offsetof(SpkHeartSubclass, variables);
+    SpkModule_InitFromTemplate(Heart, &Spk_ModulemoduleTmpl, Module);
+    Spk_heart = &scaffold;;
+    Spk_GLOBAL(uninit) = Object;
     Spk_heart = (SpkModule *)SpkModule_New(Heart);
     
     /*
@@ -426,6 +424,7 @@ int Spk_Boot(void) {
     initBuiltInClasses();
     if (Spk_InitReadOnlyData() < 0)
         return 0;
+    SpkModule_InitLiteralsFromTemplate(Spk_heart, &Spk_ModulemoduleTmpl);
     
     /* XXX: There is an order-of-init problem that prevents core
        classes from defining operators.  As a work-around, simply

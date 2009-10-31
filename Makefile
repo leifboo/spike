@@ -51,7 +51,7 @@ spike-1: spike-1.o $(obj)
 xcspk: xcspk.o $(boot_obj)
 	$(CC) -o $@ xcspk.o $(boot_obj)
 
-xgenerated.c: xcspk
+xgenerated.c: xcspk $(spk)
 	./xcspk $(spk)
 
 cspk: cspk.o $(boot_obj)
@@ -68,4 +68,4 @@ lemon: lemon.c
 
 
 clean:
-	rm -f spike-1 xcspk cspk lemon $(obj) gram.c gram.h gram.out lexer.c xgenerated.c
+	rm -f spike-1 xcspk cspk lemon $(obj) spike-1.o xcspk.o cspk.o gram.c gram.h gram.out lexer.c xgenerated.c

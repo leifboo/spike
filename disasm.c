@@ -3,6 +3,7 @@
 
 #include "behavior.h"
 #include "cgen.h"
+#include "heart.h"
 #include "host.h"
 #include "interp.h"
 #include "module.h"
@@ -966,6 +967,84 @@ static void genCCodeClassTemplate(SpkBehavior *aClass,
             );
 }
 
+static void genCCodeLiteralTable(SpkModule *module,
+                                 Level *level, void *closure)
+{
+    FILE *out = (FILE *)closure;
+    size_t i;
+    SpkUnknown *literal;
+    SpkBehavior *klass;
+    
+    fprintf(out, "static SpkLiteralTmpl ");
+    nest(level, out);
+    fprintf(out, "literals[] = {\n");
+    for (i = 0; i < module->literalCount; ++i) {
+        literal = module->literals[i];
+        fprintf(out, "    { ");
+        /* XXX: It would be nice if there separate tables -- separate
+           "data segments" -- for each type of literal. */
+        klass = ((SpkObject *)literal)->klass;
+        if (klass == Spk_CLASS(Symbol)) {
+            fprintf(out, "Spk_LITERAL_SYMBOL, 0, 0.0, \"%s\"", SpkHost_SymbolAsCString(literal));
+        } else if (klass == Spk_CLASS(Integer)) {
+            fprintf(out, "Spk_LITERAL_INTEGER, %ld, 0.0, 0", SpkHost_IntegerAsCLong(literal));
+        } else if (klass == Spk_CLASS(Float)) {
+            fprintf(out, "Spk_LITERAL_FLOAT, 0, %g, 0", SpkHost_FloatAsCDouble(literal));
+        } else if (klass == Spk_CLASS(Char)) {
+            fprintf(out, "Spk_LITERAL_CHAR, '%c', 0.0, 0", SpkHost_CharAsCChar(literal));
+        } else if (klass == Spk_CLASS(String)) {
+            fprintf(out, "Spk_LITERAL_STRING, 0, 0.0, \"%s\"", SpkHost_StringAsCString(literal));
+        } else {
+            /* cause a compilation error */
+            fprintf(out, "unknownClassOfLiteral");
+        }
+        fprintf(out, " },\n");
+    }
+    fprintf(out, "    { 0 }\n};\n\n");
+}
+
+static void genCCodeModuleTemplate(SpkModule *module,
+                                   Level *level, void *closure)
+{
+    FILE *out = (FILE *)closure;
+    
+    fprintf(out,
+            "SpkModuleTmpl Spk_Module%sTmpl = {\n"
+            "    {\n"
+            /* there is no class variable */
+            /*"        Spk_HEART_CLASS_TMPL(%s, Module), {\n",*/
+            "        \"%s\", 0, offsetof(SpkHeart, Module), {\n",
+            level->name, level->name);
+    fprintf(out,
+            "            /*accessors*/ 0,\n"
+            "            ");
+    nest(level, out);
+    fprintf(out, "rv_methods,\n"
+            "            ");
+    nest(level, out);
+    fprintf(out, "lv_methods,\n"
+            "            /*instVarOffset*/ 0,\n"
+            "            /*itemSize*/ 0,\n"
+            "            /*zero*/ 0,\n"
+            "            /*dealloc*/ 0,\n"
+            "            /*traverse*/ 0,\n"
+            "            /*instVarCount*/ %lu\n"
+            "        }, /*meta*/ {\n"
+            "            /*accessors*/ 0,\n"
+            "            /*methods*/ 0,\n"
+            "            /*lvalueMethods*/ 0\n"
+            "        }\n"
+            "    },\n"
+            "    /*literalCount*/ %lu,\n"
+            "    ",
+            (unsigned long)module->base.klass->instVarCount,
+            (unsigned long)module->literalCount);
+    nest(level, out);
+    fprintf(out,
+            "literals\n"
+            "};\n\n");
+}
+
 
 static Visitor cCodeGenOpcodes = {
     0,
@@ -980,7 +1059,7 @@ static Visitor cCodeGenOpcodes = {
     0
 };
 
-static Visitor cCodeGenClassTemplates = {
+static Visitor cCodeGenTemplates = {
     0,
     &genCCodeForMethodTableEntry,
     &genCCodePreMethodNamespace,
@@ -989,8 +1068,8 @@ static Visitor cCodeGenClassTemplates = {
     0,
     0,
     &genCCodeClassTemplate,
-    0,
-    0
+    &genCCodeLiteralTable,
+    &genCCodeModuleTemplate
 };
 
 
@@ -1017,5 +1096,5 @@ void SpkDisassembler_DisassembleModuleAsCCode(SpkModule *module, FILE *out) {
             (int)(strlen(timestamp) - 1), /* strip newline */
             timestamp);
     traverseModule(module, &cCodeGenOpcodes, (void *)out);
-    traverseModule(module, &cCodeGenClassTemplates, (void *)out);
+    traverseModule(module, &cCodeGenTemplates, (void *)out);
 }

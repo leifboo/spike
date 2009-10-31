@@ -2,6 +2,7 @@
 #include "boot.h"
 #include "compiler.h"
 #include "disasm.h"
+#include "module.h"
 #include "scheck.h"
 
 #include "float.h"
@@ -24,6 +25,8 @@ SpkClassBootRec Spk_classBootRec[] = {
     0
 };
 
+
+SpkModuleTmpl Spk_ModulemoduleTmpl;
 
 struct SpkModule *Spk_heart;
 

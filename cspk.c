@@ -33,6 +33,8 @@ SpkClassBootRec Spk_classBootRec[] = {
 };
 
 
+SpkModuleTmpl Spk_ModulemoduleTmpl;
+
 struct SpkModule *Spk_heart;
 
 
