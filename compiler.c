@@ -22,13 +22,13 @@ static SpkUnknown *defaultNotifier(void) {
 }
 
 
-static SpkModule *compileTree(SpkStmt **pTree, /* destroys reference */
-                              SpkSymbolTable *st,
-                              SpkUnknown *notifier)
+static SpkModuleTmpl *compileTree(SpkStmt **pTree, /* destroys reference */
+                                  SpkSymbolTable *st,
+                                  SpkUnknown *notifier)
 {
     SpkStmt *tree;
     SpkUnknown *tmp = 0;
-    SpkModule *module = 0;
+    SpkModuleTmpl *moduleTmpl = 0;
     
     tree = SpkParser_NewModuleDef(*pTree);
     if (!tree) {
@@ -46,12 +46,12 @@ static SpkModule *compileTree(SpkStmt **pTree, /* destroys reference */
     if (!tmp)
         goto unwind;
     
-    module = SpkCodeGen_GenerateCode(tree);
+    moduleTmpl = SpkCodeGen_GenerateCode(tree);
     
     Spk_DECREF(tmp);
     Spk_DECREF(tree);
     
-    return module;
+    return moduleTmpl;
     
  unwind:
     Spk_XDECREF(tmp);
@@ -60,11 +60,11 @@ static SpkModule *compileTree(SpkStmt **pTree, /* destroys reference */
 }
 
 
-struct SpkModule *SpkCompiler_CompileFileStream(FILE *stream) {
+struct SpkModuleTmpl *SpkCompiler_CompileFileStream(FILE *stream) {
     SpkUnknown *notifier = 0;
     SpkSymbolTable *st = 0;
     SpkStmt *tree = 0;
-    SpkModule *module = 0;
+    SpkModuleTmpl *moduleTmpl = 0;
     
     notifier = defaultNotifier();
     if (!notifier)
@@ -78,12 +78,12 @@ struct SpkModule *SpkCompiler_CompileFileStream(FILE *stream) {
     if (!tree)
         goto unwind;
     
-    module = compileTree(&tree, st, notifier);
+    moduleTmpl = compileTree(&tree, st, notifier);
     
     Spk_DECREF(notifier);
     Spk_DECREF(st);
     
-    return module;
+    return moduleTmpl;
     
  unwind:
     Spk_XDECREF(notifier);
@@ -92,13 +92,13 @@ struct SpkModule *SpkCompiler_CompileFileStream(FILE *stream) {
 }
 
 
-SpkModule *SpkCompiler_CompileFile(const char *pathname) {
+SpkModuleTmpl *SpkCompiler_CompileFile(const char *pathname) {
     FILE *stream = 0;
     SpkUnknown *notifier = 0;
     SpkSymbolTable *st = 0;
     SpkStmt *tree = 0;
     SpkUnknown *tmp = 0;
-    SpkModule *module = 0;
+    SpkModuleTmpl *moduleTmpl = 0;
     
     stream = fopen(pathname, "r");
     if (!stream) {
@@ -122,14 +122,14 @@ SpkModule *SpkCompiler_CompileFile(const char *pathname) {
     tmp = SpkHost_StringFromCString(pathname);
     SpkParser_Source(&tree, tmp);
     
-    module = compileTree(&tree, st, notifier);
+    moduleTmpl = compileTree(&tree, st, notifier);
     
     fclose(stream);
     Spk_DECREF(notifier);
     Spk_DECREF(st);
     Spk_DECREF(tmp);
     
-    return module;
+    return moduleTmpl;
     
  unwind:
     if (stream)
@@ -141,11 +141,11 @@ SpkModule *SpkCompiler_CompileFile(const char *pathname) {
 }
 
 
-SpkModule *SpkCompiler_CompileString(const char *string) {
+SpkModuleTmpl *SpkCompiler_CompileString(const char *string) {
     SpkUnknown *notifier = 0;
     SpkSymbolTable *st = 0;
     SpkStmt *tree = 0;
-    SpkModule *module = 0;
+    SpkModuleTmpl *moduleTmpl = 0;
     
     notifier = defaultNotifier();
     if (!notifier)
@@ -159,12 +159,12 @@ SpkModule *SpkCompiler_CompileString(const char *string) {
     if (!tree)
         goto unwind;
     
-    module = compileTree(&tree, st, notifier);
+    moduleTmpl = compileTree(&tree, st, notifier);
     
     Spk_DECREF(notifier);
     Spk_DECREF(st);
     
-    return module;
+    return moduleTmpl;
     
  unwind:
     Spk_XDECREF(notifier);

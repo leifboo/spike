@@ -72,12 +72,6 @@ void SpkBehavior_Init(SpkBehavior *self, SpkBehavior *superclass, SpkModule *mod
     self->dealloc = superclass->dealloc;
     self->traverse = superclass->traverse;
     
-    /* temporary */
-    self->next = 0;
-    self->nextInScope = 0;
-    self->nestedClassList.first = 0;
-    self->nestedClassList.last = 0;
-    
     /* memory layout of instances */
     self->instVarOffset = superclass->instVarOffset;
     self->instVarBaseIndex = superclass->instVarBaseIndex + superclass->instVarCount;
@@ -121,6 +115,17 @@ static SpkMethod *methodFromTemplate(SpkMethodTmpl *methodTmpl) {
                methodTmpl->bytecode,
                methodTmpl->bytecodeSize);
         method->nativeCode = methodTmpl->nativeCode;
+        
+        method->debug.source = methodTmpl->debug.source;
+        Spk_XINCREF(method->debug.source);
+        method->debug.lineCodeTally = methodTmpl->debug.lineCodeTally;
+        if (methodTmpl->debug.lineCodes) {
+            method->debug.lineCodes
+                = (SpkOpcode *)malloc(method->debug.lineCodeTally * sizeof(SpkOpcode));
+            memcpy(method->debug.lineCodes,
+                   methodTmpl->debug.lineCodes,
+                   method->debug.lineCodeTally);
+        }
     } else {
         method = Spk_NewNativeMethod(methodTmpl->nativeFlags, methodTmpl->nativeCode);
     }
@@ -133,15 +138,15 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl
         SpkAccessorTmpl *accessorTmpl;
         
         for (accessorTmpl = tmpl->accessors; accessorTmpl->name; ++accessorTmpl) {
-            SpkUnknown *messageSelector;
+            SpkUnknown *selector;
             SpkMethod *method;
             
-            messageSelector = SpkHost_SymbolFromCString(accessorTmpl->name);
+            selector = SpkHost_SymbolFromCString(accessorTmpl->name);
             if (accessorTmpl->flags & SpkAccessor_READ) {
                 method = SpkCodeGen_NewNativeAccessor(SpkAccessor_READ,
                                                       accessorTmpl->type,
                                                       accessorTmpl->offset);
-                SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_RVALUE, messageSelector, method);
+                SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_RVALUE, selector, method);
                 Spk_DECREF(method);
             }
             
@@ -149,11 +154,11 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl
                 method = SpkCodeGen_NewNativeAccessor(SpkAccessor_WRITE,
                                                       accessorTmpl->type,
                                                       accessorTmpl->offset);
-                SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_LVALUE, messageSelector, method);
+                SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_LVALUE, selector, method);
                 Spk_DECREF(method);
             }
             
-            Spk_DECREF(messageSelector);
+            Spk_DECREF(selector);
         }
     }
     
@@ -161,37 +166,53 @@ void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl
         SpkMethodTmpl *methodTmpl;
         
         for (methodTmpl = tmpl->methods; methodTmpl->name; ++methodTmpl) {
-            SpkUnknown *messageSelector;
+            SpkUnknown *selector;
             SpkMethod *method;
             
-            messageSelector = Spk_ParseSelector(methodTmpl->name);
+            selector = Spk_ParseSelector(methodTmpl->name);
             method = methodFromTemplate(methodTmpl);
-            SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_RVALUE, messageSelector, method);
+            SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_RVALUE, selector, method);
             Spk_DECREF(method);
-            Spk_DECREF(messageSelector);
+            Spk_DECREF(selector);
         }
     }
     if (tmpl->lvalueMethods) {
         SpkMethodTmpl *methodTmpl;
         
         for (methodTmpl = tmpl->lvalueMethods; methodTmpl->name; ++methodTmpl) {
-            SpkUnknown *messageSelector;
+            SpkUnknown *selector;
             SpkMethod *method;
             
-            messageSelector = Spk_ParseSelector(methodTmpl->name);
+            selector = Spk_ParseSelector(methodTmpl->name);
             method = methodFromTemplate(methodTmpl);
-            SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_LVALUE, messageSelector, method);
+            SpkBehavior_InsertMethod(self, Spk_METHOD_NAMESPACE_LVALUE, selector, method);
             Spk_DECREF(method);
-            Spk_DECREF(messageSelector);
+            Spk_DECREF(selector);
+        }
+    }
+    
+    if (tmpl->methodList.first) {
+        SpkMethodTmpl *methodTmpl;
+        
+        for (methodTmpl = tmpl->methodList.first;
+             methodTmpl;
+             methodTmpl = methodTmpl->nextInScope) {
+            SpkMethod *method;
+            
+            method = methodFromTemplate(methodTmpl);
+            SpkBehavior_InsertMethod(self,
+                                     methodTmpl->ns,
+                                     methodTmpl->selector,
+                                     method);
         }
     }
 }
 
-static void maybeAccelerateMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkUnknown *messageSelector, SpkMethod *method) {
+static void maybeAccelerateMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkUnknown *selector, SpkMethod *method) {
     const char *name;
     SpkOper oper;
     
-    name = SpkHost_SelectorAsCString(messageSelector);
+    name = SpkHost_SelectorAsCString(selector);
     if (!name) {
         return;
     }
@@ -200,7 +221,7 @@ static void maybeAccelerateMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkU
         switch (ns) {
         case Spk_METHOD_NAMESPACE_RVALUE:
             for (oper = 0; oper < Spk_NUM_CALL_OPER; ++oper) {
-                if (messageSelector == *Spk_operCallSelectors[oper].selector) {
+                if (selector == *Spk_operCallSelectors[oper].selector) {
                     Spk_INCREF(method);
                     Spk_XDECREF(self->operCallTable[oper]);
                     self->operCallTable[oper] = method;
@@ -209,7 +230,7 @@ static void maybeAccelerateMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkU
             }
             if (oper >= Spk_NUM_CALL_OPER) {
                 for (oper = 0; oper < Spk_NUM_OPER; ++oper) {
-                    if (messageSelector == *Spk_operSelectors[oper].selector) {
+                    if (selector == *Spk_operSelectors[oper].selector) {
                         Spk_INCREF(method);
                         Spk_XDECREF(self->operTable[oper]);
                         self->operTable[oper] = method;
@@ -219,11 +240,11 @@ static void maybeAccelerateMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkU
             }
             break;
         case Spk_METHOD_NAMESPACE_LVALUE:
-            if (messageSelector == *Spk_operSelectors[Spk_OPER_IND].selector) {
+            if (selector == *Spk_operSelectors[Spk_OPER_IND].selector) {
                 Spk_INCREF(method);
                 Spk_XDECREF(self->assignInd);
                 self->assignInd = method;
-            } else if (messageSelector == *Spk_operCallSelectors[Spk_OPER_INDEX].selector) {
+            } else if (selector == *Spk_operCallSelectors[Spk_OPER_INDEX].selector) {
                 Spk_INCREF(method);
                 Spk_XDECREF(self->assignIndex);
                 self->assignIndex = method;
@@ -233,15 +254,15 @@ static void maybeAccelerateMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkU
     }
 }
 
-void SpkBehavior_InsertMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkUnknown *messageSelector, SpkMethod *method) {
-    SpkHost_DefineSymbol(self->methodDict[ns], messageSelector, (SpkUnknown *)method);
-    maybeAccelerateMethod(self, ns, messageSelector, method);
+void SpkBehavior_InsertMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkUnknown *selector, SpkMethod *method) {
+    SpkHost_DefineSymbol(self->methodDict[ns], selector, (SpkUnknown *)method);
+    maybeAccelerateMethod(self, ns, selector, method);
 }
 
-SpkMethod *SpkBehavior_LookupMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkUnknown *messageSelector) {
+SpkMethod *SpkBehavior_LookupMethod(SpkBehavior *self, SpkMethodNamespace ns, SpkUnknown *selector) {
     SpkUnknown *value;
     
-    value = SpkHost_SymbolValue(self->methodDict[ns], messageSelector);
+    value = SpkHost_SymbolValue(self->methodDict[ns], selector);
     if (value) {
         return Spk_CAST(Method, value);
     }
@@ -250,12 +271,12 @@ SpkMethod *SpkBehavior_LookupMethod(SpkBehavior *self, SpkMethodNamespace ns, Sp
 
 SpkUnknown *SpkBehavior_FindSelectorOfMethod(SpkBehavior *self, SpkMethod *method) {
     SpkMethodNamespace ns;
-    SpkUnknown *messageSelector;
+    SpkUnknown *selector;
     
     for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
-        messageSelector = SpkHost_FindSymbol(self->methodDict[ns], (SpkUnknown *)method);
-        if (messageSelector) {
-            return messageSelector;
+        selector = SpkHost_FindSymbol(self->methodDict[ns], (SpkUnknown *)method);
+        if (selector) {
+            return selector;
         }
     }
     return 0;

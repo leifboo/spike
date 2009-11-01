@@ -110,6 +110,7 @@ struct SpkExpr {
             unsigned int index;
             int weak;
             SpkStmt *stmt;
+            void *code;
             SpkUnknown *initValue; /* XXX: Ugly? */
         } def;
     } u;

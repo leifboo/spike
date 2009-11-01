@@ -33,7 +33,13 @@ static SpkUnknown *Stmt_check(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *r
 }
 
 static SpkUnknown *Stmt_generateCode(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return (SpkUnknown *)SpkCodeGen_GenerateCode((SpkStmt *)self);
+    SpkModuleTmpl *moduleTmpl;
+    
+    moduleTmpl = SpkCodeGen_GenerateCode((SpkStmt *)self);
+    if (!moduleTmpl)
+        return 0;
+    /* We need an object, so create the class. */
+    return (SpkUnknown *)SpkModuleClass_New(moduleTmpl);
 }
 
 static SpkUnknown *Stmt_source(SpkUnknown *self, SpkUnknown *sourcePathname, SpkUnknown *arg1) {

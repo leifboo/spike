@@ -26,14 +26,14 @@ SpkClassBootRec Spk_classBootRec[] = {
 };
 
 
-SpkModuleTmpl Spk_ModulemoduleTmpl = { { "heart" } };;
+SpkModuleTmpl Spk_ModulemoduleTmpl = { { "heart" } };
 
 struct SpkModule *Spk_heart;
 
 
 int main(int argc, char **argv) {
     int i;
-    struct SpkModule *module;
+    struct SpkModuleTmpl *module;
     const char *outputFilename = "xgenerated.c";
     FILE *out;
     

@@ -62,15 +62,38 @@ typedef struct SpkAccessorTmpl {
     unsigned int flags;
 } SpkAccessorTmpl;
 
+typedef struct SpkMethodTmplList {
+    struct SpkMethodTmpl *first;
+    struct SpkMethodTmpl *last;
+} SpkMethodTmplList;
+
+typedef struct SpkClassTmplList {
+    struct SpkClassTmpl *first;
+    struct SpkClassTmpl *last;
+} SpkClassTmplList;
+
 typedef struct SpkMethodTmpl {
+    /* C code */
     const char *name;
     SpkNativeCodeFlags nativeFlags;
     SpkNativeCode nativeCode;
-    SpkOpcode *bytecode;
+    /* bytecode */
     size_t bytecodeSize;
+    SpkOpcode *bytecode;
+    struct SpkMethodTmpl *nextInScope;
+    SpkMethodNamespace ns; /* XXX: suspect */
+    SpkUnknown *selector;
+    struct {
+        SpkUnknown *source;
+        size_t lineCodeTally;
+        SpkOpcode *lineCodes;
+    } debug;
+    SpkClassTmplList nestedClassList;
+    SpkMethodTmplList nestedMethodList;
 } SpkMethodTmpl;
 
 typedef struct SpkBehaviorTmpl {
+    /* C code */
     SpkAccessorTmpl *accessors;
     SpkMethodTmpl *methods;
     SpkMethodTmpl *lvalueMethods;
@@ -79,7 +102,10 @@ typedef struct SpkBehaviorTmpl {
     void (*zero)(SpkObject *);
     void (*dealloc)(SpkObject *);
     SpkTraverse *traverse;
+    /* bytecode */
     size_t instVarCount;
+    SpkMethodTmplList methodList;
+    SpkClassTmplList nestedClassList;
 } SpkBehaviorTmpl;
 
 
@@ -98,14 +124,6 @@ struct SpkBehavior {
     void (*zero)(SpkObject *);
     void (*dealloc)(SpkObject *);
     SpkTraverse traverse;
-    
-    /* XXX: temporary */
-    SpkBehavior *next;
-    SpkBehavior *nextInScope;
-    struct {
-        struct SpkBehavior *first;
-        struct SpkBehavior *last;
-    } nestedClassList;
     
     /* memory layout of instances */
     size_t instVarOffset;

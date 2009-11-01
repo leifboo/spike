@@ -24,15 +24,18 @@ typedef struct SpkLiteralTmpl {
 
 
 typedef struct SpkModuleTmpl {
+    /* C code */
     SpkClassTmpl moduleClass;
     size_t literalCount;
-    SpkLiteralTmpl *literals;
+    SpkLiteralTmpl *literalTable;
+    /* bytecode */
+    SpkClassTmplList classList;
+    SpkUnknown **literals;
 } SpkModuleTmpl;
 
 
 typedef struct SpkModule {
     SpkObject base;
-    struct SpkBehavior *firstClass;
 } SpkModule;
 
 
@@ -40,6 +43,7 @@ typedef struct SpkModuleClass {
     SpkClass base;
     size_t literalCount;
     SpkUnknown **literals;
+    SpkModuleTmpl *tmpl;
 } SpkModuleClass;
 
 
@@ -51,6 +55,7 @@ extern struct SpkClassTmpl Spk_ClassModuleTmpl;
 
 
 void SpkModule_InitLiteralsFromTemplate(SpkBehavior *, SpkModuleTmpl *);
+SpkModuleClass *SpkModuleClass_New(SpkModuleTmpl *);
 
 
 #endif /* __spk_module_h__ */

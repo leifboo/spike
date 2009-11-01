@@ -37,7 +37,8 @@ interpreter(argv) {
     tree = tree.asModuleDef();
     tree.check(st, notifier);
     
-    var module = tree.generateCode();
+    var moduleClass = tree.generateCode();
+    var module = moduleClass.new();
     
     var newArgv = Array.new(argv.size - 1);
     newArgv[0] = sourcePathname;
@@ -47,6 +48,7 @@ interpreter(argv) {
     }
     
     stdout.printf("---- running %s\n", sourcePathname);
+    module._init();
     module.main(newArgv);
     
     return 0;

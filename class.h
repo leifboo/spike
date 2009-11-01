@@ -7,11 +7,18 @@
 
 
 typedef struct SpkClassTmpl {
+    /* C code */
     const char *name;
     size_t classVarOffset;
     size_t superclassVarOffset;
     SpkBehaviorTmpl thisClass;
     SpkBehaviorTmpl metaclass;
+    /* bytecode */
+    struct SpkClassTmpl *next, *nextInScope;
+    SpkUnknown *symbol;
+    size_t classVarIndex;
+    size_t superclassVarIndex;
+    SpkUnknown *superclassName; /* XXX: kludge for C bytecode gen */
 } SpkClassTmpl;
 
 

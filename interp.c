@@ -147,11 +147,6 @@ SpkClassTmpl Spk_ClassMessageTmpl = {
 static void Method_zero(SpkObject *_self) {
     SpkMethod *self = (SpkMethod *)_self;
     (*Spk_CLASS(Method)->superclass->zero)(_self);
-    self->nextInScope = 0;
-    self->nestedClassList.first = 0;
-    self->nestedClassList.last = 0;
-    self->nestedMethodList.first = 0;
-    self->nestedMethodList.last = 0;
     self->debug.source = 0;
     self->debug.lineCodeTally = 0;
     self->debug.lineCodes = 0;
@@ -867,7 +862,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
 
     /* message sending */
     SpkMethodNamespace ns;
-    SpkUnknown *messageSelector = 0; /* ref counted */
+    SpkUnknown *selector = 0; /* ref counted */
     size_t argumentCount = 0, varArg = 0, variadic = 0, fixedArgumentCount = 0;
     unsigned int oper;
     SpkOpcode *oldIP;
@@ -887,8 +882,13 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
     stackPointer = self->activeContext->stackp;
     framePointer = homeContext->u.m.framep;
     instVarPointer = INSTANCE_VARS(receiver, methodClass);
-    globalPointer = SpkModule_VARIABLES(methodClass->module);
-    literalPointer = SpkModule_LITERALS(methodClass->module);
+    if (methodClass->module) {
+        globalPointer = SpkModule_VARIABLES(methodClass->module);
+        literalPointer = SpkModule_LITERALS(methodClass->module);
+    } else {
+        globalPointer = 0;
+        literalPointer = 0;
+    }
     assert(self->newContext == 0);
     
     leafContext = self->scheduler->activeFiber->leafContext;
@@ -1082,8 +1082,8 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             }
             oldIP = instructionPointer - 2;
             ns = Spk_METHOD_NAMESPACE_RVALUE;
-            messageSelector = *Spk_operSelectors[oper].selector;
-            Spk_INCREF(messageSelector);
+            selector = *Spk_operSelectors[oper].selector;
+            Spk_INCREF(selector);
             goto createActualMessage;
         case Spk_OPCODE_CALL:
             oldIP = instructionPointer - 1;
@@ -1123,8 +1123,8 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 }
             }
             ns = Spk_METHOD_NAMESPACE_RVALUE;
-            messageSelector = *Spk_operCallSelectors[oper].selector;
-            Spk_INCREF(messageSelector);
+            selector = *Spk_operCallSelectors[oper].selector;
+            Spk_INCREF(selector);
             goto createActualMessage;
             
             /*** send opcodes -- "*p = v" ***/
@@ -1146,8 +1146,8 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             }
             oldIP = instructionPointer - 1;
             ns = Spk_METHOD_NAMESPACE_LVALUE;
-            messageSelector = *Spk_operSelectors[Spk_OPER_IND].selector;
-            Spk_INCREF(messageSelector);
+            selector = *Spk_operSelectors[Spk_OPER_IND].selector;
+            Spk_INCREF(selector);
             goto createActualMessage;
             
             /*** send opcodes -- "a[i] = v" ***/
@@ -1185,8 +1185,8 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 }
             }
             ns = Spk_METHOD_NAMESPACE_LVALUE;
-            messageSelector = *Spk_operCallSelectors[Spk_OPER_INDEX].selector;
-            Spk_INCREF(messageSelector);
+            selector = *Spk_operCallSelectors[Spk_OPER_INDEX].selector;
+            Spk_INCREF(selector);
             goto createActualMessage;
 
             /*** send opcodes -- "obj.attr" ***/
@@ -1203,8 +1203,8 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             receiver = stackPointer[argumentCount];
             methodClass = GET_CLASS(receiver);
             DECODE_UINT(index);
-            messageSelector = literalPointer[index];
-            Spk_INCREF(messageSelector);
+            selector = literalPointer[index];
+            Spk_INCREF(selector);
             goto lookupMethodInClass;
         case Spk_OPCODE_SET_ATTR_SUPER:
             ns = Spk_METHOD_NAMESPACE_LVALUE;
@@ -1218,8 +1218,8 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             oldIP = instructionPointer - 1;
             methodClass = methodClass->superclass;
             DECODE_UINT(index);
-            messageSelector = literalPointer[index];
-            Spk_INCREF(messageSelector);
+            selector = literalPointer[index];
+            Spk_INCREF(selector);
             goto lookupMethodInClass;
             
             /*** send opcodes -- "obj.*attr" ***/
@@ -1235,8 +1235,8 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             receiver = stackPointer[argumentCount + 1];
             methodClass = GET_CLASS(receiver);
  perform:
-            messageSelector = stackPointer[argumentCount]; /* steal reference */
-            if (0 /*!SpkHost_IsSelector(messageSelector)*/ ) {
+            selector = stackPointer[argumentCount]; /* steal reference */
+            if (0 /*!SpkHost_IsSelector(selector)*/ ) {
                 --instructionPointer;
                 TRAP(Spk_mustBeSymbol, 0);
             }
@@ -1267,8 +1267,8 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             methodClass = GET_CLASS(receiver);
  send:
             ns = Spk_METHOD_NAMESPACE_RVALUE;
-            messageSelector = literalPointer[index];
-            Spk_INCREF(messageSelector);
+            selector = literalPointer[index];
+            Spk_INCREF(selector);
             varArg = 0;
             goto lookupMethodInClass;
         case Spk_OPCODE_SEND_MESSAGE_SUPER:
@@ -1290,8 +1290,8 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             }
             ns = (SpkMethodNamespace)SpkHost_IntegerAsCLong(namespaceObj);
             assert(0 <= ns && ns < Spk_NUM_METHOD_NAMESPACES);
-            messageSelector = stackPointer[1]; /* steal reference */
-            if (0 /*!SpkHost_IsSelector(messageSelector)*/ ) {
+            selector = stackPointer[1]; /* steal reference */
+            if (0 /*!SpkHost_IsSelector(selector)*/ ) {
                 --instructionPointer;
                 TRAP(Spk_mustBeSymbol, 0);
             }
@@ -1308,25 +1308,30 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
 
  lookupMethodInClass:
             for (mc = methodClass; mc; mc = mc->superclass) {
-                method = SpkBehavior_LookupMethod(mc, ns, messageSelector);
+                method = SpkBehavior_LookupMethod(mc, ns, selector);
                 if (method) {
                     Spk_DECREF(method);
                     methodClass = mc;
-                    Spk_DECREF(messageSelector);
-                    messageSelector = 0;
+                    Spk_DECREF(selector);
+                    selector = 0;
  callNewMethod:
                     /* call */
                     self->activeContext->pc = instructionPointer;
                     instructionPointer = SpkMethod_OPCODES(method);
  jump:
                     instVarPointer = INSTANCE_VARS(receiver, methodClass);
-                    globalPointer = SpkModule_VARIABLES(methodClass->module);
-                    literalPointer = SpkModule_LITERALS(methodClass->module);
+                    if (methodClass->module) {
+                        globalPointer = SpkModule_VARIABLES(methodClass->module);
+                        literalPointer = SpkModule_LITERALS(methodClass->module);
+                    } else {
+                        globalPointer = 0;
+                        literalPointer = 0;
+                    }
                     goto loop;
                 }
             }
             
-            if (messageSelector == Spk_doesNotUnderstand) {
+            if (selector == Spk_doesNotUnderstand) {
                 /* recursive doesNotUnderstand: */
                 instructionPointer = oldIP;
                 TRAP(Spk_recursiveDoesNotUnderstand, STACK_TOP());
@@ -1347,7 +1352,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 }
                 message = SpkMessage_New();
                 message->ns = ns;
-                message->selector = messageSelector; /* steal reference */
+                message->selector = selector; /* steal reference */
                 message->arguments
                     = SpkHost_GetArgs(
                         stackPointer + varArg, argumentCount,
@@ -1361,8 +1366,8 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 ns = Spk_METHOD_NAMESPACE_RVALUE;
             } while (0);
             
-            messageSelector = Spk_doesNotUnderstand;
-            Spk_INCREF(messageSelector);
+            selector = Spk_doesNotUnderstand;
+            Spk_INCREF(selector);
             goto lookupMethodInClass;
             
 #ifdef MALTIPY
@@ -1387,8 +1392,13 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             method = homeContext->u.m.method;
             methodClass = homeContext->u.m.methodClass;
             instVarPointer = INSTANCE_VARS(receiver, methodClass);
-            globalPointer = SpkModule_VARIABLES(methodClass->module);
-            literalPointer = SpkModule_LITERALS(methodClass->module);
+            if (methodClass->module) {
+                globalPointer = SpkModule_VARIABLES(methodClass->module);
+                literalPointer = SpkModule_LITERALS(methodClass->module);
+            } else {
+                globalPointer = 0;
+                literalPointer = 0;
+            }
             if (self->activeContext->mark != &mark) {
                 /* suspend */
                 self->activeContext->pc = instructionPointer;
@@ -2084,11 +2094,11 @@ static void runtimeError(SpkInterpreter *self, SpkUnknown *selector, SpkUnknown 
     if (argument) {
         SpkMessage *message = Spk_CAST(Message, argument);
         if (message) {
-            SpkUnknown *messageSelector = PyObject_Str(message->selector);
+            SpkUnknown *selector = PyObject_Str(message->selector);
             errorString = PyString_FromFormat("%s %s",
                                               SpkHost_SymbolAsCString(selector),
-                                              SpkHost_SymbolAsCString(messageSelector));
-            Spk_DECREF(messageSelector);
+                                              SpkHost_SymbolAsCString(selector));
+            Spk_DECREF(selector);
         } else {
             SpkUnknown *argStr = PyObject_Str(argument);
             errorString = PyString_FromFormat("%s %s",

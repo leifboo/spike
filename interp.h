@@ -107,15 +107,6 @@ enum {
 
 struct SpkMethod {
     SpkVariableObject base;
-    SpkMethod *nextInScope;
-    struct {
-        struct SpkBehavior *first;
-        struct SpkBehavior *last;
-    } nestedClassList;
-    struct {
-        struct SpkMethod *first;
-        struct SpkMethod *last;
-    } nestedMethodList;
     struct {
         SpkUnknown *source;
         size_t lineCodeTally;

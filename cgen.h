@@ -7,11 +7,11 @@
 
 
 struct SpkMethod;
-struct SpkModule;
+struct SpkModuleTmpl;
 struct SpkStmt;
 
 
-struct SpkModule *SpkCodeGen_GenerateCode(struct SpkStmt *tree);
+struct SpkModuleTmpl *SpkCodeGen_GenerateCode(struct SpkStmt *tree);
 struct SpkMethod *SpkCodeGen_NewNativeAccessor(unsigned int kind,
                                                unsigned int type,
                                                size_t offset);

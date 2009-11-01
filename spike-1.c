@@ -42,10 +42,10 @@ SpkClassBootRec Spk_classBootRec[] = {
 SpkModule *Spk_heart;
 
 
-int Spk_Main(int argc, char **argv) {
+static int Spk_Main(int argc, char **argv) {
     int i, showHelp, error, disassemble;
     char *arg, *sourceFilename;
-    SpkModule *module;
+    SpkModuleTmpl *moduleTmpl; SpkModuleClass *moduleClass; SpkObject *module;
     SpkUnknown *result; SpkInteger *resultInt;
     SpkUnknown *entry, *tmp;
     SpkArray *argvObj, *args;
@@ -108,18 +108,29 @@ int Spk_Main(int argc, char **argv) {
     if (!Spk_Boot())
         return 1;
     
-    module = SpkCompiler_CompileFile(sourceFilename);
-    if (!module)
+    moduleTmpl = SpkCompiler_CompileFile(sourceFilename);
+    if (!moduleTmpl)
         return 1;
     
     switch (disassemble) {
     case 1:
-        SpkDisassembler_DisassembleModule(module, stdout);
+        SpkDisassembler_DisassembleModule(moduleTmpl, stdout);
         return 0;
     case 2:
-        SpkDisassembler_DisassembleModuleAsCCode(module, stdout);
+        SpkDisassembler_DisassembleModuleAsCCode(moduleTmpl, stdout);
         return 0;
     }
+    
+    /* Create and initialize the module. */
+    moduleClass = SpkModuleClass_New(moduleTmpl);
+    module = SpkObject_New((SpkBehavior *)moduleClass);
+    if (!module) {
+        return 1;
+    }
+    tmp = Spk_CallAttr(Spk_GLOBAL(theInterpreter), (SpkUnknown *)module, Spk__init, 0);
+    if (!tmp)
+        return 0;
+    Spk_DECREF(tmp);
     
     argvObj = SpkArray_New(argc - 1);
     for (i = 1; i < argc; ++i) {

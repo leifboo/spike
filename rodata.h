@@ -41,6 +41,8 @@ extern SpkUnknown *Spk___str__;
 extern SpkUnknown *Spk___sub__;
 extern SpkUnknown *Spk___succ__;
 extern SpkUnknown *Spk__import;
+extern SpkUnknown *Spk__init;
+extern SpkUnknown *Spk__predef;
 extern SpkUnknown *Spk_badExpr;
 extern SpkUnknown *Spk_blockCopy;
 extern SpkUnknown *Spk_cannotReenterBlock;

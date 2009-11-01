@@ -182,10 +182,6 @@ static void initCoreClasses(void) {
     Object->zero = Spk_ClassObjectTmpl.thisClass.zero;
     Object->dealloc = Spk_ClassObjectTmpl.thisClass.dealloc;
     Object->traverse = *Spk_ClassObjectTmpl.thisClass.traverse;
-    Object->next = 0;
-    Object->nextInScope = 0;
-    Object->nestedClassList.first = 0;
-    Object->nestedClassList.last = 0;
     Object->instVarOffset = Spk_ClassObjectTmpl.thisClass.instVarOffset;
     Object->instVarBaseIndex = 0;
     Object->instVarCount = 0;

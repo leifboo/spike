@@ -6,12 +6,12 @@
 #include <stdio.h>
 
 
-struct SpkModule;
+struct SpkModuleTmpl;
 
 
-struct SpkModule *SpkCompiler_CompileFileStream(FILE *);
-struct SpkModule *SpkCompiler_CompileFile(const char *);
-struct SpkModule *SpkCompiler_CompileString(const char *);
+struct SpkModuleTmpl *SpkCompiler_CompileFileStream(FILE *);
+struct SpkModuleTmpl *SpkCompiler_CompileFile(const char *);
+struct SpkModuleTmpl *SpkCompiler_CompileString(const char *);
 
 
 #endif /* __spk_compiler_h__ */

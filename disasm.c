@@ -1,11 +1,9 @@
 
 #include "disasm.h"
 
-#include "behavior.h"
 #include "cgen.h"
 #include "heart.h"
 #include "host.h"
-#include "interp.h"
 #include "module.h"
 #include "rodata.h"
 
@@ -49,18 +47,18 @@ typedef struct Level {
 } Level;
 
 typedef struct Visitor {
-    void (*preMethod)(SpkMethod *, SpkUnknown **, Level *,
+    void (*preMethod)(SpkMethodTmpl *, SpkUnknown **, Level *,
                       void *);
-    void (*postMethod)(SpkMethod *, SpkUnknown **, Level *,
+    void (*postMethod)(SpkMethodTmpl *, SpkUnknown **, Level *,
                        void *);
     void (*preMethodNamespace)(SpkMethodNamespace, Level *, void *);
     void (*postMethodNamespace)(SpkMethodNamespace, Level *, void *);
-    void (*preClassBody)(SpkBehavior *, Level *, void *);
-    void (*postClassBody)(SpkBehavior *, Level *, void *);
-    void (*preClass)(SpkBehavior *, Level *, void *);
-    void (*postClass)(SpkBehavior *, Level *, void *);
-    void (*preModule)(SpkModule *, Level *, void *);
-    void (*postModule)(SpkModule *, Level *, void *);
+    void (*preClassBody)(SpkBehaviorTmpl *, Level *, void *);
+    void (*postClassBody)(SpkBehaviorTmpl *, Level *, void *);
+    void (*preClass)(SpkClassTmpl *, Level *, void *);
+    void (*postClass)(SpkClassTmpl *, Level *, void *);
+    void (*preModule)(SpkModuleTmpl *, Level *, void *);
+    void (*postModule)(SpkModuleTmpl *, Level *, void *);
 } Visitor;
 
 
@@ -87,7 +85,7 @@ static void nest(Level *level, FILE *out) {
 /*------------------------------------------------------------------------*/
 /* disassembly */
 
-static void disassembleMethod(SpkMethod *method,
+static void disassembleMethod(SpkMethodTmpl *method,
                               SpkUnknown **literals,
                               Level *level,
                               void *closure)
@@ -100,8 +98,8 @@ static void disassembleMethod(SpkMethod *method,
     tab(level->outer, out);
     fprintf(out, "%s\n", level->name);
     
-    begin = SpkMethod_OPCODES(method);
-    end = begin + method->base.size;
+    begin = method->bytecode;
+    end = begin + method->bytecodeSize;
     instructionPointer = begin;
     
     while (instructionPointer < end) {
@@ -337,7 +335,7 @@ static void disassembleMethod(SpkMethod *method,
     fprintf(out, "\n");
 }
 
-static void disassemblePreClass(SpkBehavior *aClass,
+static void disassemblePreClass(SpkClassTmpl *aClass,
                                 Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
@@ -367,7 +365,7 @@ static void disassemblePreMethodNamespace(SpkMethodNamespace ns,
     fprintf(out, "%s\n", name);
 }
 
-static void disassemblePreClassBody(SpkBehavior *aClass,
+static void disassemblePreClassBody(SpkBehaviorTmpl *aClass,
                                     Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
@@ -375,26 +373,23 @@ static void disassemblePreClassBody(SpkBehavior *aClass,
     fprintf(out, "%s\n", level->name);
 }
 
-static void disassemblePostClass(SpkBehavior *aClass,
+static void disassemblePostClass(SpkClassTmpl *aClass,
                                  Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
     fprintf(out, "\n");
 }
 
-static void disassemblePreModule(SpkModule *module,
+static void disassemblePreModule(SpkModuleTmpl *module,
                                  Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
-    SpkModuleClass *moduleClass;
     size_t i;
     
-    moduleClass = (SpkModuleClass *)Spk_Cast(Spk_CLASS(Module)->base.klass,
-                                             (SpkUnknown *)module->base.klass);
     fprintf(out, "literal table\n");
-    for (i = 0; i < moduleClass->literalCount; ++i) {
+    for (i = 0; i < module->literalCount; ++i) {
         fprintf(out, "    %04lu: ", (unsigned long)i);
-        SpkHost_PrintObject(moduleClass->literals[i], out);
+        SpkHost_PrintObject(module->literals[i], out);
         fprintf(out, "\n");
     }
     fprintf(out, "\n");
@@ -417,26 +412,27 @@ static Visitor disassembler = {
 /*------------------------------------------------------------------------*/
 /* traversal */
 
-static void traverseClass(SpkBehavior *, Level *, Visitor *, void *);
+static void traverseClass(SpkClassTmpl *, Level *,
+                          SpkModuleTmpl *, Visitor *, void *);
 
-static void traverseMethod(SpkMethod *method,
-                           SpkUnknown **literals,
+static void traverseMethod(SpkMethodTmpl *method,
                            Level *level,
+                           SpkModuleTmpl *module,
                            Visitor *visitor,
                            void *closure)
 {
-    SpkBehavior *nestedClass;
-    SpkMethod *nestedMethod;
+    SpkClassTmpl *nestedClass;
+    SpkMethodTmpl *nestedMethod;
     Level nestedMethodLevel;
     
     if (visitor->preMethod)
-        (*visitor->preMethod)(method, literals, level, closure);
+        (*visitor->preMethod)(method, module->literals, level, closure);
     
     for (nestedClass = method->nestedClassList.first;
          nestedClass;
          nestedClass = nestedClass->nextInScope)
     {
-        traverseClass(nestedClass, level, visitor, closure);
+        traverseClass(nestedClass, level, module, visitor, closure);
     }
     
     nestedMethodLevel.outer = level;
@@ -446,24 +442,24 @@ static void traverseMethod(SpkMethod *method,
          nestedMethod;
          nestedMethod = nestedMethod->nextInScope)
     {
-        traverseMethod(nestedMethod, literals, &nestedMethodLevel,
-                       visitor, closure);
+        traverseMethod(nestedMethod, &nestedMethodLevel,
+                       module, visitor, closure);
     }
     
     if (visitor->postMethod)
-        (*visitor->postMethod)(method, literals, level, closure);
+        (*visitor->postMethod)(method, module->literals, level, closure);
 }
 
-static void traverseMethodDict(SpkUnknown *methodDict,
+static void traverseMethodList(SpkMethodTmplList *methodList,
                                SpkMethodNamespace ns,
-                               SpkUnknown **literals,
                                Level *outer,
+                               SpkModuleTmpl *module,
                                Visitor *visitor,
                                void *closure)
 {
-    SpkUnknown *selector, *methodName, *method;
-    size_t pos = 0;
+    SpkUnknown *methodName;
     Level namespaceLevel, methodLevel;
+    SpkMethodTmpl *method;
     
     namespaceLevel.outer = outer;
     namespaceLevel.name = 0;
@@ -482,16 +478,18 @@ static void traverseMethodDict(SpkUnknown *methodDict,
     
     methodLevel.outer = &namespaceLevel;
     
-    while (SpkHost_NextSymbol(methodDict, &pos, &selector, &method)) {
-        methodName = SpkHost_ObjectAsString(selector);
+    for (method = methodList->first; method; method = method->nextInScope) {
+        if (method->ns != ns)
+            continue;
         
+        methodName = SpkHost_ObjectAsString(method->selector);
         /* XXX: SpkHost_SelectorAsMangledName ? */
         methodLevel.name = SpkHost_StringAsCString(methodName);
         if (*methodLevel.name == '$')
             ++methodLevel.name;
         
-        traverseMethod((SpkMethod *)method, literals, &methodLevel,
-                       visitor, closure);
+        traverseMethod(method, &methodLevel,
+                       module, visitor, closure);
         
         Spk_DECREF(methodName);
     }
@@ -500,87 +498,79 @@ static void traverseMethodDict(SpkUnknown *methodDict,
         (*visitor->postMethodNamespace)(ns, &namespaceLevel, closure);
 }
 
-static void traverseClassBody(SpkBehavior *aClass, const char *name, Level *outer,
-                              Visitor *visitor, void *closure)
+static void traverseClassBody(SpkBehaviorTmpl *aClass, const char *name,
+                              Level *outer,
+                              SpkModuleTmpl *module, Visitor *visitor, void *closure)
 {
+    SpkClassTmpl *nestedClass;
     SpkMethodNamespace ns;
     Level level;
-    SpkModuleClass *moduleClass;
     
     level.outer = outer;
     level.name = name;
     
-    moduleClass = (SpkModuleClass *)Spk_Cast(Spk_CLASS(Module)->base.klass,
-                                             (SpkUnknown *)aClass->module->base.klass);
-    
     if (visitor->preClassBody)
         (*visitor->preClassBody)(aClass, &level, closure);
     
+    for (nestedClass = aClass->nestedClassList.first;
+         nestedClass;
+         nestedClass = nestedClass->nextInScope)
+    {
+        traverseClass(nestedClass, &level, module, visitor, closure);
+    }
+    
     for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
-        traverseMethodDict(aClass->methodDict[ns], ns,
-                           moduleClass->literals, &level,
-                           visitor, closure);
+        traverseMethodList(&aClass->methodList, ns, &level,
+                           module, visitor, closure);
     }
     
     if (visitor->postClassBody)
         (*visitor->postClassBody)(aClass, &level, closure);
 }
 
-static void traverseClass(SpkBehavior *aClass, Level *outer,
-                          Visitor *visitor, void *closure)
+static void traverseClass(SpkClassTmpl *aClass, Level *outer,
+                          SpkModuleTmpl *module, Visitor *visitor, void *closure)
 {
-    SpkBehavior *nestedClass;
     Level level;
     
     level.outer = outer;
-    level.name = SpkBehavior_NameAsCString(aClass);
+    level.name = aClass->name;
     
     if (visitor->preClass)
         (*visitor->preClass)(aClass, &level, closure);
     
-    for (nestedClass = aClass->nestedClassList.first;
-         nestedClass;
-         nestedClass = nestedClass->nextInScope)
-    {
-        traverseClass(nestedClass, &level, visitor, closure);
-    }
-    
-    traverseClassBody(aClass, "instance", &level, visitor, closure);
-    traverseClassBody(aClass->base.klass, "class", &level, visitor, closure);
+    traverseClassBody(&aClass->thisClass, "instance", &level, module, visitor, closure);
+    traverseClassBody(&aClass->metaclass, "class", &level, module, visitor, closure);
     
     if (visitor->postClass)
         (*visitor->postClass)(aClass, &level, closure);
 }
 
-static void traverseModule(SpkModule *module,
+static void traverseModule(SpkModuleTmpl *module,
                            Visitor *visitor, void *closure)
 {
-    SpkBehavior *nestedClass;
+    SpkClassTmpl *nestedClass;
     SpkMethodNamespace ns;
     Level level;
-    SpkModuleClass *moduleClass;
     
     level.outer = 0;
     level.name = "module";
     
-    moduleClass = (SpkModuleClass *)Spk_Cast(Spk_CLASS(Module)->base.klass,
-                                             (SpkUnknown *)module->base.klass);
-    
     if (visitor->preModule)
         (*visitor->preModule)(module, &level, closure);
     
-    for (nestedClass = module->base.klass->nestedClassList.first;
+    for (nestedClass = module->moduleClass.thisClass.nestedClassList.first;
          nestedClass;
          nestedClass = nestedClass->nextInScope)
     {
-        traverseClass(nestedClass, &level, visitor, closure);
+        traverseClass(nestedClass, &level, module, visitor, closure);
     }
     
     for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
-        traverseMethodDict(module->base.klass->methodDict[ns],
+        traverseMethodList(&module->moduleClass.thisClass.methodList,
                            ns,
-                           moduleClass->literals,
                            &level,
+                           module,
                            visitor,
                            closure);
     }
@@ -706,7 +696,7 @@ static const char *callOperName(SpkCallOper oper) {
     return 0;
 }
 
-static void genCCodeForMethodOpcodes(SpkMethod *method,
+static void genCCodeForMethodOpcodes(SpkMethodTmpl *method,
                                      SpkUnknown **literals,
                                      Level *level,
                                      void *closure)
@@ -723,8 +713,8 @@ static void genCCodeForMethodOpcodes(SpkMethod *method,
     nest(level, out);
     fprintf(out, "code[] = {\n");
     
-    begin = SpkMethod_OPCODES(method);
-    end = begin + method->base.size;
+    begin = method->bytecode;
+    end = begin + method->bytecodeSize;
     instructionPointer = begin;
     
     while (instructionPointer < end) {
@@ -913,18 +903,18 @@ static void genCCodePreMethodNamespace(SpkMethodNamespace ns,
     fprintf(out, "methods[] = {\n");
 }
 
-static void genCCodeForMethodTableEntry(SpkMethod *method,
+static void genCCodeForMethodTableEntry(SpkMethodTmpl *method,
                                         SpkUnknown **literals,
                                         Level *level,
                                         void *closure)
 {
     FILE *out = (FILE *)closure;
     
-    fprintf(out, "    { \"%s\", 0, 0, ", level->name);
+    fprintf(out, "    { \"%s\", 0, 0, sizeof(", level->name);
     nest(level, out);
-    fprintf(out, "code, sizeof(");
+    fprintf(out, "code), ");
     nest(level, out);
-    fprintf(out, "code) },\n");
+    fprintf(out, "code },\n");
 }
 
 static void genCCodePostMethodNamespace(SpkMethodNamespace ns,
@@ -936,7 +926,7 @@ static void genCCodePostMethodNamespace(SpkMethodNamespace ns,
     fprintf(out, "    { 0 }\n};\n\n");
 }
 
-static void genCCodeClassTemplate(SpkBehavior *aClass,
+static void genCCodeClassTemplate(SpkClassTmpl *aClass,
                                   Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
@@ -947,7 +937,7 @@ static void genCCodeClassTemplate(SpkBehavior *aClass,
     if (1) {
         /* XXX: For now, we are only interested in generating code for
            Spike itself. */
-        superclassName = SpkBehavior_NameAsCString(aClass->superclass);
+        superclassName = SpkHost_SymbolAsCString(aClass->superclassName);
         fprintf(out, "Spk_Class%sTmpl = {\n"
                 "    Spk_HEART_CLASS_TMPL(%s, %s), {\n",
                 level->name, level->name, superclassName);
@@ -978,22 +968,19 @@ static void genCCodeClassTemplate(SpkBehavior *aClass,
             );
 }
 
-static void genCCodeLiteralTable(SpkModule *module,
+static void genCCodeLiteralTable(SpkModuleTmpl *module,
                                  Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
     size_t i;
     SpkUnknown *literal;
     SpkBehavior *klass;
-    SpkModuleClass *moduleClass;
     
-    moduleClass = (SpkModuleClass *)Spk_Cast(Spk_CLASS(Module)->base.klass,
-                                             (SpkUnknown *)module->base.klass);
     fprintf(out, "static SpkLiteralTmpl ");
     nest(level, out);
     fprintf(out, "literals[] = {\n");
-    for (i = 0; i < moduleClass->literalCount; ++i) {
-        literal = moduleClass->literals[i];
+    for (i = 0; i < module->literalCount; ++i) {
+        literal = module->literals[i];
         fprintf(out, "    { ");
         /* XXX: It would be nice if there separate tables -- separate
            "data segments" -- for each type of literal. */
@@ -1008,6 +995,9 @@ static void genCCodeLiteralTable(SpkModule *module,
             fprintf(out, "Spk_LITERAL_CHAR, '%c', 0.0, 0", SpkHost_CharAsCChar(literal));
         } else if (klass == Spk_CLASS(String)) {
             fprintf(out, "Spk_LITERAL_STRING, 0, 0.0, \"%s\"", SpkHost_StringAsCString(literal));
+        } else if (1) {
+            /* XXX: predefined names are (mis)placed in this table */
+            fprintf(out, "Spk_LITERAL_INTEGER, 0");
         } else {
             /* cause a compilation error */
             fprintf(out, "unknownClassOfLiteral");
@@ -1017,14 +1007,11 @@ static void genCCodeLiteralTable(SpkModule *module,
     fprintf(out, "    { 0 }\n};\n\n");
 }
 
-static void genCCodeModuleTemplate(SpkModule *module,
+static void genCCodeModuleTemplate(SpkModuleTmpl *module,
                                    Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
-    SpkModuleClass *moduleClass;
     
-    moduleClass = (SpkModuleClass *)Spk_Cast(Spk_CLASS(Module)->base.klass,
-                                             (SpkUnknown *)module->base.klass);
     fprintf(out,
             "SpkModuleTmpl Spk_Module%sTmpl = {\n"
             "    {\n"
@@ -1054,8 +1041,8 @@ static void genCCodeModuleTemplate(SpkModule *module,
             "    },\n"
             "    /*literalCount*/ %lu,\n"
             "    ",
-            (unsigned long)module->base.klass->instVarCount,
-            (unsigned long)moduleClass->literalCount);
+            (unsigned long)module->moduleClass.thisClass.instVarCount,
+            (unsigned long)module->literalCount);
     nest(level, out);
     fprintf(out,
             "literals\n"
@@ -1093,11 +1080,11 @@ static Visitor cCodeGenTemplates = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-void SpkDisassembler_DisassembleModule(SpkModule *module, FILE *out) {
+void SpkDisassembler_DisassembleModule(SpkModuleTmpl *module, FILE *out) {
     traverseModule(module, &disassembler, (void *)out);
 }
 
-void SpkDisassembler_DisassembleModuleAsCCode(SpkModule *module, FILE *out) {
+void SpkDisassembler_DisassembleModuleAsCCode(SpkModuleTmpl *module, FILE *out) {
     time_t t;
     const char *timestamp;
     

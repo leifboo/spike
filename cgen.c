@@ -1,11 +1,8 @@
 
 #include "cgen.h"
 
-#include "behavior.h"
-#include "class.h"
 #include "heart.h"
 #include "host.h"
-#include "interp.h"
 #include "module.h"
 #include "native.h"
 #include "obj.h"
@@ -69,7 +66,7 @@ typedef struct BlockCodeGen {
 typedef struct MethodCodeGen {
     struct CodeGen *generic;
     struct OpcodeGen *opcodeGen;
-    SpkMethod *methodInstance;
+    SpkMethodTmpl *methodTmpl;
 } MethodCodeGen;
 
 typedef struct OpcodeGen {
@@ -99,15 +96,13 @@ typedef struct OpcodeGen {
 typedef struct ClassCodeGen {
     struct CodeGen *generic;
     Stmt *classDef;
-    SpkBehavior *classInstance;
+    SpkBehaviorTmpl *behaviorTmpl;
     SpkUnknown *source;
 } ClassCodeGen;
 
 typedef struct ModuleCodeGen {
     struct CodeGen *generic;
-    SpkModuleClass *moduleClass;
-    
-    SpkBehavior *firstClass, *lastClass;
+    SpkModuleTmpl *moduleTmpl;
     
     SpkUnknown **rodata;
     unsigned int rodataSize, rodataAllocSize;
@@ -1394,17 +1389,27 @@ static SpkUnknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
     return 0;
 }
 
+static void insertMethodTmpl(SpkMethodTmpl *methodTmpl,
+                             SpkMethodTmplList *list)
+{
+    if (!list->first) {
+        list->first = methodTmpl;
+    } else {
+        list->last->nextInScope = methodTmpl;
+    }
+    list->last = methodTmpl;
+}
+
 static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     CodeGen gcgen;
     OpcodeGen *cgen; MethodCodeGen *mcg;
     Stmt *body, *s;
     Stmt sentinel;
-    SpkUnknown *messageSelector;
+    SpkUnknown *selector;
     size_t stackSize;
     int thunk;
-    SpkMethod *enclosingMethod;
     
-    messageSelector = stmt->u.method.name->sym;
+    selector = stmt->u.method.name->sym;
     memset(&sentinel, 0, sizeof(sentinel));
     sentinel.kind = Spk_STMT_RETURN;
     
@@ -1418,7 +1423,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     mcg = &gcgen.u.o.u.method;
     mcg->opcodeGen = &cgen->generic->u.o;
     mcg->opcodeGen->generic = cgen->generic;
-    mcg->methodInstance = 0;
+    mcg->methodTmpl = 0;
     cgen->minArgumentCount = stmt->u.method.minArgumentCount;
     cgen->maxArgumentCount = stmt->u.method.maxArgumentCount;
     cgen->varArgList = stmt->u.method.argList.var ? 1 : 0;
@@ -1431,7 +1436,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     
     /* emit a 'thunk' opcode if this is named call-style method --
        e.g., "class X { foo(...) {} }" */
-    thunk = (messageSelector != Spk___apply__ &&
+    thunk = (selector != Spk___apply__ &&
              stmt->expr->kind == Spk_EXPR_CALL &&
              stmt->expr->oper == Spk_OPER_APPLY);
     
@@ -1457,14 +1462,17 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         _(emitCodeForStmt(&sentinel, 0, 0, 0, cgen));
         
         /* now generate code for real */
-        mcg->methodInstance = SpkMethod_New(cgen->currentOffset);
-        mcg->methodInstance->debug.lineCodeTally
+        mcg->methodTmpl = (SpkMethodTmpl *)malloc(sizeof(SpkMethodTmpl));
+        memset(mcg->methodTmpl, 0, sizeof(SpkMethodTmpl));
+        mcg->methodTmpl->bytecodeSize = cgen->currentOffset;
+        mcg->methodTmpl->bytecode = (SpkOpcode *)malloc(mcg->methodTmpl->bytecodeSize);
+        mcg->methodTmpl->debug.lineCodeTally
             = cgen->currentLineOffset;
-        mcg->methodInstance->debug.lineCodes
-            = (SpkOpcode *)malloc(cgen->currentLineOffset);
+        mcg->methodTmpl->debug.lineCodes
+            = (SpkOpcode *)malloc(mcg->methodTmpl->debug.lineCodeTally);
         rewindOpcodes(cgen,
-                      SpkMethod_OPCODES(mcg->methodInstance),
-                      mcg->methodInstance->debug.lineCodes);
+                      mcg->methodTmpl->bytecode,
+                      mcg->methodTmpl->debug.lineCodes);
         if (thunk) EMIT_OPCODE(Spk_OPCODE_THUNK);
         leaf(cgen);
         _(emitCodeForArgList(stmt, cgen));
@@ -1475,14 +1483,17 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         stackSize = cgen->stackSize;
 
         /* now generate code for real */
-        mcg->methodInstance = SpkMethod_New(cgen->currentOffset);
-        mcg->methodInstance->debug.lineCodeTally
+        mcg->methodTmpl = (SpkMethodTmpl *)malloc(sizeof(SpkMethodTmpl));
+        memset(mcg->methodTmpl, 0, sizeof(SpkMethodTmpl));
+        mcg->methodTmpl->bytecodeSize = cgen->currentOffset;
+        mcg->methodTmpl->bytecode = (SpkOpcode *)malloc(mcg->methodTmpl->bytecodeSize);
+        mcg->methodTmpl->debug.lineCodeTally
             = cgen->currentLineOffset;
-        mcg->methodInstance->debug.lineCodes
-            = (SpkOpcode *)malloc(cgen->currentLineOffset);
+        mcg->methodTmpl->debug.lineCodes
+            = (SpkOpcode *)malloc(mcg->methodTmpl->debug.lineCodeTally);
         rewindOpcodes(cgen,
-                      SpkMethod_OPCODES(mcg->methodInstance),
-                      mcg->methodInstance->debug.lineCodes);
+                      mcg->methodTmpl->bytecode,
+                      mcg->methodTmpl->debug.lineCodes);
     
         if (thunk) EMIT_OPCODE(Spk_OPCODE_THUNK);
         cgen->stackSize = stackSize;
@@ -1501,18 +1512,18 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         for (cg = outer; cg; cg = cg->outer) {
             if (cg->kind == CODE_GEN_CLASS && cg->u.klass.source) {
                 Spk_INCREF(cg->u.klass.source);
-                mcg->methodInstance->debug.source = cg->u.klass.source;
+                mcg->methodTmpl->debug.source = cg->u.klass.source;
                 break;
             }
         }
     }
 
-    ASSERT(cgen->currentOffset == mcg->methodInstance->base.size,
+    ASSERT(cgen->currentOffset == mcg->methodTmpl->bytecodeSize,
            "bad code size");
     ASSERT(cgen->stackSize == stackSize,
            "bad stack size");
     
-    ASSERT(cgen->currentLineOffset == mcg->methodInstance->debug.lineCodeTally,
+    ASSERT(cgen->currentLineOffset == mcg->methodTmpl->debug.lineCodeTally,
            "bad line code size");
     
     for (s = body->top; s; s = s->next) {
@@ -1528,23 +1539,17 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         }
     }
     
+    mcg->methodTmpl->ns = stmt->u.method.ns;
+    mcg->methodTmpl->selector = selector;  Spk_INCREF(selector);
+    
     switch (outer->kind) {
     case CODE_GEN_METHOD:
-        enclosingMethod = outer->u.o.u.method.methodInstance;
-        if (!enclosingMethod->nestedMethodList.first) {
-            enclosingMethod->nestedMethodList.first = mcg->methodInstance;
-        } else {
-            enclosingMethod->nestedMethodList.last->nextInScope
-                = mcg->methodInstance;
-        }
-        enclosingMethod->nestedMethodList.last = mcg->methodInstance;
+        insertMethodTmpl(mcg->methodTmpl,
+                         &outer->u.o.u.method.methodTmpl->nestedMethodList);
         break;
     case CODE_GEN_CLASS:
-        SpkBehavior_InsertMethod(outer->u.klass.classInstance,
-                                 stmt->u.method.ns,
-                                 messageSelector,
-                                 mcg->methodInstance);
-        Spk_DECREF(mcg->methodInstance);
+        insertMethodTmpl(mcg->methodTmpl,
+                         &outer->u.klass.behaviorTmpl->methodList);
         break;
     default:
         ASSERT(0, "method not allowed here");
@@ -1598,11 +1603,21 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, CodeGen *cgen) {
     return 0;
 }
 
+static void insertClassTmpl(SpkClassTmpl *classTmpl,
+                            SpkClassTmplList *list)
+{
+    if (!list->first) {
+        list->first = classTmpl;
+    } else {
+        list->last->nextInScope = classTmpl;
+    }
+    list->last = classTmpl;
+}
+
 static SpkUnknown *emitCodeForClass(Stmt *stmt, CodeGen *outer) {
     CodeGen gcgen;
     ClassCodeGen *cgen;
-    SpkMethod *enclosingMethod;
-    SpkBehavior *theClass, *enclosingClass;
+    SpkClassTmpl *classTmpl;
     
     /* push class code generator */
     cgen = &gcgen.u.klass;
@@ -1614,35 +1629,25 @@ static SpkUnknown *emitCodeForClass(Stmt *stmt, CodeGen *outer) {
     cgen->source = 0;
     cgen->generic->level = outer->level + 1;
     
-    theClass = (SpkBehavior *)stmt->expr->u.def.initValue;
+    classTmpl = (SpkClassTmpl *)stmt->expr->u.def.code;
     
     if (stmt->bottom) {
-        cgen->classInstance = theClass->base.klass;
+        classTmpl->metaclass.instVarCount = stmt->u.klass.classVarCount;
+        cgen->behaviorTmpl = &classTmpl->metaclass;
         _(emitCodeForClassBody(stmt->bottom, cgen->generic));
     }
-    cgen->classInstance = theClass;
+    classTmpl->thisClass.instVarCount = stmt->u.klass.instVarCount;
+    cgen->behaviorTmpl = &classTmpl->thisClass;
     _(emitCodeForClassBody(stmt->top, cgen->generic));
     
     switch (outer->kind) {
     case CODE_GEN_METHOD:
-        enclosingMethod = outer->u.o.u.method.methodInstance;
-        if (!enclosingMethod->nestedClassList.first) {
-            enclosingMethod->nestedClassList.first = cgen->classInstance;
-        } else {
-            enclosingMethod->nestedClassList.last->nextInScope
-                = cgen->classInstance;
-        }
-        enclosingMethod->nestedClassList.last = cgen->classInstance;
+        insertClassTmpl(classTmpl,
+                        &outer->u.o.u.method.methodTmpl->nestedClassList);
         break;
     case CODE_GEN_CLASS:
-        enclosingClass = outer->u.klass.classInstance;
-        if (!enclosingClass->nestedClassList.first) {
-            enclosingClass->nestedClassList.first = cgen->classInstance;
-        } else {
-            enclosingClass->nestedClassList.last->nextInScope
-                = cgen->classInstance;
-        }
-        enclosingClass->nestedClassList.last = cgen->classInstance;
+        insertClassTmpl(classTmpl,
+                        &outer->u.klass.behaviorTmpl->nestedClassList);
         break;
     default:
         ASSERT(0, "class definition not allowed here");
@@ -1655,7 +1660,9 @@ static SpkUnknown *emitCodeForClass(Stmt *stmt, CodeGen *outer) {
     return 0;
 }
 
-#ifdef MALTIPY
+/****************************************************************************/
+/* imports */
+
 static SpkUnknown *storeImport(Expr *expr, OpcodeGen *cgen) {
     Expr *def;
     
@@ -1683,8 +1690,11 @@ static SpkUnknown *storeImport(Expr *expr, OpcodeGen *cgen) {
 }
 
 static SpkUnknown *getImportedName(SpkUnknown **pName, Expr **pPkg, Expr *expr) {
+#ifdef MALTIPY
     size_t tally, i;
-    Expr *e, *pkg, *attr;
+    Expr *attr;
+#endif
+    Expr *e, *pkg;
     SpkUnknown *name;
     
     pkg = 0;
@@ -1694,6 +1704,7 @@ static SpkUnknown *getImportedName(SpkUnknown **pName, Expr **pPkg, Expr *expr) 
     }
     
     switch (e->kind) {
+#ifdef MALTIPY
     case Spk_EXPR_NAME:
         pkg = e;
         name = PyTuple_New(1); /* this ref is stolen */
@@ -1719,6 +1730,13 @@ static SpkUnknown *getImportedName(SpkUnknown **pName, Expr **pPkg, Expr *expr) 
             PyTuple_SET_ITEM(name, tally - i, attr->sym->sym);
         }
         break;
+#else /* !MALTIPY */
+    case Spk_EXPR_NAME:
+        pkg = e;
+        name = pkg->sym->sym;
+        Spk_INCREF(name); /* this ref is stolen */
+        break;
+#endif /* !MALTIPY */
     default:
         ASSERT(0, "invalid import statement");
     }
@@ -1763,11 +1781,183 @@ static SpkUnknown *generateImport(SpkUnknown *import, SpkUnknown *name,
     return 0;
 }
 
-static SpkUnknown *generateImports(Stmt *stmtList, CodeGen *outer) {
+static SpkUnknown *generateImports(Stmt *stmtList, OpcodeGen *cgen) {
+    Stmt *s;
+
+    for (s = stmtList; s; s = s->next) {
+        if (s->kind == Spk_STMT_IMPORT) {
+            Expr *expr, *pkg;
+            SpkUnknown *name;
+            
+            if (s->init) {
+                Expr *def;
+                
+                /* "import a, b, c from spam.ham;" */
+                _(getImportedName(&name, &pkg, s->expr));
+                _(generateImport(Spk_importModule, name, cgen));
+                
+                for (def = s->init; def; def = def->next) {
+                    /* dup */
+                    EMIT_OPCODE(Spk_OPCODE_DUP); tallyPush(cgen);
+                    
+                    /* gattr <name> */
+                    /* XXX: This should be done in a second
+                       pass. _bind? */
+                    ++cgen->nMessageSends;
+                    EMIT_OPCODE(Spk_OPCODE_GET_ATTR);
+                    _(emitLiteralIndex(def->sym->sym, cgen));
+                    
+                    /* store */
+                    ASSERT(def->kind == Spk_EXPR_NAME,
+                           "invalid import statement");
+                    EMIT_OPCODE(def->u.def.storeOpcode);
+                    encodeUnsignedInt(def->u.def.index, cgen);
+                    
+                    /* pop */
+                    EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
+                }
+                
+                /* pop */
+                EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
+                CHECK_STACKP();
+                
+            } else {
+                
+                for (expr = s->expr; expr; expr = expr->next) {
+                    Expr *pkgVar;
+                    
+                    _(getImportedName(&name, &pkg, expr));
+                    
+                    pkgVar = expr->kind == Spk_EXPR_ASSIGN ? 0 : pkg;
+                    _(generateImport(pkgVar ? Spk_importPackage : Spk_importModule,
+                                     name,
+                                     cgen));
+                    
+                    /* store */
+                    if (pkgVar) {
+                        EMIT_OPCODE(pkgVar->u.def.storeOpcode);
+                        encodeUnsignedInt(pkgVar->u.def.index, cgen);
+                    } else {
+                        _(storeImport(expr, cgen));
+                    }
+                    
+                    /* pop */
+                    EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
+                    CHECK_STACKP();
+                }
+            }
+        }
+    }
+    
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
+    
+ unwind:
+    return 0;
+}
+
+/****************************************************************************/
+/* module initialization */
+
+static SpkUnknown *generatePredef(Stmt *stmtList, OpcodeGen *cgen) {
+    Stmt *s;
+    Expr *def;
+    
+    /* XXX: This stashes predefined objects in the literal table! */
+    
+    for (s = stmtList; s; s = s->next) {
+        switch (s->kind) {
+        case Spk_STMT_DEF_CLASS:
+            def = s->expr;
+            _(emitCodeForLiteral(def->u.def.initValue, cgen));
+            EMIT_OPCODE(def->u.def.storeOpcode);
+            encodeUnsignedInt(def->u.def.index, cgen);
+            EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
+            break;
+        case Spk_STMT_DEF_VAR:
+            def = s->expr;
+            if (def->kind == Spk_EXPR_NAME &&
+                def->u.def.initValue) {
+                /* predefined variable -- stdin, stdout, stderr */
+                _(emitCodeForLiteral(def->u.def.initValue, cgen));
+                EMIT_OPCODE(def->u.def.storeOpcode);
+                encodeUnsignedInt(def->u.def.index, cgen);
+                EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
+    
+ unwind:
+    return 0;
+}
+
+static SpkUnknown *generateInit(Stmt *stmtList, OpcodeGen *cgen) {
+    Stmt *s;
+    Expr *def;
+    
+    /* call Module::_init() -- "super._init();" */
+    EMIT_OPCODE(Spk_OPCODE_PUSH_SUPER); /* module object */
+    tallyPush(cgen);
+    ++cgen->nMessageSends;
+    EMIT_OPCODE(Spk_OPCODE_GET_ATTR_SUPER);
+    _(emitLiteralIndex(Spk__init, cgen));
+    ++cgen->nMessageSends;
+    EMIT_OPCODE(Spk_OPCODE_CALL);
+    encodeUnsignedInt(Spk_OPER_APPLY, cgen);
+    encodeUnsignedInt(0, cgen);
+    EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
+    
+    for (s = stmtList; s; s = s->next) {
+        switch (s->kind) {
+        case Spk_STMT_DEF_CLASS:
+            /* handled by Module::_init() */
+            break;
+        case Spk_STMT_DEF_METHOD:
+            if (s->expr->kind == Spk_EXPR_CALL) {
+                /* Create a thunk for each global function. */
+                def = s->expr->left;
+                EMIT_OPCODE(Spk_OPCODE_PUSH_SELF); /* module object */
+                tallyPush(cgen);
+                ++cgen->nMessageSends;
+                EMIT_OPCODE(Spk_OPCODE_GET_ATTR);
+                _(emitLiteralIndex(s->u.method.name->sym, cgen));
+                EMIT_OPCODE(def->u.def.storeOpcode);
+                encodeUnsignedInt(def->u.def.index, cgen);
+                EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
+    
+ unwind:
+    return 0;
+}
+
+/****************************************************************************/
+/* method generator */
+
+typedef SpkUnknown *SpkCodeGenerator(Stmt *, OpcodeGen *);
+
+static SpkUnknown *generateMethod(SpkUnknown *selector,
+                                  size_t argumentCount,
+                                  SpkCodeGenerator *generator,
+                                  Stmt *stmtList,
+                                  CodeGen *outer)
+{
     CodeGen gcgen;
     OpcodeGen *cgen; MethodCodeGen *mcg;
     int run;
-    Stmt *s;
     size_t stackSize = 0;
     
     /* push method code generator */
@@ -1780,8 +1970,9 @@ static SpkUnknown *generateImports(Stmt *stmtList, CodeGen *outer) {
     mcg = &gcgen.u.o.u.method;
     mcg->opcodeGen = &cgen->generic->u.o;
     mcg->opcodeGen->generic = cgen->generic;
-    mcg->methodInstance = 0;
-    cgen->argumentCount = 1;
+    mcg->methodTmpl = 0;
+    cgen->minArgumentCount = argumentCount;
+    cgen->maxArgumentCount = argumentCount;
     cgen->varArgList = 0;
     cgen->localCount = 0;
     rewindOpcodes(cgen, 0, 0);
@@ -1795,8 +1986,11 @@ static SpkUnknown *generateImports(Stmt *stmtList, CodeGen *outer) {
         case 1:
             /* now generate code for real */
             stackSize = cgen->stackSize;
-            mcg->methodInstance = SpkMethod_New(cgen->currentOffset);
-            rewindOpcodes(cgen, SpkMethod_OPCODES(mcg->methodInstance), 0);
+            mcg->methodTmpl = (SpkMethodTmpl *)malloc(sizeof(SpkMethodTmpl));
+            memset(mcg->methodTmpl, 0, sizeof(SpkMethodTmpl));
+            mcg->methodTmpl->bytecodeSize = cgen->currentOffset;
+            mcg->methodTmpl->bytecode = (SpkOpcode *)malloc(mcg->methodTmpl->bytecodeSize);
+            rewindOpcodes(cgen, mcg->methodTmpl->bytecode, 0);
             break;
         }
         
@@ -1809,73 +2003,10 @@ static SpkUnknown *generateImports(Stmt *stmtList, CodeGen *outer) {
         cgen->stackSize = 0;
 
         EMIT_OPCODE(Spk_OPCODE_ARG);
-        encodeUnsignedInt(1, cgen);
-        encodeUnsignedInt(1, cgen);
+        encodeUnsignedInt(argumentCount, cgen);
+        encodeUnsignedInt(argumentCount, cgen);
         
-        for (s = stmtList; s; s = s->next) {
-            if (s->kind == Spk_STMT_IMPORT) {
-                Expr *expr, *pkg;
-                SpkUnknown *name;
-                
-                if (s->init) {
-                    Expr *def;
-                    
-                    /* "import a, b, c from spam.ham;" */
-                    _(getImportedName(&name, &pkg, s->expr));
-                    _(generateImport(Spk_importModule, name, cgen));
-                    
-                    for (def = s->init; def; def = def->next) {
-                        /* dup */
-                        EMIT_OPCODE(Spk_OPCODE_DUP); tallyPush(cgen);
-                        
-                        /* gattr <name> */
-                        /* XXX: This should be done in a second
-                           pass. _bind? */
-                        ++cgen->nMessageSends;
-                        EMIT_OPCODE(Spk_OPCODE_GET_ATTR);
-                        _(emitLiteralIndex(def->sym->sym, cgen));
-                        
-                        /* store */
-                        ASSERT(def->kind == Spk_EXPR_NAME,
-                               "invalid import statement");
-                        EMIT_OPCODE(def->u.def.storeOpcode);
-                        encodeUnsignedInt(def->u.def.index, cgen);
-                        
-                        /* pop */
-                        EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
-                    }
-                    
-                    /* pop */
-                    EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
-                    CHECK_STACKP();
-                    
-                } else {
-                    
-                    for (expr = s->expr; expr; expr = expr->next) {
-                        Expr *pkgVar;
-                        
-                        _(getImportedName(&name, &pkg, expr));
-                        
-                        pkgVar = expr->kind == Spk_EXPR_ASSIGN ? 0 : pkg;
-                        _(generateImport(pkgVar ? Spk_importPackage : Spk_importModule,
-                                         name,
-                                         cgen));
-                        
-                        /* store */
-                        if (pkgVar) {
-                            EMIT_OPCODE(pkgVar->u.def.storeOpcode);
-                            encodeUnsignedInt(pkgVar->u.def.index, cgen);
-                        } else {
-                            _(storeImport(expr, cgen));
-                        }
-                        
-                        /* pop */
-                        EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
-                        CHECK_STACKP();
-                    }
-                }
-            }
-        }
+        _((*generator)(stmtList, cgen));
         
         /* push void */
         EMIT_OPCODE(Spk_OPCODE_PUSH_VOID);
@@ -1888,47 +2019,18 @@ static SpkUnknown *generateImports(Stmt *stmtList, CodeGen *outer) {
         EMIT_OPCODE(Spk_OPCODE_RET);
     }
     
-    ASSERT(cgen->currentOffset == mcg->methodInstance->base.size,
-           "bad method size");
+    ASSERT(cgen->currentOffset == mcg->methodTmpl->bytecodeSize,
+           "bad code size");
     ASSERT(cgen->stackSize == stackSize,
            "bad stack size");
     
     ASSERT(outer->kind == CODE_GEN_CLASS,
            "imports not allowed here");
-    SpkBehavior_InsertMethod(outer->u.klass.classInstance,
-                             Spk_METHOD_NAMESPACE_RVALUE,
-                             Spk__import,
-                             mcg->methodInstance);
-    
-    Spk_DECREF(mcg->methodInstance);
-    
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
-    
- unwind:
-    return 0;
-}
-#endif /* MALTIPY */
 
-static SpkUnknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
-    CodeGen gcgen;
-    ClassCodeGen *cgen;
-    
-    /* push class code generator */
-    cgen = &gcgen.u.klass;
-    cgen->generic = &gcgen;
-    cgen->generic->kind = CODE_GEN_CLASS;
-    cgen->generic->outer = 0;
-    cgen->generic->module = moduleCodeGen;
-    cgen->classDef = stmt;
-    cgen->classInstance = (SpkBehavior *)moduleCodeGen->moduleClass;
-    cgen->source = 0;
-    cgen->generic->level = 1;
-    
-    _(emitCodeForClassBody(stmt->top, cgen->generic));
-#ifdef MALTIPY
-    _(generateImports(stmt->top->top, cgen->generic));
-#endif /* MALTIPY */
+    mcg->methodTmpl->ns = Spk_METHOD_NAMESPACE_RVALUE;
+    mcg->methodTmpl->selector = selector;  Spk_INCREF(selector);
+    insertMethodTmpl(mcg->methodTmpl,
+                     &outer->u.klass.behaviorTmpl->methodList);
     
     Spk_INCREF(Spk_GLOBAL(xvoid));
     return Spk_GLOBAL(xvoid);
@@ -1939,49 +2041,69 @@ static SpkUnknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
 
 /****************************************************************************/
 
-static SpkBehavior *getSuperclass(Stmt *classDef, ModuleCodeGen *cgen) {
-    SpkUnknown *initValue;
-    SpkBehavior *superclass;
+static SpkUnknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
+    CodeGen gcgen;
+    ClassCodeGen *cgen;
+    Stmt *predefList;
     
-    initValue = classDef->u.klass.superclassName->u.ref.def->u.def.initValue;
-    ASSERT(initValue, "missing superclass");
-    superclass = (SpkBehavior *)Spk_CAST(Class, initValue);
-    ASSERT(superclass, "superclass is not a Behavior");
-    return superclass;
+    /* push class code generator */
+    cgen = &gcgen.u.klass;
+    cgen->generic = &gcgen;
+    cgen->generic->kind = CODE_GEN_CLASS;
+    cgen->generic->outer = 0;
+    cgen->generic->module = moduleCodeGen;
+    cgen->classDef = stmt;
+    cgen->behaviorTmpl = &moduleCodeGen->moduleTmpl->moduleClass.thisClass;
+    cgen->source = 0;
+    cgen->generic->level = 1;
     
- unwind:
-    return 0;
-}
-
-static SpkUnknown *createClass(Stmt *classDef, ModuleCodeGen *cgen) {
-    SpkBehavior *theClass, *superclass;
+    predefList = stmt->u.module.predefList.first;
     
-    superclass = getSuperclass(classDef, cgen);
-    if (!superclass) {
-        goto unwind;
-    }
-    theClass = (SpkBehavior *)SpkClass_New(classDef->expr->sym->sym,
-                                           superclass,
-                                           classDef->u.klass.instVarCount,
-                                           classDef->u.klass.classVarCount);
-    if (!theClass) {
-        goto unwind;
-    }
-    
-    if (!cgen->firstClass) {
-        cgen->firstClass = theClass;
-    } else {
-        cgen->lastClass->next = theClass;
-    }
-    cgen->lastClass = theClass;
-    
-    classDef->expr->u.def.initValue = (SpkUnknown *)theClass;
+    moduleCodeGen->moduleTmpl->moduleClass.thisClass.instVarCount
+        = stmt->u.module.dataSize;
+    _(emitCodeForClassBody(stmt->top, cgen->generic));
+    _(generateMethod(Spk__import, 1, &generateImports, stmt->top->top, cgen->generic));
+    _(generateMethod(Spk__predef, 0, &generatePredef,  predefList, cgen->generic));
+    _(generateMethod(Spk__init,   0, &generateInit,    stmt->top->top, cgen->generic));
     
     Spk_INCREF(Spk_GLOBAL(xvoid));
     return Spk_GLOBAL(xvoid);
     
  unwind:
     return 0;
+}
+
+/****************************************************************************/
+
+static SpkUnknown *createClass(Stmt *classDef, ModuleCodeGen *cgen) {
+    SpkClassTmpl *classTmpl;
+    SpkClassTmplList *classList;
+    
+    classTmpl = (SpkClassTmpl *)malloc(sizeof(SpkClassTmpl));
+    memset(classTmpl, 0, sizeof(SpkClassTmpl));
+    
+    classTmpl->symbol = classDef->expr->sym->sym;
+    Spk_INCREF(classTmpl->symbol);
+    classTmpl->name = SpkHost_SymbolAsCString(classTmpl->symbol);
+    
+    classTmpl->classVarIndex = classDef->expr->u.def.index;
+    classTmpl->superclassVarIndex = classDef->u.klass.superclassName->u.ref.def->u.def.index;
+    
+    classTmpl->superclassName = classDef->u.klass.superclassName->sym->sym;
+    Spk_INCREF(classTmpl->superclassName);
+    
+    classList = &cgen->moduleTmpl->classList;
+    if (!classList->first) {
+        classList->first = classTmpl;
+    } else {
+        classList->last->next = classTmpl;
+    }
+    classList->last = classTmpl;
+    
+    classDef->expr->u.def.code = (void *)classTmpl;
+    
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
 }
 
 static SpkUnknown *createClassTree(Stmt *classDef, ModuleCodeGen *cgen) {
@@ -2004,90 +2126,15 @@ static SpkUnknown *createClassTree(Stmt *classDef, ModuleCodeGen *cgen) {
 
 /****************************************************************************/
 
-static SpkUnknown *initGlobalVars(SpkUnknown **globals, Stmt *stmtList) {
-    Stmt *s;
-    
-    for (s = stmtList; s; s = s->next) {
-        switch (s->kind) {
-        case Spk_STMT_DEF_CLASS:
-            ASSERT(s->expr->u.def.initValue,
-                   "missing class object");
-            globals[s->expr->u.def.index] = s->expr->u.def.initValue;
-            Spk_INCREF(s->expr->u.def.initValue);
-            break;
-        case Spk_STMT_DEF_VAR:
-            if (s->expr->kind == Spk_EXPR_NAME &&
-                s->expr->u.def.initValue) {
-                globals[s->expr->u.def.index] = s->expr->u.def.initValue;
-                Spk_INCREF(s->expr->u.def.initValue);
-            }
-            break;
-        default:
-            break;
-        }
-    }
-    
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
-    
- unwind:
-    return 0;
-}
-
-static SpkUnknown *initThunks(SpkUnknown **globals, SpkModule *module,
-                              Stmt *stmtList)
-{
-    /* Create a thunk for each global function. */
-    Stmt *s;
-    SpkThunk *thunk;
-    SpkMethod *method;
-    SpkBehavior *methodClass;
-    
-    methodClass = module->base.klass;
-    
-    for (s = stmtList; s; s = s->next) {
-        if (s->kind == Spk_STMT_DEF_METHOD &&
-            s->expr->kind == Spk_EXPR_CALL) {
-            method = SpkBehavior_LookupMethod(
-                methodClass,
-                Spk_METHOD_NAMESPACE_RVALUE,
-                s->u.method.name->sym
-                );
-            ASSERT(method, "missing global method");
-            
-            thunk = SpkThunk_New((SpkUnknown *)module, method, methodClass);
-            Spk_DECREF(method);
-            if (!thunk) {
-                goto unwind;
-            }
-            
-            globals[s->expr->left->u.def.index] = (SpkUnknown *)thunk;
-        }
-    }
-    
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
-    
- unwind:
-    return 0;
-}
-
-SpkModule *SpkCodeGen_GenerateCode(Stmt *tree) {
-    unsigned int dataSize;
-    Stmt *predefList;
+SpkModuleTmpl *SpkCodeGen_GenerateCode(Stmt *tree) {
     Stmt *rootClassList;
     Stmt *s;
     CodeGen gcgen;
     ModuleCodeGen *cgen;
-    SpkModule *module = 0;
-    SpkUnknown **globals;
-    unsigned int index;
-    SpkBehavior *aClass;
     
     ASSERT(tree->kind == Spk_STMT_DEF_MODULE, "module node expected");
     ASSERT(tree->top->kind == Spk_STMT_COMPOUND, "compound statement expected");
-    dataSize = tree->u.module.dataSize;
-    predefList = tree->u.module.predefList.first;
+    
     rootClassList = tree->u.module.rootClassList.first;
     
     memset(&gcgen, 0, sizeof(gcgen));
@@ -2100,15 +2147,11 @@ SpkModule *SpkCodeGen_GenerateCode(Stmt *tree) {
         goto unwind;
     }
     
-    /* Create a 'Module' subclass to represent this module. */
-    cgen->moduleClass
-        = (SpkModuleClass *)SpkClass_New(((SpkClass *)Spk_CLASS(Module))->name,
-                                         Spk_CLASS(Module),
-                                         dataSize,
-                                         /* XXX: unknown at this time */
-                                         0 /*cgen->rodataSize*/ );
+    /* Create the module template. */
+    cgen->moduleTmpl = (SpkModuleTmpl *)malloc(sizeof(SpkModuleTmpl));
+    memset(cgen->moduleTmpl, 0, sizeof(SpkModuleTmpl));
     
-    /* Create all classes. */
+    /* Create all class templates. */
     for (s = rootClassList; s; s = s->u.klass.nextRootClassDef) {
         _(createClassTree(s, cgen));
     }
@@ -2116,41 +2159,17 @@ SpkModule *SpkCodeGen_GenerateCode(Stmt *tree) {
     /* Generate code. */
     _(emitCodeForModule(tree, cgen));
     
-    /* Initialize the module class. */
-    cgen->moduleClass->literals = cgen->rodata;
-    cgen->moduleClass->literalCount = cgen->rodataSize;
-    
-    /* Create and initialize the module. */
-    module = (SpkModule *)SpkObject_New((SpkBehavior *)cgen->moduleClass);
-    if (!module) {
-        goto unwind;
-    }
-    module->firstClass = cgen->firstClass;
-    globals = SpkModule_VARIABLES(module);
-    for (index = 0; index < dataSize; ++index) {
-        globals[index] = Spk_GLOBAL(uninit); /* XXX: null? */
-        Spk_INCREF(Spk_GLOBAL(uninit));
-    }
-    /* XXX: This stuff should happen at runtime, with binding! */
-    _(initGlobalVars(globals, predefList));
-    _(initGlobalVars(globals, tree->top->top));
-    _(initThunks(globals, module, tree->top->top));
-
-    /* Patch 'module' attribute of classes. */
-    for (aClass = cgen->firstClass; aClass; aClass = aClass->next) {
-        aClass->module = module;
-        aClass->base.klass->module = module;
-    }
-    module->base.klass->module = module;
+    /* Finish initializing the module template. */
+    cgen->moduleTmpl->moduleClass.name = "UserModule";
+    cgen->moduleTmpl->literals = cgen->rodata;
+    cgen->moduleTmpl->literalCount = cgen->rodataSize;
     
     Spk_DECREF(cgen->rodataMap);
-    Spk_DECREF(cgen->moduleClass);
-    return module;
+    return cgen->moduleTmpl;
     
  unwind:
     Spk_XDECREF(cgen->rodataMap);
-    Spk_XDECREF(cgen->moduleClass);
-    Spk_XDECREF(module);
+    free(cgen->moduleTmpl);
     return 0;
 }
 
@@ -2165,6 +2184,7 @@ SpkMethod *SpkCodeGen_NewNativeAccessor(unsigned int kind,
     OpcodeGen *cgen; MethodCodeGen *mcg;
     int run;
     size_t stackSize = 0;
+    SpkMethod *method;
     
     ASSERT(kind == SpkAccessor_READ || kind == SpkAccessor_WRITE,
            "invalid kind");
@@ -2179,7 +2199,7 @@ SpkMethod *SpkCodeGen_NewNativeAccessor(unsigned int kind,
     mcg = &gcgen.u.o.u.method;
     mcg->opcodeGen = &cgen->generic->u.o;
     mcg->opcodeGen->generic = cgen->generic;
-    mcg->methodInstance = 0;
+    mcg->methodTmpl = 0;
     cgen->varArgList = 0;
     cgen->localCount = 0;
     
@@ -2207,8 +2227,8 @@ SpkMethod *SpkCodeGen_NewNativeAccessor(unsigned int kind,
             stackSize = cgen->stackSize;
             ASSERT(stackSize <= Spk_LEAF_MAX_STACK_SIZE,
                    "stack too big for leaf");
-            mcg->methodInstance = SpkMethod_New(cgen->currentOffset);
-            rewindOpcodes(cgen, SpkMethod_OPCODES(mcg->methodInstance), 0);
+            method = SpkMethod_New(cgen->currentOffset);
+            rewindOpcodes(cgen, SpkMethod_OPCODES(method), 0);
             break;
         }
         
@@ -2257,12 +2277,12 @@ SpkMethod *SpkCodeGen_NewNativeAccessor(unsigned int kind,
         EMIT_OPCODE(Spk_OPCODE_RET);
     }
     
-    ASSERT(cgen->currentOffset == mcg->methodInstance->base.size,
+    ASSERT(cgen->currentOffset == method->base.size,
            "bad method size");
     ASSERT(cgen->stackSize == stackSize,
            "bad stack size");
     
-    return mcg->methodInstance;
+    return method;
     
  unwind:
     return 0;
