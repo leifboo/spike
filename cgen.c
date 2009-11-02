@@ -529,6 +529,7 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     Expr *arg;
     size_t argumentCount;
     int isSuper;
+    SpkOpcode opcode;
     
     if (super) {
         *super = 0;
@@ -550,12 +551,10 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         /* thisContext.blockCopy(index, argumentCount) { */
         EMIT_OPCODE(Spk_OPCODE_PUSH_CONTEXT);
         tallyPush(cgen);
-        EMIT_OPCODE(Spk_OPCODE_GET_ATTR);
-        _(emitLiteralIndex(Spk_blockCopy, cgen));
         _(emitCodeForInt(expr->u.def.index, cgen));
         _(emitCodeForInt(expr->aux.block.argumentCount, cgen));
-        EMIT_OPCODE(Spk_OPCODE_CALL);
-        encodeUnsignedInt(Spk_OPER_APPLY, cgen);
+        EMIT_OPCODE(Spk_OPCODE_SEND_MESSAGE);
+        _(emitLiteralIndex(Spk_blockCopy, cgen));
         encodeUnsignedInt(2, cgen);
         cgen->stackPointer -= 2;
         /* } */
@@ -566,8 +565,6 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     case Spk_EXPR_COMPOUND:
         EMIT_OPCODE(Spk_OPCODE_PUSH_CONTEXT);
         tallyPush(cgen);
-        EMIT_OPCODE(Spk_OPCODE_GET_ATTR);
-        _(emitLiteralIndex(Spk_compoundExpression, cgen));
         for (arg = expr->right, argumentCount = 0;
              arg;
              arg = arg->nextArg, ++argumentCount) {
@@ -577,15 +574,46 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
             _(emitCodeForExpr(expr->var, 0, cgen));
         }
         ++cgen->nMessageSends;
-        EMIT_OPCODE(Spk_OPCODE_CALL);
-        encodeUnsignedInt(Spk_OPER_APPLY, cgen);
+        EMIT_OPCODE(Spk_OPCODE_SEND_MESSAGE);
+        _(emitLiteralIndex(Spk_compoundExpression, cgen));
         encodeUnsignedInt(argumentCount, cgen);
         cgen->stackPointer -= argumentCount + 1;
         tallyPush(cgen); /* result */
         CHECK_STACKP();
         break;
     case Spk_EXPR_CALL:
-        _(emitCodeForExpr(expr->left, &isSuper, cgen));
+        switch (expr->left->kind) {
+        case Spk_EXPR_ATTR:
+            _(emitCodeForExpr(expr->left->left, &isSuper, cgen));
+            opcode = isSuper
+                     ? (expr->var
+                        ? Spk_OPCODE_SEND_MESSAGE_SUPER_VA
+                        : Spk_OPCODE_SEND_MESSAGE_SUPER)
+                     : (expr->var
+                        ? Spk_OPCODE_SEND_MESSAGE_VA
+                        : Spk_OPCODE_SEND_MESSAGE);
+            break;
+        case Spk_EXPR_ATTR_VAR:
+            _(emitCodeForExpr(expr->left->left, &isSuper, cgen));
+            opcode = isSuper
+                     ? (expr->var
+                        ? Spk_OPCODE_SEND_MESSAGE_SUPER_VAR_VA
+                        : Spk_OPCODE_SEND_MESSAGE_SUPER_VAR)
+                     : (expr->var
+                        ? Spk_OPCODE_SEND_MESSAGE_VAR_VA
+                        : Spk_OPCODE_SEND_MESSAGE_VAR);
+            break;
+        default:
+            _(emitCodeForExpr(expr->left, &isSuper, cgen));
+            opcode = isSuper
+                     ? (expr->var
+                        ? Spk_OPCODE_CALL_SUPER_VA
+                        : Spk_OPCODE_CALL_SUPER)
+                     : (expr->var
+                        ? Spk_OPCODE_CALL_VA
+                        : Spk_OPCODE_CALL);
+            break;
+        }
         for (arg = expr->right, argumentCount = 0;
              arg;
              arg = arg->nextArg, ++argumentCount) {
@@ -594,15 +622,22 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         if (expr->var) {
             _(emitCodeForExpr(expr->var, 0, cgen));
         }
+        if (expr->left->kind == Spk_EXPR_ATTR_VAR) {
+            _(emitCodeForExpr(expr->left->right, 0, cgen));
+        }
         ++cgen->nMessageSends;
-        EMIT_OPCODE(isSuper
-                    ? (expr->var
-                       ? Spk_OPCODE_CALL_SUPER_VAR
-                       : Spk_OPCODE_CALL_SUPER)
-                    : (expr->var
-                       ? Spk_OPCODE_CALL_VAR
-                       : Spk_OPCODE_CALL));
-        encodeUnsignedInt((unsigned int)expr->oper, cgen);
+        EMIT_OPCODE(opcode);
+        switch (expr->left->kind) {
+        case Spk_EXPR_ATTR:
+            _(emitLiteralIndex(expr->left->sym->sym, cgen));
+            break;
+        case Spk_EXPR_ATTR_VAR:
+            --cgen->stackPointer;
+            break;
+        default:
+            encodeUnsignedInt((unsigned int)expr->oper, cgen);
+            break;
+        }
         encodeUnsignedInt(argumentCount, cgen);
         cgen->stackPointer -= (expr->var ? 1 : 0) + argumentCount + 1;
         tallyPush(cgen); /* result */
@@ -1350,7 +1385,7 @@ static SpkUnknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
     ptrdiff_t base;
     
     base = (ptrdiff_t)cgen->currentOffset; /* offset of 'arg' instruction */
-    EMIT_OPCODE(cgen->varArgList ? Spk_OPCODE_ARG_VAR : Spk_OPCODE_ARG);
+    EMIT_OPCODE(cgen->varArgList ? Spk_OPCODE_ARG_VA : Spk_OPCODE_ARG);
     encodeUnsignedInt(cgen->minArgumentCount, cgen);
     encodeUnsignedInt(cgen->maxArgumentCount, cgen);
     
@@ -1407,7 +1442,6 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     Stmt sentinel;
     SpkUnknown *selector;
     size_t stackSize;
-    int thunk;
     
     selector = stmt->u.method.name->sym;
     memset(&sentinel, 0, sizeof(sentinel));
@@ -1434,14 +1468,6 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     ASSERT(body->kind == Spk_STMT_COMPOUND,
            "compound statement expected");
     
-    /* emit a 'thunk' opcode if this is named call-style method --
-       e.g., "class X { foo(...) {} }" */
-    thunk = (selector != Spk___apply__ &&
-             stmt->expr->kind == Spk_EXPR_CALL &&
-             stmt->expr->oper == Spk_OPER_APPLY);
-    
-    /* dry run to compute offsets */
-    if (thunk) EMIT_OPCODE(Spk_OPCODE_THUNK);
     save(cgen); /* XXX: 'stackSize' is zero here */
     
     _(emitCodeForArgList(stmt, cgen)); /* XXX: 'stackSize' is invalid here */
@@ -1455,7 +1481,6 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         /* re-compute offsets w/o save & restore */
         rewindOpcodes(cgen, 0, 0);
         cgen->inLeaf = 1;
-        if (thunk) EMIT_OPCODE(Spk_OPCODE_THUNK);
         leaf(cgen);
         _(emitCodeForArgList(stmt, cgen));
         _(emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen));
@@ -1473,7 +1498,6 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         rewindOpcodes(cgen,
                       mcg->methodTmpl->bytecode,
                       mcg->methodTmpl->debug.lineCodes);
-        if (thunk) EMIT_OPCODE(Spk_OPCODE_THUNK);
         leaf(cgen);
         _(emitCodeForArgList(stmt, cgen));
         _(emitCodeForStmt(body, sentinel.codeOffset, 0, 0, cgen));
@@ -1495,7 +1519,6 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
                       mcg->methodTmpl->bytecode,
                       mcg->methodTmpl->debug.lineCodes);
     
-        if (thunk) EMIT_OPCODE(Spk_OPCODE_THUNK);
         cgen->stackSize = stackSize;
         save(cgen);
         cgen->stackSize = 0;
@@ -1759,18 +1782,13 @@ static SpkUnknown *generateImport(SpkUnknown *import, SpkUnknown *name,
     encodeUnsignedInt(0, cgen);
     tallyPush(cgen);
     
-    /* gattr $importXXX */
-    ++cgen->nMessageSends;
-    EMIT_OPCODE(Spk_OPCODE_GET_ATTR);
-    _(emitLiteralIndex(import, cgen));
-    
     /* push "spam.ham" */
     _(emitCodeForLiteral(name, cgen));
     
-    /* call __apply__ */
+    /* call importXXX */
     ++cgen->nMessageSends;
-    EMIT_OPCODE(Spk_OPCODE_CALL);
-    encodeUnsignedInt(Spk_OPER_APPLY, cgen);
+    EMIT_OPCODE(Spk_OPCODE_SEND_MESSAGE);
+    _(emitLiteralIndex(import, cgen));
     encodeUnsignedInt(1, cgen);
     cgen->stackPointer -= 1;
     
@@ -1905,11 +1923,8 @@ static SpkUnknown *generateInit(Stmt *stmtList, OpcodeGen *cgen) {
     EMIT_OPCODE(Spk_OPCODE_PUSH_SUPER); /* module object */
     tallyPush(cgen);
     ++cgen->nMessageSends;
-    EMIT_OPCODE(Spk_OPCODE_GET_ATTR_SUPER);
+    EMIT_OPCODE(Spk_OPCODE_SEND_MESSAGE_SUPER);
     _(emitLiteralIndex(Spk__init, cgen));
-    ++cgen->nMessageSends;
-    EMIT_OPCODE(Spk_OPCODE_CALL);
-    encodeUnsignedInt(Spk_OPER_APPLY, cgen);
     encodeUnsignedInt(0, cgen);
     EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
     
@@ -1924,9 +1939,11 @@ static SpkUnknown *generateInit(Stmt *stmtList, OpcodeGen *cgen) {
                 def = s->expr->left;
                 EMIT_OPCODE(Spk_OPCODE_PUSH_SELF); /* module object */
                 tallyPush(cgen);
+                _(emitCodeForLiteral(s->u.method.name->sym, cgen));
                 ++cgen->nMessageSends;
-                EMIT_OPCODE(Spk_OPCODE_GET_ATTR);
-                _(emitLiteralIndex(s->u.method.name->sym, cgen));
+                EMIT_OPCODE(Spk_OPCODE_SEND_MESSAGE);
+                _(emitLiteralIndex(Spk__thunk, cgen));
+                encodeUnsignedInt(1, cgen);
                 EMIT_OPCODE(def->u.def.storeOpcode);
                 encodeUnsignedInt(def->u.def.index, cgen);
                 EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
@@ -1993,9 +2010,6 @@ static SpkUnknown *generateMethod(SpkUnknown *selector,
             rewindOpcodes(cgen, mcg->methodTmpl->bytecode, 0);
             break;
         }
-        
-        /* thunk */
-        EMIT_OPCODE(Spk_OPCODE_THUNK);
         
         /* save */
         cgen->stackSize = stackSize;

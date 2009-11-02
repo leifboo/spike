@@ -57,11 +57,11 @@ int main(int argc, char **argv) {
     if (!Spk_Boot())
         return 1;
     
-    notifier = Spk_CallAttr(Spk_GLOBAL(theInterpreter),
-                            (SpkUnknown *)Spk_CLASS(Notifier),
-                            Spk_new,
-                            Spk_GLOBAL(xstderr),
-                            0);
+    notifier = Spk_Send(Spk_GLOBAL(theInterpreter),
+                        (SpkUnknown *)Spk_CLASS(Notifier),
+                        Spk_new,
+                        Spk_GLOBAL(xstderr),
+                        0);
     if (!notifier)
         return 1;
     
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
     if (!tmp)
         return 1;
     
-    tmp = Spk_Keyword(Spk_GLOBAL(theInterpreter), notifier, Spk_failOnError, 0);
+    tmp = Spk_Send(Spk_GLOBAL(theInterpreter), notifier, Spk_failOnError, 0);
     if (!tmp)
         return 1;
     

@@ -351,10 +351,10 @@ typedef struct SpkStmtSubclass {
 } SpkStmtSubclass;
 
 static SpkMethodTmpl StmtMethods[] = {
-    { "asModuleDef",  SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Stmt_asModuleDef },
-    { "check",        SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Stmt_check },
-    { "generateCode", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Stmt_generateCode },
-    { "source",       SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &Stmt_source },
+    { "asModuleDef",  SpkNativeCode_ARGS_0, &Stmt_asModuleDef },
+    { "check",        SpkNativeCode_ARGS_2, &Stmt_check },
+    { "generateCode", SpkNativeCode_ARGS_0, &Stmt_generateCode },
+    { "source",       SpkNativeCode_ARGS_1, &Stmt_source },
     { 0 }
 };
 

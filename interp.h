@@ -20,7 +20,6 @@ typedef struct SpkMessage SpkMessage;
 typedef struct SpkMethod SpkMethod;
 typedef struct SpkProcessorScheduler SpkProcessorScheduler;
 typedef struct SpkSemaphore SpkSemaphore;
-typedef struct SpkThunk SpkThunk;
 
 
 typedef unsigned char SpkOpcode;
@@ -52,15 +51,15 @@ enum /*SpkOpcode*/ {
     Spk_OPCODE_OPER,
     Spk_OPCODE_OPER_SUPER,
     Spk_OPCODE_CALL,
-    Spk_OPCODE_CALL_VAR,
+    Spk_OPCODE_CALL_VA,
     Spk_OPCODE_CALL_SUPER,
-    Spk_OPCODE_CALL_SUPER_VAR,
+    Spk_OPCODE_CALL_SUPER_VA,
     Spk_OPCODE_SET_IND,
     Spk_OPCODE_SET_IND_SUPER,
     Spk_OPCODE_SET_INDEX,
-    Spk_OPCODE_SET_INDEX_VAR,
+    Spk_OPCODE_SET_INDEX_VA,
     Spk_OPCODE_SET_INDEX_SUPER,
-    Spk_OPCODE_SET_INDEX_SUPER_VAR,
+    Spk_OPCODE_SET_INDEX_SUPER_VA,
     Spk_OPCODE_GET_ATTR,
     Spk_OPCODE_GET_ATTR_SUPER,
     Spk_OPCODE_GET_ATTR_VAR,
@@ -70,23 +69,27 @@ enum /*SpkOpcode*/ {
     Spk_OPCODE_SET_ATTR_VAR,
     Spk_OPCODE_SET_ATTR_VAR_SUPER,
     Spk_OPCODE_SEND_MESSAGE,
+    Spk_OPCODE_SEND_MESSAGE_VA,
     Spk_OPCODE_SEND_MESSAGE_SUPER,
+    Spk_OPCODE_SEND_MESSAGE_SUPER_VA,
     Spk_OPCODE_SEND_MESSAGE_VAR,
+    Spk_OPCODE_SEND_MESSAGE_VAR_VA,
     Spk_OPCODE_SEND_MESSAGE_SUPER_VAR,
+    Spk_OPCODE_SEND_MESSAGE_SUPER_VAR_VA,
+    Spk_OPCODE_SEND_MESSAGE_NS_VAR_VA,
+    Spk_OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA,
     Spk_OPCODE_RAISE,
     Spk_OPCODE_RET,
     Spk_OPCODE_RET_TRAMP,
     Spk_OPCODE_LEAF,
     Spk_OPCODE_SAVE,
     Spk_OPCODE_ARG,
-    Spk_OPCODE_ARG_VAR,
+    Spk_OPCODE_ARG_VA,
     Spk_OPCODE_NATIVE,
     Spk_OPCODE_NATIVE_PUSH_INST_VAR,
     Spk_OPCODE_NATIVE_STORE_INST_VAR,
     Spk_OPCODE_RESTORE_SENDER,
     Spk_OPCODE_RESTORE_CALLER,
-    Spk_OPCODE_THUNK,
-    Spk_OPCODE_CALL_THUNK,
     Spk_OPCODE_CALL_BLOCK,
     Spk_OPCODE_CHECK_STACKP,
     
@@ -124,14 +127,13 @@ struct SpkMessage {
 };
 
 
-extern struct SpkClassTmpl Spk_ClassMessageTmpl, Spk_ClassMethodTmpl, Spk_ClassThunkTmpl, Spk_ClassContextTmpl, Spk_ClassMethodContextTmpl, Spk_ClassBlockContextTmpl;
+extern struct SpkClassTmpl Spk_ClassMessageTmpl, Spk_ClassMethodTmpl, Spk_ClassContextTmpl, Spk_ClassMethodContextTmpl, Spk_ClassBlockContextTmpl;
 extern struct SpkClassTmpl Spk_ClassInterpreterTmpl, Spk_ClassProcessorSchedulerTmpl, Spk_ClassFiberTmpl;
 extern struct SpkClassTmpl Spk_ClassNullTmpl, Spk_ClassUninitTmpl, Spk_ClassVoidTmpl;
 
 
 SpkMessage *SpkMessage_New(void);
 SpkMethod *SpkMethod_New(size_t);
-SpkThunk *SpkThunk_New(SpkUnknown *, SpkMethod *, struct SpkBehavior *);
 
 SpkContext *SpkContext_New(size_t);
 

@@ -164,13 +164,13 @@ static SpkAccessorTmpl ObjectAccessors[] = {
 static SpkMethodTmpl ObjectMethods[] = {
     { "__eq__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Object_eq },
     { "__ne__", SpkNativeCode_BINARY_OPER, &Object_ne },
-    { "compoundExpression", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_ARRAY, &Object_compoundExpression },
+    { "compoundExpression", SpkNativeCode_ARGS_ARRAY, &Object_compoundExpression },
     { "printString", SpkNativeCode_ARGS_0, &Object_printString },
     { 0 }
 };
 
 static SpkMethodTmpl ClassObjectMethods[] = {
-    { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &ClassObject_new },
+    { "new", SpkNativeCode_ARGS_0, &ClassObject_new },
     { 0 }
 };
 
@@ -203,7 +203,7 @@ static SpkMethodTmpl VariableObjectMethods[] = {
 };
 
 static SpkMethodTmpl ClassVariableObjectMethods[] = {
-    { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &ClassVariableObject_new },
+    { "new", SpkNativeCode_ARGS_1, &ClassVariableObject_new },
     { 0 }
 };
 

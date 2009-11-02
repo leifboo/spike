@@ -336,7 +336,7 @@ static SpkUnknown *ClassFileStream_open(SpkUnknown *self, SpkUnknown *arg0, SpkU
         return Spk_GLOBAL(null);
     }
     
-    tmp = Spk_CallAttr(Spk_GLOBAL(theInterpreter), self, Spk_new, 0);
+    tmp = Spk_Send(Spk_GLOBAL(theInterpreter), self, Spk_new, 0);
     if (!tmp)
         return 0;
     newStream = Spk_CAST(FileStream, tmp);
@@ -388,21 +388,21 @@ static SpkMethodTmpl methods[] = {
     /* attributes */
     { "eof", SpkNativeCode_ARGS_0, &FileStream_eof },
     /* methods */
-    { "close",  SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &FileStream_close },
-    { "flush",  SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &FileStream_flush },
-    { "getc",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &FileStream_getc },
-    { "gets",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &FileStream_gets },
-    { "open",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &FileStream_reopen },
-    { "printf", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_ARRAY, &FileStream_printf },
-    { "putc",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &FileStream_putc },
-    { "puts",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &FileStream_puts },
-    { "reopen", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &FileStream_reopen },
-    { "rewind", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &FileStream_rewind },
+    { "close",  SpkNativeCode_ARGS_0, &FileStream_close },
+    { "flush",  SpkNativeCode_ARGS_0, &FileStream_flush },
+    { "getc",   SpkNativeCode_ARGS_0, &FileStream_getc },
+    { "gets",   SpkNativeCode_ARGS_1, &FileStream_gets },
+    { "open",   SpkNativeCode_ARGS_2, &FileStream_reopen },
+    { "printf", SpkNativeCode_ARGS_ARRAY, &FileStream_printf },
+    { "putc",   SpkNativeCode_ARGS_1, &FileStream_putc },
+    { "puts",   SpkNativeCode_ARGS_1, &FileStream_puts },
+    { "reopen", SpkNativeCode_ARGS_2, &FileStream_reopen },
+    { "rewind", SpkNativeCode_ARGS_0, &FileStream_rewind },
     { 0 }
 };
 
 static SpkMethodTmpl metaMethods[] = {
-    { "open",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &ClassFileStream_open },
+    { "open",   SpkNativeCode_ARGS_2, &ClassFileStream_open },
     { 0 }
 };
 

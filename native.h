@@ -29,12 +29,10 @@ enum /*SpkNativeCodeFlags*/ {
     SpkNativeCode_SIGNATURE_MASK      = 0x000f,
     
     SpkNativeCode_LEAF                = 0x0010,
-    SpkNativeCode_THUNK               = 0x0020,
     
     SpkNativeCode_UNARY_OPER          = SpkNativeCode_ARGS_0,
     SpkNativeCode_BINARY_OPER         = SpkNativeCode_ARGS_1,
-    SpkNativeCode_TERNARY_OPER        = SpkNativeCode_ARGS_2,
-    SpkNativeCode_METH_ATTR           = SpkNativeCode_THUNK
+    SpkNativeCode_TERNARY_OPER        = SpkNativeCode_ARGS_2
 };
 
 enum /*halt codes*/ {
@@ -61,10 +59,9 @@ SpkUnknown *Spk_Call(struct SpkInterpreter *, SpkUnknown *, SpkCallOper, ...);
 SpkUnknown *Spk_VCall(struct SpkInterpreter *, SpkUnknown *, SpkCallOper, va_list);
 SpkUnknown *Spk_Attr(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *);
 SpkUnknown *Spk_SetAttr(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, SpkUnknown *);
-SpkUnknown *Spk_CallAttr(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, ...);
-SpkUnknown *Spk_CallAttrWithArguments(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, SpkUnknown *);
-SpkUnknown *Spk_Keyword(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, ...);
-SpkUnknown *Spk_VKeyword(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, va_list);
+SpkUnknown *Spk_Send(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, ...);
+SpkUnknown *Spk_VSend(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, va_list);
+SpkUnknown *Spk_SendWithArguments(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, SpkUnknown *);
 
 void Spk_Halt(int, const char *);
 void Spk_HaltWithFormat(int, const char *, ...);

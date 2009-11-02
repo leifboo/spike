@@ -15,6 +15,12 @@
 #include <string.h>
 
 
+typedef struct SpkThunk SpkThunk;
+
+
+static SpkThunk *SpkThunk_New(SpkUnknown *, SpkUnknown *);
+
+
 /*------------------------------------------------------------------------*/
 /* methods */
 
@@ -34,7 +40,7 @@ static SpkUnknown *Module__init(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown 
     globals = SpkModule_VARIABLES(self);
     
     /* Initialize predefined variables. */
-    tmp = Spk_CallAttr(Spk_GLOBAL(theInterpreter), (SpkUnknown *)self, Spk__predef, 0);
+    tmp = Spk_Send(Spk_GLOBAL(theInterpreter), (SpkUnknown *)self, Spk__predef, 0);
     if (!tmp)
         return 0;
     Spk_DECREF(tmp);
@@ -90,6 +96,11 @@ static SpkUnknown *Module__initPythonModule(SpkUnknown *_self, SpkUnknown *modul
 #endif /* MALTIPY */
 
 
+static SpkUnknown *Module__thunk(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return (SpkUnknown *)SpkThunk_New(_self, arg0);
+}
+
+
 /*------------------------------------------------------------------------*/
 /* low-level hooks */
 
@@ -127,10 +138,11 @@ typedef struct SpkModuleClassSubclass {
 } SpkModuleClassSubclass;
 
 static SpkMethodTmpl methods[] = {
-    { "_init", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Module__init },
+    { "_init", SpkNativeCode_ARGS_0, &Module__init },
 #ifdef MALTIPY
-    { "_initPythonModule", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &Module__initPythonModule },
+    { "_initPythonModule", SpkNativeCode_ARGS_1, &Module__initPythonModule },
 #endif
+    { "_thunk", SpkNativeCode_ARGS_1, &Module__thunk },
     { 0 }
 };
 
@@ -201,4 +213,68 @@ void SpkModule_InitLiteralsFromTemplate(SpkBehavior *moduleClass, SpkModuleTmpl 
         }
         self->literals[i] = literal;
     }
+}
+
+
+/*------------------------------------------------------------------------*/
+/* thunks */
+
+struct SpkThunk {
+    SpkObject base;
+    SpkUnknown *receiver;
+    SpkUnknown *selector;
+};
+
+typedef struct SpkThunkSubclass {
+    SpkThunk base;
+    SpkUnknown *variables[1]; /* stretchy */
+} SpkThunkSubclass;
+
+static SpkUnknown *Thunk_apply(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkThunk *self = (SpkThunk *)_self;
+    return Spk_SendWithArguments(Spk_GLOBAL(theInterpreter),
+                                 self->receiver,
+                                 self->selector,
+                                 arg0);
+}
+
+static SpkMethodTmpl ThunkMethods[] = {
+    { "__apply__", SpkNativeCode_ARGS_ARRAY, &Thunk_apply },
+    { 0 }
+};
+
+static void Thunk_dealloc(SpkObject *_self) {
+    /* XXX: too lazy to implement 'traverse' */
+    SpkThunk *self = (SpkThunk *)_self;
+    Spk_DECREF(self->receiver);
+    Spk_DECREF(self->selector);
+    (*Spk_CLASS(Thunk)->superclass->dealloc)(_self);
+}
+
+SpkClassTmpl Spk_ClassThunkTmpl = {
+    Spk_HEART_CLASS_TMPL(Thunk, Object), {
+        /*accessors*/ 0,
+        ThunkMethods,
+        /*lvalueMethods*/ 0,
+        offsetof(SpkThunkSubclass, variables),
+        /*itemSize*/ 0,
+        /*zero*/ 0,
+        &Thunk_dealloc
+    }, /*meta*/ {
+        0
+    }
+};
+
+static SpkThunk *SpkThunk_New(
+    SpkUnknown *receiver,
+    SpkUnknown *selector)
+{
+    SpkThunk *newThunk;
+    
+    newThunk = (SpkThunk *)SpkObject_New(Spk_CLASS(Thunk));
+    if (!newThunk)
+        return 0;
+    newThunk->receiver = receiver;  Spk_INCREF(receiver);
+    newThunk->selector = selector;  Spk_INCREF(selector);
+    return newThunk;
 }

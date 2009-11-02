@@ -171,7 +171,7 @@ SpkUnknown *SpkSymbolTable_Insert(SpkSymbolTable *st, SpkExpr *def,
             Spk_INCREF(Spk_GLOBAL(xvoid));
             return Spk_GLOBAL(xvoid);
         }
-        tmp = Spk_Keyword(Spk_GLOBAL(theInterpreter), requestor, Spk_redefinedSymbol, def, 0);
+        tmp = Spk_Send(Spk_GLOBAL(theInterpreter), requestor, Spk_redefinedSymbol, def, 0);
         if (!tmp)
             return 0;
         Spk_DECREF(tmp);
@@ -239,7 +239,7 @@ SpkUnknown *SpkSymbolTable_Bind(SpkSymbolTable *st, SpkExpr *expr,
     }
     
     /* undefined */
-    tmp = Spk_Keyword(Spk_GLOBAL(theInterpreter), requestor, Spk_undefinedSymbol, expr, 0);
+    tmp = Spk_Send(Spk_GLOBAL(theInterpreter), requestor, Spk_undefinedSymbol, expr, 0);
     if (!tmp)
         return 0;
     Spk_DECREF(tmp);
@@ -268,11 +268,11 @@ static SpkUnknown *SymbolTable_init(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkn
 static SpkUnknown *ClassSymbolTable_new(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkUnknown *newSymbolTable, *tmp;
     
-    newSymbolTable = Spk_CallAttr(Spk_GLOBAL(theInterpreter), Spk_SUPER, Spk_new, 0);
+    newSymbolTable = Spk_Send(Spk_GLOBAL(theInterpreter), Spk_SUPER, Spk_new, 0);
     if (!newSymbolTable)
         return 0;
     tmp = newSymbolTable;
-    newSymbolTable = Spk_CallAttr(Spk_GLOBAL(theInterpreter), newSymbolTable, Spk_init, 0);
+    newSymbolTable = Spk_Send(Spk_GLOBAL(theInterpreter), newSymbolTable, Spk_init, 0);
     Spk_DECREF(tmp);
     return newSymbolTable;
 }
@@ -624,12 +624,12 @@ SpkClassTmpl Spk_ClassScopeTmpl = {
 
 
 static SpkMethodTmpl SymbolTableMethods[] = {
-    { "init", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &SymbolTable_init },
+    { "init", SpkNativeCode_ARGS_0, &SymbolTable_init },
     { 0 }
 };
 
 static SpkMethodTmpl ClassSymbolTableMethods[] = {
-    { "new",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &ClassSymbolTable_new },
+    { "new",   SpkNativeCode_ARGS_0, &ClassSymbolTable_new },
     { 0 }
 };
 

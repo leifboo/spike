@@ -426,7 +426,7 @@ typedef struct SpkParserSubclass {
 } SpkParserSubclass;
 
 static SpkMethodTmpl methods[] = {
-    { "parse", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Parser_parse },
+    { "parse", SpkNativeCode_ARGS_2, &Parser_parse },
     { 0 }
 };
 

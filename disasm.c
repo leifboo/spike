@@ -188,9 +188,9 @@ static void disassembleMethod(SpkMethodTmpl *method,
             break;
             
         case Spk_OPCODE_CALL:           mnemonic = "call";   goto call;
-        case Spk_OPCODE_CALL_VAR:       mnemonic = "callv";  goto call;
+        case Spk_OPCODE_CALL_VA:        mnemonic = "vcall";  goto call;
         case Spk_OPCODE_CALL_SUPER:     mnemonic = "scall";  goto call;
-        case Spk_OPCODE_CALL_SUPER_VAR: mnemonic = "scallv"; goto call;
+        case Spk_OPCODE_CALL_SUPER_VA:  mnemonic = "vscall"; goto call;
  call:
             oper = (unsigned int)(*instructionPointer++);
             selector = *Spk_operCallSelectors[oper].selector;
@@ -202,9 +202,9 @@ static void disassembleMethod(SpkMethodTmpl *method,
         case Spk_OPCODE_SET_IND_SUPER:  mnemonic = "sind"; break;
         
         case Spk_OPCODE_SET_INDEX:           mnemonic = "index";   goto index;
-        case Spk_OPCODE_SET_INDEX_VAR:       mnemonic = "indexv";  goto index;
+        case Spk_OPCODE_SET_INDEX_VA:        mnemonic = "vindex";  goto index;
         case Spk_OPCODE_SET_INDEX_SUPER:     mnemonic = "sindex";  goto index;
-        case Spk_OPCODE_SET_INDEX_SUPER_VAR: mnemonic = "sindexv"; goto index;
+        case Spk_OPCODE_SET_INDEX_SUPER_VA:  mnemonic = "vsindex"; goto index;
  index:
             DECODE_UINT(argumentCount);
             pArgumentCount = &argumentCount;
@@ -225,8 +225,10 @@ static void disassembleMethod(SpkMethodTmpl *method,
         case Spk_OPCODE_SET_ATTR_VAR:        mnemonic = "sattrv";   break;
         case Spk_OPCODE_SET_ATTR_VAR_SUPER:  mnemonic = "ssattrv";  break;
             
-        case Spk_OPCODE_SEND_MESSAGE:        mnemonic = "send";  goto send;
-        case Spk_OPCODE_SEND_MESSAGE_SUPER:  mnemonic = "ssend"; goto send;
+        case Spk_OPCODE_SEND_MESSAGE:           mnemonic = "send";   goto send;
+        case Spk_OPCODE_SEND_MESSAGE_VA:        mnemonic = "vsend";  goto send;
+        case Spk_OPCODE_SEND_MESSAGE_SUPER:     mnemonic = "ssend";  goto send;
+        case Spk_OPCODE_SEND_MESSAGE_SUPER_VA:  mnemonic = "vssend"; goto send;
  send:
             base = "literal";
             DECODE_UINT(index);
@@ -235,6 +237,15 @@ static void disassembleMethod(SpkMethodTmpl *method,
             literal = literals[index];
             break;
             
+        case Spk_OPCODE_SEND_MESSAGE_VAR:           mnemonic = "sendv";   goto sendVar;
+        case Spk_OPCODE_SEND_MESSAGE_VAR_VA:        mnemonic = "vsendv";  goto sendVar;
+        case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR:     mnemonic = "ssendv";  goto sendVar;
+        case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR_VA:  mnemonic = "vssendv"; goto sendVar;
+ sendVar:
+            DECODE_UINT(argumentCount);
+            pArgumentCount = &argumentCount;
+            break;
+
         case Spk_OPCODE_RAISE: mnemonic = "raise"; break;
 
         case Spk_OPCODE_RET:       mnemonic = "ret";   break;
@@ -251,7 +262,7 @@ static void disassembleMethod(SpkMethodTmpl *method,
             break;
             
         case Spk_OPCODE_ARG:     mnemonic = "arg";  goto arg;
-        case Spk_OPCODE_ARG_VAR: mnemonic = "argv"; goto arg;
+        case Spk_OPCODE_ARG_VA:  mnemonic = "varg"; goto arg;
  arg:
             DECODE_UINT(minArgumentCount);
             DECODE_UINT(maxArgumentCount);
@@ -266,8 +277,6 @@ static void disassembleMethod(SpkMethodTmpl *method,
             
         case Spk_OPCODE_RESTORE_SENDER: mnemonic = "restore"; keyword = "sender"; break;
         case Spk_OPCODE_RESTORE_CALLER: mnemonic = "restore"; keyword = "caller"; break;
-        case Spk_OPCODE_THUNK:          mnemonic = "thunk"; break;
-        case Spk_OPCODE_CALL_THUNK:     mnemonic = "ct";    break;
         case Spk_OPCODE_CALL_BLOCK:     mnemonic = "cb";    break;
             
         case Spk_OPCODE_CHECK_STACKP:
@@ -318,7 +327,7 @@ static void disassembleMethod(SpkMethodTmpl *method,
                         (unsigned long)stackSize);
                 break;
             case Spk_OPCODE_ARG:
-            case Spk_OPCODE_ARG_VAR:
+            case Spk_OPCODE_ARG_VA:
                 fprintf(out, "\t%lu,%lu",
                         (unsigned long)minArgumentCount,
                         (unsigned long)maxArgumentCount);
@@ -611,15 +620,15 @@ static const char *opcodeName(SpkOpcode opcode) {
     case Spk_OPCODE_OPER: return "Spk_OPCODE_OPER";
     case Spk_OPCODE_OPER_SUPER: return "Spk_OPCODE_OPER_SUPER";
     case Spk_OPCODE_CALL: return "Spk_OPCODE_CALL";
-    case Spk_OPCODE_CALL_VAR: return "Spk_OPCODE_CALL_VAR";
+    case Spk_OPCODE_CALL_VA: return "Spk_OPCODE_CALL_VA";
     case Spk_OPCODE_CALL_SUPER: return "Spk_OPCODE_CALL_SUPER";
-    case Spk_OPCODE_CALL_SUPER_VAR: return "Spk_OPCODE_CALL_SUPER_VAR";
+    case Spk_OPCODE_CALL_SUPER_VA: return "Spk_OPCODE_CALL_SUPER_VA";
     case Spk_OPCODE_SET_IND: return "Spk_OPCODE_SET_IND";
     case Spk_OPCODE_SET_IND_SUPER: return "Spk_OPCODE_SET_IND_SUPER";
     case Spk_OPCODE_SET_INDEX: return "Spk_OPCODE_SET_INDEX";
-    case Spk_OPCODE_SET_INDEX_VAR: return "Spk_OPCODE_SET_INDEX_VAR";
+    case Spk_OPCODE_SET_INDEX_VA: return "Spk_OPCODE_SET_INDEX_VA";
     case Spk_OPCODE_SET_INDEX_SUPER: return "Spk_OPCODE_SET_INDEX_SUPER";
-    case Spk_OPCODE_SET_INDEX_SUPER_VAR: return "Spk_OPCODE_SET_INDEX_SUPER_VAR";
+    case Spk_OPCODE_SET_INDEX_SUPER_VA: return "Spk_OPCODE_SET_INDEX_SUPER_VA";
     case Spk_OPCODE_GET_ATTR: return "Spk_OPCODE_GET_ATTR";
     case Spk_OPCODE_GET_ATTR_SUPER: return "Spk_OPCODE_GET_ATTR_SUPER";
     case Spk_OPCODE_GET_ATTR_VAR: return "Spk_OPCODE_GET_ATTR_VAR";
@@ -631,21 +640,23 @@ static const char *opcodeName(SpkOpcode opcode) {
     case Spk_OPCODE_SEND_MESSAGE: return "Spk_OPCODE_SEND_MESSAGE";
     case Spk_OPCODE_SEND_MESSAGE_SUPER: return "Spk_OPCODE_SEND_MESSAGE_SUPER";
     case Spk_OPCODE_SEND_MESSAGE_VAR: return "Spk_OPCODE_SEND_MESSAGE_VAR";
+    case Spk_OPCODE_SEND_MESSAGE_VAR_VA: return "Spk_OPCODE_SEND_MESSAGE_VAR_VA";
     case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR: return "Spk_OPCODE_SEND_MESSAGE_SUPER_VAR";
+    case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR_VA: return "Spk_OPCODE_SEND_MESSAGE_SUPER_VAR_VA";
+    case Spk_OPCODE_SEND_MESSAGE_NS_VAR_VA: return "Spk_OPCODE_SEND_MESSAGE_NS_VAR_VA";
+    case Spk_OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA: return "Spk_OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA";
     case Spk_OPCODE_RAISE: return "Spk_OPCODE_RAISE";
     case Spk_OPCODE_RET: return "Spk_OPCODE_RET";
     case Spk_OPCODE_RET_TRAMP: return "Spk_OPCODE_RET_TRAMP";
     case Spk_OPCODE_LEAF: return "Spk_OPCODE_LEAF";
     case Spk_OPCODE_SAVE: return "Spk_OPCODE_SAVE";
     case Spk_OPCODE_ARG: return "Spk_OPCODE_ARG";
-    case Spk_OPCODE_ARG_VAR: return "Spk_OPCODE_ARG_VAR";
+    case Spk_OPCODE_ARG_VA: return "Spk_OPCODE_ARG_VA";
     case Spk_OPCODE_NATIVE: return "Spk_OPCODE_NATIVE";
     case Spk_OPCODE_NATIVE_PUSH_INST_VAR: return "Spk_OPCODE_NATIVE_PUSH_INST_VAR";
     case Spk_OPCODE_NATIVE_STORE_INST_VAR: return "Spk_OPCODE_NATIVE_STORE_INST_VAR";
     case Spk_OPCODE_RESTORE_SENDER: return "Spk_OPCODE_RESTORE_SENDER";
     case Spk_OPCODE_RESTORE_CALLER: return "Spk_OPCODE_RESTORE_CALLER";
-    case Spk_OPCODE_THUNK: return "Spk_OPCODE_THUNK";
-    case Spk_OPCODE_CALL_THUNK: return "Spk_OPCODE_CALL_THUNK";
     case Spk_OPCODE_CALL_BLOCK: return "Spk_OPCODE_CALL_BLOCK";
     case Spk_OPCODE_CHECK_STACKP: return "Spk_OPCODE_CHECK_STACKP";
     
@@ -797,9 +808,9 @@ static void genCCodeForMethodOpcodes(SpkMethodTmpl *method,
             break;
             
         case Spk_OPCODE_CALL:
-        case Spk_OPCODE_CALL_VAR:
+        case Spk_OPCODE_CALL_VA:
         case Spk_OPCODE_CALL_SUPER:
-        case Spk_OPCODE_CALL_SUPER_VAR:
+        case Spk_OPCODE_CALL_SUPER_VA:
             callOperator = (SpkCallOper)(*instructionPointer++);
             fprintf(out, "%s, ", callOperName(callOperator));
             ip = instructionPointer;
@@ -811,9 +822,9 @@ static void genCCodeForMethodOpcodes(SpkMethodTmpl *method,
             break;
         
         case Spk_OPCODE_SET_INDEX:
-        case Spk_OPCODE_SET_INDEX_VAR:
+        case Spk_OPCODE_SET_INDEX_VA:
         case Spk_OPCODE_SET_INDEX_SUPER:
-        case Spk_OPCODE_SET_INDEX_SUPER_VAR:
+        case Spk_OPCODE_SET_INDEX_SUPER_VA:
             ip = instructionPointer;
             DECODE_UINT(argumentCount);
             break;
@@ -833,10 +844,19 @@ static void genCCodeForMethodOpcodes(SpkMethodTmpl *method,
             break;
             
         case Spk_OPCODE_SEND_MESSAGE:
+        case Spk_OPCODE_SEND_MESSAGE_VA:
         case Spk_OPCODE_SEND_MESSAGE_SUPER:
+        case Spk_OPCODE_SEND_MESSAGE_SUPER_VA:
             DECODE_UINT(index);
             DECODE_UINT(argumentCount);
             literal = literals[index];
+            break;
+            
+        case Spk_OPCODE_SEND_MESSAGE_VAR:
+        case Spk_OPCODE_SEND_MESSAGE_VAR_VA:
+        case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR:
+        case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR_VA:
+            DECODE_UINT(argumentCount);
             break;
             
         case Spk_OPCODE_RAISE:
@@ -855,7 +875,7 @@ static void genCCodeForMethodOpcodes(SpkMethodTmpl *method,
             break;
             
         case Spk_OPCODE_ARG:
-        case Spk_OPCODE_ARG_VAR:
+        case Spk_OPCODE_ARG_VA:
             DECODE_UINT(minArgumentCount);
             DECODE_UINT(maxArgumentCount);
             if (minArgumentCount < maxArgumentCount) {
@@ -870,8 +890,6 @@ static void genCCodeForMethodOpcodes(SpkMethodTmpl *method,
             
         case Spk_OPCODE_RESTORE_SENDER:
         case Spk_OPCODE_RESTORE_CALLER:
-        case Spk_OPCODE_THUNK:
-        case Spk_OPCODE_CALL_THUNK:
         case Spk_OPCODE_CALL_BLOCK:
             break;
             

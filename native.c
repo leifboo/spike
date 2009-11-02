@@ -17,9 +17,6 @@ SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
     SpkOpcode *ip;
     
     size = 0;
-    if (flags & SpkNativeCode_THUNK) {
-        size += 1; /* thunk */
-    }
     if (flags & SpkNativeCode_LEAF) {
         size += 5; /* leaf, arg, native */
     } else {
@@ -45,9 +42,6 @@ SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
     newMethod->nativeCode = nativeCode;
     
     ip = SpkMethod_OPCODES(newMethod);
-    if (flags & SpkNativeCode_THUNK) {
-        *ip++ = Spk_OPCODE_THUNK;
-    }
     if (flags & SpkNativeCode_LEAF) {
         assert(!variadic && "SpkNativeCode_ARGS_ARRAY cannot be combined with SpkNativeCode_LEAF");
         *ip++ = Spk_OPCODE_LEAF;
@@ -63,7 +57,7 @@ SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
         *ip++ = Spk_OPCODE_SAVE;
         *ip++ = (SpkOpcode)contextSize;
         *ip++ = (SpkOpcode)stackSize;
-        *ip++ = variadic ? Spk_OPCODE_ARG_VAR : Spk_OPCODE_ARG;
+        *ip++ = variadic ? Spk_OPCODE_ARG_VA : Spk_OPCODE_ARG;
         *ip++ = (SpkOpcode)argumentCount;
         *ip++ = (SpkOpcode)argumentCount;
         *ip++ = Spk_OPCODE_NATIVE;
@@ -73,9 +67,9 @@ SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
         *ip++ = 6;
         
         /* trampolines for re-entering interpreted code */
-        *ip++ = Spk_OPCODE_SEND_MESSAGE_VAR;
+        *ip++ = Spk_OPCODE_SEND_MESSAGE_NS_VAR_VA;
         *ip++ = Spk_OPCODE_RET_TRAMP;
-        *ip++ = Spk_OPCODE_SEND_MESSAGE_SUPER_VAR;
+        *ip++ = Spk_OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA;
         *ip++ = Spk_OPCODE_RET_TRAMP;
     }
     
@@ -157,51 +151,28 @@ SpkUnknown *Spk_SetAttr(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown
     return sendMessage(interpreter, obj, Spk_METHOD_NAMESPACE_LVALUE, name, value, 0);
 }
 
-SpkUnknown *Spk_CallAttr(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *name, ...) {
-    SpkUnknown *result, *thunk;
-    va_list ap;
-    
-    va_start(ap, name);
-    thunk = Spk_Attr(interpreter, obj, name);
-    if (!thunk) {
-        return 0;
-    }
-    result = Spk_VCall(interpreter, thunk, Spk_OPER_APPLY, ap);
-    Spk_DECREF(thunk);
-    va_end(ap);
-    return result;
-}
-
-SpkUnknown *Spk_CallAttrWithArguments(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *name,
-                                      SpkUnknown *argumentArray)
-{
-    SpkUnknown *result, *thunk;
-    
-    thunk = Spk_Attr(interpreter, obj, name);
-    if (!thunk) {
-        return 0;
-    }
-    result = Spk_SendMessage(interpreter,
-                             thunk,
-                             Spk_METHOD_NAMESPACE_RVALUE,
-                             *Spk_operCallSelectors[Spk_OPER_APPLY].selector,
-                             argumentArray);
-    Spk_DECREF(thunk);
-    return result;
-}
-
-SpkUnknown *Spk_Keyword(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *selector, ...) {
+SpkUnknown *Spk_Send(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *selector, ...) {
     SpkUnknown *result;
     va_list ap;
     
     va_start(ap, selector);
-    result = Spk_VKeyword(interpreter, obj, selector, ap);
+    result = Spk_VSend(interpreter, obj, selector, ap);
     va_end(ap);
     return result;
 }
 
-SpkUnknown *Spk_VKeyword(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *selector, va_list ap) {
+SpkUnknown *Spk_VSend(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *selector, va_list ap) {
     return vSendMessage(interpreter, obj, Spk_METHOD_NAMESPACE_RVALUE, selector, ap);
+}
+
+SpkUnknown *Spk_SendWithArguments(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *name,
+                                  SpkUnknown *argumentArray)
+{
+    return Spk_SendMessage(interpreter,
+                           obj,
+                           Spk_METHOD_NAMESPACE_RVALUE,
+                           name,
+                           argumentArray);
 }
 
 

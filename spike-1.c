@@ -47,7 +47,7 @@ static int Spk_Main(int argc, char **argv) {
     char *arg, *sourceFilename;
     SpkModuleTmpl *moduleTmpl; SpkModuleClass *moduleClass; SpkObject *module;
     SpkUnknown *result; SpkInteger *resultInt;
-    SpkUnknown *entry, *tmp;
+    SpkUnknown *tmp;
     SpkArray *argvObj, *args;
     
     sourceFilename = 0;
@@ -127,11 +127,12 @@ static int Spk_Main(int argc, char **argv) {
     if (!module) {
         return 1;
     }
-    tmp = Spk_CallAttr(Spk_GLOBAL(theInterpreter), (SpkUnknown *)module, Spk__init, 0);
+    tmp = Spk_Send(Spk_GLOBAL(theInterpreter), (SpkUnknown *)module, Spk__init, 0);
     if (!tmp)
         return 0;
     Spk_DECREF(tmp);
     
+    /* Build 'argv'. */
     argvObj = SpkArray_New(argc - 1);
     for (i = 1; i < argc; ++i) {
         tmp = (SpkUnknown *)SpkString_FromCString(argv[i]);
@@ -142,21 +143,12 @@ static int Spk_Main(int argc, char **argv) {
     SpkArray_SetItem(args, 0, (SpkUnknown *)argvObj);
     Spk_DECREF(argvObj);
     
-    entry = Spk_SendMessage(
+    /* Call 'main'. */
+    result = Spk_SendMessage(
         Spk_GLOBAL(theInterpreter),
         (SpkUnknown *)module,
         Spk_METHOD_NAMESPACE_RVALUE,
         Spk_main,
-        Spk_emptyArgs
-        );
-    if (!entry) {
-        return 1;
-    }
-    result = Spk_SendMessage(
-        Spk_GLOBAL(theInterpreter),
-        entry,
-        Spk_METHOD_NAMESPACE_RVALUE,
-        Spk___apply__,
         (SpkUnknown *)args
         );
     

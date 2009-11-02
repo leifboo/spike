@@ -55,12 +55,12 @@ static SpkUnknown *badExpr(Expr *expr, const char *desc, StaticChecker *checker)
     descStr = SpkHost_StringFromCString(desc);
     if (!descStr)
         return 0;
-    tmp = Spk_Keyword(Spk_GLOBAL(theInterpreter),
-                      checker->requestor,
-                      Spk_badExpr,
-                      expr,
-                      descStr,
-                      0);
+    tmp = Spk_Send(Spk_GLOBAL(theInterpreter),
+                   checker->requestor,
+                   Spk_badExpr,
+                   expr,
+                   descStr,
+                   0);
     Spk_DECREF(descStr);
     if (!tmp)
         return 0;

@@ -51,7 +51,7 @@ typedef struct SpkModuleClass {
 #define SpkModule_LITERALS(op) (((SpkModuleClass *)(op->base.klass))->literals)
 
 
-extern struct SpkClassTmpl Spk_ClassModuleTmpl;
+extern struct SpkClassTmpl Spk_ClassModuleTmpl, Spk_ClassThunkTmpl;
 
 
 void SpkModule_InitLiteralsFromTemplate(SpkBehavior *, SpkModuleTmpl *);

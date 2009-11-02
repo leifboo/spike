@@ -140,11 +140,11 @@ static SpkUnknown *Notifier_failOnError(SpkUnknown *_self, SpkUnknown *arg0, Spk
 static SpkUnknown *ClassNotifier_new(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkUnknown *newNotifier, *tmp;
     
-    newNotifier = Spk_CallAttr(Spk_GLOBAL(theInterpreter), Spk_SUPER, Spk_new, 0);
+    newNotifier = Spk_Send(Spk_GLOBAL(theInterpreter), Spk_SUPER, Spk_new, 0);
     if (!newNotifier)
         return 0;
     tmp = newNotifier;
-    newNotifier = Spk_CallAttr(Spk_GLOBAL(theInterpreter), newNotifier, Spk_init, arg0, 0);
+    newNotifier = Spk_Send(Spk_GLOBAL(theInterpreter), newNotifier, Spk_init, arg0, 0);
     Spk_DECREF(tmp);
     return newNotifier;
 }
@@ -204,7 +204,7 @@ static SpkAccessorTmpl accessors[] = {
 };
 
 static SpkMethodTmpl methods[] = {
-    { "init", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &Notifier_init },
+    { "init", SpkNativeCode_ARGS_1, &Notifier_init },
     { "badExpr:", SpkNativeCode_ARGS_2, &Notifier_badExpr },
     { "redefinedSymbol:", SpkNativeCode_ARGS_1, &Notifier_redefinedSymbol },
     { "undefinedSymbol:", SpkNativeCode_ARGS_1, &Notifier_undefinedSymbol },
@@ -213,7 +213,7 @@ static SpkMethodTmpl methods[] = {
 };
 
 static SpkMethodTmpl metaMethods[] = {
-    { "new", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_1, &ClassNotifier_new },
+    { "new", SpkNativeCode_ARGS_1, &ClassNotifier_new },
     { 0 }
 };
 

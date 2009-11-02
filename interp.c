@@ -76,15 +76,6 @@ struct SpkProcessorScheduler {
 };
 
 
-struct SpkThunk {
-    SpkObject base;
-    SpkUnknown *receiver;
-    SpkMethod *method;
-    struct SpkBehavior *methodClass;
-    SpkOpcode *pc;
-};
-
-
 struct SpkInterpreter {
     SpkObject base;
 
@@ -190,41 +181,6 @@ SpkClassTmpl Spk_ClassMethodTmpl = {
 };
 
 
-typedef struct SpkThunkSubclass {
-    SpkThunk base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkThunkSubclass;
-
-static void Thunk_traverse_init(SpkObject *);
-static SpkUnknown **Thunk_traverse_current(SpkObject *);
-static void Thunk_traverse_next(SpkObject *);
-
-static SpkTraverse Thunk_traverse = {
-    &Thunk_traverse_init,
-    &Thunk_traverse_current,
-    &Thunk_traverse_next,
-};
-
-static SpkMethodTmpl ThunkMethods[] = {
-    { 0 }
-};
-
-SpkClassTmpl Spk_ClassThunkTmpl = {
-    Spk_HEART_CLASS_TMPL(Thunk, Object), {
-        /*accessors*/ 0,
-        ThunkMethods,
-        /*lvalueMethods*/ 0,
-        offsetof(SpkThunkSubclass, variables),
-        /*itemSize*/ 0,
-        /*zero*/ 0,
-        /*dealloc*/ 0,
-        &Thunk_traverse
-    }, /*meta*/ {
-        0
-    }
-};
-
-
 static void Context_traverse_init(SpkObject *);
 static SpkUnknown **Context_traverse_current(SpkObject *);
 static void Context_traverse_next(SpkObject *);
@@ -238,8 +194,8 @@ typedef struct SpkContextSubclass {
 } SpkContextSubclass;
 
 static SpkMethodTmpl ContextMethods[] = {
-    { "blockCopy", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_2, &Context_blockCopy },
-    { "compoundExpression", SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_ARRAY, &Context_compoundExpression },
+    { "blockCopy", SpkNativeCode_ARGS_2, &Context_blockCopy },
+    { "compoundExpression", SpkNativeCode_ARGS_ARRAY, &Context_compoundExpression },
     { 0 }
 };
 
@@ -416,12 +372,7 @@ SpkClassTmpl Spk_ClassFiberTmpl = {
 /* initialization */
 
 void SpkInterpreter_Boot(void) {
-    SpkMethod *callThunk, *callBlock;
-    
-    callThunk = SpkMethod_New(1);
-    SpkMethod_OPCODES(callThunk)[0] = Spk_OPCODE_CALL_THUNK;
-    SpkBehavior_InsertMethod(Spk_CLASS(Thunk), Spk_METHOD_NAMESPACE_RVALUE, Spk___apply__, callThunk);
-    Spk_DECREF(callThunk);
+    SpkMethod *callBlock;
     
     callBlock = SpkMethod_New(1);
     SpkMethod_OPCODES(callBlock)[0] = Spk_OPCODE_CALL_BLOCK;
@@ -487,60 +438,6 @@ SpkMessage *SpkMessage_New() {
 
 SpkMethod *SpkMethod_New(size_t size) {
     return (SpkMethod *)SpkObject_NewVar(Spk_CLASS(Method), size);
-}
-
-
-/*------------------------------------------------------------------------*/
-/* thunks */
-
-SpkThunk *SpkThunk_New(
-    SpkUnknown *receiver,
-    SpkMethod *method,
-    SpkBehavior *methodClass)
-{
-    SpkThunk *newThunk;
-    
-    newThunk = (SpkThunk *)SpkObject_New(Spk_CLASS(Thunk));
-    if (!newThunk)
-        return 0;
-    newThunk->receiver = receiver;  Spk_INCREF(receiver);
-    newThunk->method = method;  Spk_INCREF(method);
-    newThunk->methodClass = methodClass;  Spk_INCREF(methodClass);
-    /* skip 'thunk' opcode */
-    newThunk->pc = SpkMethod_OPCODES(method) + 1;
-    return newThunk;
-}
-
-static void Thunk_traverse_init(SpkObject *_self) {
-    SpkThunk *self;
-    
-    self = (SpkThunk *)_self;
-    (*Spk_CLASS(Thunk)->superclass->traverse.init)(_self);
-    self->pc = (SpkOpcode *)0 + 3;
-}
-
-static SpkUnknown **Thunk_traverse_current(SpkObject *_self) {
-    SpkThunk *self;
-    ptrdiff_t i;
-    
-    self = (SpkThunk *)_self;
-    i = self->pc - (SpkOpcode *)0;
-    switch (i) {
-    case 3: return &self->receiver;
-    case 2: return (SpkUnknown **)&self->method;
-    case 1: return (SpkUnknown **)&self->methodClass;
-    }
-    return (*Spk_CLASS(Thunk)->superclass->traverse.current)(_self);
-}
-
-static void Thunk_traverse_next(SpkObject *_self) {
-    SpkThunk *self;
-    
-    self = (SpkThunk *)_self;
-    if (self->pc)
-        --self->pc;
-    else
-        (*Spk_CLASS(Thunk)->superclass->traverse.next)(_self);
 }
 
 
@@ -646,10 +543,10 @@ static SpkUnknown *Context_blockCopy(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
 
 static SpkUnknown *Context_compoundExpression(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkContext *self = (SpkContext *)_self;
-    return Spk_CallAttrWithArguments(Spk_GLOBAL(theInterpreter),
-                                     self->homeContext->u.m.receiver,
-                                     Spk_compoundExpression,
-                                     arg0);
+    return Spk_SendWithArguments(Spk_GLOBAL(theInterpreter),
+                                 self->homeContext->u.m.receiver,
+                                 Spk_compoundExpression,
+                                 arg0);
 }
 
 
@@ -1093,7 +990,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             receiver = stackPointer[argumentCount];
             methodClass = GET_CLASS(receiver);
             goto call;
-        case Spk_OPCODE_CALL_VAR:
+        case Spk_OPCODE_CALL_VA:
             oldIP = instructionPointer - 1;
             oper = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
@@ -1108,7 +1005,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             varArg = 0;
             methodClass = methodClass->superclass;
             goto call;
-        case Spk_OPCODE_CALL_SUPER_VAR:
+        case Spk_OPCODE_CALL_SUPER_VA:
             oldIP = instructionPointer - 1;
             oper = (unsigned int)(*instructionPointer++);
             DECODE_UINT(argumentCount);
@@ -1158,7 +1055,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             receiver = stackPointer[argumentCount];
             methodClass = GET_CLASS(receiver);
             goto index;
-        case Spk_OPCODE_SET_INDEX_VAR:
+        case Spk_OPCODE_SET_INDEX_VA:
             oldIP = instructionPointer - 1;
             DECODE_UINT(argumentCount);
             varArg = 1;
@@ -1171,7 +1068,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             varArg = 0;
             methodClass = methodClass->superclass;
             goto index;
-        case Spk_OPCODE_SET_INDEX_SUPER_VAR:
+        case Spk_OPCODE_SET_INDEX_SUPER_VA:
             oldIP = instructionPointer - 1;
             DECODE_UINT(argumentCount);
             varArg = 1;
@@ -1258,32 +1155,79 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             methodClass = methodClass->superclass;
             goto perform;
             
-            /*** send opcodes -- keyword expressions ***/
+            /*** send opcodes -- "obj.attr(a1, a2, ...)" &  keyword expressions ***/
         case Spk_OPCODE_SEND_MESSAGE:
             oldIP = instructionPointer - 1;
             DECODE_UINT(index);
             DECODE_UINT(argumentCount);
+            varArg = 0;
             receiver = stackPointer[argumentCount];
             methodClass = GET_CLASS(receiver);
- send:
-            ns = Spk_METHOD_NAMESPACE_RVALUE;
-            selector = literalPointer[index];
-            Spk_INCREF(selector);
-            varArg = 0;
-            goto lookupMethodInClass;
+            goto send;
+        case Spk_OPCODE_SEND_MESSAGE_VA:
+            oldIP = instructionPointer - 1;
+            DECODE_UINT(index);
+            DECODE_UINT(argumentCount);
+            varArg = 1;
+            receiver = stackPointer[argumentCount + 1];
+            methodClass = GET_CLASS(receiver);
+            goto send;
         case Spk_OPCODE_SEND_MESSAGE_SUPER:
             oldIP = instructionPointer - 1;
             DECODE_UINT(index);
             DECODE_UINT(argumentCount);
+            varArg = 0;
             methodClass = methodClass->superclass;
             goto send;
+        case Spk_OPCODE_SEND_MESSAGE_SUPER_VA:
+            oldIP = instructionPointer - 1;
+            DECODE_UINT(index);
+            DECODE_UINT(argumentCount);
+            varArg = 1;
+            methodClass = methodClass->superclass;
+ send:
+            ns = Spk_METHOD_NAMESPACE_RVALUE;
+            selector = literalPointer[index];
+            Spk_INCREF(selector);
+            goto lookupMethodInClass;
+
+            /*** send opcodes -- "(obj.*attr)(a1, a2, ...)" ***/
+        case Spk_OPCODE_SEND_MESSAGE_VAR:
+            oldIP = instructionPointer - 1;
+            DECODE_UINT(argumentCount);
+            varArg = 0;
+            receiver = stackPointer[argumentCount + 1];
+            methodClass = GET_CLASS(receiver);
+            goto sendVar;
+        case Spk_OPCODE_SEND_MESSAGE_VAR_VA:
+            oldIP = instructionPointer - 1;
+            DECODE_UINT(argumentCount);
+            varArg = 1;
+            receiver = stackPointer[argumentCount + 2];
+            methodClass = GET_CLASS(receiver);
+            goto sendVar;
+        case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR:
+            oldIP = instructionPointer - 1;
+            DECODE_UINT(argumentCount);
+            varArg = 0;
+            methodClass = methodClass->superclass;
+            goto sendVar;
+        case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR_VA:
+            oldIP = instructionPointer - 1;
+            DECODE_UINT(argumentCount);
+            varArg = 1;
+            methodClass = methodClass->superclass;
+ sendVar:
+            ns = Spk_METHOD_NAMESPACE_RVALUE;
+            selector = POP_OBJECT(); /* steal reference */
+            goto lookupMethodInClass;
             
             /*** send opcodes -- generic ***/
-        case Spk_OPCODE_SEND_MESSAGE_VAR: {
+        case Spk_OPCODE_SEND_MESSAGE_NS_VAR_VA: {
             SpkUnknown *namespaceObj;
             receiver = stackPointer[3];
             methodClass = GET_CLASS(receiver);
- sendVar:
+ sendNSVar:
             namespaceObj = stackPointer[2];
             if (!SpkHost_IsInteger(namespaceObj)) {
                 assert(XXX); /* trap */
@@ -1302,9 +1246,9 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             argumentCount = 0;
             varArg = 1;
             goto lookupMethodInClass; }
-        case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR:
+        case Spk_OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA:
             methodClass = methodClass->superclass;
-            goto sendVar;
+            goto sendNSVar;
 
  lookupMethodInClass:
             for (mc = methodClass; mc; mc = mc->superclass) {
@@ -1318,7 +1262,6 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                     /* call */
                     self->activeContext->pc = instructionPointer;
                     instructionPointer = SpkMethod_OPCODES(method);
- jump:
                     instVarPointer = INSTANCE_VARS(receiver, methodClass);
                     if (methodClass->module) {
                         globalPointer = SpkModule_VARIABLES(methodClass->module);
@@ -1386,7 +1329,6 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
 
             /*** save/restore/return opcodes ***/
         case Spk_OPCODE_RET:
- ret:
             instructionPointer = self->activeContext->pc;
             receiver = homeContext->u.m.receiver;
             method = homeContext->u.m.method;
@@ -1474,7 +1416,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             framePointer = newContext->u.m.framep;
             break; }
             
-        case Spk_OPCODE_ARG_VAR:
+        case Spk_OPCODE_ARG_VA:
             variadic = 1;
             goto args;
         case Spk_OPCODE_ARG: {
@@ -1727,39 +1669,6 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             PUSH(result);
             break; }
             
-            /*** thunk opcodes ***/
-        case Spk_OPCODE_THUNK: {
-            /* new thunk */
-            SpkThunk *thunk;
-            if (argumentCount != 0) {
-                TRAP(Spk_wrongNumberOfArguments, 0);
-            }
-            if (varArg) {
-                SpkUnknown *varArgTuple = stackPointer[0];
-                if (!Spk_IsArgs(varArgTuple)) {
-                    TRAP(Spk_mustBeTuple, 0);
-                }
-                if (Spk_ArgsSize(varArgTuple) != 0) {
-                    TRAP(Spk_wrongNumberOfArguments, 0);
-                }
-                Spk_DECREF(varArgTuple);
-                POP(1);
-            }
-            thunk = (SpkThunk *)SpkObject_New(Spk_CLASS(Thunk));
-            thunk->receiver = receiver;        /* steal reference from stack */
-            thunk->method = method;            Spk_INCREF(method);
-            thunk->methodClass = methodClass;  Spk_INCREF(methodClass);
-            thunk->pc = instructionPointer;
-            stackPointer[0] = (SpkUnknown *)thunk; /* replace receiver */
-            goto ret; }
-        case Spk_OPCODE_CALL_THUNK: {
-            SpkThunk *thunk = (SpkThunk *)(receiver);
-            receiver = thunk->receiver;
-            method = thunk->method;
-            methodClass = thunk->methodClass;
-            instructionPointer = thunk->pc;
-            goto jump; }
-        
             /*** block context opcodes ***/
         case Spk_OPCODE_CALL_BLOCK: {
             SpkContext *blockContext;

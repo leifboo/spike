@@ -41,7 +41,7 @@ typedef struct SpkMetaclassSubclass {
 } SpkMetaclassSubclass;
 
 static SpkMethodTmpl methods[] = {
-    { "new",   SpkNativeCode_METH_ATTR | SpkNativeCode_ARGS_0, &Metaclass_new   },
+    { "new",   SpkNativeCode_ARGS_0, &Metaclass_new   },
     { 0 }
 };
 

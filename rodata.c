@@ -49,6 +49,7 @@ SpkUnknown *Spk___succ__;
 SpkUnknown *Spk__import;
 SpkUnknown *Spk__init;
 SpkUnknown *Spk__predef;
+SpkUnknown *Spk__thunk;
 SpkUnknown *Spk_badExpr;
 SpkUnknown *Spk_blockCopy;
 SpkUnknown *Spk_cannotReenterBlock;
@@ -162,6 +163,7 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk__import,                       "_import"                     },
     { &Spk__init,                         "_init"                       },
     { &Spk__predef,                       "_predef"                     },
+    { &Spk__thunk,                        "_thunk"                      },
     { &Spk_badExpr,                       "badExpr:"                    },
     { &Spk_blockCopy,                     "blockCopy"                   },
     { &Spk_cannotReenterBlock,            "cannotReenterBlock"          },
