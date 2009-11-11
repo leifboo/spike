@@ -83,7 +83,6 @@ static SpkUnknown *FileStream_getc(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkno
 static SpkUnknown *FileStream_gets(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkFileStream *self;
     SpkInteger *size;
-    SpkString *s;
     SpkUnknown *result;
     
     self = (SpkFileStream *)_self;
@@ -96,9 +95,11 @@ static SpkUnknown *FileStream_gets(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkno
         Spk_INCREF(Spk_GLOBAL(null));
         return Spk_GLOBAL(null);
     }
-    s = SpkString_FromCStream(self->stream, (size_t)SpkInteger_AsCPtrdiff(size));
-    result = s ? (SpkUnknown *)s : Spk_GLOBAL(null);
-    Spk_INCREF(result);
+    result = (SpkUnknown *)SpkString_FromCStream(self->stream, (size_t)SpkInteger_AsCPtrdiff(size));
+    if (!result) {
+        Spk_INCREF(Spk_GLOBAL(null));
+        return Spk_GLOBAL(null);
+    }
     return result;
 }
 
