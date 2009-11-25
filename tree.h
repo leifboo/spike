@@ -56,6 +56,13 @@ typedef enum SpkExprNameKind {
     Spk_EXPR_NAME_REF
 } SpkExprNameKind;
 
+enum {
+    Spk_DECL_SPEC_NONE = 0x0000,
+    Spk_DECL_SPEC_ARG  = 0x0001,
+    Spk_DECL_SPEC_INT  = 0x0002,
+    Spk_DECL_SPEC_VAR  = 0x0004
+};
+
 
 typedef struct SpkExpr SpkExpr;
 typedef struct SpkExprList SpkExprList;
@@ -86,6 +93,7 @@ struct SpkExpr {
     SpkObject base;
     SpkExprKind kind;
     SpkOper oper;
+    int isDeclarator; int declSpecs;
     SpkExpr *next, *nextArg, *cond, *left, *right, *var;
     struct SpkSymbolNode *sym;
     unsigned int lineNo;

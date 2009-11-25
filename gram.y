@@ -61,8 +61,6 @@ closed_statement(r) ::= YIELD expr(expr) SEMI.                                  
 closed_statement(r) ::= RAISE expr(expr) SEMI.                                  { r = SpkParser_NewStmt(Spk_STMT_RAISE, expr.first, 0, 0); }
 closed_statement(r) ::= IMPORT expr(expr) SEMI.                                 { r = SpkParser_NewStmt(Spk_STMT_IMPORT, expr.first, 0, 0); }
 closed_statement(r) ::= IMPORT expr(names) FROM expr(module) SEMI.              { r = SpkParser_NewStmt(Spk_STMT_IMPORT, module.first, 0, 0); r->init = names.first; }
-closed_statement(r) ::= ARG expr(declList) SEMI.                                { r = SpkParser_NewStmt(Spk_STMT_DEF_ARG, declList.first, 0, 0); }
-closed_statement(r) ::= VAR expr(declList) SEMI.                                { r = SpkParser_NewStmt(Spk_STMT_DEF_VAR, declList.first, 0, 0); }
 closed_statement(r) ::= expr(expr) compound_statement(stmt).                    { r = SpkParser_NewStmt(Spk_STMT_DEF_METHOD, expr.first, stmt, 0); }
 closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) class_body(body).           { r = SpkParser_NewClassDef(&name, 0, body.top, body.bottom, parserState->st); }
 closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) COLON TYPE_IDENTIFIER(super) class_body(body).
@@ -77,8 +75,21 @@ compound_statement(r) ::= LCURLY                          RCURLY.               
 compound_statement(r) ::= LCURLY statement_list(stmtList) RCURLY.               { r = SpkParser_NewStmt(Spk_STMT_COMPOUND, 0, stmtList.first, 0); }
 
 %type expr {SpkExprList}
-expr(r) ::= colon_expr(expr).                                                   { r.first = expr; r.last = expr; }
-expr(r) ::= expr(left) COMMA colon_expr(right).                                 { r = left; r.last->next = right; r.last = right; }
+expr(r) ::= comma_expr(expr).                                                   { r = expr; }
+expr(r) ::= decl_spec_list(declSpecList) comma_expr(expr).                      { r = expr; r.first->isDeclarator = 1; r.first->declSpecs = declSpecList; }
+
+%type decl_spec_list {int}
+decl_spec_list(r) ::= decl_spec(declSpec).                                      { r = declSpec; }
+decl_spec_list(r) ::= decl_spec_list(declSpecList) decl_spec(declSpec).         { r = declSpecList | declSpec; }
+
+%type decl_spec {int}
+decl_spec(r) ::= ARG.                                                           { r = Spk_DECL_SPEC_ARG; }
+decl_spec(r) ::= INT.                                                           { r = Spk_DECL_SPEC_INT; }
+decl_spec(r) ::= VAR.                                                           { r = Spk_DECL_SPEC_VAR; }
+
+%type comma_expr {SpkExprList}
+comma_expr(r) ::= colon_expr(expr).                                             { r.first = expr; r.last = expr; }
+comma_expr(r) ::= comma_expr(left) COMMA colon_expr(right).                     { r = left; r.last->next = right; r.last = right; }
 
 %type colon_expr {SpkExpr *}
 colon_expr(r) ::= assignment_expr(expr).                                        { r = expr; }
@@ -209,10 +220,10 @@ postfix_expr(r) ::= postfix_expr(expr) DEC(t).                                  
 
 %type primary_expr {SpkExpr *}
 primary_expr(r) ::= IDENTIFIER(name).                                           { r = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, &name); r->sym = name.sym; }
-primary_expr(r) ::= SYMBOL(t).                                                  { r = SpkParser_NewExpr(Spk_EXPR_SYMBOL, 0, 0, 0, 0, &t); r->sym = t.sym; }
-primary_expr(r) ::= INT(t).                                                     { r = SpkParser_NewExpr(Spk_EXPR_LITERAL, 0, 0, 0, 0, &t); r->aux.literalValue = t.literalValue; }
-primary_expr(r) ::= FLOAT(t).                                                   { r = SpkParser_NewExpr(Spk_EXPR_LITERAL, 0, 0, 0, 0, &t); r->aux.literalValue = t.literalValue; }
-primary_expr(r) ::= CHAR(t).                                                    { r = SpkParser_NewExpr(Spk_EXPR_LITERAL, 0, 0, 0, 0, &t); r->aux.literalValue = t.literalValue; }
+primary_expr(r) ::= LITERAL_SYMBOL(t).                                          { r = SpkParser_NewExpr(Spk_EXPR_SYMBOL, 0, 0, 0, 0, &t); r->sym = t.sym; }
+primary_expr(r) ::= LITERAL_INT(t).                                             { r = SpkParser_NewExpr(Spk_EXPR_LITERAL, 0, 0, 0, 0, &t); r->aux.literalValue = t.literalValue; }
+primary_expr(r) ::= LITERAL_FLOAT(t).                                           { r = SpkParser_NewExpr(Spk_EXPR_LITERAL, 0, 0, 0, 0, &t); r->aux.literalValue = t.literalValue; }
+primary_expr(r) ::= LITERAL_CHAR(t).                                            { r = SpkParser_NewExpr(Spk_EXPR_LITERAL, 0, 0, 0, 0, &t); r->aux.literalValue = t.literalValue; }
 primary_expr(r) ::= literal_string(expr).                                       { r = expr; }
 primary_expr(r) ::= LPAREN expr(expr) RPAREN.                                   { r = expr.first; }
 primary_expr(r) ::= LPAREN TYPE_IDENTIFIER(name) RPAREN.                        { r = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, &name); r->sym = name.sym; }
@@ -220,7 +231,7 @@ primary_expr(r) ::= block(expr).                                                
 primary_expr(r) ::= LCURLY(t) expr(expr) RCURLY.                                { r = SpkParser_NewCompoundExpr(expr.first, &t); }
 
 %type literal_string {SpkExpr *}
-literal_string(r) ::= STR(t).                                                   { r = SpkParser_NewExpr(Spk_EXPR_LITERAL, 0, 0, 0, 0, &t); r->aux.literalValue = t.literalValue; }
+literal_string(r) ::= LITERAL_STR(t).                                           { r = SpkParser_NewExpr(Spk_EXPR_LITERAL, 0, 0, 0, 0, &t); r->aux.literalValue = t.literalValue; }
 literal_string(r) ::= literal_string(expr) STR(t).                              { r = expr; SpkHost_StringConcat(&r->aux.literalValue, t.literalValue); }
 
 %type block {SpkExpr *}
@@ -235,7 +246,10 @@ argument_list(r) ::= ELLIPSIS assignment_expr(v).                               
 
 %type expr_list {SpkExprList}
 expr_list(r) ::= colon_expr(arg).                                               { r.first = arg; r.last = arg; }
+expr_list(r) ::= decl_spec_list(declSpecList) colon_expr(arg).                  { r.first = arg; r.last = arg; arg->declSpecs = declSpecList; }
 expr_list(r) ::= expr_list(args) COMMA colon_expr(arg).                         { r = args; r.last->nextArg = arg; r.last = arg; }
+expr_list(r) ::= expr_list(args) COMMA decl_spec_list(declSpecList) colon_expr(arg).
+                                                                                { r = args; r.last->nextArg = arg; r.last = arg; arg->declSpecs = declSpecList; }
 
 %syntax_error {
     printf("syntax error! token %d, line %u\n", TOKEN.id, TOKEN.lineNo);

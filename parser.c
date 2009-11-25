@@ -41,7 +41,7 @@ static SpkSymbolNode *symbolNodeForToken(SpkToken *token, SpkSymbolTable *st) {
     
     case Spk_TOKEN_IDENTIFIER:
     case Spk_TOKEN_TYPE_IDENTIFIER:
-    case Spk_TOKEN_SYMBOL:
+    case Spk_TOKEN_LITERAL_SYMBOL:
         return token->sym;
     }
     return 0;
@@ -101,6 +101,17 @@ Stmt *SpkParser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom) {
     newStmt->top = top;
     newStmt->bottom = bottom;
     newStmt->expr = expr;
+    
+    if (kind == Spk_STMT_EXPR && expr && expr->isDeclarator) {
+        /* XXX: There are at least a dozen cases where a declarator is *not* allowed. */
+        /* XXX: 'isDeclarator' should be contagious */
+        if (expr->declSpecs & Spk_DECL_SPEC_ARG) {
+            newStmt->kind = Spk_STMT_DEF_ARG;
+        } else {
+            newStmt->kind = Spk_STMT_DEF_VAR;
+        }
+    }
+    
     return newStmt;
 }
 

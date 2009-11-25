@@ -40,6 +40,7 @@ static void lcomment(yyscan_t yyscanner);
 "from"			{ count(yyscanner); return Spk_TOKEN_FROM; }
 "if"			{ count(yyscanner); return Spk_TOKEN_IF; }
 "import"		{ count(yyscanner); return Spk_TOKEN_IMPORT; }
+"int"			{ count(yyscanner); return Spk_TOKEN_INT; }
 "meta"			{ count(yyscanner); return Spk_TOKEN_META; }
 "raise"			{ count(yyscanner); return Spk_TOKEN_RAISE; }
 "return"		{ count(yyscanner); return Spk_TOKEN_RETURN; }
@@ -49,16 +50,16 @@ static void lcomment(yyscan_t yyscanner);
 
 {LL}({L}|{D})*		{ count(yyscanner); return Spk_TOKEN_IDENTIFIER; }
 {UL}({L}|{D})*		{ count(yyscanner); return Spk_TOKEN_TYPE_IDENTIFIER; }
-${L}({L}|{D})*		{ count(yyscanner); return Spk_TOKEN_SYMBOL; }
+${L}({L}|{D})*		{ count(yyscanner); return Spk_TOKEN_LITERAL_SYMBOL; }
 
-0[xX]{H}+{IS}?		{ count(yyscanner); return Spk_TOKEN_INT; }
-0{D}+{IS}?		{ count(yyscanner); return Spk_TOKEN_INT; }
-{D}+{IS}?		{ count(yyscanner); return Spk_TOKEN_INT; }
-{D}+{E}{FS}?		{ count(yyscanner); return Spk_TOKEN_FLOAT; }
-{D}*"."{D}+({E})?{FS}?	{ count(yyscanner); return Spk_TOKEN_FLOAT; }
-{D}+"."{D}*({E})?{FS}?	{ count(yyscanner); return Spk_TOKEN_FLOAT; }
-'(\\.|[^\\'])+'		{ count(yyscanner); return Spk_TOKEN_CHAR; }
-\"(\\.|[^\\"])*\"	{ count(yyscanner); return Spk_TOKEN_STR; }
+0[xX]{H}+{IS}?		{ count(yyscanner); return Spk_TOKEN_LITERAL_INT; }
+0{D}+{IS}?		{ count(yyscanner); return Spk_TOKEN_LITERAL_INT; }
+{D}+{IS}?		{ count(yyscanner); return Spk_TOKEN_LITERAL_INT; }
+{D}+{E}{FS}?		{ count(yyscanner); return Spk_TOKEN_LITERAL_FLOAT; }
+{D}*"."{D}+({E})?{FS}?	{ count(yyscanner); return Spk_TOKEN_LITERAL_FLOAT; }
+{D}+"."{D}*({E})?{FS}?	{ count(yyscanner); return Spk_TOKEN_LITERAL_FLOAT; }
+'(\\.|[^\\'])+'		{ count(yyscanner); return Spk_TOKEN_LITERAL_CHAR; }
+\"(\\.|[^\\"])*\"	{ count(yyscanner); return Spk_TOKEN_LITERAL_STR; }
 
 "..."			{ count(yyscanner); return Spk_TOKEN_ELLIPSIS; }
 "==="			{ count(yyscanner); return Spk_TOKEN_ID; }
@@ -322,23 +323,23 @@ int SpkLexer_GetNextToken(SpkToken *token, yyscan_t scanner, SpkSymbolTable *st)
         return 0;
     }
     switch (id) {
-    case Spk_TOKEN_INT:
+    case Spk_TOKEN_LITERAL_INT:
         token->literalValue = intFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
-    case Spk_TOKEN_FLOAT:
+    case Spk_TOKEN_LITERAL_FLOAT:
         token->literalValue = floatFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
-    case Spk_TOKEN_CHAR:
+    case Spk_TOKEN_LITERAL_CHAR:
         token->literalValue = charFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
-    case Spk_TOKEN_STR:
+    case Spk_TOKEN_LITERAL_STR:
         token->literalValue = stringFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
     case Spk_TOKEN_IDENTIFIER:
     case Spk_TOKEN_TYPE_IDENTIFIER:
         token->sym = SpkSymbolNode_FromCString(st, yyget_text(scanner));
         break;
-    case Spk_TOKEN_SYMBOL:
+    case Spk_TOKEN_LITERAL_SYMBOL:
         token->sym = SpkSymbolNode_FromCString(st, yyget_text(scanner) + 1);
         break;
     }

@@ -49,6 +49,17 @@ static void indent(CxxCodeGen *cgen) {
         fputs("    ", cgen->out);
 }
 
+static void emitDeclSpecs(Expr *def, CxxCodeGen *cgen) {
+    int type = 0;
+    if (def->declSpecs & Spk_DECL_SPEC_INT) {
+        fputs("int ", cgen->out);
+        type = 1;
+    }
+    if (!type) {
+        fputs("obj ", cgen->out);
+    }
+}
+
 static SpkUnknown *emitCxxCodeForVarDefList(Expr *defList,
                                             Stmt *stmt,
                                             CxxCodeGen *cgen,
@@ -56,7 +67,7 @@ static SpkUnknown *emitCxxCodeForVarDefList(Expr *defList,
 {
     Expr *expr, *def;
     
-    fputs("obj ", cgen->out);
+    emitDeclSpecs(defList, cgen);
     for (expr = defList; expr; expr = expr->next) {
         if (expr->kind == Spk_EXPR_ASSIGN) {
             def = expr->left;
@@ -419,15 +430,18 @@ static SpkUnknown *emitCxxCodeForMethodDef(Stmt *stmt,
         ASSERT(expr->left->kind == Spk_EXPR_NAME, "invalid method declarator");
         switch (outer->kind) {
         default:
-            fprintf(cgen->out, "obj %s(", SpkHost_SelectorAsCString(stmt->u.method.name->sym));
+            emitDeclSpecs(expr, cgen);
+            fprintf(cgen->out, "%s(", SpkHost_SelectorAsCString(stmt->u.method.name->sym));
             break;
         case Spk_STMT_DEF_CLASS:
             switch (outerPass) {
             case 1:
-                fprintf(cgen->out, "obj %s(", SpkHost_SelectorAsCString(stmt->u.method.name->sym));
+                emitDeclSpecs(expr, cgen);
+                fprintf(cgen->out, "%s(", SpkHost_SelectorAsCString(stmt->u.method.name->sym));
                 break;
             case 2:
-                fprintf(cgen->out, "obj %s::%s(",
+                emitDeclSpecs(expr, cgen);
+                fprintf(cgen->out, "%s::%s(",
                         SpkHost_SymbolAsCString(outer->expr->sym->sym),
                         SpkHost_SelectorAsCString(stmt->u.method.name->sym));
                 break;
@@ -441,7 +455,8 @@ static SpkUnknown *emitCxxCodeForMethodDef(Stmt *stmt,
                 def = arg;
             }
             ASSERT(def->kind == Spk_EXPR_NAME, "invalid argument definition");
-            fprintf(cgen->out, "obj %s%s",
+            emitDeclSpecs(def, cgen);
+            fprintf(cgen->out, "%s%s",
                     SpkHost_SelectorAsCString(def->sym->sym),
                     arg->nextArg ? ", " : "");
         }
