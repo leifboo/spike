@@ -12,6 +12,23 @@
 #include <string.h>
 
 
+static void declareType(SpkSymbolTable *st, SpkUnknown *name) {
+    SpkExpr *nameExpr;
+    SpkStmt *typeDef;
+    
+    nameExpr = (SpkExpr *)SpkObject_New(Spk_CLASS(Expr));        
+    nameExpr->kind = Spk_EXPR_NAME;
+    
+    typeDef = (SpkStmt *)SpkObject_New(Spk_CLASS(Stmt));
+    typeDef->kind = Spk_STMT_DEF_TYPE;
+    typeDef->expr = nameExpr;
+    typeDef->expr->sym = SpkSymbolNode_FromSymbol(st, name);
+    typeDef->expr->u.def.stmt = typeDef;
+    
+    SpkSymbolTable_Insert(st, typeDef->expr, 0);
+}
+
+
 /*------------------------------------------------------------------------*/
 /* C API */
 
@@ -43,12 +60,34 @@ SpkSymbolNode *SpkSymbolNode_FromCString(SpkSymbolTable *st, const char *str) {
     return node;
 }
 
+int SpkSymbolNode_IsType(SpkSymbolNode *node) {
+    SpkExpr *def;
+    
+    return node->sym == Spk_obj;
+
+    /* XXX */
+    if (!node->entry)
+        return 0;
+    def = node->entry->def;
+    return (def->kind == Spk_EXPR_NAME &&
+            def->aux.nameKind == Spk_EXPR_NAME_DEF &&
+            def->u.def.stmt->kind == Spk_STMT_DEF_TYPE);
+}
+
+
 SpkSymbolTable *SpkSymbolTable_New() {
     SpkSymbolTable *newSymbolTable;
     
     newSymbolTable = (SpkSymbolTable *)SpkObject_New(Spk_CLASS(SymbolTable));
     Spk_XDECREF(newSymbolTable->symbolNodes);
     newSymbolTable->symbolNodes = SpkHost_NewSymbolDict();
+    
+    if (0) {
+        /* XXX: pushOpcode/storeOpcode breaks with this approach */
+        SpkSymbolTable_EnterScope(newSymbolTable, 1); /* meta scope */
+        declareType(newSymbolTable, Spk_obj);
+    }
+    
     return newSymbolTable;
 }
 
@@ -257,6 +296,13 @@ static SpkUnknown *SymbolTable_init(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkn
     self = (SpkSymbolTable *)_self;
     Spk_XDECREF(self->symbolNodes);
     self->symbolNodes = SpkHost_NewSymbolDict();
+    
+    if (0) {
+        /* XXX */
+        SpkSymbolTable_EnterScope(self, 1); /* meta scope */
+        declareType(self, Spk_obj);
+    }
+    
     Spk_INCREF(_self);
     return _self;
 }

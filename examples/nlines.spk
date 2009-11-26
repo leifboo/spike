@@ -1,7 +1,7 @@
 #!/usr/bin/env spike-1
 
 main(argv) {
-    var stream, line, i;
+    obj stream, line, i;
     
     stream = FileStream.open("README", "r");
     if (stream == null) {

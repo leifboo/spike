@@ -31,7 +31,7 @@ class Four : Three {
 }
 
 main(argv) {
-    var example1, example2, example3, example4;
+    obj example1, example2, example3, example4;
     
     example1 = One.new();
     example2 = Two.new();

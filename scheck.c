@@ -133,7 +133,7 @@ static SpkUnknown *checkBlock(Expr *expr, Stmt *stmt, StaticChecker *checker,
     firstStmt = expr->aux.block.stmtList;
     expr->u.def.index = 0;
     
-    if (firstStmt && firstStmt->kind == Spk_STMT_DEF_ARG) {
+    if (firstStmt && firstStmt->kind == Spk_STMT_DEF_VAR) {
         /* declare block arguments */
         for (arg = firstStmt->expr; arg; arg = arg->next) {
             if (arg->kind != Spk_EXPR_NAME) {
@@ -703,14 +703,6 @@ static SpkUnknown *checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker,
             SpkSymbolTable_ExitScope(checker->st);
         }
         break;
-    case Spk_STMT_DEF_ARG:
-        if (outerPass == 1) {
-            _(badExpr(stmt->expr,
-                      "'arg' can only be used as the first statement of a block",
-                      checker
-                  ));
-        }
-        break;
     case Spk_STMT_DEF_VAR:
         _(checkVarDefList(stmt->expr, stmt, checker, outerPass));
         break;
@@ -722,6 +714,9 @@ static SpkUnknown *checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker,
         break;
     case Spk_STMT_DEF_MODULE:
         ASSERT(0, "unexpected module node");
+        break;
+    case Spk_STMT_DEF_TYPE:
+        ASSERT(0, "unexpected type node");
         break;
     case Spk_STMT_DO_WHILE:
         _(checkExpr(stmt->expr, stmt, checker, outerPass));
@@ -750,24 +745,6 @@ static SpkUnknown *checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker,
         if (stmt->bottom) {
             _(checkStmt(stmt->bottom, stmt, checker, outerPass));
         }
-        break;
-    case Spk_STMT_IMPORT:
-#ifdef MALTIPY
-        _(checkImport(stmt, checker, outerPass));
-#else
-        if (outerPass == 1) {
-            _(badExpr(stmt->expr, "'import' not implemented", checker));
-        }
-#endif /* MALTIPY */
-        break;
-    case Spk_STMT_RAISE:
-#ifdef MALTIPY
-        _(checkExpr(stmt->expr, stmt, checker, outerPass));
-#else
-        if (outerPass == 1) {
-            _(badExpr(stmt->expr, "'raise' not implemented", checker));
-        }
-#endif /* MALTIPY */
         break;
     case Spk_STMT_PRAGMA_SOURCE:
         _(Spk_SetAttr(Spk_GLOBAL(theInterpreter), checker->requestor, Spk_source, stmt->u.source));

@@ -1,7 +1,7 @@
 #!/usr/bin/env spike-1
 
 class Queen {
-    var row, column, neighbor, boardSize;
+    obj row, column, neighbor, boardSize;
     
     build(myNeighbor, c, size) {
         neighbor = myNeighbor;
@@ -14,7 +14,7 @@ class Queen {
     }
 
     check(c, r) {
-        var cd;
+        obj cd;
         
         if (r == row)
             return false;
@@ -60,7 +60,7 @@ class Queen {
 }
 
 main(argv) {
-    var last, size, x;
+    obj last, size, x;
 
     size = 8;
     last = null;

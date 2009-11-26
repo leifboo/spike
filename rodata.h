@@ -61,6 +61,7 @@ extern SpkUnknown *Spk_mustBeTuple;
 extern SpkUnknown *Spk_new;
 extern SpkUnknown *Spk_noRunnableFiber;
 extern SpkUnknown *Spk_numArgs;
+extern SpkUnknown *Spk_obj;
 extern SpkUnknown *Spk_printString;
 extern SpkUnknown *Spk_recursiveDoesNotUnderstand;
 extern SpkUnknown *Spk_redefinedSymbol;

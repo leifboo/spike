@@ -4,8 +4,8 @@
 // from chapter 2 of blue book
 
 page33() {
-    var incrementBlock, sumBlock;
-    var sum, index;
+    obj incrementBlock, sumBlock;
+    obj sum, index;
     
     incrementBlock = [index += 1 ];
     sumBlock = [sum + index * index ];
@@ -18,7 +18,7 @@ page33() {
     stdout.printf("The sum is %d.\n", sum);
     stdout.printf("The index is %d.\n", index);
     
-    var amount;
+    obj amount;
     amount = 1;
     timesRepeat(4, [amount += amount]);
     stdout.printf("The amount is %d.\n", amount);
@@ -34,7 +34,7 @@ timesRepeat(count, aBlock) {
 // ftp://st.cs.uiuc.edu/pub/Smalltalk/st-docs/classic-bugs.txt
 
 amusingProblem() {
-    var anotherArray, aBlockArray;
+    obj anotherArray, aBlockArray;
     
     aBlockArray = Array.new(4);
     anotherArray = Array.new(4);
@@ -43,14 +43,14 @@ amusingProblem() {
     anotherArray[2] = 4;
     anotherArray[3] = 8;
     
-    var range;
+    obj range;
     range = Range.new().init(0, aBlockArray.size);
     range do:
-        [arg anIndex;
+        [obj anIndex;
          aBlockArray[anIndex] = [anotherArray[anIndex] * 2]
             ];
     
-    var i, result;
+    obj i, result;
     for (i = 0; i < aBlockArray.size; ++i) {
         result = (aBlockArray[i])();
         stdout.printf("%d\n", result);
@@ -58,12 +58,12 @@ amusingProblem() {
 }
 
 class Range {
-    var begin, end;
+    obj begin, end;
     
     init(i, j) { begin = i; end = j; return self; }
     
     self do: block {
-        var i;
+        obj i;
         for (i = begin; i < end; ++i) {
             block(i);
         }

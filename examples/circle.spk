@@ -7,7 +7,7 @@ class Color {
 }
 
 createClass() {
-    var myClass;
+    obj myClass;
     
     myClass = (Color)
               subclass: $Foo
@@ -15,34 +15,34 @@ createClass() {
               classVarCount: 2;
     stdout.printf("created class: %s\n", myClass.printString);
     
-    var myInstance;
+    obj myInstance;
     myInstance = myClass.new();
     myInstance.blue();
 }
 
 interpreter(argv) {
-    var sourcePathname = argv[1];
-    var stream = FileStream.open(sourcePathname, "r");
+    obj sourcePathname = argv[1];
+    obj stream = FileStream.open(sourcePathname, "r");
     if (stream == null) {
         stderr.printf("%s: cannot open '%s'\n", argv[0], sourcePathname);
         return 1;
     }
     
-    var st = SymbolTable.new();
-    var notifier = Notifier.new(stderr);
+    obj st = SymbolTable.new();
+    obj notifier = Notifier.new(stderr);
     
-    var parser = Parser.new();
-    var tree = parser.parse(stream, st);
+    obj parser = Parser.new();
+    obj tree = parser.parse(stream, st);
     tree = tree.source(sourcePathname);
     tree = tree.asModuleDef();
     tree.check(st, notifier);
     
-    var moduleClass = tree.generateCode();
-    var module = moduleClass.new();
+    obj moduleClass = tree.generateCode();
+    obj module = moduleClass.new();
     
-    var newArgv = Array.new(argv.size - 1);
+    obj newArgv = Array.new(argv.size - 1);
     newArgv[0] = sourcePathname;
-    var i;
+    obj i;
     for (i = 1; i < newArgv.size; ++i) {
         newArgv[i] = argv[i + 1];
     }

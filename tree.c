@@ -88,6 +88,8 @@ static SpkUnknown **Expr_traverse_current(SpkObject *_self) {
     
     self = (SpkExpr *)_self;
     
+    if (self->declSpecs)
+        return (SpkUnknown **)&self->declSpecs;
     if (self->next)
         return (SpkUnknown **)&self->next;
     if (self->nextArg)
@@ -141,6 +143,10 @@ static void Expr_traverse_next(SpkObject *_self) {
     
     self = (SpkExpr *)_self;
     
+    if (self->declSpecs) {
+        self->declSpecs = 0;
+        return;
+    }
     if (self->next) {
         self->next = 0;
         return;

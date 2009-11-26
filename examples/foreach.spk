@@ -1,10 +1,10 @@
 #!/usr/bin/env spike-1
 
 abc() {
-    var alphabet;
+    obj alphabet;
     
     alphabet = "abcdefghijklmnopqrstuvwxyz";
-    alphabet do: [arg letter;
+    alphabet do: [obj letter;
         stdout.printf("%c ", letter);
         ];
     stdout.putc('\n');

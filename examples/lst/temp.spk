@@ -1,7 +1,7 @@
 #!/usr/bin/env spike-1
 
 main(argv) {
-    var i;
+    obj i;
     
     i = 1;
     while (i < 3) {

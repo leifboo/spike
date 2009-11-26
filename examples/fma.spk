@@ -4,13 +4,13 @@
 
 main(argv) {
     // constants
-    var g, dt, dvy, totalTime;
+    obj g, dt, dvy, totalTime;
     g         = -9.8;
     dt        = 0.1; // smaller timesteps increase accuracy
     dvy       = g * dt;
     totalTime = 3.0;
     
-    var t, vy, y;
+    obj t, vy, y;
     t = 0.0;
     vy = 0.0;
     y = 10.0;

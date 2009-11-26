@@ -23,7 +23,6 @@ typedef SpkStmtList StmtList;
 
 static SpkSymbolNode *symbolNodeForToken(SpkToken *token, SpkSymbolTable *st) {
     switch (token->id) {
-    case Spk_TOKEN_ARG:      return SpkSymbolNode_FromCString(st, "arg");
     case Spk_TOKEN_CLASS:    return SpkSymbolNode_FromCString(st, "class");
     case Spk_TOKEN_BREAK:    return SpkSymbolNode_FromCString(st, "break");
     case Spk_TOKEN_CONTINUE: return SpkSymbolNode_FromCString(st, "continue");
@@ -31,11 +30,8 @@ static SpkSymbolNode *symbolNodeForToken(SpkToken *token, SpkSymbolTable *st) {
     case Spk_TOKEN_ELSE:     return SpkSymbolNode_FromCString(st, "else");
     case Spk_TOKEN_FOR:      return SpkSymbolNode_FromCString(st, "for");
     case Spk_TOKEN_IF:       return SpkSymbolNode_FromCString(st, "if");
-    case Spk_TOKEN_IMPORT:   return SpkSymbolNode_FromCString(st, "import");
     case Spk_TOKEN_META:     return SpkSymbolNode_FromCString(st, "meta");
-    case Spk_TOKEN_RAISE:    return SpkSymbolNode_FromCString(st, "raise");
     case Spk_TOKEN_RETURN:   return SpkSymbolNode_FromCString(st, "return");
-    case Spk_TOKEN_VAR:      return SpkSymbolNode_FromCString(st, "var");
     case Spk_TOKEN_WHILE:    return SpkSymbolNode_FromCString(st, "while");
     case Spk_TOKEN_YIELD:    return SpkSymbolNode_FromCString(st, "yield");
     
@@ -105,11 +101,7 @@ Stmt *SpkParser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom) {
     if (kind == Spk_STMT_EXPR && expr && expr->isDeclarator) {
         /* XXX: There are at least a dozen cases where a declarator is *not* allowed. */
         /* XXX: 'isDeclarator' should be contagious */
-        if (expr->declSpecs & Spk_DECL_SPEC_ARG) {
-            newStmt->kind = Spk_STMT_DEF_ARG;
-        } else {
-            newStmt->kind = Spk_STMT_DEF_VAR;
-        }
+        newStmt->kind = Spk_STMT_DEF_VAR;
     }
     
     return newStmt;

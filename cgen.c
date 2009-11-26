@@ -1261,7 +1261,6 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
                "continue not allowed here");
         _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, continueLabel, cgen));
         break;
-    case Spk_STMT_DEF_ARG:
     case Spk_STMT_DEF_METHOD:
     case Spk_STMT_DEF_CLASS:
         break;
@@ -1270,6 +1269,9 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
         break;
     case Spk_STMT_DEF_MODULE:
         ASSERT(0, "unexpected module node");
+        break;
+    case Spk_STMT_DEF_TYPE:
+        ASSERT(0, "unexpected type node");
         break;
     case Spk_STMT_DO_WHILE:
         childNextLabel = stmt->expr->codeOffset;
@@ -1324,20 +1326,6 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
                               continueLabel, cgen));
         }
         break;
-#ifdef MALTIPY
-    case Spk_STMT_IMPORT:
-        break;
-    case Spk_STMT_RAISE:
-        _(emitCodeForExpr(stmt->expr, 0, cgen));
-        EMIT_OPCODE(Spk_OPCODE_RAISE);
-        --cgen->stackPointer;
-        break;
-#else /* !MALTIPY */
-    case Spk_STMT_IMPORT:
-    case Spk_STMT_RAISE:
-        ASSERT(0, "not implemented");
-        break;
-#endif /* !MALTIPY */
     case Spk_STMT_PRAGMA_SOURCE:
         break;
     case Spk_STMT_RETURN:
@@ -1605,10 +1593,6 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, CodeGen *cgen) {
         case Spk_STMT_DEF_CLASS:
             _(emitCodeForClass(s, cgen));
             break;
-#ifdef MALTIPY
-        case Spk_STMT_IMPORT:
-            break;
-#endif /* MALTIPY */
         case Spk_STMT_PRAGMA_SOURCE:
             Spk_INCREF(s->u.source);
             Spk_XDECREF(cgen->u.klass.source);
@@ -1674,197 +1658,6 @@ static SpkUnknown *emitCodeForClass(Stmt *stmt, CodeGen *outer) {
         break;
     default:
         ASSERT(0, "class definition not allowed here");
-    }
-    
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
-    
- unwind:
-    return 0;
-}
-
-/****************************************************************************/
-/* imports */
-
-static SpkUnknown *storeImport(Expr *expr, OpcodeGen *cgen) {
-    Expr *def;
-    
-    switch (expr->kind) {
-    case Spk_EXPR_ASSIGN:
-        _(storeImport(expr->right, cgen));
-        def = expr->left;
-        ASSERT(def->kind == Spk_EXPR_NAME, "invalid import statement");
-        EMIT_OPCODE(def->u.def.storeOpcode);
-        encodeUnsignedInt(def->u.def.index, cgen);
-        break;
-    case Spk_EXPR_NAME:
-        break;
-    case Spk_EXPR_ATTR:
-        break;
-    default:
-        ASSERT(0, "invalid import statement");
-    }
-    
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
-    
- unwind:
-    return 0;
-}
-
-static SpkUnknown *getImportedName(SpkUnknown **pName, Expr **pPkg, Expr *expr) {
-#ifdef MALTIPY
-    size_t tally, i;
-    Expr *attr;
-#endif
-    Expr *e, *pkg;
-    SpkUnknown *name;
-    
-    pkg = 0;
-    e = expr;
-    while (e->kind == Spk_EXPR_ASSIGN) {
-        e = e->right;
-    }
-    
-    switch (e->kind) {
-#ifdef MALTIPY
-    case Spk_EXPR_NAME:
-        pkg = e;
-        name = PyTuple_New(1); /* this ref is stolen */
-        if (!name) {
-            goto unwind;
-        }
-        PyTuple_SET_ITEM(name, 0, pkg->sym->sym);
-        break;
-    case Spk_EXPR_ATTR:
-        pkg = e->left;
-        tally = 1;
-        while (pkg->kind == Spk_EXPR_ATTR) {
-            pkg = pkg->left;
-            ++tally;
-        }
-        ASSERT(pkg->kind == Spk_EXPR_NAME, "invalid import statement");
-        ++tally;
-        name = PyTuple_New(tally); /* this ref is stolen */
-        if (!name) {
-            goto unwind;
-        }
-        for (i = 1, attr = e; i <= tally; attr = attr->left, ++i) {
-            PyTuple_SET_ITEM(name, tally - i, attr->sym->sym);
-        }
-        break;
-#else /* !MALTIPY */
-    case Spk_EXPR_NAME:
-        pkg = e;
-        name = pkg->sym->sym;
-        Spk_INCREF(name); /* this ref is stolen */
-        break;
-#endif /* !MALTIPY */
-    default:
-        ASSERT(0, "invalid import statement");
-    }
-    
-    *pName = name;
-    *pPkg = pkg;
-    
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
-    
- unwind:
-    return 0;
-}
-
-static SpkUnknown *generateImport(SpkUnknown *import, SpkUnknown *name,
-                                  OpcodeGen *cgen)
-{
-    /* push loader */
-    EMIT_OPCODE(Spk_OPCODE_PUSH_LOCAL);
-    encodeUnsignedInt(0, cgen);
-    tallyPush(cgen);
-    
-    /* push "spam.ham" */
-    _(emitCodeForLiteral(name, cgen));
-    
-    /* call importXXX */
-    ++cgen->nMessageSends;
-    EMIT_OPCODE(Spk_OPCODE_SEND_MESSAGE);
-    _(emitLiteralIndex(import, cgen));
-    encodeUnsignedInt(1, cgen);
-    cgen->stackPointer -= 1;
-    
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
-    
- unwind:
-    return 0;
-}
-
-static SpkUnknown *generateImports(Stmt *stmtList, OpcodeGen *cgen) {
-    Stmt *s;
-
-    for (s = stmtList; s; s = s->next) {
-        if (s->kind == Spk_STMT_IMPORT) {
-            Expr *expr, *pkg;
-            SpkUnknown *name;
-            
-            if (s->init) {
-                Expr *def;
-                
-                /* "import a, b, c from spam.ham;" */
-                _(getImportedName(&name, &pkg, s->expr));
-                _(generateImport(Spk_importModule, name, cgen));
-                
-                for (def = s->init; def; def = def->next) {
-                    /* dup */
-                    EMIT_OPCODE(Spk_OPCODE_DUP); tallyPush(cgen);
-                    
-                    /* gattr <name> */
-                    /* XXX: This should be done in a second
-                       pass. _bind? */
-                    ++cgen->nMessageSends;
-                    EMIT_OPCODE(Spk_OPCODE_GET_ATTR);
-                    _(emitLiteralIndex(def->sym->sym, cgen));
-                    
-                    /* store */
-                    ASSERT(def->kind == Spk_EXPR_NAME,
-                           "invalid import statement");
-                    EMIT_OPCODE(def->u.def.storeOpcode);
-                    encodeUnsignedInt(def->u.def.index, cgen);
-                    
-                    /* pop */
-                    EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
-                }
-                
-                /* pop */
-                EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
-                CHECK_STACKP();
-                
-            } else {
-                
-                for (expr = s->expr; expr; expr = expr->next) {
-                    Expr *pkgVar;
-                    
-                    _(getImportedName(&name, &pkg, expr));
-                    
-                    pkgVar = expr->kind == Spk_EXPR_ASSIGN ? 0 : pkg;
-                    _(generateImport(pkgVar ? Spk_importPackage : Spk_importModule,
-                                     name,
-                                     cgen));
-                    
-                    /* store */
-                    if (pkgVar) {
-                        EMIT_OPCODE(pkgVar->u.def.storeOpcode);
-                        encodeUnsignedInt(pkgVar->u.def.index, cgen);
-                    } else {
-                        _(storeImport(expr, cgen));
-                    }
-                    
-                    /* pop */
-                    EMIT_OPCODE(Spk_OPCODE_POP); --cgen->stackPointer;
-                    CHECK_STACKP();
-                }
-            }
-        }
     }
     
     Spk_INCREF(Spk_GLOBAL(xvoid));
@@ -2039,7 +1832,7 @@ static SpkUnknown *generateMethod(SpkUnknown *selector,
            "bad stack size");
     
     ASSERT(outer->kind == CODE_GEN_CLASS,
-           "imports not allowed here");
+           "generated code not allowed here");
 
     mcg->methodTmpl->ns = Spk_METHOD_NAMESPACE_RVALUE;
     mcg->methodTmpl->selector = selector;  Spk_INCREF(selector);
@@ -2076,7 +1869,6 @@ static SpkUnknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
     moduleCodeGen->moduleTmpl->moduleClass.thisClass.instVarCount
         = stmt->u.module.dataSize;
     _(emitCodeForClassBody(stmt->top, cgen->generic));
-    _(generateMethod(Spk__import, 1, &generateImports, stmt->top->top, cgen->generic));
     _(generateMethod(Spk__predef, 0, &generatePredef,  predefList, cgen->generic));
     _(generateMethod(Spk__init,   0, &generateInit,    stmt->top->top, cgen->generic));
     

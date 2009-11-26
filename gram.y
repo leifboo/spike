@@ -58,12 +58,9 @@ closed_statement(r) ::= RETURN            SEMI.                                 
 closed_statement(r) ::= RETURN expr(expr) SEMI.                                 { r = SpkParser_NewStmt(Spk_STMT_RETURN, expr.first, 0, 0); }
 closed_statement(r) ::= YIELD            SEMI.                                  { r = SpkParser_NewStmt(Spk_STMT_YIELD, 0, 0, 0); }
 closed_statement(r) ::= YIELD expr(expr) SEMI.                                  { r = SpkParser_NewStmt(Spk_STMT_YIELD, expr.first, 0, 0); }
-closed_statement(r) ::= RAISE expr(expr) SEMI.                                  { r = SpkParser_NewStmt(Spk_STMT_RAISE, expr.first, 0, 0); }
-closed_statement(r) ::= IMPORT expr(expr) SEMI.                                 { r = SpkParser_NewStmt(Spk_STMT_IMPORT, expr.first, 0, 0); }
-closed_statement(r) ::= IMPORT expr(names) FROM expr(module) SEMI.              { r = SpkParser_NewStmt(Spk_STMT_IMPORT, module.first, 0, 0); r->init = names.first; }
 closed_statement(r) ::= expr(expr) compound_statement(stmt).                    { r = SpkParser_NewStmt(Spk_STMT_DEF_METHOD, expr.first, stmt, 0); }
-closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) class_body(body).           { r = SpkParser_NewClassDef(&name, 0, body.top, body.bottom, parserState->st); }
-closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) COLON TYPE_IDENTIFIER(super) class_body(body).
+closed_statement(r) ::= CLASS IDENTIFIER(name) class_body(body).                { r = SpkParser_NewClassDef(&name, 0, body.top, body.bottom, parserState->st); }
+closed_statement(r) ::= CLASS IDENTIFIER(name) COLON IDENTIFIER(super) class_body(body).
                                                                                 { r = SpkParser_NewClassDef(&name, &super, body.top, body.bottom, parserState->st); }
 
 %type class_body {SpkStmtPair}
@@ -76,16 +73,14 @@ compound_statement(r) ::= LCURLY statement_list(stmtList) RCURLY.               
 
 %type expr {SpkExprList}
 expr(r) ::= comma_expr(expr).                                                   { r = expr; }
-expr(r) ::= decl_spec_list(declSpecList) comma_expr(expr).                      { r = expr; r.first->isDeclarator = 1; r.first->declSpecs = declSpecList; }
+expr(r) ::= decl_spec_list(declSpecList) comma_expr(expr).                      { r = expr; r.first->isDeclarator = 1; r.first->declSpecs = declSpecList.first; }
 
-%type decl_spec_list {int}
-decl_spec_list(r) ::= decl_spec(declSpec).                                      { r = declSpec; }
-decl_spec_list(r) ::= decl_spec_list(declSpecList) decl_spec(declSpec).         { r = declSpecList | declSpec; }
+%type decl_spec_list {SpkExprList}
+decl_spec_list(r) ::= decl_spec(declSpec).                                      { r.first = declSpec; r.last = declSpec; }
+decl_spec_list(r) ::= decl_spec_list(declSpecList) decl_spec(declSpec).         { r = declSpecList; r.last->next = declSpec; r.last = declSpec; }
 
-%type decl_spec {int}
-decl_spec(r) ::= ARG.                                                           { r = Spk_DECL_SPEC_ARG; }
-decl_spec(r) ::= INT.                                                           { r = Spk_DECL_SPEC_INT; }
-decl_spec(r) ::= VAR.                                                           { r = Spk_DECL_SPEC_VAR; }
+%type decl_spec {SpkExpr *}
+decl_spec(r) ::= TYPE_IDENTIFIER(name).                                         { r = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, &name); r->sym = name.sym; }
 
 %type comma_expr {SpkExprList}
 comma_expr(r) ::= colon_expr(expr).                                             { r.first = expr; r.last = expr; }
@@ -135,19 +130,15 @@ keyword_list(r) ::= keyword_list(expr) keyword(kw) COLON conditional_expr(arg). 
 
 %type keyword {SpkToken}
 keyword(r) ::= IDENTIFIER(t).                                                   { r = t; }
-keyword(r) ::= ARG(t).                                                          { r = t; }
-keyword(r) ::= CLASS(t).                                                        { r = t; }
 keyword(r) ::= BREAK(t).                                                        { r = t; }
+keyword(r) ::= CLASS(t).                                                        { r = t; }
 keyword(r) ::= CONTINUE(t).                                                     { r = t; }
 keyword(r) ::= DO(t).                                                           { r = t; }
 keyword(r) ::= ELSE(t).                                                         { r = t; }
 keyword(r) ::= FOR(t).                                                          { r = t; }
 keyword(r) ::= IF(t).                                                           { r = t; }
-keyword(r) ::= IMPORT(t).                                                       { r = t; }
 keyword(r) ::= META(t).                                                         { r = t; }
-keyword(r) ::= RAISE(t).                                                        { r = t; }
 keyword(r) ::= RETURN(t).                                                       { r = t; }
-keyword(r) ::= VAR(t).                                                          { r = t; }
 keyword(r) ::= WHILE(t).                                                        { r = t; }
 keyword(r) ::= YIELD(t).                                                        { r = t; }
 
@@ -246,10 +237,10 @@ argument_list(r) ::= ELLIPSIS assignment_expr(v).                               
 
 %type expr_list {SpkExprList}
 expr_list(r) ::= colon_expr(arg).                                               { r.first = arg; r.last = arg; }
-expr_list(r) ::= decl_spec_list(declSpecList) colon_expr(arg).                  { r.first = arg; r.last = arg; arg->declSpecs = declSpecList; }
+expr_list(r) ::= decl_spec_list(declSpecList) colon_expr(arg).                  { r.first = arg; r.last = arg; arg->declSpecs = declSpecList.first; }
 expr_list(r) ::= expr_list(args) COMMA colon_expr(arg).                         { r = args; r.last->nextArg = arg; r.last = arg; }
 expr_list(r) ::= expr_list(args) COMMA decl_spec_list(declSpecList) colon_expr(arg).
-                                                                                { r = args; r.last->nextArg = arg; r.last = arg; arg->declSpecs = declSpecList; }
+                                                                                { r = args; r.last->nextArg = arg; r.last = arg; arg->declSpecs = declSpecList.first; }
 
 %syntax_error {
     printf("syntax error! token %d, line %u\n", TOKEN.id, TOKEN.lineNo);

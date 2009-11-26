@@ -33,18 +33,16 @@ typedef enum SpkStmtKind {
     Spk_STMT_BREAK,
     Spk_STMT_COMPOUND,
     Spk_STMT_CONTINUE,
-    Spk_STMT_DEF_ARG,
     Spk_STMT_DEF_CLASS,
     Spk_STMT_DEF_METHOD,
     Spk_STMT_DEF_MODULE,
+    Spk_STMT_DEF_TYPE,
     Spk_STMT_DEF_VAR,
     Spk_STMT_DO_WHILE,
     Spk_STMT_EXPR,
     Spk_STMT_FOR,
     Spk_STMT_IF_ELSE,
-    Spk_STMT_IMPORT,
     Spk_STMT_PRAGMA_SOURCE,
-    Spk_STMT_RAISE,
     Spk_STMT_RETURN,
     Spk_STMT_WHILE,
     Spk_STMT_YIELD
@@ -55,13 +53,6 @@ typedef enum SpkExprNameKind {
     Spk_EXPR_NAME_DEF,
     Spk_EXPR_NAME_REF
 } SpkExprNameKind;
-
-enum {
-    Spk_DECL_SPEC_NONE = 0x0000,
-    Spk_DECL_SPEC_ARG  = 0x0001,
-    Spk_DECL_SPEC_INT  = 0x0002,
-    Spk_DECL_SPEC_VAR  = 0x0004
-};
 
 
 typedef struct SpkExpr SpkExpr;
@@ -93,7 +84,7 @@ struct SpkExpr {
     SpkObject base;
     SpkExprKind kind;
     SpkOper oper;
-    int isDeclarator; int declSpecs;
+    int isDeclarator; SpkExpr *declSpecs;
     SpkExpr *next, *nextArg, *cond, *left, *right, *var;
     struct SpkSymbolNode *sym;
     unsigned int lineNo;

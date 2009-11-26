@@ -9,11 +9,11 @@ xxx(n) {
 }
 
 foo(n) {
-    return [arg i; n += i];
+    return [obj i; n += i];
 }
 
 main(argv) {
-    var acc, sum;
+    obj acc, sum;
     
     acc = foo(10);
     sum = acc(10);

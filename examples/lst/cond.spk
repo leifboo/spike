@@ -1,7 +1,7 @@
 #!/usr/bin/env spike-1
 
 main(argv) {
-    var i;
+    obj i;
     
     stdout.puts(2 < 3 ? "correct\n" : null);
     if (2 < 3)

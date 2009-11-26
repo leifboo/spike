@@ -4,7 +4,7 @@ class Main {
     main() {
         ifTrue(2 < 3, [stdout.puts("correct-1\n")]);
         stdout.puts(ifTrue(2 < 3, ["correct-2\n"]));
-        ([arg x; stdout.puts(x)])("correct-3\n");
+        ([obj x; stdout.puts(x)])("correct-3\n");
         ifTrue(2 < 3 || 3 < 4, [stdout.puts("correct-4\n")]);
         ifTrue(2 > 3 || 3 < 4, [stdout.puts("correct-5\n")]);
         ifTrue(2 < 3 && 3 < 4, [stdout.puts("correct-6\n")]);
@@ -37,7 +37,7 @@ ifFalse(c, b) {
 }
 
 main(argv) {
-    var m;
+    obj m;
     m = Main.new();
     m.main();
     return 0;

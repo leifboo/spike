@@ -4,8 +4,6 @@
 
 D			[0-9]
 L			[a-zA-Z_]
-UL			[A-Z]
-LL			[a-z_]
 H			[a-fA-F0-9]
 E			[Ee][+-]?{D}+
 FS			(f|F|l|L)
@@ -30,26 +28,19 @@ static void lcomment(yyscan_t yyscanner);
 "/*"			{ comment(yyscanner); }
 "//"			{ lcomment(yyscanner); }
 
-"arg"			{ count(yyscanner); return Spk_TOKEN_ARG; }
 "break"			{ count(yyscanner); return Spk_TOKEN_BREAK; }
 "class"			{ count(yyscanner); return Spk_TOKEN_CLASS; }
 "continue"		{ count(yyscanner); return Spk_TOKEN_CONTINUE; }
 "do"			{ count(yyscanner); return Spk_TOKEN_DO; }
 "else"			{ count(yyscanner); return Spk_TOKEN_ELSE; }
 "for"			{ count(yyscanner); return Spk_TOKEN_FOR; }
-"from"			{ count(yyscanner); return Spk_TOKEN_FROM; }
 "if"			{ count(yyscanner); return Spk_TOKEN_IF; }
-"import"		{ count(yyscanner); return Spk_TOKEN_IMPORT; }
-"int"			{ count(yyscanner); return Spk_TOKEN_INT; }
 "meta"			{ count(yyscanner); return Spk_TOKEN_META; }
-"raise"			{ count(yyscanner); return Spk_TOKEN_RAISE; }
 "return"		{ count(yyscanner); return Spk_TOKEN_RETURN; }
-"var"			{ count(yyscanner); return Spk_TOKEN_VAR; }
 "while"			{ count(yyscanner); return Spk_TOKEN_WHILE; }
 "yield"			{ count(yyscanner); return Spk_TOKEN_YIELD; }
 
-{LL}({L}|{D})*		{ count(yyscanner); return Spk_TOKEN_IDENTIFIER; }
-{UL}({L}|{D})*		{ count(yyscanner); return Spk_TOKEN_TYPE_IDENTIFIER; }
+{L}({L}|{D})*		{ count(yyscanner); return Spk_TOKEN_IDENTIFIER; }
 ${L}({L}|{D})*		{ count(yyscanner); return Spk_TOKEN_LITERAL_SYMBOL; }
 
 0[xX]{H}+{IS}?		{ count(yyscanner); return Spk_TOKEN_LITERAL_INT; }
@@ -336,8 +327,10 @@ int SpkLexer_GetNextToken(SpkToken *token, yyscan_t scanner, SpkSymbolTable *st)
         token->literalValue = stringFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
     case Spk_TOKEN_IDENTIFIER:
-    case Spk_TOKEN_TYPE_IDENTIFIER:
         token->sym = SpkSymbolNode_FromCString(st, yyget_text(scanner));
+        if (SpkSymbolNode_IsType(token->sym)) {
+            token->id = Spk_TOKEN_TYPE_IDENTIFIER;
+        }
         break;
     case Spk_TOKEN_LITERAL_SYMBOL:
         token->sym = SpkSymbolNode_FromCString(st, yyget_text(scanner) + 1);

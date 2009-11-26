@@ -51,10 +51,12 @@ static void indent(CxxCodeGen *cgen) {
 
 static void emitDeclSpecs(Expr *def, CxxCodeGen *cgen) {
     int type = 0;
+#if 0
     if (def->declSpecs & Spk_DECL_SPEC_INT) {
         fputs("int ", cgen->out);
         type = 1;
     }
+#endif
     if (!type) {
         fputs("obj ", cgen->out);
     }
@@ -71,9 +73,8 @@ static SpkUnknown *emitCxxCodeForVarDefList(Expr *defList,
     for (expr = defList; expr; expr = expr->next) {
         if (expr->kind == Spk_EXPR_ASSIGN) {
             def = expr->left;
-#if 0 /* XXX: default arguments */
+            ASSERT(0, "XXX: initializers");
             _(emitCxxCodeForExpr(expr->right, stmt, cgen, pass));
-#endif
         } else {
             def = expr;
         }
@@ -115,7 +116,7 @@ static SpkUnknown *emitCxxCodeForBlock(Expr *expr, Stmt *stmt, CxxCodeGen *cgen,
     
     firstStmt = expr->aux.block.stmtList;
     
-    if (firstStmt && firstStmt->kind == Spk_STMT_DEF_ARG) {
+    if (firstStmt && firstStmt->kind == Spk_STMT_DEF_VAR) {
         /* block arguments */
         for (arg = firstStmt->expr; arg; arg = arg->next) {
             ASSERT(arg->kind == Spk_EXPR_NAME, "invalid argument definition");
@@ -149,7 +150,8 @@ static SpkUnknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cge
     Expr *arg;
     const char *token;
     
-    /* XXX: precedence */
+    /* account for precedence */
+    fputs("(", cgen->out);
     
     switch (expr->kind) {
     case Spk_EXPR_LITERAL:
@@ -157,6 +159,7 @@ static SpkUnknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cge
         SpkHost_PrintObject(expr->aux.literalValue, cgen->out);
         break;
     case Spk_EXPR_SYMBOL:
+        ASSERT(0, "XXX");
         break;
     case Spk_EXPR_NAME:
         fputs(SpkHost_SelectorAsCString(expr->u.ref.def->sym->sym), cgen->out);
@@ -194,7 +197,23 @@ static SpkUnknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cge
     case Spk_EXPR_POSTOP:
     case Spk_EXPR_PREOP:
     case Spk_EXPR_UNARY:
-        _(emitCxxCodeForExpr(expr->left, stmt, cgen, pass));
+        switch (expr->oper) {
+        case Spk_OPER_SUCC:  token = "++";  break;
+        case Spk_OPER_PRED:  token = "--";  break;
+        case Spk_OPER_ADDR:  token = "&";   break;
+        case Spk_OPER_IND:   token = "*";   break;
+        case Spk_OPER_POS:   token = "+";   break;
+        case Spk_OPER_NEG:   token = "-";   break;
+        case Spk_OPER_BNEG:  token = "~";   break;
+        case Spk_OPER_LNEG:  token = "!";   break;
+        }
+        if (expr->kind == Spk_EXPR_POSTOP) {
+            _(emitCxxCodeForExpr(expr->left, stmt, cgen, pass));
+            fputs(token, cgen->out);
+        } else {
+            fputs(token, cgen->out);
+            _(emitCxxCodeForExpr(expr->left, stmt, cgen, pass));
+        }
         break;
     case Spk_EXPR_AND:
     case Spk_EXPR_OR:
@@ -214,13 +233,22 @@ static SpkUnknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cge
     case Spk_EXPR_ASSIGN:
         switch (expr->left->kind) {
         case Spk_EXPR_NAME:
-            if (expr->oper == Spk_OPER_EQ) {
-                fprintf(cgen->out, "%s = ",
-                        SpkHost_SymbolAsCString(expr->left->u.ref.def->sym->sym));
-                _(emitCxxCodeForExpr(expr->right, stmt, cgen, pass));
-            } else {
-                ASSERT(0, "XXX");
+            fputs(SpkHost_SymbolAsCString(expr->left->u.ref.def->sym->sym), cgen->out);
+            switch (expr->oper) {
+            case Spk_OPER_EQ:      token = "=";    break;
+            case Spk_OPER_MUL:     token = "*=";   break;
+            case Spk_OPER_DIV:     token = "/=";   break;
+            case Spk_OPER_MOD:     token = "%=";   break;
+            case Spk_OPER_ADD:     token = "+=";   break;
+            case Spk_OPER_SUB:     token = "-=";   break;
+            case Spk_OPER_LSHIFT:  token = "<<=";  break;
+            case Spk_OPER_RSHIFT:  token = ">>=";  break;
+            case Spk_OPER_BAND:    token = "&=";   break;
+            case Spk_OPER_BXOR:    token = "^=";   break;
+            case Spk_OPER_BOR:     token = "|=";   break;
             }
+            fprintf(cgen->out, " %s ", token);
+            _(emitCxxCodeForExpr(expr->right, stmt, cgen, pass));
             break;
         default:
             ASSERT(0, "XXX");
@@ -228,8 +256,29 @@ static SpkUnknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cge
         }
         break;
     case Spk_EXPR_ATTR_VAR:
+        ASSERT(0, "XXX");
+        break;
     case Spk_EXPR_BINARY:
         _(emitCxxCodeForExpr(expr->left, stmt, cgen, pass));
+        switch (expr->oper) {
+        case Spk_OPER_MUL:     token = "*";   break;
+        case Spk_OPER_DIV:     token = "/";   break;
+        case Spk_OPER_MOD:     token = "%";   break;
+        case Spk_OPER_ADD:     token = "+";   break;
+        case Spk_OPER_SUB:     token = "-";   break;
+        case Spk_OPER_LSHIFT:  token = "<<";  break;
+        case Spk_OPER_RSHIFT:  token = ">>";  break;
+        case Spk_OPER_LT:      token = "<";   break;
+        case Spk_OPER_GT:      token = ">";   break;
+        case Spk_OPER_LE:      token = "<=";  break;
+        case Spk_OPER_GE:      token = ">=";  break;
+        case Spk_OPER_EQ:      token = "==";  break;
+        case Spk_OPER_NE:      token = "!=";  break;
+        case Spk_OPER_BAND:    token = "&";   break;
+        case Spk_OPER_BXOR:    token = "^";   break;
+        case Spk_OPER_BOR:     token = "|";   break;
+        }
+        fputs(token, cgen->out);
         _(emitCxxCodeForExpr(expr->right, stmt, cgen, pass));
         break;
     case Spk_EXPR_COND:
@@ -241,6 +290,8 @@ static SpkUnknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cge
         break;
     }
     
+    fputs(")", cgen->out);
+        
     Spk_INCREF(Spk_GLOBAL(xvoid));
     return Spk_GLOBAL(xvoid);
     
@@ -284,8 +335,6 @@ static SpkUnknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
             fputs("}\n", cgen->out);
         }
         break;
-    case Spk_STMT_DEF_ARG:
-        break;
     case Spk_STMT_DEF_VAR:
         switch (outer->kind) {
         default:
@@ -306,6 +355,9 @@ static SpkUnknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
         break;
     case Spk_STMT_DEF_MODULE:
         ASSERT(0, "unexpected module node");
+        break;
+    case Spk_STMT_DEF_TYPE:
+        ASSERT(0, "unexpected type node");
         break;
     case Spk_STMT_DO_WHILE:
         if (outerPass == 2) {
@@ -367,12 +419,6 @@ static SpkUnknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
                 --cgen->indent;
             }
         }
-        break;
-    case Spk_STMT_IMPORT:
-        /* XXX */
-        break;
-    case Spk_STMT_RAISE:
-        /* XXX */
         break;
     case Spk_STMT_PRAGMA_SOURCE:
         /* XXX */
@@ -477,13 +523,12 @@ static SpkUnknown *emitCxxCodeForMethodDef(Stmt *stmt,
         fputs(" {\n", cgen->out);
         ++cgen->indent;
         for (innerPass = 1; innerPass <= 2; ++innerPass) {
-#if 0 /* XXX: default arguments */
             for (arg = stmt->u.method.argList.fixed; arg; arg = arg->nextArg) {
                 if (arg->kind == Spk_EXPR_ASSIGN) {
+                    ASSERT(0, "XXX: default arguments");
                     _(emitCxxCodeForExpr(arg->right, stmt, cgen, innerPass));
                 }
             }
-#endif
             for (s = body->top; s; s = s->next) {
                 _(emitCxxCodeForStmt(s, stmt, cgen, innerPass));
             }
