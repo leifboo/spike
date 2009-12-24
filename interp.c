@@ -1509,7 +1509,7 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
                 
                 for (i = minFixedArgumentCount; i < maxFixedArgumentCount; ++i) {
                     DECODE_SINT(displacement);
-                    if (i == argumentCount) {
+                    if (i == argc) {
                         instructionPointer = base + displacement;
                         goto loop;
                     }
