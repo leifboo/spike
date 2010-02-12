@@ -8,10 +8,10 @@
 #include <string.h>
 
 
-typedef struct { SpkUnknown **p; char *s; }           SymbolTableEntry;
-typedef SymbolTableEntry                              SelectorTableEntry;
-typedef struct { SpkUnknown **p; long i; }            IntegerTableEntry;
-typedef struct { SpkUnknown **p; char *s; size_t n; } StringTableEntry;
+typedef struct { SpkUnknown **p; const char *s; }           SymbolTableEntry;
+typedef SymbolTableEntry                                    SelectorTableEntry;
+typedef struct { SpkUnknown **p; long i; }                  IntegerTableEntry;
+typedef struct { SpkUnknown **p; const char *s; size_t n; } StringTableEntry;
 
 
 /* symbols */

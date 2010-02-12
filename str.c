@@ -162,7 +162,7 @@ static SpkUnknown *String_do(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *ar
 static SpkUnknown *String_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkString *self;
     SpkString *result;
-    char *d, *s, *subst;
+    char *d, *s; const char *subst;
     char c;
     
     self = (SpkString *)_self;

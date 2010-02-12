@@ -104,7 +104,7 @@ static void disassembleMethod(SpkMethodTmpl *method,
     
     while (instructionPointer < end) {
         SpkOpcode opcode;
-        char *keyword = 0;
+        const char *keyword = 0;
         SpkUnknown *selector = 0;
         const char *mnemonic = "unk", *base = 0;
         size_t index = 0;

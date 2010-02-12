@@ -109,7 +109,7 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
     SpkUnknown *formatObj = 0; SpkString *formatString; char *format = 0; size_t formatSize;
     char c, convOp, *f, *chunk;
     SpkUnknown *arg = 0; SpkChar *charArg; SpkInteger *intArg; SpkFloat *floatArg; SpkString *strArg;
-    static char *convOps = "cdeEfgGinopsuxX%";
+    static const char *convOps = "cdeEfgGinopsuxX%";
     
     self = (SpkFileStream *)_self;
     args = Spk_CAST(Array, arg0);
