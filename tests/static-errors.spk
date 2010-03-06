@@ -1,0 +1,71 @@
+#!/usr/bin/env spike
+
+class Foo {
+    obj +x; // invalid variable definition
+    
+    // invalid argument definitions
+    red(a, -b) {
+        return [obj x + y; return a;];
+    }
+    green(a, b, c, ... +d) {}
+    
+    // invalid method declarators
+    a = (b + c) {}
+    (a + b) = c {}
+    self(i) = v {}
+    x[i] = v {}
+    (a + b)() {}
+    x[i] {}
+    a + b {}
+    self + (a + b) {}
+    self - 2 {}
+    self * 1 {}
+    a foo {}
+    a foo: b {}
+    (a + b) foo {}
+    (a - b) foo: c {}
+    self && b {}
+    self.x {}
+    self === v {}
+    42 {}
+    self++ {}
+    --self {}
+}
+
+// cycle in superclass chain
+class Bar : Zoo {}
+class Zoo : Tomato {}
+class Tomato: Bar {}
+class Ring : Ring {}
+
+// invalid superclass specification
+obj (Superman);
+class Clark : Superman {}
+(Loisfunc)() {}
+class Lois : Loisfunc {}
+
+pirate() {
+    obj aBlock, x;
+    
+    // 'arg' can only be used as the first statement of a block
+    aBlock = [
+        /*arg*/ obj booty;
+        x = 42;
+        /*arg*/ obj thar, be, errors;
+        ];
+}
+
+obj g;
+
+local() {
+    obj g;
+    obj x;
+    
+    obj x; // symbol 'x' multiply defined
+    
+    return y; // symbol 'y' undefined
+}
+
+main(argv) {
+    return 1;
+}

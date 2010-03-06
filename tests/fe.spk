@@ -1,0 +1,52 @@
+#!/usr/bin/env spike
+
+printf(format, ...args) { stdout.printf(format, ...args); }
+puts(s) { stdout.printf("%s\n", s); }
+
+abc() {
+    obj alphabet, letter, i;
+    
+    alphabet = "abcdefghijklmnopqrstuvwxyz";
+    for (i = 0; i < alphabet.len; ++i) {
+        letter = alphabet[i];
+        printf("%c ", letter);
+    }
+    puts("");
+    
+    obj aBlock;
+    aBlock = [obj a, b, c;
+              printf("little girl voice: %c %c %c\n", a, b, c); ];
+    
+    aBlock('a', 'b', 'c');
+    obj letters;
+    letters = tuple('x', 'y', 'z');
+    aBlock(...letters);
+    letters = tuple('j', 'k');
+    aBlock('i', ...letters);
+    
+    alphabet do: [obj l; printf("%c ", l);];
+    puts("");
+    
+    alphabet do: [obj l;
+        printf("%c ", l);
+        ];
+    puts("");
+    
+    varargs("Now", "I", "know", "my", "ABCs.");
+    
+    alphabet do: [obj l; printf("%c ", l); if (l == 'g') return "hey"; ];
+    puts("ERROR: not reached");
+}
+
+tuple(...args) {
+    return args;
+}
+
+varargs(...args) {
+    args do: [obj a; printf("%s\n", a);];
+}
+
+main(argv) {
+    puts(abc());
+    return 0;
+}

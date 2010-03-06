@@ -1,0 +1,29 @@
+#!/usr/bin/env spike
+
+fib() {
+    return [ ;
+        obj a, b, tmp;
+        
+        a = 0;
+        b = 1;
+        while (true) {
+            yield a;
+            tmp = a;
+            a = b;
+            b = tmp + b;
+        }
+        ];
+}
+
+main(argv) {
+    obj gen, max, n;
+    
+    gen = fib();
+    max = 1000;
+    n = gen();
+    while (n < max) {
+        stdout.printf("%d\n", n);
+        n = gen();
+    }
+    return 0;
+}

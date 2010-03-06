@@ -1,0 +1,27 @@
+#!/usr/bin/env spike
+
+
+class Foo {
+    self doesNotUnderstand: aMessage {
+        stdout.printf("I don't understand %s\n",
+                      aMessage.selector.printString);
+        return 42;
+    }
+}
+
+
+tuple(...args) { return args; }
+
+
+main(argv) {
+    obj f, args;
+    
+    f = Foo.new();
+    f hey: 42;
+    stdout.printf("tomato is %d\n", f.tomato);
+    f + 42;
+    f();
+    args = tuple(1,2,3);
+    f(...args);
+    return 0;
+}

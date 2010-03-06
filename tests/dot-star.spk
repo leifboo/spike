@@ -1,0 +1,65 @@
+#!/usr/bin/env spike
+
+class Foo {
+    foo() {
+        stdout.puts("Hello from foo!\n");
+    }
+    bar() {
+        stdout.puts("Hello from bar!\n");
+    }
+    tomato() {
+        stdout.puts("Hello from tomato!\n");
+    }
+    goodbye() {
+        stdout.puts("Goodbye from Foo!\n");
+    }
+}
+
+class Bar : Foo {
+    bar(sym) {
+        stdout.puts("Hello from Bar.bar!\n");
+        (self.*sym)();
+        (super.*sym)();
+    }
+    tomato() {
+        stdout.puts("Hello from Bar.tomato!\n");
+    }
+    whatever() {
+        stdout.puts("Whatever.\n");
+    }
+}
+
+math(oper) {
+    obj a, b;
+    
+    a = 40;
+    b = 2;
+    stdout.printf("math: %d\n", (a.*oper)(b));
+}
+
+main(args) {
+    obj sym, o;
+    
+    sym = $foo;
+    stdout.printf("%s\n", sym.printString);
+    
+    o = Bar.new();
+    (o.*sym)();
+    sym = $bar;
+    (o.*sym)($tomato);
+    (o.*(doWhatever()))();
+    (o.*$goodbye)();
+    
+    if (false) {
+        // XXX: Currently, the dot-star operator doesn't work with
+        // operators... or keyword methods.
+        math($__add__);
+        math($__mul__);
+    }
+    
+    return 0;
+}
+
+doWhatever() {
+    return $whatever;
+}

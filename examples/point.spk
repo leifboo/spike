@@ -1,0 +1,85 @@
+#!/usr/bin/env spike
+
+printf(format, ...args) { stdout.printf(format, ...args); }
+
+
+class Point {
+    obj x, y;
+    
+    // initializing
+    init(newX, newY) {
+        x = newX;
+        y = newY;
+    }
+    
+    // accessing
+    x { return x; }
+    y { return y; }
+    x = newX { x = newX; }
+    y = newY { y = newY; }
+    
+    self x: newX y: newY {
+        x = newX;
+        y = newY;
+        return self;
+    }
+        
+    // printing
+    printString() {
+        return "(" + x.printString + ", " + y.printString + ")";
+    }
+    
+    // arithmetic
+    self + delta {
+        return self.class
+            x: x + delta.x
+            y: y + delta.y;
+    }
+    self * scale {
+        return self.class
+            x: scale * x
+            y: scale * y;
+    }
+    -self {
+        return self.class
+            x: -x
+            y: -y;
+    }
+    self + 1 {
+        return self.class
+            x: x + 1
+            y: y + 1;
+    }
+    self - 1 {
+        return self.class
+            x: x - 1
+            y: y - 1;
+    }
+    
+} meta {
+    
+    self x: xValue y: yValue {
+        return self.new() x: xValue y: yValue;
+    }
+}
+
+
+main(argv) {
+    obj a, b, c;
+    
+    a = (Point) x: 4  y: 2;
+    b = (Point) x: 22 y: 44;
+    
+    printf("a is %s\n", a.printString);
+    printf("b is %s\n", b.printString);
+    printf("the sum is %s\n", (a + b).printString);
+    printf("a scaled by 2 is %s\n", (a * 2).printString);
+    printf("the negative of a is %s\n", (-a).printString);
+    printf("a incremented is %s\n", (++a).printString);
+    printf("a decremented is %s\n", (--a).printString);
+    printf("a.x is %s\n", a.x.printString);
+    printf("a.y is %s\n", a.y.printString);
+    a.y = 42;
+    printf("a.y is now %s\n", a.y.printString);
+    return 0;
+}

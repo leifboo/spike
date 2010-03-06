@@ -1,4 +1,4 @@
-#!/usr/bin/env spike-1
+#!/usr/bin/env spike
 
 main(argv) {
     obj i;

@@ -1,0 +1,41 @@
+#!/usr/bin/env spike
+
+import printf from spike.io;
+import list, xrange from __builtin__;
+import array from array;
+
+
+// Translated from the Pyrex example.
+
+primes(kmax) {
+    var n, k, i;
+    var p, result;
+    
+    result = list();
+    p = array("i", xrange(0, 1000));
+    if (kmax > 1000)
+        kmax = 1000;
+    k = 0;
+    n = 2;
+    while (k < kmax) {
+        i = 0;
+        while (i < k && n % p[i] != 0)
+            ++i;
+        if (i == k) {
+            p[k] = n;
+            ++k;
+            result.append(n);
+        }
+        ++n;
+    }
+    return result;
+}
+
+
+main(argv) {
+    primes(100) do: [
+        arg prime;
+        printf("%d\n", prime);
+        ];
+    return 0;
+}

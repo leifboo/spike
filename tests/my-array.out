@@ -1,0 +1,14 @@
+The array size is 4.
+MyArray: self[0] = 0
+MyArray: self[1] = 2
+MyArray: self[2] = 4
+MyArray: self[3] = 6
+MyArray: self[0] == 0
+0
+MyArray: self[1] == 2
+2
+MyArray: self[2] == 4
+4
+MyArray: self[3] == 6
+6
+The label is 'tomato'.

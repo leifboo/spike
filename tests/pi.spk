@@ -1,0 +1,29 @@
+#!/usr/bin/env spike
+
+import random from random;
+import float from __builtin__;
+import fprintf, puts, stderr from spike.io;
+
+main(argv) {
+    var n, total, interior, pi;
+    
+    n = (10).__pow__(6 /*XXX: 7*/);
+    interior = 0;
+
+    for (total = 0; total < n; ++total) {
+        var x, y;
+        
+        x = random();
+        y = random();
+        if (x*x + y*y <= 1.0) {
+            ++interior;
+        }
+    }
+    
+    pi = 4 * float(interior) / float(total);
+    fprintf(stderr, "pi: %.8f\n", pi);
+    if (!(3.1 < pi && pi < 3.15)) {
+        puts("Error!");
+    }
+    return 0;
+}

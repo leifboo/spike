@@ -1,0 +1,39 @@
+#!/usr/bin/env spike
+
+
+// Inspired by an old "Sesame Street" segment.
+
+abc(j) {
+    obj alphabet, letter, i;
+    
+    alphabet = "abcdefghijklmnopqrstuvwxyz";
+    for (i = 0; i < alphabet.len; ++i) {
+        letter = alphabet[i];
+        stdout.printf("%c ", letter);
+        child(i, j, [obj x; stdout.printf("%s\n", x); break;]);
+    }
+    for (i = 0; i < alphabet.len; ++i) {
+        letter = alphabet[i];
+        stdout.printf("%c ", letter);
+        child(i, j, [obj x; stdout.printf("%s\n", x); continue;]);
+    }
+    for (i = 0; i < alphabet.len; ++i) {
+        letter = alphabet[i];
+        stdout.printf("%c ", letter);
+        child(i, j, [obj x; stdout.printf("%s\n", x); return;]);
+    }
+    stdout.puts("not reached");
+}
+
+
+child(i, j, stop) {
+    if (i == j)
+        stop("Cookie Monster!");
+}
+
+
+main(argv) {
+    abc(5);
+    abc(10);
+    return 0;
+}

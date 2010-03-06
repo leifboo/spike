@@ -1,0 +1,32 @@
+4: invalid variable definition
+13: invalid method declarator
+14: invalid method declarator
+15: invalid method declarator
+16: invalid method declarator
+17: invalid method declarator
+18: invalid method declarator
+19: invalid method declarator
+20: invalid method declarator
+21: invalid method declarator
+22: invalid method declarator
+23: invalid method declarator
+24: invalid method declarator
+25: invalid method declarator
+26: invalid method declarator
+27: invalid method declarator
+28: invalid method declarator
+29: invalid method declarator
+30: invalid method declarator
+31: invalid method declarator
+32: invalid method declarator
+7: invalid argument definition
+8: invalid argument definition
+10: invalid argument definition
+43: invalid superclass specification
+45: invalid superclass specification
+64: symbol 'x' multiply defined
+66: symbol 'y' undefined
+36: cycle in superclass chain
+37: cycle in superclass chain
+38: cycle in superclass chain
+39: cycle in superclass chain

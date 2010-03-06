@@ -1,0 +1,61 @@
+#!/usr/bin/env spike
+
+printf(format, ...args) { stdout.printf(format, ...args); }
+
+obj g;
+
+foo(x) {
+    g = x;
+}
+
+class Gremlin {
+    obj anotherGizmo;
+    
+    self eachGizmoDo: aBlock {
+        aBlock("hey");
+        aBlock(42);
+        aBlock(anotherGizmo);
+        return aBlock("tomato");
+    }
+    
+    anotherGizmo = aGizmo {
+        anotherGizmo = aGizmo;
+    }
+    
+    crash(crashBlock) {
+        crashBlock(self);
+    }
+    
+    red() { self.green(); }
+    green() { self.blue(); }
+    blue() { self.huh; }
+
+    self doesNotUnderstand: aMessage {
+        printf("I don't understand '%s'!\n",
+               aMessage.selector.printString);
+    }
+}
+
+zeroToTen() {
+    obj r, i;
+    r = Array.new(10);
+    for (i = 0; i < 10; ++i)
+        r[i] = i;
+    return r;
+}
+
+main(argv) {
+    foo(666);
+    printf("The global var is %s.\n", g.printString);
+    
+    obj gremlin, result;
+    gremlin = Gremlin.new();
+    gremlin.anotherGizmo = zeroToTen();
+    
+    result = gremlin eachGizmoDo: [obj gizmo; printf("%s\n", gizmo.printString); gizmo];
+    printf("The result is %s.\n", result.printString);
+    
+    gremlin.crash([obj g; g.red()]);
+    
+    return 0;
+}

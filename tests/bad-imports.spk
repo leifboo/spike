@@ -1,0 +1,12 @@
+#!/usr/bin/env spike
+
+import a + b, c from spam.ham;
+import a, b, c from x + y;
+import (a + b).spam.ham;
+import ham.spam = spam.ham;
+import a = b = c = x + y;
+import a * b;
+
+main(argv) {
+    return 1;
+}

@@ -1,0 +1,44 @@
+psst
+1
+8
+50
+uninit
+42
+uninit
+bar is a XBar
+uninit
+42
+uninit
+'XBar'
+a metaclass
+
+55
+a Bar
+tomato
+1
+6
+
+--- condTest ---
+cond
+left 
+right 
+left 
+right 
+correct!
+
+and
+left 
+left 
+left right 
+left right true!
+
+or
+left right 
+left right true!
+left true!
+left true!
+
+prec
+left hey!
+left False
+yeah!

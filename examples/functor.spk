@@ -1,0 +1,25 @@
+#!/usr/bin/env spike
+
+class Adder {
+    obj value;
+    
+    init(aValue) {
+        value = aValue;
+    }
+    
+    self(x) {
+        return value + x;
+    }
+    
+}
+
+main(argv) {
+    obj a, sum;
+    
+    a = Adder.new();
+    a.init(40);
+    sum = a(2);
+    stdout.printf("The sum is %d.\n", sum);
+    
+    return 0;
+}

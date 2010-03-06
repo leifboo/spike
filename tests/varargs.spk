@@ -1,0 +1,121 @@
+#!/usr/bin/env spike
+
+printf(format, ...args) { stdout.printf(format, ...args); }
+
+show(v) {
+    printf("%s\n", v.printString);
+}
+
+showResult(v, label) {
+    printf("%s <- %s\n", v.printString, label);
+}
+
+foo(x, y, z, ...args) {
+    obj i;
+    
+    show(x);
+    show(y);
+    show(z);
+    show(args);
+    for (i = 0; i < args.size; ++i) {
+        printf("foo arg: %s\n", args[i].printString);
+    }
+    printf("\n");
+    return args;
+}
+
+v(...args) {
+    obj i;
+    
+    printf("v: %s\n", args.printString);
+    for (i = 0; i < args.size; ++i) {
+        printf("v arg: %s\n", args[i].printString);
+    }
+    printf("\n");
+}
+
+v1(x, ...args) {
+    obj i;
+    
+    show(x);
+    show(args);
+    for (i = 0; i < args.size; ++i) {
+        printf("v1 arg: %s\n", args[i].printString);
+    }
+    printf("\n");
+}
+
+zoo() {
+    stdout.puts("zoo\n");
+}
+
+bar(x, y, z) {
+    show(x);
+    show(y);
+    show(z);
+    printf("\n");
+}
+
+leaf1(x, y) {
+    return x;
+}
+
+leaf2(x, y) {
+    return y;
+}
+
+manyArgs(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9,
+         b0, b1, b2, b3, b4, b5, b6, b7, b8, b9,
+         c0, c1, c2, c3, c4, c5, c6, c7, c8, c9,
+         d0, d1, d2, d3, d4, d5, d6, d7, d8, d9) {
+    return a4;
+}
+
+makeBigTuple() {
+    obj l, i;
+    
+    l = Array.new(40);
+    for (i = 0; i < 40; ++i) {
+        l[i] = i;
+    }
+    return l;
+}
+
+makeTuple(...args) {
+    return args;
+}
+
+main(argv) {
+    obj args;
+    
+    foo(1, 2, 3);
+    args = foo(1, 2, 3, 4, 5, 6);
+    foo("a", "b", "c", "hello", "world", ...args);
+    foo(...args);
+    v(...args);
+    v(...makeTuple());
+    v1(...args);
+    v1("help", ...args);
+    zoo();
+    bar(91, 92, 93);
+    bar(...args);
+    args = foo(1, 2, 3, "y", "z");
+    bar(1, ...args);
+    showResult(leaf1("a", "b"), "leaf1");
+    showResult(leaf2("a", "b"), "leaf2");
+    showResult(leaf1(...args), "leaf1");
+    showResult(leaf2(...args), "leaf2");
+    showResult(leaf1(1, 2), "leaf1");
+    showResult(leaf2(1, 2), "leaf2");
+    args = foo(1, 2, 3, "y");
+    showResult(leaf1(1, ...args), "leaf1");
+    showResult(leaf2(1, ...args), "leaf2");
+    showResult(leaf1(1, 2, ...makeTuple()), "leaf1");
+    showResult(leaf2(1, 2, ...makeTuple()), "leaf2");
+    
+    // bug fixed in r121
+    args = makeBigTuple();
+    showResult(manyArgs(...args), "a4");
+    
+    return 0;
+}

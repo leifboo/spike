@@ -1,14 +1,14 @@
-#!/usr/bin/env spike-1
+#!/usr/bin/env spike
 
 main(argv) {
     obj stream, line, i;
     
-    stream = FileStream.open("README", "r");
+    stream = FileStream.open(argv[1], "r");
     if (stream == null) {
         stderr.puts("Cannot open file!\n");
         return 1;
     }
-    for (i = 1; (line = stream.gets(160)) != null; ++i) {
+    for (i = 1; (line = stream.gets(200)) != null; ++i) {
         stdout.printf("%04d: %s", i, line);
     }
     stream.close();

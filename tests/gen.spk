@@ -1,0 +1,59 @@
+#!/usr/bin/env spike
+
+printf(format, ...args) { stdout.printf(format, ...args); }
+puts(s) { stdout.printf("%s\n", s); }
+repr(o) { return o.printString; }
+
+generator(gn) {
+    obj i;
+    i = 2;
+    if (gn == 0) {
+        return [yield 1; yield 2; yield 3; /*return 42;*/ while(true) yield i+=2;];
+    } else if (gn == 1) {
+        return [yield i+= 2; i];
+    }
+    return [i+= 2];
+}
+
+main(argv) {
+    obj gn, g, i, z;
+    
+    z = Zoo.new();
+    z = z yield: "airplane";
+    puts(z);
+    
+    for (gn = 0; gn < 3; ++gn) {
+        puts("generate!");
+        g = generator(gn);
+        for (i = 0; i < 10; ++i) {
+            printf("%s\n", repr(g()));
+        }
+        puts("");
+    }
+    
+    obj b;
+    b = down();
+    printf("back from hell: %s\n", repr(b()));
+    return 0;
+}
+
+down() {
+    obj b;
+    b = [while (true) { yield 666; yield 42; } /*return b; cannotReenterBlock */ ];
+    downDown(b);
+    return b;
+}
+
+downDown(b) {
+    obj i;
+    for (i = 0; i < 10; ++i) {
+        printf("pit of hell: %s\n", repr(b()));
+    }
+}
+
+
+class Zoo {
+    self yield: tomato {
+        return tomato;
+    }
+}

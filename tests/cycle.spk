@@ -1,0 +1,13 @@
+#!/usr/bin/env spike
+
+class Foo : Bar {
+}
+
+class Bar : Zoo {
+}
+
+class Zoo : Tomato {
+}
+
+class Tomato: Bar {
+}

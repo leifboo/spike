@@ -1,0 +1,10 @@
+a is (4, 2)
+b is (22, 44)
+the sum is (26, 46)
+a scaled by 2 is (8, 4)
+the negative of a is (-4, -2)
+a incremented is (5, 3)
+a decremented is (4, 2)
+a.x is 4
+a.y is 2
+a.y is now 42

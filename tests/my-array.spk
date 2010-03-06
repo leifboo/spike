@@ -1,0 +1,38 @@
+#!/usr/bin/env spike
+
+printf(format, ...args) { stdout.printf(format, ...args); }
+
+class MyArray : Array {
+    obj label;
+    
+    label { return label; }
+    label = aLabel { label = aLabel; }
+    
+    self[i] {
+        obj oldValue;
+        
+        oldValue = super[i];
+        printf("MyArray: self[%d] == %s\n", i, oldValue.printString);
+        return oldValue;
+    }
+    self[i] = newValue {
+        printf("MyArray: self[%d] = %s\n", i, newValue.printString);
+        return super[i] = newValue;
+    }
+}
+
+main(argv) {
+    obj a, i;
+    
+    a = MyArray.new(4);
+    a.label = "tomato";
+    printf("The array size is %d.\n", a.size);
+    for (i = 0; i < 4; ++i) {
+        a[i] = i * 2;
+    }
+    for (i = 0; i < 4; ++i) {
+        printf("%s\n", a[i].printString);
+    }
+    printf("The label is '%s'.\n", a.label);
+    return 0;
+}

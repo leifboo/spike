@@ -1,0 +1,281 @@
+#!/usr/bin/env spike
+
+printf(format, ...args) { stdout.printf(format, ...args); }
+puts(s) { stdout.printf("%s\n", s); }
+
+show(v) {
+    obj u;
+    if (v === u) {
+        puts("uninit");
+    } else if (v.class === (Foo)) {
+        puts("a Foo");
+    } else if (v.class === (Bar)) {
+        puts("a Bar");
+    } else if (v.class === (XBar)) {
+        puts("a XBar");
+    } else if (v === (Foo)) {
+        puts("class Foo");
+    } else if (v === (Bar)) {
+        puts("class Bar");
+    } else if (v === (XBar)) {
+        puts("class XBar");
+    } else if (v.class === Foo.class.class) {
+        puts("a metaclass");
+    } else {
+        printf("%s\n", v.printString);
+    }
+}
+
+
+obj g;
+
+main(argv) {
+    obj a;
+    
+    a = Foo.new().psst(1, 8);
+    show(a);
+    xmain();
+    return 0;
+}
+
+xmain() {
+    obj result, bar;
+    obj a, b, c;
+    
+    a = 0;
+    b = 0;
+    c = 0;
+    
+    scope(1, 2, 3); /* d'oh! */
+    bar = XBar.new();
+    printf("bar is "); show(bar);
+    bar.scope(1, 2, 3);
+    //bar = XBar.new();
+    //bar.opt();
+    show(bar.class.name);
+    show(Bar.class);
+    puts("");
+
+    if (true) {
+        result = fib(10);
+        show(result);
+
+        bar = Bar.new();
+        show(bar);
+
+        bar.funcTest();
+        bar.condTest();
+        show(bar.logic());
+        bar.opt();
+    }
+    return 0;
+}
+
+scope(a, b, c) {
+    obj d, e, f;
+    
+    show(d);
+    
+    {
+        obj g, h, i;
+        
+        g = 42;
+        show(g);
+    }
+    {
+        obj j, k, l;
+        
+        show(j);
+    }
+}
+
+class XBar : Foo {
+    scope(a, b, c) {
+        obj d, e, f;
+        
+        show(d);
+    
+        {
+            obj g, h, i;
+        
+            g = 42;
+            show(g);
+        }
+        {
+            obj j, k, l;
+            
+            show(j);
+        }
+    }
+}
+
+class Foo {
+    obj secret;
+    
+    answer() {
+        return 42;
+    }
+    // XXX: This should be an error.
+    answer() {
+        return 42;
+    }
+    main() {
+        obj b;
+        
+        b = Bar.new();
+        show(b.wrongAnswer());
+        self.red();
+    }
+    red() {
+        self.green();
+        return 1;
+    }
+    green() {
+        self.blue();
+    }
+    blue() {
+        //self.xxx();
+        //self.print();
+    }
+    psst(x, y) {
+        obj a, b;
+        
+        puts("psst");
+        show(x);
+        show(y);
+        g = 11;
+        a = 40;
+        b = 2;
+        secret = a + b + y;
+        return secret;
+    }
+    fib(x) {
+        if (x<=2) return 1;
+        return self.fib(x-1) + self.fib(x-2);
+    }
+    wrongAnswer() {
+        return 24;
+    }
+}
+
+tomato() {
+    puts("tomato");
+}
+
+class Bar : Foo {
+    tomato() {
+        return 1 + 2 + self.wrongAnswer();
+    }
+    wrongAnswer() {
+        return super.wrongAnswer() + 6;
+    }
+    getFunc() {
+        return tomato;
+    }
+    funcTest() {
+        obj f;
+        f = self.getFunc();
+        f();
+        f = [; self.blub()];
+        f().doStuff(1, 2, 3);
+    }
+    doStuff(x, y, z) {
+        show(x);
+        show(x + y + z);
+    }
+    blub() {
+        return self;
+    }
+    
+    falseLeft() {
+        printf("left ");
+        return false;
+    }
+    trueLeft() {
+        printf("left ");
+        return true;
+    }
+    falseRight() {
+        printf("right ");
+        return false;
+    }
+    trueRight() {
+        printf("right ");
+        return true;
+    }
+    getTrue() { return true; }
+    getFalse() { return false; }
+    condTest() {
+        printf("\n--- condTest ---\n");
+        puts("cond");
+        true ? self.trueLeft() : self.trueRight();
+        printf("\n");
+        false ? self.trueLeft() : self.trueRight();
+        printf("\n");
+        self.getTrue() ? self.trueLeft() : self.trueRight();
+        printf("\n");
+        self.getFalse() ? self.trueLeft() : self.trueRight();
+        printf("\n");
+        if ((self.getTrue() ? 42 : 99) == 42) {
+            puts("correct!");
+        }
+        if ((self.getFalse() ? 42 : 99) == 42) {
+            puts("correct!");
+        }
+        
+        printf("\nand\n");
+        if (self.falseLeft() && self.falseRight())
+            printf("true!");
+        printf("\n");
+        if (self.falseLeft() && self.trueRight())
+            printf("true!");
+        printf("\n");
+        if (self.trueLeft() && self.falseRight())
+            printf("true!");
+        printf("\n");
+        if (self.trueLeft() && self.trueRight())
+            printf("true!");
+        printf("\n");
+        
+        printf("\nor\n");
+        if (self.falseLeft() || self.falseRight())
+            printf("true!");
+        printf("\n");
+        if (self.falseLeft() || self.trueRight())
+            printf("true!");
+        printf("\n");
+        if (self.trueLeft() || self.falseRight())
+            printf("true!");
+        printf("\n");
+        if (self.trueLeft() || self.trueRight())
+            printf("true!");
+        printf("\n");
+    
+        printf("\nprec\n");
+        if (self.trueLeft() || self.trueRight() && self.getFalse())
+            puts("hey!");
+    }
+    
+    logic() {
+        return (self.trueLeft() || self.trueRight()) & false;
+    }
+    
+    opt() {
+        if ((false && false) & false) {
+            puts("wtf!");
+        }
+        if ((true && false) | true) {
+            puts("yeah!");
+        }
+    }
+}
+
+
+fib(x) {
+    if (x<=2) {
+        obj foo;
+        foo = Foo.new();
+        return foo.red();
+    }
+    return fib(x-1) + fib(x-2);
+}

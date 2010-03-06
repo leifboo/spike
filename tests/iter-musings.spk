@@ -1,0 +1,125 @@
+#!/usr/bin/env spike
+
+printf(format, ...args) { stdout.printf(format, ...args); }
+puts(s) { stdout.printf("%s\n", s); }
+
+show(v) {
+    printf("%s\n", v.printString);
+}
+
+class MyArray : Array {
+    obj x, y, z;
+    
+    tomato(a, b, c) {
+        x = a;
+        y = b;
+        z = c;
+    }
+    report() {
+        show(x);
+        show(y);
+        show(z);
+    }
+    self forEachItem: callback {
+        obj size, i;
+        
+        size = self.size;
+        for (i = 0; i < size; ++i) {
+            callback(self[i]);
+        }
+    }
+    self[i] {
+        obj oldValue;
+        
+        oldValue = super[i];
+        printf("self[%d] == %s\n", i, oldValue.printString);
+        return oldValue;
+    }
+    self[i] = newValue {
+        printf("self[%d] = %s\n", i, newValue.printString);
+        return super[i] = newValue;
+    }
+}
+
+class ArrayIter {
+    obj array, i;
+    
+    init(anArray) {
+        array = anArray;
+        i = 0;
+        return self;
+    }
+    atEnd {
+        return i >= array.size;
+    }
+    next() {
+        return array[i++];
+    }
+}
+
+
+class Foo {
+    mcallback(item) {
+        printf("method callback: %s\n", item.printString);
+    }
+    iterate(a) {
+        obj callback;
+        callback = [obj item; self.mcallback(item)];
+        a forEachItem: callback;
+        
+        obj tally, iter, item;
+        tally = 0;
+        iter = ArrayIter.new().init(a);
+        while (!iter.atEnd) {
+            item = iter.next();
+            printf("iter: %s\n", item.printString);
+            ++tally;
+        }
+        printf("There are %d items.\n", tally);
+        
+        tally = 0;
+        a do: [obj each;
+               show(each);
+               ++tally;];
+        printf("There are indeed %d items.\n", tally);
+    }
+    
+}
+
+gcallback(item) {
+    printf("global callback: %s\n", item.printString);
+}
+
+
+main(argv) {
+    obj a, i;
+    
+    a = MyArray.new(4);
+    printf("The array size is %d.\n", a.size);
+    for (i = 0; i < 4; ++i) {
+        a[i] = i * 2;
+    }
+    for (i = 0; i < 4; ++i) {
+        show(a[i]);
+    }
+    a.tomato(42, 43, 44);
+    for (i = 0; i < 4; ++i) {
+        show(a[i]);
+    }
+    a.report();
+    for (i = 0; i < 4; ++i) {
+        a[i] = i * 2;
+    }
+    a.report();
+    for (i = 0; i < 4; ++i) {
+        show(a[i]);
+    }
+    
+    a forEachItem: gcallback;
+
+    obj f;
+    f = Foo.new();
+    f.iterate(a);
+    
+    return 0;
+}

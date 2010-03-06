@@ -1,0 +1,69 @@
+The array size is 4.
+self[0] = 0
+self[1] = 2
+self[2] = 4
+self[3] = 6
+self[0] == 0
+0
+self[1] == 2
+2
+self[2] == 4
+4
+self[3] == 6
+6
+self[0] == 0
+0
+self[1] == 2
+2
+self[2] == 4
+4
+self[3] == 6
+6
+42
+43
+44
+self[0] = 0
+self[1] = 2
+self[2] = 4
+self[3] = 6
+42
+43
+44
+self[0] == 0
+0
+self[1] == 2
+2
+self[2] == 4
+4
+self[3] == 6
+6
+self[0] == 0
+global callback: 0
+self[1] == 2
+global callback: 2
+self[2] == 4
+global callback: 4
+self[3] == 6
+global callback: 6
+self[0] == 0
+method callback: 0
+self[1] == 2
+method callback: 2
+self[2] == 4
+method callback: 4
+self[3] == 6
+method callback: 6
+self[0] == 0
+iter: 0
+self[1] == 2
+iter: 2
+self[2] == 4
+iter: 4
+self[3] == 6
+iter: 6
+There are 4 items.
+0
+2
+4
+6
+There are indeed 4 items.

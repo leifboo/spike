@@ -1,0 +1,70 @@
+#!/usr/bin/env spike
+
+
+class Foo {
+    obj attr;
+    
+    attr {
+        return attr;
+    }
+    attr = newValue {
+        attr = newValue;
+    }
+}
+
+
+printAttr(f) {
+    stdout.printf("The attribute value is %d.\n", f.attr);
+}
+
+printWholeExpr(tmp) {
+    stdout.printf("The value of the whole expression is %d.\n", tmp);
+}
+
+printTmp(tmp) {
+    stdout.printf("The temporary value is %d.\n", tmp);
+}
+
+printOldAttr(tmp) {
+    stdout.printf("The attribute value was %d.\n", tmp);
+}
+
+
+main(argv) {
+    obj f, tmp;
+    
+    f = Foo.new();
+    tmp = (f.attr = 42);
+    printAttr(f);
+    printWholeExpr(tmp);
+    f.attr += 2;
+    printAttr(f);
+    
+    tmp = ++f.attr;
+    printAttr(f);
+    printTmp(tmp);
+    tmp = f.attr++;
+    printAttr(f);
+    printOldAttr(tmp);
+    
+    
+    stdout.printf("\n* Reprise *\n");
+    
+    obj sym;
+    sym = $attr;
+    
+    tmp = ((f.*sym) = 42);
+    printAttr(f);
+    printWholeExpr(tmp);
+    (f.*sym) += 2;
+    printAttr(f);
+    
+    tmp = ++(f.*sym);
+    printAttr(f);
+    printTmp(tmp);
+    tmp = (f.*sym)++;
+    printAttr(f);
+    printOldAttr(tmp);
+    
+    return 0;
+}

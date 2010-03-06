@@ -1,0 +1,21 @@
+#!/usr/bin/env spike
+
+
+class Form {
+    self display medium: aDisplayMedium location: aPoint clippingBox: clipRect rule: anInteger fillColor: aForm {
+        stdout.printf("display %s %d %d %s %s\n",
+                      aDisplayMedium, aPoint, clipRect, anInteger, aForm);
+    }
+}
+
+main(argv) {
+    obj form;
+    
+    form = Form.new();
+    form display medium: "canvas" location: 0 clippingBox: 42 rule: "xor" fillColor: "black";
+    form display fillColor: "black" medium: "canvas" location: 1 clippingBox: 42 rule: "xor";
+    form display rule: "xor" fillColor: "black" medium: "canvas" location: 2 clippingBox: 42;
+    form display clippingBox: 42 rule: "xor" fillColor: "black" medium: "canvas" location: 3;
+    form display location: 4 clippingBox: 42 rule: "xor" fillColor: "black" medium: "canvas";
+    return 0;
+}

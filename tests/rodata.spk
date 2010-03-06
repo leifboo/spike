@@ -1,0 +1,31 @@
+#!/usr/bin/env spike
+
+puts(s) { stdout.printf("%s\n", s); }
+
+
+hash() {
+    obj x, y;
+    x = 1.0;
+    y = 1;
+    if (x === y) {
+        // Fixed in r167.
+        puts("ERROR: ints and floats hash to the same slots");
+    } else {
+        puts("int hash OK");
+    }
+    
+    obj s1, s2;
+    s1 = "Life is a tomato.";
+    s2 = "Life is a tomato.";
+    if (s1 !== s2) {
+        puts("ERROR: duplicate strings in rodata");
+    } else {
+        puts("str hash OK");
+    }
+}
+
+
+main(argv) {
+    hash();
+    return 0;
+}

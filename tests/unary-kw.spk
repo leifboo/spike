@@ -1,0 +1,43 @@
+#!/usr/bin/env spike
+
+class Foo {
+    obj answer;
+    
+    self init answer: a {
+        answer = a;
+        return self;
+    }
+    
+    self zoo {
+        return answer;
+    }
+    self mutate: a {
+        return a + 2;
+    }
+    
+} meta {
+    self new {
+        return self new answer: 42;
+    }
+    self new answer: a {
+        return super.new() init answer: a;
+    }
+}
+
+main(argv) {
+    obj f, a;
+    
+    f = (Foo) new;
+    a = f zoo;
+    stdout.printf("zoo: %d\n", a);
+    a = f mutate: (f zoo);
+    stdout.printf("mutation: %d\n", a);
+    
+    f = (Foo) new answer: 40;
+    a = f zoo;
+    stdout.printf("zoo: %d\n", a);
+    a = f mutate: (f zoo);
+    stdout.printf("mutation: %d\n", a);
+    
+    return 0;
+}

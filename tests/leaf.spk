@@ -1,0 +1,92 @@
+#!/usr/bin/env spike
+
+printf(format, ...args) { stdout.printf(format, ...args); }
+puts(s) { stdout.printf("%s\n", s); }
+
+show(v) {
+    printf("%s\n", v.printString);
+}
+
+class Foo {
+    obj instVar;
+    obj a1, b1, c1;
+    obj a2, b2, c2;
+    obj tally;
+    
+    init() {
+        instVar = 7;
+        tally = 0;
+        return self;
+    }
+    
+    leaf() {
+        return 42;
+    }
+    getValue() {
+        return instVar;
+    }
+    setValue(newValue, junk, junk2) {
+        instVar = newValue;
+    }
+    noLeafSend() {
+        return self.leaf();
+    }
+    noLeafContext() {
+        return thisContext;
+    }
+    noLeafDepth() {
+        return 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8;
+    }
+    noLeafVar() {
+        obj x;
+        return 42;
+    }
+    reverse(a, b, c) {
+        a1 = a;
+        b1 = b;
+        c1 = c;
+        a = 1;
+        b = 2;
+        c = 3;
+        a2 = a;
+        b2 = b;
+        c2 = c;
+    }
+    diagnose() {
+        printf("a1 is %s\n", a1.printString);
+        printf("b1 is %s\n", b1.printString);
+        printf("c1 is %s\n", c1.printString);
+        printf("a2 is %s\n", a2.printString);
+        printf("b2 is %s\n", b2.printString);
+        printf("c2 is %s\n", c2.printString);
+    }
+    leafLoop(flag) {
+        while (flag) {
+            tally = 1;
+            flag = false;
+        }
+        return tally;
+    }
+}
+
+main(argv) {
+    obj foo, answer;
+    
+    foo = Foo.new().init();
+    answer = foo.leaf();
+    show(answer);
+    
+    show(foo.getValue());
+    foo.setValue(73, 66, 1234);
+    show(foo.getValue());
+    
+    foo.reverse(8, 9, 10);
+    foo.diagnose();
+    
+    answer = foo.leafLoop(false);
+    show(answer);
+    answer = foo.leafLoop(true);
+    show(answer);
+    
+    return 0;
+}

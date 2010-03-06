@@ -1,0 +1,85 @@
+#!/usr/bin/env spike
+
+printf(format, ...args) { stdout.printf(format, ...args); }
+puts(s) { stdout.printf("%s\n", s); }
+
+zeroToTen() {
+    obj r, i;
+    r = Array.new(10);
+    for (i = 0; i < 10; ++i)
+        r[i] = i;
+    return r;
+}
+
+zoo() {
+    obj a, i;
+    
+    a = Foo.new();
+    i = 2;
+    a[i+2].print();
+    a[i] = 42;
+    a[i] += 24;
+    a[i+4] += 24;
+    return 0;
+}
+
+main(argv) {
+    obj s, c, i, tmp;
+    
+    s = zeroToTen();
+    for (i = 0; i < 10; ++i) {
+        s[i] = 0;
+    }
+    
+    c = s[2];
+    show(c);
+    //puts(c.class.name);
+    
+    i = 2;
+    tmp = (s[i] = "b");
+    printf("The value of the whole expression is %s.\n", tmp.printString);
+    show(s);
+    s[++i] = "c";
+    show(s);
+    show(i);
+    s[i++] = "d";
+    show(s);
+    show(i);
+    s[i] += 42;
+    show(s);
+    s[i] = 2;
+    s[i] += s[i] += s[i] += s[i] += 7;
+    show(s);
+    if (false) {
+        puts("uh-oh!");
+        s[i,2,3] = "a"; /* XXX: wrong # of args */
+        puts("wtf!");
+    }
+    show(s);
+    incr();
+    return 0;
+}
+
+show(v) {
+    printf("%s\n", v.printString);
+}
+
+incr() {
+    obj s, i;
+    
+    puts("incr");
+    s = zeroToTen();
+    i = 3;
+    show(++s[i]);
+    show(s[i]++);
+    show(s[i]++);
+    show(s);
+    show(--s[i]);
+    show(s[i]--);
+    show(s);
+
+    return 0;
+}
+
+class Foo {
+}
