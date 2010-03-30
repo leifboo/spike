@@ -1,0 +1,17 @@
+required is 0; answer is 42; foo is hey; weird is 42.
+required is 1; answer is 24; foo is hey; weird is 24.
+required is 2; answer is 666; foo is you; weird is 666.
+required is 3; answer is 666; foo is guys; weird is 999.
+required is 0; answer is 42; foo is hey; weird is 42.
+required is 1; answer is 24; foo is hey; weird is 24.
+required is 2; answer is 666; foo is you; weird is 666.
+required is 3; answer is 666; foo is guys; weird is 999.
+required is 4; answer is 666; foo is you; weird is 999; extra contains 77.
+required is 5; answer is 666; foo is guys; weird is 999; extra contains 77 88.
+[f(42)] whine: 42, 43
+[f(0)] whine: 0, 1
+whine: 2, 3
+required is 0; answer is 73; foo is later; weird is 73.
+required is 1; answer is 24; foo is later; weird is 24.
+required is 2; answer is 666; foo is you; weird is 666.
+required is 3; answer is 666; foo is guys; weird is 999.

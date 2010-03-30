@@ -1,0 +1,65 @@
+#!/usr/bin/env spike
+
+hgg1(required, answer = 42, foo = "hey", weird = answer) {
+    stdout.printf("required is %d; ", required);
+    stdout.printf("answer is %d; ", answer);
+    stdout.printf("foo is %s; ", foo);
+    stdout.printf("weird is %d.\n", weird);
+}
+
+hgg2(required, answer = 42, foo = "hey", weird = answer, ...extra) {
+    stdout.printf("required is %d; ", required);
+    stdout.printf("answer is %d; ", answer);
+    stdout.printf("foo is %s; ", foo);
+    stdout.printf("weird is %d", weird);
+    if (extra.size > 0) {
+        stdout.printf("; extra contains");
+        extra do: [obj x; stdout.printf(" %d", x);];
+        stdout.printf(".\n");
+    } else {
+        stdout.printf(".\n");
+    }
+}
+
+class Foo {
+    hgg3(required, answer = self.defaultAnswer, foo = self.defaultFoo, weird = answer) {
+        stdout.printf("required is %d; ", required);
+        stdout.printf("answer is %d; ", answer);
+        stdout.printf("foo is %s; ", foo);
+        stdout.printf("weird is %d.\n", weird);
+    }
+    defaultAnswer { return 73; }
+    defaultFoo { return "later"; }
+}
+
+f(x) { stdout.printf("[f(%d)] ", x); return x + 1; }
+
+flora(x = 42, y = f(x)) {
+    stdout.printf("whine: %d, %d\n", x, y);
+}
+
+check(hgg) {
+    hgg(0);
+    hgg(1, 24);
+    hgg(2, 666, "you");
+    hgg(3, 666, "guys", 999);
+    if (hgg == hgg2) {
+        hgg(4, 666, "you", 999, 77);
+        hgg(5, 666, "guys", 999, 77, 88);
+    }
+}
+
+hgg3_wrapper(...args) {
+    f = Foo.new();
+    f.hgg3(...args);
+}
+
+main(argv) {
+    check(hgg1);
+    check(hgg2);
+    flora();
+    flora(0);
+    flora(2, 3);
+    check(hgg3_wrapper);
+    return 0;
+}
