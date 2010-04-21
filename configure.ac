@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.61)
+AC_PREREQ(2.59)
 AC_INIT([spike], [1.0], [leif.c.strand@gmail.com])
 AC_CONFIG_SRCDIR([spike.c])
 AC_CONFIG_HEADER([config.h])
