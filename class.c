@@ -5,6 +5,7 @@
 #include "host.h"
 #include "interp.h"
 #include "metaclass.h"
+#include "str.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -18,16 +19,19 @@
 static SpkUnknown *Class_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
     static const char *format = "<class %s>";
     const char *name;
-    SpkUnknown *result;
+    SpkString *result;
     size_t len;
+    char *str;
     
     name = SpkBehavior_NameAsCString((SpkBehavior *)self);
     len = strlen(format) + strlen(name);
-    result = SpkHost_StringFromCStringAndLength(0, len);
+    result = SpkString_FromCStringAndLength(0, len);
     if (!result)
         return 0;
-    sprintf(SpkHost_StringAsCString(result), format, name);
-    return result;
+    str = SpkString_AsCString(result);
+    sprintf(str, format, name);
+    result->size = strlen(str) + 1;
+    return (SpkUnknown *)result;
 }
 
 static SpkUnknown *Class_subclass(SpkUnknown *_self, SpkUnknown *args, SpkUnknown *arg1) {

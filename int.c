@@ -8,6 +8,7 @@
 #include "str.h"
 
 #include <stdio.h>
+#include <string.h>
 
 
 struct SpkInteger {
@@ -230,6 +231,7 @@ static SpkUnknown *Integer_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkU
         return 0;
     str = SpkString_AsCString(result);
     sprintf(str, "%ld", (long)self->value);
+    result->size = strlen(str) + 1;
     return (SpkUnknown *)result;
 }
 

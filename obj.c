@@ -11,6 +11,7 @@
 #include "host.h"
 #include "interp.h"
 #include "native.h"
+#include "str.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,16 +46,19 @@ static SpkUnknown *Object_compoundExpression(SpkUnknown *self, SpkUnknown *arg0,
 static SpkUnknown *Object_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
     static const char *format = "<%s instance at %p>";
     const char *className;
-    SpkUnknown *result;
+    SpkString *result;
     size_t len;
+    char *str;
     
     className = SpkBehavior_NameAsCString(((SpkObject *)self)->klass);
     len = strlen(format) + strlen(className) + 2*sizeof(void*); /* assumes %p is hex */
-    result = SpkHost_StringFromCStringAndLength(0, len);
+    result = SpkString_FromCStringAndLength(0, len);
     if (!result)
         return 0;
-    sprintf(SpkHost_StringAsCString(result), format, className, self);
-    return result;
+    str = SpkString_AsCString(result);
+    sprintf(str, format, className, self);
+    result->size = strlen(str) + 1;
+    return (SpkUnknown *)result;
 }
 
 

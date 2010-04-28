@@ -195,6 +195,7 @@ static SpkUnknown *String_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUn
     }
     *d++ = '"';
     *d = '\0';
+    result->size = d - STR(result) + 1;
     return (SpkUnknown *)result;
 }
 

@@ -171,9 +171,11 @@ TESTS = \
 	$(empty)
 
 XFAIL_TESTS = \
+	tests/bad-imports.spk \
 	tests/bc-in-blocks.spk \
 	tests/empty.spk \
 	tests/no-main.spk \
+	tests/pi.spk \
 	tests/syntax-error.spk \
 	$(empty)
 
