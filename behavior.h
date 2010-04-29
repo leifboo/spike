@@ -49,12 +49,6 @@ enum /*flags*/ {
     SpkAccessor_WRITE = 0x2  /* create 'set' accessor */
 };
 
-typedef struct SpkTraverse {
-    void (*init)(SpkObject *);
-    SpkUnknown **(*current)(SpkObject *);
-    void (*next)(SpkObject *);
-} SpkTraverse;
-
 typedef struct SpkAccessorTmpl {
     const char *name;
     SpkInstVarType type;
@@ -100,8 +94,7 @@ typedef struct SpkBehaviorTmpl {
     size_t instVarOffset;
     size_t itemSize;
     void (*zero)(SpkObject *);
-    void (*dealloc)(SpkObject *);
-    SpkTraverse *traverse;
+    void (*dealloc)(SpkObject *, SpkUnknown **);
     /* bytecode */
     size_t instVarCount;
     SpkMethodTmplList methodList;
@@ -122,8 +115,7 @@ struct SpkBehavior {
     
     /* low-level hooks */
     void (*zero)(SpkObject *);
-    void (*dealloc)(SpkObject *);
-    SpkTraverse traverse;
+    void (*dealloc)(SpkObject *, SpkUnknown **);
     
     /* memory layout of instances */
     size_t instVarOffset;

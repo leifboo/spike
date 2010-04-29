@@ -6,8 +6,9 @@
 #include <stddef.h>
 
 
-typedef struct SpkUnknown {
+typedef union SpkUnknown {
     size_t refCount;
+    union SpkUnknown *next;
 } SpkUnknown;
 
 
@@ -17,8 +18,10 @@ void SpkObjMem_Dealloc(SpkUnknown *);
 
 #define Spk_INCREF(op) (((SpkUnknown *)(op))->refCount++)
 #define Spk_DECREF(op) if (--((SpkUnknown *)(op))->refCount > 0) ; else SpkObjMem_Dealloc((SpkUnknown *)(op))
+#define Spk_LDECREF(op, l) if (--((SpkUnknown *)(op))->refCount > 0) ; else ((SpkUnknown *)(op))->next = *(l), *(l) = ((SpkUnknown *)(op));
 #define Spk_XINCREF(op) if (!(op)) ; else Spk_INCREF(op)
 #define Spk_XDECREF(op) if (!(op)) ; else Spk_DECREF(op)
+#define Spk_XLDECREF(op, l) if (!(op)) ; else Spk_LDECREF(op, l)
 
 #define Spk_CLEAR(op) \
     do {                                             \

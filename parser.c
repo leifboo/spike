@@ -385,38 +385,13 @@ static void Parser_zero(SpkObject *_self) {
     self->st = 0;
 }
 
-
-/*------------------------------------------------------------------------*/
-/* memory layout of instances */
-
-static void Parser_traverse_init(SpkObject *self) {
-    (*Spk_CLASS(Parser)->superclass->traverse.init)(self);
-}
-
-static SpkUnknown **Parser_traverse_current(SpkObject *_self) {
-    SpkParser *self;
-    
-    self = (SpkParser *)_self;
-    if (0 && self->root)
-        return (SpkUnknown **)&self->root;
-    if (self->st)
-        return (SpkUnknown **)&self->st;
-    return (*Spk_CLASS(Parser)->superclass->traverse.current)(_self);
-}
-
-static void Parser_traverse_next(SpkObject *_self) {
-    SpkParser *self;
-    
-    self = (SpkParser *)_self;
-    if (0 && self->root) {
-        self->root = 0;
-        return;
+static void Parser_dealloc(SpkObject *_self, SpkUnknown **l) {
+    SpkParser *self = (SpkParser *)_self;
+    if (0) { /* XXX: why? */
+        Spk_XLDECREF(self->root, l);
     }
-    if (self->st) {
-        self->st = 0;
-        return;
-    }
-    (*Spk_CLASS(Parser)->superclass->traverse.next)(_self);
+    Spk_XLDECREF(self->st, l);
+    (*Spk_CLASS(Parser)->superclass->dealloc)(_self, l);
 }
 
 
@@ -433,12 +408,6 @@ static SpkMethodTmpl methods[] = {
     { 0 }
 };
 
-static SpkTraverse traverse = {
-    &Parser_traverse_init,
-    &Parser_traverse_current,
-    &Parser_traverse_next,
-};
-
 SpkClassTmpl Spk_ClassParserTmpl = {
     Spk_HEART_CLASS_TMPL(Parser, Object), {
         /*accessors*/ 0,
@@ -447,8 +416,7 @@ SpkClassTmpl Spk_ClassParserTmpl = {
         offsetof(SpkParserSubclass, variables),
         /*itemSize*/ 0,
         &Parser_zero,
-        /*dealloc*/ 0,
-        &traverse
+        &Parser_dealloc
     }, /*meta*/ {
         0
     }

@@ -55,6 +55,8 @@ static SpkUnknown *Stmt_source(SpkUnknown *self, SpkUnknown *sourcePathname, Spk
 /*------------------------------------------------------------------------*/
 /* low-level hooks */
 
+/* Expr */
+
 static void Expr_zero(SpkObject *_self) {
     SpkExpr *self = (SpkExpr *)_self;
     size_t baseSize = offsetof(SpkExpr, kind);
@@ -63,6 +65,51 @@ static void Expr_zero(SpkObject *_self) {
            0,
            sizeof(SpkExpr) - baseSize);
 }
+
+static void Expr_dealloc(SpkObject *_self, SpkUnknown **l) {
+    SpkExpr *self;
+    
+    self = (SpkExpr *)_self;
+    
+    Spk_XLDECREF(self->declSpecs, l);
+    Spk_XLDECREF(self->next, l);
+    Spk_XLDECREF(self->nextArg, l);
+    Spk_XLDECREF(self->cond, l);
+    Spk_XLDECREF(self->left, l);
+    Spk_XLDECREF(self->right, l);
+    Spk_XLDECREF(self->var, l);
+    Spk_XLDECREF(self->sym, l);
+    
+    switch (self->kind) {
+    case Spk_EXPR_BLOCK:
+        Spk_XLDECREF(self->aux.block.stmtList, l);
+        break;
+    case Spk_EXPR_KEYWORD:
+        Spk_XLDECREF(self->aux.keywords, l);
+        break;
+    case Spk_EXPR_LITERAL:
+        Spk_XLDECREF(self->aux.literalValue, l);
+        break;
+    case Spk_EXPR_NAME:
+        switch (self->aux.nameKind) {
+        case Spk_EXPR_NAME_UNK:
+            break;
+        case Spk_EXPR_NAME_DEF:
+            break;
+        case Spk_EXPR_NAME_REF:
+            Spk_XLDECREF(self->u.ref.def, l);
+            break;
+        }
+        break;
+    default:
+        break;
+    }
+        
+    return (*Spk_CLASS(Expr)->superclass->dealloc)(_self, l);
+}
+
+
+/* Stmt */
 
 static void Stmt_zero(SpkObject *_self) {
     SpkStmt *self = (SpkStmt *)_self;
@@ -73,247 +120,32 @@ static void Stmt_zero(SpkObject *_self) {
            sizeof(SpkStmt) - baseSize);
 }
 
-
-/*------------------------------------------------------------------------*/
-/* memory layout of instances */
-
-/* Expr */
-
-static void Expr_traverse_init(SpkObject *self) {
-    (*Spk_CLASS(Expr)->superclass->traverse.init)(self);
-}
-
-static SpkUnknown **Expr_traverse_current(SpkObject *_self) {
-    SpkExpr *self;
-    
-    self = (SpkExpr *)_self;
-    
-    if (self->declSpecs)
-        return (SpkUnknown **)&self->declSpecs;
-    if (self->next)
-        return (SpkUnknown **)&self->next;
-    if (self->nextArg)
-        return (SpkUnknown **)&self->nextArg;
-    if (self->cond)
-        return (SpkUnknown **)&self->cond;
-    if (self->left)
-        return (SpkUnknown **)&self->left;
-    if (self->right)
-        return (SpkUnknown **)&self->right;
-    if (self->var)
-        return (SpkUnknown **)&self->var;
-    if (self->sym)
-        return (SpkUnknown **)&self->sym;
-    
-    switch (self->kind) {
-    case Spk_EXPR_BLOCK:
-        if (self->aux.block.stmtList)
-            return (SpkUnknown **)&self->aux.block.stmtList;
-        break;
-    case Spk_EXPR_KEYWORD:
-        if (self->aux.keywords)
-            return (SpkUnknown **)&self->aux.keywords;
-        break;
-    case Spk_EXPR_LITERAL:
-        if (self->aux.literalValue)
-            return (SpkUnknown **)&self->aux.literalValue;
-        break;
-    case Spk_EXPR_NAME:
-        switch (self->aux.nameKind) {
-        case Spk_EXPR_NAME_UNK:
-            break;
-        case Spk_EXPR_NAME_DEF:
-            break;
-        case Spk_EXPR_NAME_REF:
-            if (self->u.ref.def) {
-                return (SpkUnknown **)&self->u.ref.def;
-            }
-            break;
-        }
-        break;
-    default:
-        break;
-    }
-        
-    return (*Spk_CLASS(Expr)->superclass->traverse.current)(_self);
-}
-
-static void Expr_traverse_next(SpkObject *_self) {
-    SpkExpr *self;
-    
-    self = (SpkExpr *)_self;
-    
-    if (self->declSpecs) {
-        self->declSpecs = 0;
-        return;
-    }
-    if (self->next) {
-        self->next = 0;
-        return;
-    }
-    if (self->nextArg) {
-        self->nextArg = 0;
-        return;
-    }
-    if (self->cond) {
-        self->cond = 0;
-        return;
-    }
-    if (self->left) {
-        self->left = 0;
-        return;
-    }
-    if (self->right) {
-        self->right = 0;
-        return;
-    }
-    if (self->var) {
-        self->var = 0;
-        return;
-    }
-    if (self->sym) {
-        self->sym = 0;
-        return;
-    }
-    
-    switch (self->kind) {
-    case Spk_EXPR_BLOCK:
-        if (self->aux.block.stmtList) {
-            self->aux.block.stmtList = 0;
-            return;
-        }
-        break;
-    case Spk_EXPR_KEYWORD:
-        if (self->aux.keywords) {
-            self->aux.keywords = 0;
-            return;
-        }
-        break;
-    case Spk_EXPR_LITERAL:
-        if (self->aux.literalValue) {
-            self->aux.literalValue = 0;
-            return;
-        }
-        break;
-    case Spk_EXPR_NAME:
-        switch (self->aux.nameKind) {
-        case Spk_EXPR_NAME_UNK:
-            break;
-        case Spk_EXPR_NAME_DEF:
-            break;
-        case Spk_EXPR_NAME_REF:
-            if (self->u.ref.def) {
-                self->u.ref.def = 0;
-                return;
-            }
-            break;
-        }
-        break;
-    default:
-        break;
-    }
-    
-    (*Spk_CLASS(Expr)->superclass->traverse.next)(_self);
-}
-
-
-/* Stmt */
-
-static void Stmt_traverse_init(SpkObject *self) {
-    (*Spk_CLASS(Stmt)->superclass->traverse.init)(self);
-}
-
-static SpkUnknown **Stmt_traverse_current(SpkObject *_self) {
+static void Stmt_dealloc(SpkObject *_self, SpkUnknown **l) {
     SpkStmt *self;
     
     self = (SpkStmt *)_self;
     
-    if (self->next)
-        return (SpkUnknown **)&self->next;
-    if (self->top)
-        return (SpkUnknown **)&self->top;
-    if (self->bottom)
-        return (SpkUnknown **)&self->bottom;
-    if (self->init)
-        return (SpkUnknown **)&self->init;
-    if (self->expr)
-        return (SpkUnknown **)&self->expr;
-    if (self->incr)
-        return (SpkUnknown **)&self->incr;
+    Spk_XLDECREF(self->next, l);
+    Spk_XLDECREF(self->top, l);
+    Spk_XLDECREF(self->bottom, l);
+    Spk_XLDECREF(self->init, l);
+    Spk_XLDECREF(self->expr, l);
+    Spk_XLDECREF(self->incr, l);
     
     switch (self->kind) {
     case Spk_STMT_DEF_CLASS:
-        if (self->u.klass.superclassName)
-            return (SpkUnknown **)&self->u.klass.superclassName;
+        Spk_XLDECREF(self->u.klass.superclassName, l);
         break;
     case Spk_STMT_DEF_METHOD:
-        if (self->u.method.name)
-            return (SpkUnknown **)&self->u.method.name;
+        Spk_XLDECREF(self->u.method.name, l);
         break;
     case Spk_STMT_PRAGMA_SOURCE:
-        if (self->u.source)
-            return (SpkUnknown **)&self->u.source;
+        Spk_XLDECREF(self->u.source, l);
     default:
         break;
     }
     
-    return (*Spk_CLASS(Stmt)->superclass->traverse.current)(_self);
-}
-
-static void Stmt_traverse_next(SpkObject *_self) {
-    SpkStmt *self;
-    
-    self = (SpkStmt *)_self;
-    
-    if (self->next) {
-        self->next = 0;
-        return;
-    }
-    if (self->top) {
-        self->top = 0;
-        return;
-    }
-    if (self->bottom) {
-        self->bottom = 0;
-        return;
-    }
-    if (self->init) {
-        self->init = 0;
-        return;
-    }
-    if (self->expr) {
-        self->expr = 0;
-        return;
-    }
-    if (self->incr) {
-        self->incr = 0;
-        return;
-    }
-    
-    switch (self->kind) {
-    case Spk_STMT_DEF_CLASS:
-        if (self->u.klass.superclassName) {
-            self->u.klass.superclassName = 0;
-            return;
-        }
-        break;
-    case Spk_STMT_DEF_METHOD:
-        if (self->u.method.name) {
-            self->u.method.name = 0;
-            return;
-        }
-        break;
-    case Spk_STMT_PRAGMA_SOURCE:
-        if (self->u.source) {
-            self->u.source = 0;
-            return;
-        }
-        break;
-    default:
-        break;
-    }
-    
-    (*Spk_CLASS(Stmt)->superclass->traverse.next)(_self);
+    return (*Spk_CLASS(Stmt)->superclass->dealloc)(_self, l);
 }
 
 
@@ -329,12 +161,6 @@ static SpkMethodTmpl ExprMethods[] = {
     { 0 }
 };
 
-static SpkTraverse Expr_traverse = {
-    &Expr_traverse_init,
-    &Expr_traverse_current,
-    &Expr_traverse_next,
-};
-
 SpkClassTmpl Spk_ClassExprTmpl = {
     Spk_HEART_CLASS_TMPL(Expr, Object), {
         /*accessors*/ 0,
@@ -343,8 +169,7 @@ SpkClassTmpl Spk_ClassExprTmpl = {
         offsetof(SpkExprSubclass, variables),
         /*itemSize*/ 0,
         &Expr_zero,
-        /*dealloc*/ 0,
-        &Expr_traverse
+        &Expr_dealloc
     }, /*meta*/ {
         0
     }
@@ -364,12 +189,6 @@ static SpkMethodTmpl StmtMethods[] = {
     { 0 }
 };
 
-static SpkTraverse Stmt_traverse = {
-    &Stmt_traverse_init,
-    &Stmt_traverse_current,
-    &Stmt_traverse_next,
-};
-
 SpkClassTmpl Spk_ClassStmtTmpl = {
     Spk_HEART_CLASS_TMPL(Stmt, Object), {
         /*accessors*/ 0,
@@ -378,8 +197,7 @@ SpkClassTmpl Spk_ClassStmtTmpl = {
         offsetof(SpkStmtSubclass, variables),
         /*itemSize*/ 0,
         &Stmt_zero,
-        /*dealloc*/ 0,
-        &Stmt_traverse
+        &Stmt_dealloc
     }, /*meta*/ {
         0
     }

@@ -70,7 +70,6 @@ void SpkBehavior_Init(SpkBehavior *self, SpkBehavior *superclass, SpkModule *mod
     /* low-level hooks */
     self->zero = superclass->zero;
     self->dealloc = superclass->dealloc;
-    self->traverse = superclass->traverse;
     
     /* memory layout of instances */
     self->instVarOffset = superclass->instVarOffset;
@@ -102,8 +101,6 @@ void SpkBehavior_InitFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl, SpkB
         self->zero = tmpl->zero;
     if (tmpl->dealloc)
         self->dealloc = tmpl->dealloc;
-    if (tmpl->traverse)
-        self->traverse = *tmpl->traverse;
 }
 
 static SpkMethod *methodFromTemplate(SpkMethodTmpl *methodTmpl) {

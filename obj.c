@@ -113,7 +113,22 @@ static void Object_zero(SpkObject *self) {
     }
 }
 
-static void Object_dealloc(SpkObject *self) {
+static void Object_dealloc(SpkObject *self, SpkUnknown **l) {
+    SpkUnknown **variables;
+    SpkBehavior *klass;
+    size_t instVarTotal, i;
+    
+    klass = self->klass;
+    
+    variables = (SpkUnknown **)((char *)self + klass->instVarOffset);
+    instVarTotal = klass->instVarBaseIndex + klass->instVarCount;
+    
+    for (i = 0; i < instVarTotal; ++i) {
+        Spk_LDECREF(variables[i], l);
+    }
+    
+    Spk_LDECREF(klass, l);
+    self->klass = 0;
 }
 
 static void VariableObject_zero(SpkObject *_self) {
@@ -121,39 +136,6 @@ static void VariableObject_zero(SpkObject *_self) {
     (*Spk_CLASS(VariableObject)->superclass->zero)(_self);
     memset(SpkVariableObject_ITEM_BASE(self), 0,
            self->size * self->base.klass->itemSize);
-}
-
-
-/*------------------------------------------------------------------------*/
-/* memory layout of instances */
-
-static void Object_traverse_init(SpkObject *self) {
-#ifndef MALTIPY
-    self->base.refCount = 0;
-#endif /* !MALTIPY */
-}
-
-static SpkUnknown **Object_traverse_current(SpkObject *self) {
-#ifdef MALTIPY
-    return 0;
-#else
-    SpkUnknown **variables;
-    SpkBehavior *klass;
-    size_t instVarTotal;
-    
-    klass = self->klass;
-    instVarTotal = klass->instVarBaseIndex + klass->instVarCount;
-    if (self->base.refCount >= instVarTotal)
-        return 0;
-    variables = (SpkUnknown **)((char *)self + klass->instVarOffset);
-    return &variables[self->base.refCount];
-#endif /* !MALTIPY */
-}
-
-static void Object_traverse_next(SpkObject *self) {
-#ifndef MALTIPY
-    ++self->base.refCount;
-#endif /* !MALTIPY */
 }
 
 
@@ -178,12 +160,6 @@ static SpkMethodTmpl ClassObjectMethods[] = {
     { 0 }
 };
 
-static SpkTraverse ObjectTraverse = {
-    &Object_traverse_init,
-    &Object_traverse_current,
-    &Object_traverse_next,
-};
-
 SpkClassTmpl Spk_ClassObjectTmpl = {
     "Object", offsetof(SpkHeart, Object), 0, {
         ObjectAccessors,
@@ -192,8 +168,7 @@ SpkClassTmpl Spk_ClassObjectTmpl = {
         offsetof(SpkObjectSubclass, variables),
         /*itemSize*/ 0,
         &Object_zero,
-        &Object_dealloc,
-        &ObjectTraverse
+        &Object_dealloc
     }, /*meta*/ {
         /*accessors*/ 0,
         ClassObjectMethods,
@@ -260,6 +235,8 @@ SpkObject *SpkObject_New(SpkBehavior *klass) {
         return 0;
     }
     newObject->klass = klass;  Spk_INCREF(klass);
+    /* XXX: 'zero' should be called 'uninit'; and, for symmetry,
+       should be called from SpkObjMem_Alloc() */
     (*klass->zero)(newObject);
     return newObject;
 }

@@ -1049,7 +1049,6 @@ static void genCCodeModuleTemplate(SpkModuleTmpl *module,
             "            /*itemSize*/ 0,\n"
             "            /*zero*/ 0,\n"
             "            /*dealloc*/ 0,\n"
-            "            /*traverse*/ 0,\n"
             "            /*instVarCount*/ %lu\n"
             "        }, /*meta*/ {\n"
             "            /*accessors*/ 0,\n"

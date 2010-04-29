@@ -145,16 +145,11 @@ static void Method_zero(SpkObject *_self) {
     return;
 }
 
-static void Method_dealloc(SpkObject *_self) {
+static void Method_dealloc(SpkObject *_self, SpkUnknown **l) {
     SpkMethod *self = (SpkMethod *)_self;
-    if (self->debug.source) {
-        /* XXX: lazy */
-        Spk_DECREF(self->debug.source);
-        self->debug.source = 0;
-    }
+    Spk_XLDECREF(self->debug.source, l);
     free(self->debug.lineCodes);
-    self->debug.lineCodes = 0;
-    (*Spk_CLASS(Method)->superclass->dealloc)(_self);
+    (*Spk_CLASS(Method)->superclass->dealloc)(_self, l);
 }
 
 typedef struct SpkMethodSubclass {
@@ -181,10 +176,7 @@ SpkClassTmpl Spk_ClassMethodTmpl = {
 };
 
 
-static void Context_traverse_init(SpkObject *);
-static SpkUnknown **Context_traverse_current(SpkObject *);
-static void Context_traverse_next(SpkObject *);
-static void Context_dealloc(SpkObject *);
+static void Context_dealloc(SpkObject *, SpkUnknown **);
 static SpkUnknown *Context_blockCopy(SpkUnknown *, SpkUnknown *, SpkUnknown *);
 static SpkUnknown *Context_compoundExpression(SpkUnknown *, SpkUnknown *, SpkUnknown *);
 
@@ -199,12 +191,6 @@ static SpkMethodTmpl ContextMethods[] = {
     { 0 }
 };
 
-static SpkTraverse Context_traverse = {
-    &Context_traverse_init,
-    &Context_traverse_current,
-    &Context_traverse_next,
-};
-
 SpkClassTmpl Spk_ClassContextTmpl = {
     Spk_HEART_CLASS_TMPL(Context, VariableObject), {
         /*accessors*/ 0,
@@ -213,8 +199,7 @@ SpkClassTmpl Spk_ClassContextTmpl = {
         offsetof(SpkContextSubclass, variables),
         sizeof(SpkUnknown *),
         /*zero*/ 0,
-        &Context_dealloc,
-        &Context_traverse
+        &Context_dealloc
     }, /*meta*/ {
         0
     }
@@ -464,49 +449,32 @@ SpkContext *SpkContext_New(size_t size) {
     return newContext;
 }
 
-static void Context_traverse_init(SpkObject *self) {
-    (*Spk_CLASS(Context)->superclass->traverse.init)(self);
-}
-
-static SpkUnknown **Context_traverse_current(SpkObject *_self) {
+static void Context_dealloc(SpkObject *_self, SpkUnknown **l) {
     SpkContext *self;
-    
-    self = (SpkContext *)_self;
-    if (self->base.size > 0)
-        return &(SpkContext_VARIABLES(self)[self->base.size - 1]);
-    return (*Spk_CLASS(Context)->superclass->traverse.current)(_self);
-}
-
-static void Context_traverse_next(SpkObject *_self) {
-    SpkContext *self;
-    
-    self = (SpkContext *)_self;
-    if (self->base.size > 0)
-        --self->base.size;
-    else
-        (*Spk_CLASS(Context)->superclass->traverse.next)(_self);
-}
-
-static void Context_dealloc(SpkObject *_self) {
-    SpkContext *self;
+    SpkUnknown **p;
+    size_t count;
     
     self = (SpkContext *)_self;
     
-    /* XXX: This cleans up extra stuff missed by the 'traverse'
-       routines. */
-    
-    Spk_XDECREF(self->caller);
-    if (self->homeContext) { /* XXX: shady */
-        /* block context */
-        Spk_DECREF(self->homeContext);
-    } else {
-        /* method context */
-        Spk_DECREF(self->u.m.method);
-        Spk_DECREF(self->u.m.methodClass);
-        Spk_DECREF(self->u.m.receiver);
+    for (count = 0, p = SpkContext_VARIABLES(self);
+         count < self->base.size;
+         ++count, ++p)
+    {
+        Spk_LDECREF(*p, l);
     }
     
-    (*Spk_CLASS(Context)->superclass->dealloc)(_self);
+    Spk_XLDECREF(self->caller, l);
+    if (self->homeContext) { /* XXX: shady */
+        /* block context */
+        Spk_LDECREF(self->homeContext, l);
+    } else {
+        /* method context */
+        Spk_LDECREF(self->u.m.method, l);
+        Spk_LDECREF(self->u.m.methodClass, l);
+        Spk_LDECREF(self->u.m.receiver, l);
+    }
+    
+    (*Spk_CLASS(Context)->superclass->dealloc)(_self, l);
 }
 
 static SpkUnknown *Context_blockCopy(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {

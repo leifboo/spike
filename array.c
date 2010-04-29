@@ -94,31 +94,15 @@ static void Array_zero(SpkObject *_self) {
     }
 }
 
-
-/*------------------------------------------------------------------------*/
-/* memory layout of instances */
-
-static void Array_traverse_init(SpkObject *self) {
-    (*Spk_CLASS(Array)->superclass->traverse.init)(self);
-}
-
-static SpkUnknown **Array_traverse_current(SpkObject *_self) {
+static void Array_dealloc(SpkObject *_self, SpkUnknown **l) {
     SpkArray *self;
+    size_t i;
     
     self = (SpkArray *)_self;
-    if (self->size > 0)
-        return &(ARRAY(self)[self->size - 1]);
-    return (*Spk_CLASS(Array)->superclass->traverse.current)(_self);
-}
-
-static void Array_traverse_next(SpkObject *_self) {
-    SpkArray *self;
-    
-    self = (SpkArray *)_self;
-    if (self->size > 0)
-        --self->size;
-    else
-        (*Spk_CLASS(Array)->superclass->traverse.next)(_self);
+    for (i = 0; i < self->size; ++i) {
+        Spk_LDECREF(ARRAY(self)[i], l);
+    }
+    (*Spk_CLASS(Array)->superclass->dealloc)(_self, l);
 }
 
 
@@ -157,12 +141,6 @@ static SpkMethodTmpl lvalueMethods[] = {
     { 0 }
 };
 
-static SpkTraverse traverse = {
-    &Array_traverse_init,
-    &Array_traverse_current,
-    &Array_traverse_next,
-};
-
 SpkClassTmpl Spk_ClassArrayTmpl = {
     Spk_HEART_CLASS_TMPL(Array, VariableObject), {
         accessors,
@@ -171,8 +149,7 @@ SpkClassTmpl Spk_ClassArrayTmpl = {
         offsetof(SpkArraySubclass, variables),
         sizeof(SpkUnknown *),
         &Array_zero,
-        /*dealloc*/ 0,
-        &traverse
+        &Array_dealloc
     }, /*meta*/ {
         0
     }

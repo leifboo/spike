@@ -243,12 +243,11 @@ static SpkMethodTmpl ThunkMethods[] = {
     { 0 }
 };
 
-static void Thunk_dealloc(SpkObject *_self) {
-    /* XXX: too lazy to implement 'traverse' */
+static void Thunk_dealloc(SpkObject *_self, SpkUnknown **l) {
     SpkThunk *self = (SpkThunk *)_self;
-    Spk_DECREF(self->receiver);
-    Spk_DECREF(self->selector);
-    (*Spk_CLASS(Thunk)->superclass->dealloc)(_self);
+    Spk_LDECREF(self->receiver, l);
+    Spk_LDECREF(self->selector, l);
+    (*Spk_CLASS(Thunk)->superclass->dealloc)(_self, l);
 }
 
 SpkClassTmpl Spk_ClassThunkTmpl = {

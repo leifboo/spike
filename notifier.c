@@ -14,7 +14,8 @@
 
 struct SpkNotifier {
     SpkObject base;
-    FILE *stream;
+    SpkUnknown *stream;
+    FILE *cStream;
     unsigned int errorTally;
     SpkUnknown *source;
 };
@@ -32,7 +33,8 @@ static SpkUnknown *Notifier_init(SpkUnknown *_self, SpkUnknown *stream, SpkUnkno
         return 0;
     }
     
-    self->stream = SpkHost_FileStreamAsCFileStream(stream);
+    self->stream = stream; Spk_INCREF(stream);
+    self->cStream = SpkHost_FileStreamAsCFileStream(stream);
     self->errorTally = 0;
     
     Spk_INCREF(_self);
@@ -112,7 +114,7 @@ static SpkUnknown *Notifier_undefinedSymbol(SpkUnknown *_self, SpkUnknown *arg0,
     source = self->source
                      ? SpkHost_StringAsCString(self->source)
                      : "<unknown>";
-    fprintf(self->stream, "%s:%u: symbol '%s' undefined\n",
+    fprintf(self->cStream, "%s:%u: symbol '%s' undefined\n",
             source, expr->lineNo,
             SpkHost_SymbolAsCString(expr->sym->sym));
     ++self->errorTally;
@@ -157,35 +159,15 @@ static void Notifier_zero(SpkObject *_self) {
     SpkNotifier *self = (SpkNotifier *)_self;
     (*Spk_CLASS(Notifier)->superclass->zero)(_self);
     self->stream = 0;
+    self->cStream = 0;
     self->source = 0;
 }
 
-
-/*------------------------------------------------------------------------*/
-/* memory layout of instances */
-
-static void Notifier_traverse_init(SpkObject *self) {
-    (*Spk_CLASS(Notifier)->superclass->traverse.init)(self);
-}
-
-static SpkUnknown **Notifier_traverse_current(SpkObject *_self) {
-    SpkNotifier *self;
-    
-    self = (SpkNotifier *)_self;
-    if (self->source)
-        return (SpkUnknown **)&self->source;
-    return (*Spk_CLASS(Notifier)->superclass->traverse.current)(_self);
-}
-
-static void Notifier_traverse_next(SpkObject *_self) {
-    SpkNotifier *self;
-    
-    self = (SpkNotifier *)_self;
-    if (self->source) {
-        self->source = 0;
-        return;
-    }
-    (*Spk_CLASS(Notifier)->superclass->traverse.next)(_self);
+static void Notifier_dealloc(SpkObject *_self, SpkUnknown **l) {
+    SpkNotifier *self = (SpkNotifier *)_self;
+    Spk_LDECREF(self->stream, l);
+    Spk_XLDECREF(self->source, l);
+    (*Spk_CLASS(Notifier)->superclass->dealloc)(_self, l);
 }
 
 
@@ -217,12 +199,6 @@ static SpkMethodTmpl metaMethods[] = {
     { 0 }
 };
 
-static SpkTraverse traverse = {
-    &Notifier_traverse_init,
-    &Notifier_traverse_current,
-    &Notifier_traverse_next,
-};
-
 SpkClassTmpl Spk_ClassNotifierTmpl = {
     Spk_HEART_CLASS_TMPL(Notifier, Object), {
         accessors,
@@ -231,8 +207,7 @@ SpkClassTmpl Spk_ClassNotifierTmpl = {
         offsetof(SpkNotifierSubclass, variables),
         /*itemSize*/ 0,
         &Notifier_zero,
-        /*dealloc*/ 0,
-        &traverse
+        &Notifier_dealloc
     }, /*meta*/ {
         /*accessors*/ 0,
         metaMethods,
