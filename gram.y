@@ -60,7 +60,14 @@ closed_statement(r) ::= YIELD            SEMI.                                  
 closed_statement(r) ::= YIELD expr(expr) SEMI.                                  { r = SpkParser_NewStmt(Spk_STMT_YIELD, expr.first, 0, 0); }
 closed_statement(r) ::= expr(expr) compound_statement(stmt).                    { r = SpkParser_NewStmt(Spk_STMT_DEF_METHOD, expr.first, stmt, 0); }
 closed_statement(r) ::= CLASS IDENTIFIER(name) class_body(body).                { r = SpkParser_NewClassDef(&name, 0, body.top, body.bottom, parserState->st); }
+closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) class_body(body).           { r = SpkParser_NewClassDef(&name, 0, body.top, body.bottom, parserState->st); }
 closed_statement(r) ::= CLASS IDENTIFIER(name) COLON IDENTIFIER(super) class_body(body).
+                                                                                { r = SpkParser_NewClassDef(&name, &super, body.top, body.bottom, parserState->st); }
+closed_statement(r) ::= CLASS IDENTIFIER(name) COLON TYPE_IDENTIFIER(super) class_body(body).
+                                                                                { r = SpkParser_NewClassDef(&name, &super, body.top, body.bottom, parserState->st); }
+closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) COLON IDENTIFIER(super) class_body(body).
+                                                                                { r = SpkParser_NewClassDef(&name, &super, body.top, body.bottom, parserState->st); }
+closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) COLON TYPE_IDENTIFIER(super) class_body(body).
                                                                                 { r = SpkParser_NewClassDef(&name, &super, body.top, body.bottom, parserState->st); }
 
 %type class_body {SpkStmtPair}

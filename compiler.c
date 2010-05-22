@@ -65,6 +65,7 @@ struct SpkModuleTmpl *SpkCompiler_CompileFileStream(FILE *stream) {
     SpkSymbolTable *st = 0;
     SpkStmt *tree = 0;
     SpkModuleTmpl *moduleTmpl = 0;
+    SpkUnknown *tmp = 0;
     
     notifier = defaultNotifier();
     if (!notifier)
@@ -73,6 +74,10 @@ struct SpkModuleTmpl *SpkCompiler_CompileFileStream(FILE *stream) {
     st = SpkSymbolTable_New();
     if (!st)
         goto unwind;
+    tmp = SpkStaticChecker_DeclareBuiltIn(st, notifier);
+    if (!tmp)
+        goto unwind;
+    Spk_DECREF(tmp);
     
     tree = SpkParser_ParseFileStream(stream, st);
     if (!tree)
@@ -114,6 +119,10 @@ SpkModuleTmpl *SpkCompiler_CompileFile(const char *pathname) {
     st = SpkSymbolTable_New();
     if (!st)
         goto unwind;
+    tmp = SpkStaticChecker_DeclareBuiltIn(st, notifier);
+    if (!tmp)
+        goto unwind;
+    Spk_DECREF(tmp);
     
     tree = SpkParser_ParseFileStream(stream, st);
     if (!tree)
@@ -146,6 +155,7 @@ SpkModuleTmpl *SpkCompiler_CompileString(const char *string) {
     SpkSymbolTable *st = 0;
     SpkStmt *tree = 0;
     SpkModuleTmpl *moduleTmpl = 0;
+    SpkUnknown *tmp = 0;
     
     notifier = defaultNotifier();
     if (!notifier)
@@ -154,6 +164,10 @@ SpkModuleTmpl *SpkCompiler_CompileString(const char *string) {
     st = SpkSymbolTable_New();
     if (!st)
         goto unwind;
+    tmp = SpkStaticChecker_DeclareBuiltIn(st, notifier);
+    if (!tmp)
+        goto unwind;
+    Spk_DECREF(tmp);
     
     tree = SpkParser_ParseString(string, st);
     if (!tree)

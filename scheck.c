@@ -75,12 +75,35 @@ static SpkUnknown *checkExpr(Expr *, Stmt *, StaticChecker *, unsigned int);
 static SpkUnknown *checkOneExpr(Expr *, Stmt *, StaticChecker *, unsigned int);
 
 
+static SpkUnknown *checkDeclSpecs(Expr *declSpecs,
+                                  StaticChecker *checker,
+                                  unsigned int pass)
+{
+    Expr *declSpec;
+    
+    if (pass != 1) /* XXX: ??? */
+        return;
+    
+    for (declSpec = declSpecs; declSpec; declSpec = declSpec->next) {
+        ASSERT(declSpec->kind == Spk_EXPR_NAME, "identifier expected");
+        _(SpkSymbolTable_Bind(checker->st, declSpec, checker->requestor));
+    }
+    
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
+    
+ unwind:
+    return 0;
+}
+
 static SpkUnknown *checkVarDefList(Expr *defList,
                                    Stmt *stmt,
                                    StaticChecker *checker,
                                    unsigned int pass)
 {
     Expr *expr, *def;
+    
+    checkDeclSpecs(defList->declSpecs, checker, pass);
     
     for (expr = defList; expr; expr = expr->next) {
         if (expr->kind == Spk_EXPR_ASSIGN) {
@@ -260,6 +283,8 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
     ASSERT(body->kind == Spk_STMT_COMPOUND,
            "compound statement expected");
     
+    checkDeclSpecs(expr->declSpecs, checker, outerPass);
+    
     switch (outerPass) {
     case 1:
         ns = Spk_METHOD_NAMESPACE_RVALUE;
@@ -393,6 +418,7 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
             def = arg;
             if (def->kind != Spk_EXPR_NAME)
                 break;
+            checkDeclSpecs(def->declSpecs, checker, 1);
             _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
             ++stmt->u.method.minArgumentCount;
             ++stmt->u.method.maxArgumentCount;
@@ -781,6 +807,14 @@ static struct PseudoVariable {
     { 0 }
 };
 
+static struct Type {
+    const char *name;
+} builtInTypes[] = {
+    { "obj" },
+    { "int" },
+    { 0 }
+};
+
 static Expr *newNameExpr(void) {
     Expr *newExpr;
     
@@ -789,11 +823,26 @@ static Expr *newNameExpr(void) {
     return newExpr;
 }
 
-static Expr *newPseudoVariable(struct PseudoVariable *pv, StaticChecker *checker) {
+static void declareBuiltInType(struct Type *bit, SpkSymbolTable *st) {
+    SpkExpr *nameExpr;
+    SpkStmt *typeDef;
+    
+    nameExpr = newNameExpr();
+    
+    typeDef = (SpkStmt *)SpkObject_New(Spk_CLASS(Stmt));
+    typeDef->kind = Spk_STMT_DEF_TYPE;
+    typeDef->expr = nameExpr;
+    typeDef->expr->sym = SpkSymbolNode_FromCString(st, bit->name);
+    typeDef->expr->u.def.stmt = typeDef;
+    
+    SpkSymbolTable_Insert(st, typeDef->expr, 0);
+}
+
+static Expr *newPseudoVariable(struct PseudoVariable *pv, SpkSymbolTable *st) {
     Expr *newExpr;
     
     newExpr = newNameExpr();
-    newExpr->sym = SpkSymbolNode_FromCString(checker->st, pv->name);
+    newExpr->sym = SpkSymbolNode_FromCString(st, pv->name);
     newExpr->u.def.pushOpcode = pv->pushOpcode;
     return newExpr;
 }
@@ -849,6 +898,32 @@ static SpkUnknown *declareClass(SpkBehavior *aClass,
     return 0;
 }
 
+SpkUnknown *SpkStaticChecker_DeclareBuiltIn(SpkSymbolTable *st,
+                                            SpkUnknown *requestor)
+{
+    struct PseudoVariable *pv;
+    struct Type *bit;
+    
+    /* XXX: where to exit this scope? */
+    SpkSymbolTable_EnterScope(st, 1); /* built-in scope */
+    
+    for (pv = pseudoVariables; pv->name; ++pv) {
+        Expr *pvDef = newPseudoVariable(pv, st);
+        _(SpkSymbolTable_Insert(st, pvDef, requestor));
+        Spk_DECREF(pvDef);
+    }
+    
+    for (bit = builtInTypes; bit->name; ++bit) {
+        declareBuiltInType(bit, st);
+    }
+    
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
+    
+ unwind:
+    return 0;
+}
+
 SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
                                    SpkSymbolTable *st,
                                    SpkUnknown *requestor)
@@ -857,7 +932,6 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     StmtList *rootClassList;
     Stmt *s;
     StaticChecker checker;
-    struct PseudoVariable *pv;
     unsigned int pass;
     SpkClassBootRec *classBootRec; SpkBehavior **classVar;
     SpkVarBootRec *varBootRec; SpkUnknown **var;
@@ -869,12 +943,6 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     
     checker.st = st;
     checker.requestor = requestor;
-    SpkSymbolTable_EnterScope(checker.st, 1); /* built-in scope */
-    for (pv = pseudoVariables; pv->name; ++pv) {
-        Expr *pvDef = newPseudoVariable(pv, &checker);
-        _(SpkSymbolTable_Insert(checker.st, pvDef, checker.requestor));
-        Spk_DECREF(pvDef);
-    }
     SpkSymbolTable_EnterScope(checker.st, 1); /* global scope */
     
     predefList->first = predefList->last = 0;
@@ -914,7 +982,6 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     tree->u.module.dataSize = checker.st->currentScope->context->nDefs;
     
     SpkSymbolTable_ExitScope(checker.st); /* global */
-    SpkSymbolTable_ExitScope(checker.st); /* built-in */
     
     Spk_INCREF(Spk_GLOBAL(xvoid));
     return Spk_GLOBAL(xvoid);

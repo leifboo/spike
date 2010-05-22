@@ -11,6 +11,8 @@ struct SpkStmtList;
 struct SpkSymbolTable;
 
 
+SpkUnknown *SpkStaticChecker_DeclareBuiltIn(struct SpkSymbolTable *st,
+                                            SpkUnknown *requestor);
 SpkUnknown *SpkStaticChecker_Check(struct SpkStmt *tree,
                                    struct SpkSymbolTable *st,
                                    SpkUnknown *requestor);

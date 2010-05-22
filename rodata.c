@@ -67,7 +67,6 @@ SpkUnknown *Spk_mustBeTuple;
 SpkUnknown *Spk_new;
 SpkUnknown *Spk_noRunnableFiber;
 SpkUnknown *Spk_numArgs;
-SpkUnknown *Spk_obj;
 SpkUnknown *Spk_printString;
 SpkUnknown *Spk_recursiveDoesNotUnderstand;
 SpkUnknown *Spk_redefinedSymbol;
@@ -182,7 +181,6 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_new,                           "new"                         },
     { &Spk_noRunnableFiber,               "noRunnableFiber"             },
     { &Spk_numArgs,                       "numArgs"                     },
-    { &Spk_obj,                           "obj"                         },
     { &Spk_printString,                   "printString"                 },
     { &Spk_recursiveDoesNotUnderstand,    "recursiveDoesNotUnderstand:" },
     { &Spk_redefinedSymbol,               "redefinedSymbol:"            },

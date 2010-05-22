@@ -68,6 +68,9 @@ int main(int argc, char **argv) {
     st = SpkSymbolTable_New();
     if (!st)
         return 1;
+    tmp = SpkStaticChecker_DeclareBuiltIn(st, notifier);
+    if (!tmp)
+        return 1;
     
     tree = 0;
     treeTail = &tree;

@@ -49,17 +49,20 @@ static void indent(CxxCodeGen *cgen) {
         fputs("    ", cgen->out);
 }
 
-static void emitDeclSpecs(Expr *def, CxxCodeGen *cgen) {
-    int type = 0;
-#if 0
-    if (def->declSpecs & Spk_DECL_SPEC_INT) {
-        fputs("int ", cgen->out);
-        type = 1;
+static int emitDeclSpecs(Expr *def, CxxCodeGen *cgen) {
+    Expr *declSpec;
+    int ptr;
+    
+    ptr = 0;
+    for (declSpec = def->declSpecs; declSpec; declSpec = declSpec->next) {
+        fprintf(cgen->out, "%s ", SpkHost_SymbolAsCString(declSpec->sym->sym));
+        ptr = ptr ||
+              (declSpec->u.ref.def &&
+               declSpec->u.ref.def->kind == Spk_EXPR_NAME &&
+               declSpec->u.ref.def->u.def.stmt &&
+               declSpec->u.ref.def->u.def.stmt->kind == Spk_STMT_DEF_CLASS);
     }
-#endif
-    if (!type) {
-        fputs("obj ", cgen->out);
-    }
+    return ptr;
 }
 
 static SpkUnknown *emitCxxCodeForVarDefList(Expr *defList,
@@ -68,8 +71,9 @@ static SpkUnknown *emitCxxCodeForVarDefList(Expr *defList,
                                             unsigned int pass)
 {
     Expr *expr, *def;
+    int ptr;
     
-    emitDeclSpecs(defList, cgen);
+    ptr = emitDeclSpecs(defList, cgen);
     for (expr = defList; expr; expr = expr->next) {
         if (expr->kind == Spk_EXPR_ASSIGN) {
             def = expr->left;
@@ -79,7 +83,8 @@ static SpkUnknown *emitCxxCodeForVarDefList(Expr *defList,
             def = expr;
         }
         ASSERT(def->kind == Spk_EXPR_NAME, "invalid variable definition");
-        fprintf(cgen->out, "%s%s",
+        fprintf(cgen->out, "%s%s%s",
+                ptr ? "*" : "",
                 SpkHost_SymbolAsCString(def->sym->sym),
                 expr->next ? ", " : "");
     }
@@ -162,7 +167,10 @@ static SpkUnknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cge
         ASSERT(0, "XXX");
         break;
     case Spk_EXPR_NAME:
-        fputs(SpkHost_SelectorAsCString(expr->u.ref.def->sym->sym), cgen->out);
+        if (expr->u.ref.def->u.def.pushOpcode == Spk_OPCODE_PUSH_SELF)
+            fputs("this", cgen->out);
+        else
+            fputs(SpkHost_SelectorAsCString(expr->u.ref.def->sym->sym), cgen->out);
         break;
     case Spk_EXPR_BLOCK:
         _(emitCxxCodeForBlock(expr, stmt, cgen, pass));
@@ -191,7 +199,7 @@ static SpkUnknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cge
         break;
     case Spk_EXPR_ATTR:
         _(emitCxxCodeForExpr(expr->left, stmt, cgen, pass));
-        fputs(".", cgen->out);
+        fputs("->", cgen->out);
         fputs(SpkHost_SelectorAsCString(expr->sym->sym), cgen->out);
         break;
     case Spk_EXPR_POSTOP:
@@ -464,6 +472,7 @@ static SpkUnknown *emitCxxCodeForMethodDef(Stmt *stmt,
     Stmt *body, *s;
     Expr *expr, *arg, *def;
     unsigned int innerPass;
+    int ptr;
     
     expr = stmt->expr;
     body = stmt->top;
@@ -476,18 +485,19 @@ static SpkUnknown *emitCxxCodeForMethodDef(Stmt *stmt,
         ASSERT(expr->left->kind == Spk_EXPR_NAME, "invalid method declarator");
         switch (outer->kind) {
         default:
-            emitDeclSpecs(expr, cgen);
-            fprintf(cgen->out, "%s(", SpkHost_SelectorAsCString(stmt->u.method.name->sym));
+            ptr = emitDeclSpecs(expr, cgen);
+            fprintf(cgen->out, "%s%s(", ptr ? "*" : "", SpkHost_SelectorAsCString(stmt->u.method.name->sym));
             break;
         case Spk_STMT_DEF_CLASS:
             switch (outerPass) {
             case 1:
-                emitDeclSpecs(expr, cgen);
-                fprintf(cgen->out, "%s(", SpkHost_SelectorAsCString(stmt->u.method.name->sym));
+                ptr = emitDeclSpecs(expr, cgen);
+                fprintf(cgen->out, "%s%s(", ptr ? "*" : "", SpkHost_SelectorAsCString(stmt->u.method.name->sym));
                 break;
             case 2:
-                emitDeclSpecs(expr, cgen);
-                fprintf(cgen->out, "%s::%s(",
+                ptr = emitDeclSpecs(expr, cgen);
+                fprintf(cgen->out, "%s%s::%s(",
+                        ptr ? "*" : "",
                         SpkHost_SymbolAsCString(outer->expr->sym->sym),
                         SpkHost_SelectorAsCString(stmt->u.method.name->sym));
                 break;
@@ -501,8 +511,9 @@ static SpkUnknown *emitCxxCodeForMethodDef(Stmt *stmt,
                 def = arg;
             }
             ASSERT(def->kind == Spk_EXPR_NAME, "invalid argument definition");
-            emitDeclSpecs(def, cgen);
-            fprintf(cgen->out, "%s%s",
+            ptr = emitDeclSpecs(def, cgen);
+            fprintf(cgen->out, "%s%s%s",
+                    ptr ? "*" : "",
                     SpkHost_SelectorAsCString(def->sym->sym),
                     arg->nextArg ? ", " : "");
         }
@@ -580,8 +591,10 @@ static SpkUnknown *emitCxxCodeForClassDef(Stmt *stmt, Stmt *outer, CxxCodeGen *c
         indent(cgen);
         fprintf(cgen->out, "struct %s", SpkHost_SymbolAsCString(stmt->expr->sym->sym));
         if (stmt->u.klass.superclassName) {
+            Expr *sc = stmt->u.klass.superclassName;
             fputs(" : ", cgen->out);
-            _(emitCxxCodeForExpr(stmt->u.klass.superclassName, stmt, cgen, outerPass));
+            ASSERT(sc->kind == Spk_EXPR_NAME, "identifier expected");
+            fputs(SpkHost_SelectorAsCString(sc->u.ref.def->sym->sym), cgen->out);
         }
         fputs(" {\n", cgen->out);
         ++cgen->indent;
