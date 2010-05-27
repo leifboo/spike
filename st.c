@@ -207,12 +207,11 @@ SpkUnknown *SpkSymbolTable_Insert(SpkSymbolTable *st, SpkExpr *def,
     Spk_XDECREF(newEntry->sym);
     Spk_XDECREF(newEntry->def);
     Spk_INCREF(cs);
-    Spk_XINCREF(oldEntry);
     Spk_INCREF(sym);
     Spk_INCREF(def);
     newEntry->scope = cs; /* note cycle */
     newEntry->nextInScope = cs->entryList; /* steal reference */
-    newEntry->shadow = oldEntry;
+    newEntry->shadow = oldEntry; /* steal reference (if any) */
     newEntry->sym = sym;
     newEntry->def = def;
     
