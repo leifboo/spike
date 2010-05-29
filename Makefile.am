@@ -41,6 +41,7 @@ libspike_a_SOURCES = \
 	float.c \
 	float.h \
 	gram.c \
+	gram.h \
 	heart.h \
 	host.c \
 	host.h \
@@ -97,7 +98,8 @@ EXTRA_DIST = \
 	$(empty)
 
 
-gram.c: $(srcdir)/gram.y lemon
+gram.c: $(srcdir)/gram.y #lemon
+	$(CC) -o lemon $(srcdir)/lemon.c # XXX
 	./lemon $< || (rm -f gram.c && exit 1)
 
 lexer.c: $(srcdir)/lexer.l gram.c
@@ -112,14 +114,17 @@ xgenerated.c: xcspk
 
 CLEANFILES = \
 	lemon \
-	lexer.c \
-	gram.c \
-	gram.h \
-	gram.out \
 	test.out \
 	test.err \
 	test.tmp \
 	xgenerated.c \
+	$(empty)
+
+MAINTAINERCLEANFILES = \
+	lexer.c \
+	gram.c \
+	gram.h \
+	gram.out \
 	$(empty)
 
 
