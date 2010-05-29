@@ -80,7 +80,7 @@ compound_statement(r) ::= LCURLY statement_list(stmtList) RCURLY.               
 
 %type expr {SpkExprList}
 expr(r) ::= comma_expr(expr).                                                   { r = expr; }
-expr(r) ::= decl_spec_list(declSpecList) comma_expr(expr).                      { r = expr; r.first->isDeclarator = 1; r.first->declSpecs = declSpecList.first; }
+expr(r) ::= decl_spec_list(declSpecList) comma_expr(expr).                      { r = expr; r.first->declSpecs = declSpecList.first; }
 
 %type decl_spec_list {SpkExprList}
 decl_spec_list(r) ::= decl_spec(declSpec).                                      { r.first = declSpec; r.last = declSpec; }
@@ -200,6 +200,7 @@ unary_expr(r) ::= INC(t)   unary_expr(expr).                                    
 unary_expr(r) ::= DEC(t)   unary_expr(expr).                                    { r = SpkParser_NewExpr(Spk_EXPR_PREOP, Spk_OPER_PRED, 0, expr, 0, &t); }
 unary_expr(r) ::= PLUS(t)  unary_expr(expr).                                    { r = SpkParser_NewExpr(Spk_EXPR_UNARY, Spk_OPER_POS,  0, expr, 0, &t); }
 unary_expr(r) ::= MINUS(t) unary_expr(expr).                                    { r = SpkParser_NewExpr(Spk_EXPR_UNARY, Spk_OPER_NEG,  0, expr, 0, &t); }
+unary_expr(r) ::= TIMES(t) unary_expr(expr).                                    { r = SpkParser_NewExpr(Spk_EXPR_UNARY, Spk_OPER_IND,  0, expr, 0, &t); }
 unary_expr(r) ::= BNEG(t)  unary_expr(expr).                                    { r = SpkParser_NewExpr(Spk_EXPR_UNARY, Spk_OPER_BNEG, 0, expr, 0, &t); }
 unary_expr(r) ::= LNEG(t)  unary_expr(expr).                                    { r = SpkParser_NewExpr(Spk_EXPR_UNARY, Spk_OPER_LNEG, 0, expr, 0, &t); }
 

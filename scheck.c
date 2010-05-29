@@ -112,6 +112,9 @@ static SpkUnknown *checkVarDefList(Expr *defList,
         } else {
             def = expr;
         }
+        while (def->kind == Spk_EXPR_UNARY && def->oper == Spk_OPER_IND) {
+            def = def->left;
+        }
         if (def->kind != Spk_EXPR_NAME) {
             if (pass == 1)
                 _(badExpr(def, "invalid variable definition", checker));
@@ -289,6 +292,10 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
     case 1:
         ns = Spk_METHOD_NAMESPACE_RVALUE;
         name = 0;
+        /* XXX: This can only be meaningfully composed with Spk_EXPR_CALL. */
+        while (expr->kind == Spk_EXPR_UNARY && expr->oper == Spk_OPER_IND) {
+            expr = expr->left;
+        }
         switch (expr->kind) {
         case Spk_EXPR_NAME:
             name = expr->sym;  Spk_INCREF(name);
@@ -416,6 +423,9 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
         /* declare function arguments */
         for (arg = stmt->u.method.argList.fixed; arg; arg = arg->nextArg) {
             def = arg;
+            while (def->kind == Spk_EXPR_UNARY && def->oper == Spk_OPER_IND) {
+                def = def->left;
+            }
             if (def->kind != Spk_EXPR_NAME)
                 break;
             checkDeclSpecs(def->declSpecs, checker, 1);
@@ -432,6 +442,9 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
                     _(badExpr(arg, "non-default argument follows default argument", checker));
                     /* fall though and define it, to reduce the number of errors */
                 }
+            }
+            while (def->kind == Spk_EXPR_UNARY && def->oper == Spk_OPER_IND) {
+                def = def->left;
             }
             if (def->kind != Spk_EXPR_NAME) {
                 _(badExpr(arg, "invalid argument definition", checker));
@@ -812,6 +825,7 @@ static struct Type {
 } builtInTypes[] = {
     { "obj" },
     { "int" },
+    { "char" },
     { 0 }
 };
 

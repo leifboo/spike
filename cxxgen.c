@@ -71,9 +71,9 @@ static SpkUnknown *emitCxxCodeForVarDefList(Expr *defList,
                                             unsigned int pass)
 {
     Expr *expr, *def;
-    int ptr;
+    int objPtr, ptr, i;
     
-    ptr = emitDeclSpecs(defList, cgen);
+    objPtr = emitDeclSpecs(defList, cgen);
     for (expr = defList; expr; expr = expr->next) {
         if (expr->kind == Spk_EXPR_ASSIGN) {
             def = expr->left;
@@ -82,9 +82,15 @@ static SpkUnknown *emitCxxCodeForVarDefList(Expr *defList,
         } else {
             def = expr;
         }
+        ptr = objPtr; /* XXX: "obj *" is illegal, right? */
+        while (def->kind == Spk_EXPR_UNARY && def->oper == Spk_OPER_IND) {
+            def = def->left;
+            ++ptr;
+        }
         ASSERT(def->kind == Spk_EXPR_NAME, "invalid variable definition");
-        fprintf(cgen->out, "%s%s%s",
-                ptr ? "*" : "",
+        for (i = 0; i < ptr; ++i)
+            fputs("*", cgen->out);
+        fprintf(cgen->out, "%s%s",
                 SpkHost_SymbolAsCString(def->sym->sym),
                 expr->next ? ", " : "");
     }
@@ -472,7 +478,7 @@ static SpkUnknown *emitCxxCodeForMethodDef(Stmt *stmt,
     Stmt *body, *s;
     Expr *expr, *arg, *def;
     unsigned int innerPass;
-    int ptr;
+    int objPtr, ptr, i;
     
     expr = stmt->expr;
     body = stmt->top;
@@ -480,24 +486,28 @@ static SpkUnknown *emitCxxCodeForMethodDef(Stmt *stmt,
            "compound statement expected");
     
     indent(cgen);
+    objPtr = emitDeclSpecs(expr, cgen);
+    ptr = objPtr; /* XXX: "obj *" is illegal, right? */
+    while (expr->kind == Spk_EXPR_UNARY && expr->oper == Spk_OPER_IND) {
+        expr = expr->left;
+        ++ptr;
+    }
+    for (i = 0; i < ptr; ++i)
+        fputs("*", cgen->out);
     switch (expr->kind) {
     case Spk_EXPR_CALL:
         ASSERT(expr->left->kind == Spk_EXPR_NAME, "invalid method declarator");
         switch (outer->kind) {
         default:
-            ptr = emitDeclSpecs(expr, cgen);
-            fprintf(cgen->out, "%s%s(", ptr ? "*" : "", SpkHost_SelectorAsCString(stmt->u.method.name->sym));
+            fprintf(cgen->out, "%s(", SpkHost_SelectorAsCString(stmt->u.method.name->sym));
             break;
         case Spk_STMT_DEF_CLASS:
             switch (outerPass) {
             case 1:
-                ptr = emitDeclSpecs(expr, cgen);
-                fprintf(cgen->out, "%s%s(", ptr ? "*" : "", SpkHost_SelectorAsCString(stmt->u.method.name->sym));
+                fprintf(cgen->out, "%s(", SpkHost_SelectorAsCString(stmt->u.method.name->sym));
                 break;
             case 2:
-                ptr = emitDeclSpecs(expr, cgen);
-                fprintf(cgen->out, "%s%s::%s(",
-                        ptr ? "*" : "",
+                fprintf(cgen->out, "%s::%s(",
                         SpkHost_SymbolAsCString(outer->expr->sym->sym),
                         SpkHost_SelectorAsCString(stmt->u.method.name->sym));
                 break;
@@ -505,15 +515,21 @@ static SpkUnknown *emitCxxCodeForMethodDef(Stmt *stmt,
             break;
         }
         for (arg = stmt->u.method.argList.fixed; arg; arg = arg->nextArg) {
+            objPtr = emitDeclSpecs(arg, cgen);
             if (arg->kind == Spk_EXPR_ASSIGN) {
                 def = arg->left;
             } else {
                 def = arg;
             }
+            ptr = objPtr; /* XXX: "obj *" is illegal, right? */
+            while (def->kind == Spk_EXPR_UNARY && def->oper == Spk_OPER_IND) {
+                def = def->left;
+                ++ptr;
+            }
             ASSERT(def->kind == Spk_EXPR_NAME, "invalid argument definition");
-            ptr = emitDeclSpecs(def, cgen);
-            fprintf(cgen->out, "%s%s%s",
-                    ptr ? "*" : "",
+            for (i = 0; i < ptr; ++i)
+                fputs("*", cgen->out);
+            fprintf(cgen->out, "%s%s",
                     SpkHost_SelectorAsCString(def->sym->sym),
                     arg->nextArg ? ", " : "");
         }

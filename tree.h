@@ -84,7 +84,7 @@ struct SpkExpr {
     SpkObject base;
     SpkExprKind kind;
     SpkOper oper;
-    int isDeclarator; SpkExpr *declSpecs;
+    SpkExpr *declSpecs;
     SpkExpr *next, *nextArg, *cond, *left, *right, *var;
     struct SpkSymbolNode *sym;
     unsigned int lineNo;

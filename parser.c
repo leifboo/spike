@@ -98,9 +98,8 @@ Stmt *SpkParser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom) {
     newStmt->bottom = bottom;
     newStmt->expr = expr;
     
-    if (kind == Spk_STMT_EXPR && expr && expr->isDeclarator) {
+    if (kind == Spk_STMT_EXPR && expr && expr->declSpecs) {
         /* XXX: There are at least a dozen cases where a declarator is *not* allowed. */
-        /* XXX: 'isDeclarator' should be contagious */
         newStmt->kind = Spk_STMT_DEF_VAR;
     }
     
