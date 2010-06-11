@@ -34,6 +34,8 @@ typedef SpkStmtList StmtList;
 typedef struct CxxCodeGen {
     FILE *out;
     int indent;
+    SpkUnknown *source;
+    unsigned int currentLineNo;
 } CxxCodeGen;
 
 
@@ -47,6 +49,44 @@ static void indent(CxxCodeGen *cgen) {
     
     for (i = 0; i < cgen->indent; ++i)
         fputs("    ", cgen->out);
+}
+
+static void exprLine(Expr *expr, CxxCodeGen *cgen) {
+    if (cgen->source &&
+        expr->lineNo != cgen->currentLineNo)
+    {
+        if (expr->lineNo > cgen->currentLineNo &&
+            expr->lineNo - cgen->currentLineNo <= 3) {
+            for ( ; cgen->currentLineNo < expr->lineNo; ++cgen->currentLineNo)
+                fprintf(cgen->out, "\n");
+        } else {
+            fprintf(cgen->out,
+                    "\n"
+                    "#line %u \"%s\"\n",
+                    expr->lineNo, SpkHost_StringAsCString(cgen->source));
+            cgen->currentLineNo = expr->lineNo;
+        }
+        indent(cgen);
+    }
+}
+
+static void stmtLine(Stmt *stmt, CxxCodeGen *cgen) {
+    Expr *expr = 0;
+    
+    switch (stmt->kind) {
+    case Spk_STMT_DO_WHILE:
+        indent(cgen);
+    case Spk_STMT_COMPOUND:
+    case Spk_STMT_DEF_CLASS:
+        return;
+    }
+    
+    /**/ if (stmt->init) expr = stmt->init;
+    else if (stmt->expr) expr = stmt->expr;
+    else if (stmt->incr) expr = stmt->incr;
+    
+    if (expr) exprLine(expr, cgen);
+    else indent(cgen);
 }
 
 static int emitDeclSpecs(Expr *def, CxxCodeGen *cgen) {
@@ -160,6 +200,8 @@ static SpkUnknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cge
 {
     Expr *arg;
     const char *token;
+    
+    exprLine(expr, cgen);
     
     /* account for precedence */
     fputs("(", cgen->out);
@@ -318,17 +360,18 @@ static SpkUnknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
 {
     unsigned int varDefPass;
     
+    if (outerPass == 2)
+        stmtLine(stmt, cgen);
+    
     switch (stmt->kind) {
     case Spk_STMT_BREAK:
         if (outerPass == 2) {
-            indent(cgen);
-            fputs("break;\n", cgen->out);
+            fputs("break;", cgen->out);
         }
         break;
     case Spk_STMT_CONTINUE:
         if (outerPass == 2) {
-            indent(cgen);
-            fputs("continue;\n", cgen->out);
+            fputs("continue;", cgen->out);
         }
         break;
     case Spk_STMT_COMPOUND:
@@ -336,8 +379,7 @@ static SpkUnknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
             Stmt *s;
             unsigned int innerPass;
             
-            indent(cgen);
-            fputs("{\n", cgen->out);
+            fputs("{", cgen->out);
             ++cgen->indent;
             for (innerPass = 1; innerPass <= 2; ++innerPass) {
                 for (s = stmt->top; s; s = s->next) {
@@ -345,8 +387,7 @@ static SpkUnknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
                 }
             }
             --cgen->indent;
-            indent(cgen);
-            fputs("}\n", cgen->out);
+            fputs("}", cgen->out);
         }
         break;
     case Spk_STMT_DEF_VAR:
@@ -357,9 +398,10 @@ static SpkUnknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
         case Spk_STMT_DEF_METHOD: varDefPass = 2; break;
         }
         if (outerPass == varDefPass) {
-            indent(cgen);
+            if (outerPass != 2)
+                indent(cgen);
             _(emitCxxCodeForVarDefList(stmt->expr, stmt, cgen, outerPass));
-            fputs(";\n", cgen->out);
+            fputs(";", cgen->out);
         }
         break;
     case Spk_STMT_DEF_METHOD:
@@ -375,29 +417,26 @@ static SpkUnknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
         break;
     case Spk_STMT_DO_WHILE:
         if (outerPass == 2) {
-            indent(cgen);
-            fputs("do\n", cgen->out);
+            fputs("do ", cgen->out);
             ++cgen->indent;
             _(emitCxxCodeForStmt(stmt->top, stmt, cgen, outerPass));
             --cgen->indent;
             indent(cgen);
             fputs("while (", cgen->out);
             _(emitCxxCodeForExpr(stmt->expr, stmt, cgen, outerPass));
-            fputs(");\n", cgen->out);
+            fputs(");", cgen->out);
         }
         break;
     case Spk_STMT_EXPR:
         if (outerPass == 2) {
-            indent(cgen);
             if (stmt->expr) {
                 _(emitCxxCodeForExpr(stmt->expr, stmt, cgen, outerPass));
             }
-            fputs(";\n", cgen->out);
+            fputs(";", cgen->out);
         }
         break;
     case Spk_STMT_FOR:
         if (outerPass == 2) {
-            indent(cgen);
             fputs("for (", cgen->out);
             if (stmt->init) {
                 _(emitCxxCodeForExpr(stmt->init, stmt, cgen, outerPass));
@@ -410,7 +449,7 @@ static SpkUnknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
             if (stmt->incr) {
                 _(emitCxxCodeForExpr(stmt->incr, stmt, cgen, outerPass));
             }
-            fputs(")\n", cgen->out);
+            fputs(")", cgen->out);
             ++cgen->indent;
             _(emitCxxCodeForStmt(stmt->top, stmt, cgen, outerPass));
             --cgen->indent;
@@ -418,16 +457,15 @@ static SpkUnknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
         break;
     case Spk_STMT_IF_ELSE:
         if (outerPass == 2) {
-            indent(cgen);
             fputs("if (", cgen->out);
             _(emitCxxCodeForExpr(stmt->expr, stmt, cgen, outerPass));
-            fputs(")\n", cgen->out);
+            fputs(")", cgen->out);
             ++cgen->indent;
             _(emitCxxCodeForStmt(stmt->top, stmt, cgen, outerPass));
             --cgen->indent;
             if (stmt->bottom) {
                 indent(cgen);
-                fputs("else\n", cgen->out);
+                fputs("else ", cgen->out);
                 ++cgen->indent;
                 _(emitCxxCodeForStmt(stmt->bottom, stmt, cgen, outerPass));
                 --cgen->indent;
@@ -435,27 +473,28 @@ static SpkUnknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
         }
         break;
     case Spk_STMT_PRAGMA_SOURCE:
-        /* XXX */
+        Spk_INCREF(stmt->u.source);
+        Spk_XDECREF(cgen->source);
+        cgen->source = stmt->u.source;
+        cgen->currentLineNo = 0;
         break;
     case Spk_STMT_RETURN:
         if (outerPass == 2) {
-            indent(cgen);
             fputs("return", cgen->out);
             if (stmt->expr) {
                 fputs(" ", cgen->out);
                 _(emitCxxCodeForExpr(stmt->expr, stmt, cgen, outerPass));
             }
-            fputs(";\n", cgen->out);
+            fputs(";", cgen->out);
         }
         break;
     case Spk_STMT_YIELD:
         break;
     case Spk_STMT_WHILE:
         if (outerPass == 2) {
-            indent(cgen);
             fputs("while (", cgen->out);
             _(emitCxxCodeForExpr(stmt->expr, stmt, cgen, outerPass));
-            fputs(")\n", cgen->out);
+            fputs(")", cgen->out);
             ++cgen->indent;
             _(emitCxxCodeForStmt(stmt->top, stmt, cgen, outerPass));
             --cgen->indent;
@@ -547,7 +586,7 @@ static SpkUnknown *emitCxxCodeForMethodDef(Stmt *stmt,
         break;
         
     case 2:
-        fputs(" {\n", cgen->out);
+        fputs(" {", cgen->out);
         ++cgen->indent;
         for (innerPass = 1; innerPass <= 2; ++innerPass) {
             for (arg = stmt->u.method.argList.fixed; arg; arg = arg->nextArg) {
@@ -562,7 +601,7 @@ static SpkUnknown *emitCxxCodeForMethodDef(Stmt *stmt,
         }
         --cgen->indent;
         indent(cgen);
-        fputs("}\n", cgen->out);
+        fputs("}", cgen->out);
         break;
     }
     
@@ -672,6 +711,8 @@ SpkUnknown *SpkCxxCodeGen_GenerateCode(Stmt *tree, FILE *out)
     
     cgen.out = out;
     cgen.indent = 0;
+    cgen.source = 0;
+    cgen.currentLineNo = 0;
     
     for (pass = 0; pass <= 2; ++pass) {
         for (s = tree->u.module.rootClassList.first; s; s = s->u.klass.nextRootClassDef) {
