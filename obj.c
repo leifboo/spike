@@ -3,9 +3,6 @@
 
 #include "behavior.h"
 #include "bool.h"
-#ifdef MALTIPY
-#include "bridge.h"
-#endif
 #include "class.h"
 #include "heart.h"
 #include "host.h"
@@ -209,11 +206,6 @@ SpkObject *Spk_Cast(SpkBehavior *target, SpkUnknown *unk) {
     SpkObject *op;
     SpkBehavior *c;
     
-#ifdef MALTIPY
-    if (!PyObject_TypeCheck(unk, &SpkSpikeObject_Type)) {
-        return 0;
-    }
-#endif /* MALTIPY */
     op = (SpkObject *)unk;
     for (c = op->klass; c; c = c->superclass) {
         if (c == target) {

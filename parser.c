@@ -267,7 +267,7 @@ Stmt *SpkParser_ParseFileStream(FILE *yyin, SpkSymbolTable *st) {
     
     SpkLexer_lex_init(&lexer);
     SpkLexer_restart(yyin, lexer);
-    fgets(buffer, sizeof(buffer), yyin); /* skip shebang (#!) line */
+    (void)fgets(buffer, sizeof(buffer), yyin); /* skip shebang (#!) line */
     SpkLexer_set_lineno(2, lexer);
     SpkLexer_set_column(1, lexer);
     
@@ -335,7 +335,7 @@ static SpkUnknown *Parser_parse(SpkUnknown *_self,
     SpkLexer_lex_init(&lexer);
     if (stream) {
         SpkLexer_restart(stream, lexer);
-        fgets(buffer, sizeof(buffer), stream); /* skip #! line */
+        (void)fgets(buffer, sizeof(buffer), stream); /* skip #! line */
         SpkLexer_set_lineno(2, lexer);
     } else {
         SpkLexer__scan_string(string, lexer);

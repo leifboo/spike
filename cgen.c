@@ -175,7 +175,7 @@ static void encodeSignedIntEx(long value, int which, OpcodeGen *cgen) {
         value >>= 7;
         if (negative) {
             /* sign extend */
-            value |= - (1 << (8 * sizeof(value) - 7));
+            value |= - (1L << (8 * sizeof(value) - 7));
         }
         if ((value == 0 && !(byte & 0x40)) ||
             ((value == -1 && (byte & 0x40)))) {

@@ -65,37 +65,6 @@ static SpkUnknown *Module__init(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown 
 }
 
 
-#ifdef MALTIPY
-static SpkUnknown *Module__initPythonModule(SpkUnknown *_self, SpkUnknown *module, SpkUnknown *arg1) {
-    SpkObject *self;
-    SpkUnknown *args, *methodDict, *selector, *value, *thunk;
-    int pos;
-    
-    self = (SpkObject *)_self;
-
-    args = Spk_emptyArgs;
-    Spk_INCREF(args);
-    
-    methodDict = self->klass->methodDict[Spk_METHOD_NAMESPACE_RVALUE];
-    pos = 0;
-    while (PyDict_Next(methodDict, &pos, &selector, &value)) {
-        thunk = Spk_SendMessage(Spk_GLOBAL(theInterpreter), _self, Spk_METHOD_NAMESPACE_RVALUE, selector, args);
-        if (!thunk) {
-            goto error;
-        }
-        PyObject_SetAttr(module, selector, thunk);
-    }
-    Spk_DECREF(args);
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
-
- error:
-    Spk_DECREF(args);
-    return 0;
-}
-#endif /* MALTIPY */
-
-
 static SpkUnknown *Module__thunk(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     return (SpkUnknown *)SpkThunk_New(_self, arg0);
 }
@@ -139,9 +108,6 @@ typedef struct SpkModuleClassSubclass {
 
 static SpkMethodTmpl methods[] = {
     { "_init", SpkNativeCode_ARGS_0, &Module__init },
-#ifdef MALTIPY
-    { "_initPythonModule", SpkNativeCode_ARGS_1, &Module__initPythonModule },
-#endif
     { "_thunk", SpkNativeCode_ARGS_1, &Module__thunk },
     { 0 }
 };

@@ -3,21 +3,12 @@
 
 #include "behavior.h"
 #include "bool.h"
-#ifdef MALTIPY
-#include "bridge.h"
-#endif
 #include "class.h"
 #include "heart.h"
 #include "host.h"
 #include "module.h"
 #include "native.h"
 #include "rodata.h"
-
-#ifdef MALTIPY
-#include "compile.h"
-#include "frameobject.h"
-#include "traceback.h"
-#endif
 
 #include <assert.h>
 #include <stdio.h>
@@ -519,97 +510,6 @@ static SpkUnknown *Context_compoundExpression(SpkUnknown *_self, SpkUnknown *arg
 
 
 /*------------------------------------------------------------------------*/
-/* utils */
-
-#ifdef MALTIPY
-static void addTraceback(SpkContext *ctxt) {
-    /* derived from __Pyx_AddTraceback */
-    SpkContext *home;
-    SpkMethod *method;
-    SpkBehavior *methodClass;
-    PyObject *methodSel;
-    PyObject *savedType, *savedValue, *savedTraceback;
-    
-    PyErr_Fetch(&savedType, &savedValue, &savedTraceback);
-    
-    int lineno = 0; /* XXX */
-    
-    PyObject *py_srcfile = 0;
-    PyObject *py_funcname = 0;
-    PyObject *py_globals = 0;
-    PyObject *empty_tuple = 0;
-    PyObject *empty_string = 0;
-    PyCodeObject *py_code = 0;
-    PyFrameObject *py_frame = 0;
-    
-    home = ctxt->homeContext;
-    method = home->u.m.method;
-    methodClass = home->u.m.methodClass;
-    
-    methodSel = SpkBehavior_FindSelectorOfMethod(methodClass, method);
-    if (!methodSel) {
-        methodSel = Spk_unknownSelector;
-        Spk_INCREF(methodSel);
-    } else if (!SpkHost_IsSymbol(methodSel)) {
-        PyObject *tmp = PyObject_Str(methodSel);
-        Spk_DECREF(methodSel);
-        methodSel = tmp;
-    }
-    
-    py_srcfile = Spk_unknownSourcePathname;
-    Spk_INCREF(py_srcfile);
-    py_funcname = methodSel;
-    if (!py_funcname) goto bad;
-#if XXX
-    py_globals = PyModule_GetDict(__pyx_m);
-#else
-    py_globals = PyDict_New();
-#endif
-    if (!py_globals) goto bad;
-    empty_tuple = Spk_emptyArgs;
-    Spk_INCREF(empty_tuple);
-    empty_string = Spk_emptyString;
-    Spk_INCREF(empty_string);
-    py_code = PyCode_New(
-        0,            /*int argcount,*/
-        0,            /*int nlocals,*/
-        0,            /*int stacksize,*/
-        0,            /*int flags,*/
-        empty_string, /*PyObject *code,*/
-        empty_tuple,  /*PyObject *consts,*/
-        empty_tuple,  /*PyObject *names,*/
-        empty_tuple,  /*PyObject *varnames,*/
-        empty_tuple,  /*PyObject *freevars,*/
-        empty_tuple,  /*PyObject *cellvars,*/
-        py_srcfile,   /*PyObject *filename,*/
-        py_funcname,  /*PyObject *name,*/
-        lineno,       /*int firstlineno,*/
-        empty_string  /*PyObject *lnotab*/
-        );
-    if (!py_code) goto bad;
-    py_frame = PyFrame_New(
-        PyThreadState_Get(), /*PyThreadState *tstate,*/
-        py_code,             /*PyCodeObject *code,*/
-        py_globals,          /*PyObject *globals,*/
-        0                    /*PyObject *locals*/
-        );
-    if (!py_frame) goto bad;
-    py_frame->f_lineno = lineno;
-    PyTraceBack_Here(py_frame);
- bad:
-    Py_XDECREF(py_srcfile);
-    Py_XDECREF(py_funcname);
-    Py_XDECREF(empty_tuple);
-    Py_XDECREF(empty_string);
-    Py_XDECREF(py_code);
-    Py_XDECREF(py_frame);
-    
-    PyErr_Restore(savedType, savedValue, savedTraceback);
-}
-#endif /* MALTIPY */
-
-
-/*------------------------------------------------------------------------*/
 /* interpreter loop */
 
 /* stackPointer */
@@ -675,35 +575,18 @@ do { --stackPointer; \
     } \
 } while (0)
 
-#ifndef MALTIPY
 /* XXX: What about leaf methods? */
 #define TRAP(selector, argument) \
     self->activeContext->pc = instructionPointer; \
     self->activeContext->stackp = stackPointer; \
     trap(self, selector, argument); \
     return 0
-#else
-/* for now */
-#define TRAP(selector, argument) \
-    self->activeContext->pc = instructionPointer; \
-    self->activeContext->stackp = stackPointer; \
-    runtimeError(self, selector, argument); \
-    goto exception
-#endif
 
 
-/* Python interoperability */
-#ifdef MALTIPY
-#define GET_CLASS(op) (PyObject_TypeCheck((op), &SpkSpikeObject_Type) ? ((SpkObject *)(op))->klass : Spk_CLASS(PythonObject))
-#else
 #define GET_CLASS(op) (((SpkObject *)(op))->klass)
-#endif
 
 
 static SpkFiber *trap(SpkInterpreter *, SpkUnknown *, SpkUnknown *);
-#ifdef MALTIPY
-static void runtimeError(SpkInterpreter *, SpkUnknown *, SpkUnknown *);
-#endif
 static void unknownOpcode(SpkInterpreter *);
 static void halt(SpkInterpreter *, SpkUnknown *, SpkUnknown *);
 
@@ -1281,20 +1164,6 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             Spk_INCREF(selector);
             goto lookupMethodInClass;
             
-#ifdef MALTIPY
-        case Spk_OPCODE_RAISE: {
-            PyObject *type, *value;
-            value = POP_OBJECT();
-            if (PyInstance_Check(value)) {
-                type = (PyObject*)((PyInstanceObject*)value)->in_class;
-            } else {
-                type = (PyObject *)value->ob_type;
-            }
-            PyErr_SetObject(type, value);
-            Spk_DECREF(value);
-            goto exception; }
-#endif /* MALTIPY */
-
             /*** save/restore/return opcodes ***/
         case Spk_OPCODE_RET:
             instructionPointer = self->activeContext->pc;
@@ -1503,25 +1372,6 @@ SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *self) {
             result = (*method->nativeCode)(receiver, arg1, arg2);
             if (result) {
                 PUSH(result);
-#ifdef MALTIPY
-            } else if (PyErr_Occurred()) {
- exception:
-                while (self->activeContext && self->activeContext->mark == &mark) {
-                    SpkContext *thisCntx = self->activeContext;
-                    addTraceback(thisCntx);
-                    self->activeContext = thisCntx->caller; /* steal reference */
-                    thisCntx->caller = 0;
-                    thisCntx->pc = 0;
-                    if (thisCntx->homeContext == thisCntx) {
-                        /* break cycles */
-                        tmp = (SpkUnknown *)thisCntx->homeContext;
-                        thisCntx->homeContext = 0;
-                        Spk_DECREF(tmp);
-                    }
-                    Spk_DECREF(thisCntx);
-                }
-                return 0;
-#endif /* MALTIPY */
             } else if (self->activeContext->mark != &mark) {
                 return 0; /* unwind */
             } else { /* unwinding is done, and the result is already
@@ -1962,36 +1812,6 @@ static SpkFiber *trap(SpkInterpreter *self, SpkUnknown *selector, SpkUnknown *ar
     halt(self, selector, argument);
     return 0;
 }
-
-#ifdef MALTIPY
-static void runtimeError(SpkInterpreter *self, SpkUnknown *selector, SpkUnknown *argument) {
-    SpkUnknown *errorString;
-    
-    selector = PyObject_Str(selector);
-    if (argument) {
-        SpkMessage *message = Spk_CAST(Message, argument);
-        if (message) {
-            SpkUnknown *selector = PyObject_Str(message->selector);
-            errorString = PyString_FromFormat("%s %s",
-                                              SpkHost_SymbolAsCString(selector),
-                                              SpkHost_SymbolAsCString(selector));
-            Spk_DECREF(selector);
-        } else {
-            SpkUnknown *argStr = PyObject_Str(argument);
-            errorString = PyString_FromFormat("%s %s",
-                                              SpkHost_SymbolAsCString(selector),
-                                              PyString_AsString(argStr));
-            Spk_DECREF(argStr);
-        }
-    } else {
-        errorString = selector;
-        Spk_INCREF(errorString);
-    }
-    Spk_HaltWithString(Spk_HALT_RUNTIME_ERROR, errorString);
-    Spk_DECREF(errorString);
-    Spk_DECREF(selector);
-}
-#endif /* MALTIPY */
 
 static void unknownOpcode(SpkInterpreter *self) {
     trap(self, Spk_unknownOpcode, 0);

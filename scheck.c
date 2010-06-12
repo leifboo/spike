@@ -1,9 +1,7 @@
 
 #include "scheck.h"
 
-#ifndef MALTIPY
 #include "array.h"
-#endif /* !MALTIPY */
 #include "behavior.h"
 #include "boot.h"
 #include "class.h"
@@ -632,95 +630,6 @@ static SpkUnknown *checkClassDef(Stmt *stmt, Stmt *outer, StaticChecker *checker
     return 0;
 }
 
-#ifdef MALTIPY
-static SpkUnknown *checkImport(Stmt *stmt, StaticChecker *checker,
-                               unsigned int pass)
-{
-    Expr *expr, *e, *def;
-    
-    if (pass != 1) {
-        goto leave;
-    }
-    
-    if (stmt->init) {
-        /* "import a, b, c from spam.ham;" */
-        for (def = stmt->init; def; def = def->next) {
-            if (def->kind != Spk_EXPR_NAME) {
-                _(badExpr(def, "invalid import statement", checker));
-                goto leave;
-            }
-            def->u.def.weak = 1;
-            _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
-        }
-        switch (stmt->expr->kind) {
-        case Spk_EXPR_NAME:
-        case Spk_EXPR_ATTR:
-            break;
-        default:
-            _(badExpr(stmt->expr, "invalid import statement", checker));
-            goto leave;
-        }
-        goto leave;
-    }
-    
-    for (expr = stmt->expr; expr; expr = expr->next) {
-        switch (expr->kind) {
-        case Spk_EXPR_NAME:
-            /* "import spam;" */
-            def = expr;
-            def->u.def.weak = 1;
-            _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
-            break;
-        case Spk_EXPR_ATTR:
-            /* "import spam.ham;" */
-            def = expr->left;
-            while (def->kind == Spk_EXPR_ATTR) {
-                def = def->left;
-            }
-            if (def->kind != Spk_EXPR_NAME) {
-                _(badExpr(def, "invalid import statement", checker));
-                goto leave;
-            }
-            def->u.def.weak = 1;
-            _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
-            break;
-        case Spk_EXPR_ASSIGN:
-            /* "import ham = spam.ham;" */
-            e = expr;
-            do {
-                def = e->left;
-                if (def->kind != Spk_EXPR_NAME) {
-                    _(badExpr(def, "invalid import statement", checker));
-                    goto leave;
-                }
-                def->u.def.weak = 1;
-                _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
-                e = e->right;
-            } while (e->kind == Spk_EXPR_ASSIGN);
-            switch (e->kind) {
-            case Spk_EXPR_NAME:
-            case Spk_EXPR_ATTR:
-                break;
-            default:
-                _(badExpr(e, "invalid import statement", checker));
-                goto leave;
-            }
-            break;
-        default:
-            _(badExpr(expr, "invalid import statement", checker));
-            goto leave;
-        }
-    }
-    
- leave:
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
-    
- unwind:
-    return 0;
-}
-#endif /* MALTIPY */
-
 static SpkUnknown *checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker,
                              unsigned int outerPass)
 {
@@ -964,9 +873,7 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     _(declareClass(Spk_CLASS(Object), predefList, &checker));
     if (Spk_declareBuiltIn) {
         /* XXX: What about the other core classes? */
-#ifndef MALTIPY
         _(declareClass(Spk_CLASS(Array), predefList, &checker));
-#endif /* !MALTIPY */
         for (classBootRec = Spk_essentialClassBootRec; *classBootRec; ++classBootRec) {
             classVar = (SpkBehavior **)((char *)Spk_heart + (*classBootRec)->classVarOffset);
             _(declareClass(*classVar, predefList, &checker));
