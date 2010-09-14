@@ -369,7 +369,11 @@ static void FileStream_zero(SpkObject *_self) {
 
 static void FileStream_dealloc(SpkObject *_self, SpkUnknown **l) {
     SpkFileStream *self = (SpkFileStream *)_self;
-    if (self->stream)
+    if (self->stream &&
+        /* XXX: clumsy */
+        self->stream != stdin &&
+        self->stream != stdout &&
+        self->stream != stderr)
         fclose(self->stream);
     (*Spk_CLASS(FileStream)->superclass->dealloc)(_self, l);
 }

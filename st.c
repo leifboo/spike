@@ -387,7 +387,9 @@ static void SymbolTable_zero(SpkObject *_self) {
 
 static void SymbolTable_dealloc(SpkObject *_self, SpkUnknown **l) {
     SpkSymbolTable *self = (SpkSymbolTable *)_self;
-    Spk_XLDECREF(self->currentScope, l);
+    while (self->currentScope) {
+        SpkSymbolTable_ExitScope(self);
+    }
     Spk_XLDECREF(self->symbolNodes, l);
     (*Spk_CLASS(SymbolTable)->superclass->dealloc)(_self, l);
 }

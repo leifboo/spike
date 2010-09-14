@@ -99,6 +99,8 @@ extern SpkUnknown *Spk_emptyArgs;
 int Spk_InitSymbols(void);
 int Spk_InitReadOnlyData(void);
 SpkUnknown *Spk_ParseSelector(const char *);
+void Spk_ReleaseSymbols(void);
+void Spk_ReleaseReadOnlyData(void);
 
 
 #endif /* __spk_rodata_h__ */

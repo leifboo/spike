@@ -15,6 +15,65 @@
 
 
 /*------------------------------------------------------------------------*/
+/* low-level hooks */
+
+static void Behavior_zero(SpkObject *_self) {
+    SpkBehavior *self = (SpkBehavior *)_self;
+    SpkMethodNamespace ns;
+    size_t i;
+    
+    (*Spk_CLASS(Behavior)->superclass->zero)(_self);
+    
+    self->superclass = 0;
+    self->module = 0;
+    
+    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+        self->methodDict[ns] = 0;
+    }
+    for (i = 0; i < Spk_NUM_OPER; ++i) {
+        self->operTable[i] = 0;
+    }
+    for (i = 0; i < Spk_NUM_CALL_OPER; ++i) {
+        self->operCallTable[i] = 0;
+    }
+    self->assignInd = 0;
+    self->assignIndex = 0;
+    
+    self->zero = 0;
+    self->dealloc = 0;
+    
+    self->instVarOffset = 0;
+    self->instVarBaseIndex = 0;
+    self->instVarCount = 0;
+    self->instanceSize = 0;
+    self->itemSize = 0;
+}
+
+static void Behavior_dealloc(SpkObject *_self, SpkUnknown **l) {
+    SpkBehavior *self = (SpkBehavior *)_self;
+    SpkMethodNamespace ns;
+    size_t i;
+    
+    Spk_LDECREF(self->superclass, l);
+    Spk_LDECREF(self->module, l);
+    
+    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+        Spk_XLDECREF(self->methodDict[ns], l);
+    }
+    for (i = 0; i < Spk_NUM_OPER; ++i) {
+        Spk_XLDECREF(self->operTable[i], l);
+    }
+    for (i = 0; i < Spk_NUM_CALL_OPER; ++i) {
+        Spk_XLDECREF(self->operCallTable[i], l);
+    }
+    Spk_XLDECREF(self->assignInd, l);
+    Spk_XLDECREF(self->assignIndex, l);
+    
+    (*Spk_CLASS(Behavior)->superclass->dealloc)(_self, l);
+}
+
+
+/*------------------------------------------------------------------------*/
 /* class template */
 
 typedef struct SpkBehaviorSubclass {
@@ -36,7 +95,10 @@ SpkClassTmpl Spk_ClassBehaviorTmpl = {
         accessors,
         methods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkBehaviorSubclass, variables)
+        offsetof(SpkBehaviorSubclass, variables),
+        /*itemSize*/ 0,
+        &Behavior_zero,
+        &Behavior_dealloc
     }, /*meta*/ {
         0
     }

@@ -127,7 +127,7 @@ SpkClass *SpkClass_New(SpkUnknown *name, SpkBehavior *superclass,
     newClass->name = name;
     
     assert(!newMetaclass->thisClass);
-    newMetaclass->thisClass = newClass;  Spk_INCREF(newClass);
+    newMetaclass->thisClass = newClass;  Spk_INCWREF(newClass);
     
     Spk_DECREF(newMetaclass);
     
@@ -150,7 +150,7 @@ SpkClass *SpkClass_EmptyFromTemplate(SpkClassTmpl *tmpl,
     newClass = (SpkClass *)SpkObject_New((SpkBehavior *)newMetaclass);
     SpkClass_InitFromTemplate(newClass, tmpl, superclass, module);
     
-    newMetaclass->thisClass = newClass;  Spk_INCREF(newClass);
+    newMetaclass->thisClass = newClass;  Spk_INCWREF(newClass);
     
     Spk_DECREF(newMetaclass);
     
@@ -172,7 +172,7 @@ SpkClass *SpkClass_FromTemplate(SpkClassTmpl *tmpl,
     SpkClass_InitFromTemplate(newClass, tmpl, superclass, module);
     
     assert(!newMetaclass->thisClass);
-    newMetaclass->thisClass = newClass;  Spk_INCREF(newClass);
+    newMetaclass->thisClass = newClass;  Spk_INCWREF(newClass);
     
     SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)newClass, &tmpl->thisClass);
     

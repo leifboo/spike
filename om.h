@@ -33,4 +33,9 @@ void SpkObjMem_Dealloc(SpkUnknown *);
     } while (0)
 
 
+/* weak reference counting -- currently no-ops */
+#define Spk_INCWREF(op)
+#define Spk_DECWREF(op)
+
+
 #endif /* __spk_om_h__ */

@@ -167,6 +167,7 @@ SpkClassTmpl Spk_ClassMethodTmpl = {
 };
 
 
+static void Context_zero(SpkObject *);
 static void Context_dealloc(SpkObject *, SpkUnknown **);
 static SpkUnknown *Context_blockCopy(SpkUnknown *, SpkUnknown *, SpkUnknown *);
 static SpkUnknown *Context_compoundExpression(SpkUnknown *, SpkUnknown *, SpkUnknown *);
@@ -189,7 +190,7 @@ SpkClassTmpl Spk_ClassContextTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SpkContextSubclass, variables),
         sizeof(SpkUnknown *),
-        /*zero*/ 0,
+        &Context_zero,
         &Context_dealloc
     }, /*meta*/ {
         0
@@ -281,6 +282,27 @@ SpkClassTmpl Spk_ClassVoidTmpl = {
 };
 
 
+static void Interpreter_zero(SpkObject *_self) {
+    SpkInterpreter *self = (SpkInterpreter *)_self;
+    (*Spk_CLASS(Interpreter)->superclass->zero)(_self);
+    self->scheduler = 0;
+    self->theInterruptSemaphore = 0;
+    self->interruptPending = 0;
+    self->activeContext = 0;
+    self->newContext = 0;
+    self->printingStack = 0;
+    return;
+}
+
+static void Interpreter_dealloc(SpkObject *_self, SpkUnknown **l) {
+    SpkInterpreter *self = (SpkInterpreter *)_self;
+    Spk_LDECREF(self->scheduler, l);
+    Spk_XLDECREF(self->theInterruptSemaphore, l); /* XXX: no semaphore yet */
+    Spk_XLDECREF(self->activeContext, l);
+    Spk_XLDECREF(self->newContext, l);
+    (*Spk_CLASS(Interpreter)->superclass->dealloc)(_self, l);
+}
+
 typedef struct SpkInterpreterSubclass {
     SpkInterpreter base;
     SpkUnknown *variables[1]; /* stretchy */
@@ -295,12 +317,29 @@ SpkClassTmpl Spk_ClassInterpreterTmpl = {
         /*accessors*/ 0,
         InterpreterMethods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkInterpreterSubclass, variables)
+        offsetof(SpkInterpreterSubclass, variables),
+        /*itemSize*/ 0,
+        &Interpreter_zero,
+        &Interpreter_dealloc
     }, /*meta*/ {
         0
     }
 };
 
+
+static void ProcessorScheduler_zero(SpkObject *_self) {
+    SpkProcessorScheduler *self = (SpkProcessorScheduler *)_self;
+    (*Spk_CLASS(ProcessorScheduler)->superclass->zero)(_self);
+    self->quiescentFiberLists = 0;
+    self->activeFiber = 0;
+    return;
+}
+
+static void ProcessorScheduler_dealloc(SpkObject *_self, SpkUnknown **l) {
+    SpkProcessorScheduler *self = (SpkProcessorScheduler *)_self;
+    Spk_LDECREF(self->activeFiber, l);
+    (*Spk_CLASS(ProcessorScheduler)->superclass->dealloc)(_self, l);
+}
 
 typedef struct SpkProcessorSchedulerSubclass {
     SpkProcessorScheduler base;
@@ -316,12 +355,35 @@ SpkClassTmpl Spk_ClassProcessorSchedulerTmpl = {
         /*accessors*/ 0,
         ProcessorSchedulerMethods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkProcessorSchedulerSubclass, variables)
+        offsetof(SpkProcessorSchedulerSubclass, variables),
+        /*itemSize*/ 0,
+        &ProcessorScheduler_zero,
+        &ProcessorScheduler_dealloc
     }, /*meta*/ {
         0
     }
 };
 
+
+static void Fiber_zero(SpkObject *_self) {
+    SpkFiber *self = (SpkFiber *)_self;
+    (*Spk_CLASS(Fiber)->superclass->zero)(_self);
+    self->nextLink = 0;
+    self->suspendedContext = 0;
+    self->leafContext = 0;
+    self->priority = 0;
+    self->myList = 0;
+    return;
+}
+
+static void Fiber_dealloc(SpkObject *_self, SpkUnknown **l) {
+    SpkFiber *self = (SpkFiber *)_self;
+    Spk_XLDECREF(self->nextLink, l);
+    Spk_XLDECREF(self->suspendedContext, l);
+    Spk_LDECREF(self->leafContext, l);
+    Spk_XLDECREF(self->myList, l);
+    (*Spk_CLASS(Fiber)->superclass->dealloc)(_self, l);
+}
 
 typedef struct SpkFiberSubclass {
     SpkFiber base;
@@ -337,7 +399,10 @@ SpkClassTmpl Spk_ClassFiberTmpl = {
         /*accessors*/ 0,
         FiberMethods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkFiberSubclass, variables)
+        offsetof(SpkFiberSubclass, variables),
+        /*itemSize*/ 0,
+        &Fiber_zero,
+        &Fiber_dealloc
     }, /*meta*/ {
         0
     }
@@ -421,23 +486,31 @@ SpkMethod *SpkMethod_New(size_t size) {
 /* contexts */
 
 SpkContext *SpkContext_New(size_t size) {
-    SpkContext *newContext;
+    return (SpkContext *)SpkObject_NewVar(Spk_CLASS(MethodContext), size);
+}
+
+static void Context_zero(SpkObject *_self) {
+    SpkContext *self = (SpkContext *)_self;
     SpkUnknown **p;
     size_t count;
     
-    newContext = (SpkContext *)SpkObject_NewVar(Spk_CLASS(MethodContext), size);
-    if (!newContext) {
-        return 0;
-    }
+    (*Spk_CLASS(Context)->superclass->zero)(_self);
     
-    for (count = 0, p = SpkContext_VARIABLES(newContext); count < size; ++count, ++p) {
+    self->caller = 0;
+    self->pc = 0;
+    self->stackp = 0;
+    self->homeContext = 0;
+    
+    memset(&self->u, 0, sizeof(self->u));
+    
+    for (count = 0, p = SpkContext_VARIABLES(self); count < self->base.size; ++count, ++p) {
         Spk_INCREF(Spk_GLOBAL(uninit));
         *p = Spk_GLOBAL(uninit);
     }
     
-    newContext->mark = 0;
-
-    return newContext;
+    self->mark = 0;
+    
+    return;
 }
 
 static void Context_dealloc(SpkObject *_self, SpkUnknown **l) {
@@ -460,9 +533,10 @@ static void Context_dealloc(SpkObject *_self, SpkUnknown **l) {
         Spk_LDECREF(self->homeContext, l);
     } else {
         /* method context */
-        Spk_LDECREF(self->u.m.method, l);
-        Spk_LDECREF(self->u.m.methodClass, l);
-        Spk_LDECREF(self->u.m.receiver, l);
+        /* These might be null in a leaf context. */
+        Spk_XLDECREF(self->u.m.method, l);
+        Spk_XLDECREF(self->u.m.methodClass, l);
+        Spk_XLDECREF(self->u.m.receiver, l);
     }
     
     (*Spk_CLASS(Context)->superclass->dealloc)(_self, l);

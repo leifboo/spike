@@ -26,6 +26,7 @@ typedef struct SpkVarBootRec {
 
 
 int Spk_Boot(void);
+void Spk_Shutdown(void);
 
 
 extern SpkClassBootRec Spk_essentialClassBootRec[];

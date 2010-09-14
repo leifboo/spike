@@ -299,3 +299,37 @@ SpkUnknown *Spk_ParseSelector(const char *methodName) {
     
     return selector;
 }
+
+
+static void releaseSymbols(SymbolTableEntry *t) {
+    for ( ; t->p; ++t)
+        Spk_CLEAR(*t->p);
+}
+
+static void releaseSelectors(SelectorTableEntry *t) {
+    for ( ; t->p; ++t)
+        Spk_CLEAR(*t->p);
+}
+
+static void releaseIntegers(IntegerTableEntry *t) {
+    for ( ; t->p; ++t)
+        Spk_CLEAR(*t->p);
+}
+
+static void releaseStrings(StringTableEntry *t) {
+    for ( ; t->p; ++t)
+        Spk_CLEAR(*t->p);
+}
+
+
+void Spk_ReleaseSymbols(void) {
+    releaseSelectors(selectorTable);
+    releaseSymbols(symbolTable);
+    return 0;
+}
+
+void Spk_ReleaseReadOnlyData(void) {
+    Spk_DECREF(Spk_emptyArgs);
+    releaseStrings(stringTable);
+    releaseIntegers(integerTable);
+}

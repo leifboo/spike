@@ -198,6 +198,7 @@ static void initCoreClasses(void) {
      * before we proceed, set up some scaffolding so that we don't crash.
      */
     Spk_heart = (SpkModule *)&scaffold;
+    Spk_CLASS(Behavior) = Behavior;
     Spk_CLASS(Class) = Class;
     Spk_CLASS(IdentityDictionary) = IdentityDictionary;
     Spk_CLASS(Symbol) = Symbol;
@@ -226,12 +227,12 @@ static void initCoreClasses(void) {
     /**/SpkBehavior_Init((SpkBehavior *)SymbolClass, (SpkBehavior *)ObjectClass, 0, 0);
     
     /* Each metaclass has a reference to is sole instance. */
-    ObjectClass->thisClass = (SpkClass *)Object;        Spk_INCREF(Object);
-    BehaviorClass->thisClass = (SpkClass *)Behavior;    Spk_INCREF(Behavior);
-    ClassClass->thisClass = (SpkClass *)Class;          Spk_INCREF(Class);
-    MetaclassClass->thisClass = (SpkClass *)Metaclass;  Spk_INCREF(Metaclass);
-    IdentityDictionaryClass->thisClass = (SpkClass *)IdentityDictionary; Spk_INCREF(IdentityDictionary);
-    SymbolClass->thisClass = (SpkClass *)Symbol;                         Spk_INCREF(Symbol);
+    ObjectClass->thisClass = (SpkClass *)Object;        Spk_INCWREF(Object);
+    BehaviorClass->thisClass = (SpkClass *)Behavior;    Spk_INCWREF(Behavior);
+    ClassClass->thisClass = (SpkClass *)Class;          Spk_INCWREF(Class);
+    MetaclassClass->thisClass = (SpkClass *)Metaclass;  Spk_INCWREF(Metaclass);
+    IdentityDictionaryClass->thisClass = (SpkClass *)IdentityDictionary; Spk_INCWREF(IdentityDictionary);
+    SymbolClass->thisClass = (SpkClass *)Symbol;                         Spk_INCWREF(Symbol);
     
     /*
      * Create class 'Module' and its first subclass and instance:
@@ -423,4 +424,83 @@ int Spk_Boot(void) {
         return 0;
     
     return 1;
+}
+
+
+static void releaseBuiltInClasses(void) {
+    SpkClassBootRec *r;
+    SpkBehavior **classVar;
+    SpkClassTmpl *t;
+    
+    for (r = Spk_classBootRec; *r; ++r) {
+        t = *r;
+        classVar = (SpkBehavior **)((char *)Spk_heart + t->classVarOffset);
+        Spk_CLEAR(*classVar);
+    }
+    for (r = Spk_essentialClassBootRec; *r; ++r) {
+        t = *r;
+        classVar = (SpkBehavior **)((char *)Spk_heart + t->classVarOffset);
+        Spk_CLEAR(*classVar);
+    }
+}
+
+
+static void releaseGlobalObjects(void) {
+    SpkObjectBootRec *r;
+    SpkObject **var;
+    
+    for (r = Spk_objectBootRec; r->varOffset; ++r) {
+        var = (SpkObject **)((char *)Spk_heart + r->varOffset);
+        Spk_CLEAR(*var);
+    }
+}
+
+
+static void releaseGlobalVars(void) {
+    SpkVarBootRec *r;
+    SpkObject **var;
+    
+    for (r = Spk_globalVarBootRec; r->varOffset; ++r) {
+        var = (SpkObject **)((char *)Spk_heart + r->varOffset);
+        Spk_CLEAR(*var);
+    }
+}
+
+
+static void releaseCoreClasses(void) {
+    Spk_CLEAR(Spk_CLASS(Array));
+    Spk_CLEAR(Spk_CLASS(VariableObject));
+    
+    Spk_CLEAR(Spk_CLASS(Symbol));
+    Spk_CLEAR(Spk_CLASS(IdentityDictionary));
+    Spk_CLEAR(Spk_CLASS(Module));
+    Spk_CLEAR(Spk_CLASS(Metaclass));
+    Spk_CLEAR(Spk_CLASS(Class));
+    Spk_CLEAR(Spk_CLASS(Behavior));
+    Spk_CLEAR(Spk_CLASS(Object));
+    
+    Spk_CLEAR(Spk_CLASS(Method));
+}
+
+
+void Spk_Shutdown(void) {
+    Spk_CLEAR(Spk_GLOBAL(xstdin));
+    Spk_CLEAR(Spk_GLOBAL(xstdout));
+    Spk_CLEAR(Spk_GLOBAL(xstderr));
+    
+    Spk_CLEAR(Spk_GLOBAL(xtrue));
+    Spk_CLEAR(Spk_GLOBAL(xfalse));
+    
+    Spk_CLEAR(Spk_GLOBAL(theInterpreter));
+    
+    releaseGlobalVars();
+    releaseGlobalObjects();
+    
+    Spk_ReleaseReadOnlyData();
+    
+    releaseBuiltInClasses();
+    
+    Spk_ReleaseSymbols();
+    
+    releaseCoreClasses();
 }

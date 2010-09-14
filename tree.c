@@ -139,6 +139,9 @@ static void Stmt_dealloc(SpkObject *_self, SpkUnknown **l) {
     case Spk_STMT_DEF_METHOD:
         Spk_XLDECREF(self->u.method.name, l);
         break;
+    case Spk_STMT_DEF_MODULE:
+        Spk_XLDECREF(self->u.module.predefList.first, l);
+        break;
     case Spk_STMT_PRAGMA_SOURCE:
         Spk_XLDECREF(self->u.source, l);
     default:
