@@ -7,6 +7,7 @@
 #include "interp.h"
 #include "native.h"
 #include "rodata.h"
+#include "scheck.h"
 #include "tree.h"
 
 #include <assert.h>
@@ -48,7 +49,7 @@ SpkSymbolNode *SpkSymbolNode_FromCString(SpkSymbolTable *st, const char *str) {
 int SpkSymbolNode_IsType(SpkSymbolNode *node) {
     SpkExpr *def;
     
-    if (1 /*cxxgen*/ ) {
+    if (0 /*cxxgen*/ ) {
         if (isupper(SpkHost_SymbolAsCString(node->sym)[0]))
             return 1;
     }
@@ -282,6 +283,11 @@ static SpkUnknown *SymbolTable_init(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkn
     return _self;
 }
 
+static SpkUnknown *SymbolTable_declareBuiltIn(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkSymbolTable *self = (SpkSymbolTable *)_self;
+    return SpkStaticChecker_DeclareBuiltIn(self, arg0);
+}
+
 
 /*------------------------------------------------------------------------*/
 /* meta-methods */
@@ -486,6 +492,7 @@ SpkClassTmpl Spk_ClassScopeTmpl = {
 
 static SpkMethodTmpl SymbolTableMethods[] = {
     { "init", SpkNativeCode_ARGS_0, &SymbolTable_init },
+    { "declareBuiltIn", SpkNativeCode_ARGS_1, &SymbolTable_declareBuiltIn },
     { 0 }
 };
 

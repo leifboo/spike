@@ -135,6 +135,7 @@ TESTS_ENVIRONMENT = $(top_srcdir)/run-test $(top_srcdir) $(top_builddir)/spike
 TESTS = \
 	examples/accgen.spk \
 	examples/blocks.spk \
+	examples/circle.spk \
 	examples/fib.spk \
 	examples/fibgen.spk \
 	examples/fma.spk \
@@ -187,6 +188,8 @@ XFAIL_TESTS = \
 test_io = \
 	examples/accgen.out \
 	examples/blocks.out \
+	examples/circle.in \
+	examples/circle.out \
 	examples/fib.out \
 	examples/fibgen.out \
 	examples/fma.out \

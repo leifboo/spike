@@ -31,6 +31,8 @@ interpreter(argv) {
     obj st = SymbolTable.new();
     obj notifier = Notifier.new(stderr);
     
+    st.declareBuiltIn(notifier);
+    
     obj parser = Parser.new();
     obj tree = parser.parse(stream, st);
     tree = tree.source(sourcePathname);
@@ -55,7 +57,7 @@ interpreter(argv) {
 }
 
 main(argv) {
-    createClass();
+    //createClass();
     if (argv.size > 1)
         return interpreter(argv);
     return 0;
