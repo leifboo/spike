@@ -108,7 +108,12 @@ static int Spk_Main(int argc, char **argv) {
     if (!Spk_Boot())
         return 1;
     
-    moduleTmpl = SpkCompiler_CompileFile(sourceFilename);
+    arg = sourceFilename + strlen(sourceFilename) - 3;
+    if (arg > sourceFilename && 0 == strcmp(arg, ".sm")) {
+        moduleTmpl = SpkCompiler_CompileModule(sourceFilename);
+    } else {
+        moduleTmpl = SpkCompiler_CompileFile(sourceFilename);
+    }
     if (!moduleTmpl)
         return 1;
     

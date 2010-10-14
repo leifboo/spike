@@ -16,6 +16,8 @@
 #include "st.h"
 #include "tree.h"
 
+#include <string.h>
+
 
 static SpkUnknown *defaultNotifier(void) {
     return Spk_Send(Spk_GLOBAL(theInterpreter), (SpkUnknown *)Spk_CLASS(Notifier), Spk_new, Spk_GLOBAL(xstderr), 0);
@@ -183,5 +185,92 @@ SpkModuleTmpl *SpkCompiler_CompileString(const char *string) {
  unwind:
     Spk_XDECREF(notifier);
     Spk_XDECREF(st);
+    return 0;
+}
+
+
+SpkModuleTmpl *SpkCompiler_CompileModule(const char *pathname) {
+    FILE *moduleStream = 0, *stream = 0;
+    SpkUnknown *notifier = 0;
+    SpkSymbolTable *st = 0;
+    SpkStmt *tree = 0, **treeTail, *s;
+    SpkUnknown *tmp = 0;
+    SpkModuleTmpl *moduleTmpl = 0;
+    char buffer[1024], *b;
+    size_t len;
+    
+    moduleStream = fopen(pathname, "r");
+    if (!moduleStream) {
+        fprintf(stderr, "%s: cannot open '%s'\n",
+                /*argv[0]*/ "spike", pathname);
+        goto unwind;
+    }
+    
+    notifier = defaultNotifier();
+    if (!notifier)
+        goto unwind;
+    
+    st = SpkSymbolTable_New();
+    if (!st)
+        goto unwind;
+    tmp = SpkStaticChecker_DeclareBuiltIn(st, notifier);
+    if (!tmp)
+        goto unwind;
+    
+    treeTail = &tree;
+    
+    while (b = fgets(buffer, sizeof(buffer), moduleStream)) {
+        len = strlen(b);
+        if (b[len-1] == '\n')
+            b[--len] = '\0';
+        
+        if (len > 0 && b[0] != '#') {
+            
+            pathname = b;
+            
+            stream = fopen(pathname, "r");
+            if (!stream) {
+                fprintf(stderr, "%s: cannot open '%s'\n",
+                        /*argv[0]*/ "spike", pathname);
+                goto unwind;
+            }
+            
+            *treeTail = SpkParser_ParseFileStream(stream, st);
+            if (!treeTail)
+                goto unwind;
+            
+            fclose(stream);
+            stream = 0;
+            
+            Spk_DECREF(tmp);
+            tmp = SpkHost_StringFromCString(pathname);
+            SpkParser_Source(treeTail, tmp);
+            
+            for (s = *treeTail; s->next; s = s->next)
+                ;
+            treeTail = &s->next;
+        }
+    }
+    
+    if (!tree)
+        goto unwind;
+    
+    moduleTmpl = compileTree(&tree, st, notifier);
+    
+    fclose(moduleStream);
+    Spk_DECREF(notifier);
+    Spk_DECREF(st);
+    Spk_DECREF(tmp);
+    
+    return moduleTmpl;
+    
+unwind:
+    if (stream)
+        fclose(stream);
+    if (moduleStream)
+        fclose(moduleStream);
+    Spk_XDECREF(notifier);
+    Spk_XDECREF(st);
+    Spk_XDECREF(tmp);
     return 0;
 }
