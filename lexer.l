@@ -18,6 +18,7 @@ IS			(u|U|l|L)*
 #include "host.h"
 #include "lexer.h"
 #include "st.h"
+#include "sym.h"
 
 static void count(yyscan_t yyscanner);
 static void comment(yyscan_t yyscanner);
@@ -326,14 +327,14 @@ int SpkLexer_GetNextToken(SpkToken *token, yyscan_t scanner, SpkSymbolTable *st)
     case Spk_TOKEN_LITERAL_STR:
         token->literalValue = stringFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
+    case Spk_TOKEN_LITERAL_SYMBOL:
+        token->literalValue = (SpkUnknown *)SpkSymbol_FromCString(yyget_text(scanner) + 1);
+        break;
     case Spk_TOKEN_IDENTIFIER:
         token->sym = SpkSymbolNode_FromCString(st, yyget_text(scanner));
         if (SpkSymbolNode_IsType(token->sym)) {
             token->id = Spk_TOKEN_TYPE_IDENTIFIER;
         }
-        break;
-    case Spk_TOKEN_LITERAL_SYMBOL:
-        token->sym = SpkSymbolNode_FromCString(st, yyget_text(scanner) + 1);
         break;
     }
     return id;

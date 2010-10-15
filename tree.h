@@ -25,7 +25,6 @@ typedef enum SpkExprKind {
     Spk_EXPR_OR,
     Spk_EXPR_POSTOP,
     Spk_EXPR_PREOP,
-    Spk_EXPR_SYMBOL,
     Spk_EXPR_UNARY
 } SpkExprKind;
 

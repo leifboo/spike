@@ -211,9 +211,6 @@ static SpkUnknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cge
         /* XXX: kludge */
         SpkHost_PrintObject(expr->aux.literalValue, cgen->out);
         break;
-    case Spk_EXPR_SYMBOL:
-        ASSERT(0, "XXX");
-        break;
     case Spk_EXPR_NAME:
         if (expr->u.ref.def->u.def.pushOpcode == Spk_OPCODE_PUSH_SELF)
             fputs("this", cgen->out);

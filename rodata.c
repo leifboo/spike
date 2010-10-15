@@ -75,9 +75,72 @@ SpkUnknown *Spk_undefinedSymbol;
 SpkUnknown *Spk_unknownOpcode;
 SpkUnknown *Spk_wrongNumberOfArguments;
 
+/* selectors -- class names */
 SpkUnknown *Spk_Boolean;
 SpkUnknown *Spk_False;
 SpkUnknown *Spk_True;
+
+/* selectors -- parser */
+SpkUnknown *Spk_exprAnd;
+SpkUnknown *Spk_exprAssign;
+SpkUnknown *Spk_exprAttr;
+SpkUnknown *Spk_exprAttrVar;
+SpkUnknown *Spk_exprBinaryOp;
+SpkUnknown *Spk_exprBlock;
+SpkUnknown *Spk_exprCall;
+SpkUnknown *Spk_exprCompound;
+SpkUnknown *Spk_exprCond;
+SpkUnknown *Spk_exprId;
+SpkUnknown *Spk_exprKeyword;
+SpkUnknown *Spk_exprLiteral;
+SpkUnknown *Spk_exprName;
+SpkUnknown *Spk_exprNI;
+SpkUnknown *Spk_exprOr;
+SpkUnknown *Spk_exprPostOp;
+SpkUnknown *Spk_exprPreOp;
+SpkUnknown *Spk_exprUnaryOp;
+SpkUnknown *Spk_operAdd;
+SpkUnknown *Spk_operAddr;
+SpkUnknown *Spk_operApply;
+SpkUnknown *Spk_operBAnd;
+SpkUnknown *Spk_operBNeg;
+SpkUnknown *Spk_operBOr;
+SpkUnknown *Spk_operBXOr;
+SpkUnknown *Spk_operDiv;
+SpkUnknown *Spk_operEq;
+SpkUnknown *Spk_operGE;
+SpkUnknown *Spk_operGT;
+SpkUnknown *Spk_operInd;
+SpkUnknown *Spk_operIndex;
+SpkUnknown *Spk_operLE;
+SpkUnknown *Spk_operLNeg;
+SpkUnknown *Spk_operLShift;
+SpkUnknown *Spk_operLT;
+SpkUnknown *Spk_operMod;
+SpkUnknown *Spk_operMul;
+SpkUnknown *Spk_operNE;
+SpkUnknown *Spk_operNeg;
+SpkUnknown *Spk_operPos;
+SpkUnknown *Spk_operPred;
+SpkUnknown *Spk_operRShift;
+SpkUnknown *Spk_operSub;
+SpkUnknown *Spk_operSucc;
+SpkUnknown *Spk_stmtBreak;
+SpkUnknown *Spk_stmtCompound;
+SpkUnknown *Spk_stmtContinue;
+SpkUnknown *Spk_stmtDefClass;
+SpkUnknown *Spk_stmtDefMethod;
+SpkUnknown *Spk_stmtDefModule;
+SpkUnknown *Spk_stmtDefType;
+SpkUnknown *Spk_stmtDefVar;
+SpkUnknown *Spk_stmtDoWhile;
+SpkUnknown *Spk_stmtExpr;
+SpkUnknown *Spk_stmtFor;
+SpkUnknown *Spk_stmtIfElse;
+SpkUnknown *Spk_stmtPragmaSource;
+SpkUnknown *Spk_stmtReturn;
+SpkUnknown *Spk_stmtWhile;
+SpkUnknown *Spk_stmtYield;
 
 SpkSpecialSelector Spk_operSelectors[Spk_NUM_OPER] = {
     { &Spk___succ__,   0 },
@@ -192,6 +255,67 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_Boolean,                       "Boolean"                     },
     { &Spk_False,                         "False"                       },
     { &Spk_True,                          "True"                        },
+    
+    { &Spk_exprAnd,                       "exprAnd"                     },
+    { &Spk_exprAssign,                    "exprAssign"                  },
+    { &Spk_exprAttr,                      "exprAttr"                    },
+    { &Spk_exprAttrVar,                   "exprAttrVar"                 },
+    { &Spk_exprBinaryOp,                  "exprBinaryOp"                },
+    { &Spk_exprBlock,                     "exprBlock"                   },
+    { &Spk_exprCall,                      "exprCall"                    },
+    { &Spk_exprCompound,                  "exprCompound"                },
+    { &Spk_exprCond,                      "exprCond"                    },
+    { &Spk_exprId,                        "exprId"                      },
+    { &Spk_exprKeyword,                   "exprKeyword"                 },
+    { &Spk_exprLiteral,                   "exprLiteral"                 },
+    { &Spk_exprName,                      "exprName"                    },
+    { &Spk_exprNI,                        "exprNI"                      },
+    { &Spk_exprOr,                        "exprOr"                      },
+    { &Spk_exprPostOp,                    "exprPostOp"                  },
+    { &Spk_exprPreOp,                     "exprPreOp"                   },
+    { &Spk_exprUnaryOp,                   "exprUnaryOp"                 },
+    { &Spk_operAdd,                       "operAdd"                     },
+    { &Spk_operAddr,                      "operAddr"                    },
+    { &Spk_operApply,                     "operApply"                   },
+    { &Spk_operBAnd,                      "operBAnd"                    },
+    { &Spk_operBNeg,                      "operBNeg"                    },
+    { &Spk_operBOr,                       "operBOr"                     },
+    { &Spk_operBXOr,                      "operBXOr"                    },
+    { &Spk_operDiv,                       "operDiv"                     },
+    { &Spk_operEq,                        "operEq"                      },
+    { &Spk_operGE,                        "operGE"                      },
+    { &Spk_operGT,                        "operGT"                      },
+    { &Spk_operInd,                       "operInd"                     },
+    { &Spk_operIndex,                     "operIndex"                   },
+    { &Spk_operLE,                        "operLE"                      },
+    { &Spk_operLNeg,                      "operLNeg"                    },
+    { &Spk_operLShift,                    "operLShift"                  },
+    { &Spk_operLT,                        "operLT"                      },
+    { &Spk_operMod,                       "operMod"                     },
+    { &Spk_operMul,                       "operMul"                     },
+    { &Spk_operNE,                        "operNE"                      },
+    { &Spk_operNeg,                       "operNeg"                     },
+    { &Spk_operPos,                       "operPos"                     },
+    { &Spk_operPred,                      "operPred"                    },
+    { &Spk_operRShift,                    "operRShift"                  },
+    { &Spk_operSub,                       "operSub"                     },
+    { &Spk_operSucc,                      "operSucc"                    },
+    { &Spk_stmtBreak,                     "stmtBreak"                   },
+    { &Spk_stmtCompound,                  "stmtCompound"                },
+    { &Spk_stmtContinue,                  "stmtContinue"                },
+    { &Spk_stmtDefClass,                  "stmtDefClass"                },
+    { &Spk_stmtDefMethod,                 "stmtDefMethod"               },
+    { &Spk_stmtDefModule,                 "stmtDefModule"               },
+    { &Spk_stmtDefType,                   "stmtDefType"                 },
+    { &Spk_stmtDefVar,                    "stmtDefVar"                  },
+    { &Spk_stmtDoWhile,                   "stmtDoWhile"                 },
+    { &Spk_stmtExpr,                      "stmtExpr"                    },
+    { &Spk_stmtFor,                       "stmtFor"                     },
+    { &Spk_stmtIfElse,                    "stmtIfElse"                  },
+    { &Spk_stmtPragmaSource,              "stmtPragmaSource"            },
+    { &Spk_stmtReturn,                    "stmtReturn"                  },
+    { &Spk_stmtWhile,                     "stmtWhile"                   },
+    { &Spk_stmtYield,                     "stmtYield"                   },
     
     { 0 }
 };
@@ -325,7 +449,7 @@ static void releaseStrings(StringTableEntry *t) {
 void Spk_ReleaseSymbols(void) {
     releaseSelectors(selectorTable);
     releaseSymbols(symbolTable);
-    return 0;
+    return;
 }
 
 void Spk_ReleaseReadOnlyData(void) {

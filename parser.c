@@ -49,7 +49,7 @@ static SpkSymbolNode *symbolNodeForToken(SpkToken *token, SpkSymbolTable *st) {
 
 Stmt *SpkParser_NewClassDef(SpkToken *name, SpkToken *super,
                             Stmt *body, Stmt *metaBody,
-                            SpkSymbolTable *st)
+                            SpkParser *parser)
 {
     Stmt *newStmt;
     
@@ -57,39 +57,41 @@ Stmt *SpkParser_NewClassDef(SpkToken *name, SpkToken *super,
     newStmt->kind = Spk_STMT_DEF_CLASS;
     newStmt->top = body;
     newStmt->bottom = metaBody;
-    newStmt->expr = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, name);
+    newStmt->expr = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, name, parser);
     newStmt->expr->sym = name->sym;
-    newStmt->u.klass.superclassName = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, super);
+    newStmt->u.klass.superclassName = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, super, parser);
     newStmt->u.klass.superclassName->sym
         = super
         ? super->sym
-        : SpkSymbolNode_FromCString(st, "Object");
+        : SpkSymbolNode_FromCString(parser->st, "Object");
     return newStmt;
 }
 
 Expr *SpkParser_NewAttrExpr(Expr *obj, SpkToken *attrName,
-                            SpkToken *dot, SpkSymbolTable *st)
+                            SpkToken *dot, SpkParser *parser)
 {
     Expr *newExpr;
     
-    newExpr = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0, dot);
-    newExpr->sym = symbolNodeForToken(attrName, st);
+    newExpr = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0, dot, parser);
+    newExpr->sym = symbolNodeForToken(attrName, parser->st);
     return newExpr;
 }
 
 Expr *SpkParser_NewClassAttrExpr(SpkToken *className, SpkToken *attrName,
-                                 SpkToken *dot, SpkSymbolTable *st)
+                                 SpkToken *dot, SpkParser *parser)
 {
     Expr *obj, *newExpr;
     
-    obj = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, className);
+    obj = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, className, parser);
     obj->sym = className->sym;
-    newExpr = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0, dot);
-    newExpr->sym = symbolNodeForToken(attrName, st);
+    newExpr = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0, dot, parser);
+    newExpr->sym = symbolNodeForToken(attrName, parser->st);
     return newExpr;
 }
 
-Stmt *SpkParser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom) {
+Stmt *SpkParser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom,
+                        SpkParser *parser)
+{
     Stmt *newStmt;
     
     newStmt = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
@@ -106,7 +108,9 @@ Stmt *SpkParser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom) {
     return newStmt;
 }
 
-Stmt *SpkParser_NewForStmt(Expr *expr1, Expr *expr2, Expr *expr3, Stmt *body) {
+Stmt *SpkParser_NewForStmt(Expr *expr1, Expr *expr2, Expr *expr3, Stmt *body,
+                           SpkParser *parser)
+{
     Stmt *newStmt;
     
     newStmt = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
@@ -120,7 +124,7 @@ Stmt *SpkParser_NewForStmt(Expr *expr1, Expr *expr2, Expr *expr3, Stmt *body) {
 
 Expr *SpkParser_NewExpr(ExprKind kind, SpkOper oper, Expr *cond,
                         Expr *left, Expr *right,
-                        SpkToken *token)
+                        SpkToken *token, SpkParser *parser)
 {
     Expr *newExpr;
     
@@ -135,7 +139,9 @@ Expr *SpkParser_NewExpr(ExprKind kind, SpkOper oper, Expr *cond,
     return newExpr;
 }
 
-Expr *SpkParser_NewBlock(Stmt *stmtList, Expr *expr, SpkToken *token) {
+Expr *SpkParser_NewBlock(Stmt *stmtList, Expr *expr, SpkToken *token,
+                         SpkParser *parser)
+{
     Expr *newExpr;
     
     newExpr = (Expr *)SpkObject_New(Spk_CLASS(Expr));
@@ -147,7 +153,7 @@ Expr *SpkParser_NewBlock(Stmt *stmtList, Expr *expr, SpkToken *token) {
 }
 
 Expr *SpkParser_NewKeywordExpr(SpkToken *kw, Expr *arg,
-                               SpkSymbolTable *st)
+                               SpkParser *parser)
 {
     Expr *newExpr;
     SpkSymbolNode *kwNode;
@@ -157,19 +163,19 @@ Expr *SpkParser_NewKeywordExpr(SpkToken *kw, Expr *arg,
     newExpr->right = arg;
     newExpr->lineNo = kw->lineNo;
     newExpr->aux.keywords = SpkHost_NewKeywordSelectorBuilder();
-    kwNode = symbolNodeForToken(kw, st);
+    kwNode = symbolNodeForToken(kw, parser->st);
     SpkHost_AppendKeyword(&newExpr->aux.keywords, kwNode->sym);
     Spk_DECREF(kwNode);
     return newExpr;
 }
 
 Expr *SpkParser_AppendKeyword(Expr *expr, SpkToken *kw, Expr *arg,
-                              SpkSymbolTable *st)
+                              SpkParser *parser)
 {
     Expr *e;
     SpkSymbolNode *kwNode;
     
-    kwNode = symbolNodeForToken(kw, st);
+    kwNode = symbolNodeForToken(kw, parser->st);
     SpkHost_AppendKeyword(&expr->aux.keywords, kwNode->sym);
     for (e = expr->right; e->nextArg; e = e->nextArg)
         ;
@@ -179,12 +185,12 @@ Expr *SpkParser_AppendKeyword(Expr *expr, SpkToken *kw, Expr *arg,
 }
 
 Expr *SpkParser_FreezeKeywords(Expr *expr, SpkToken *kw,
-                               SpkSymbolTable *st)
+                               SpkParser *parser)
 {
     SpkUnknown *tmp;
     SpkSymbolNode *kwNode;
     
-    kwNode = kw ? symbolNodeForToken(kw, st) : 0;
+    kwNode = kw ? symbolNodeForToken(kw, parser->st) : 0;
     if (!expr) {
         expr = (Expr *)SpkObject_New(Spk_CLASS(Expr));
         expr->kind = Spk_EXPR_KEYWORD;
@@ -200,7 +206,7 @@ Expr *SpkParser_FreezeKeywords(Expr *expr, SpkToken *kw,
     return expr;
 }
 
-Expr *SpkParser_NewCompoundExpr(Expr *args, SpkToken *token) {
+Expr *SpkParser_NewCompoundExpr(Expr *args, SpkToken *token, SpkParser *parser) {
     Expr *arg;
     
     /* convert comma expression to argument list */
@@ -208,7 +214,7 @@ Expr *SpkParser_NewCompoundExpr(Expr *args, SpkToken *token) {
         arg->nextArg = arg->next;
         arg->next = 0;
     }
-    return SpkParser_NewExpr(Spk_EXPR_COMPOUND, 0, 0, 0, args, token);
+    return SpkParser_NewExpr(Spk_EXPR_COMPOUND, 0, 0, 0, args, token, parser);
 }
 
 Stmt *SpkParser_NewModuleDef(Stmt *stmtList) {
@@ -294,7 +300,8 @@ Stmt *SpkParser_ParseString(const char *input, SpkSymbolTable *st) {
 void SpkParser_Source(SpkStmt **pStmtList, SpkUnknown *source) {
     Stmt *pragma;
     
-    pragma = SpkParser_NewStmt(Spk_STMT_PRAGMA_SOURCE, 0, 0, 0);
+    pragma = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
+    pragma->kind = Spk_STMT_PRAGMA_SOURCE;
     pragma->u.source = source;  Spk_INCREF(source);
     pragma->next = *pStmtList;
     *pStmtList = pragma;
@@ -382,6 +389,7 @@ static void Parser_zero(SpkObject *_self) {
     self->root = 0;
     self->error = 0;
     self->st = 0;
+    self->tb = 0;
 }
 
 static void Parser_dealloc(SpkObject *_self, SpkUnknown **l) {
@@ -390,6 +398,7 @@ static void Parser_dealloc(SpkObject *_self, SpkUnknown **l) {
         Spk_XLDECREF(self->root, l);
     }
     Spk_XLDECREF(self->st, l);
+    Spk_XLDECREF(self->tb, l);
     (*Spk_CLASS(Parser)->superclass->dealloc)(_self, l);
 }
 

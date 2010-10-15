@@ -543,9 +543,6 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     case Spk_EXPR_NAME:
         _(emitCodeForName(expr, super, cgen));
         break;
-    case Spk_EXPR_SYMBOL:
-        _(emitCodeForLiteral(expr->sym->sym, cgen));
-        break;
     case Spk_EXPR_BLOCK:
         ++cgen->nMessageSends;
         /* thisContext.blockCopy(index, argumentCount) { */

@@ -209,7 +209,6 @@ static SpkUnknown *checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker,
     
     switch (expr->kind) {
     case Spk_EXPR_LITERAL:
-    case Spk_EXPR_SYMBOL:
         break;
     case Spk_EXPR_NAME:
         if (pass == 2) {
