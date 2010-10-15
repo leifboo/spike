@@ -6,10 +6,14 @@
 #include "heart.h"
 #include "host.h"
 #include "lexer.h"
+#include "rodata.h"
 #include "st.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+
+
+#define X(o) (o) ? (SpkUnknown *)(o) : Spk_GLOBAL(null)
 
 
 typedef SpkExprKind ExprKind;
@@ -43,6 +47,90 @@ static SpkSymbolNode *symbolNodeForToken(SpkToken *token, SpkSymbolTable *st) {
     return 0;
 }
 
+static SpkUnknown *operSelector(SpkOper oper) {
+    switch (oper) {
+    case Spk_OPER_SUCC:     return Spk_operSucc;
+    case Spk_OPER_PRED:     return Spk_operPred;
+    case Spk_OPER_ADDR:     return Spk_operAddr;
+    case Spk_OPER_IND:      return Spk_operInd;
+    case Spk_OPER_POS:      return Spk_operPos;
+    case Spk_OPER_NEG:      return Spk_operNeg;
+    case Spk_OPER_BNEG:     return Spk_operBNeg;
+    case Spk_OPER_LNEG:     return Spk_operLNeg;
+    case Spk_OPER_MUL:      return Spk_operMul;
+    case Spk_OPER_DIV:      return Spk_operDiv;
+    case Spk_OPER_MOD:      return Spk_operMod;
+    case Spk_OPER_ADD:      return Spk_operAdd;
+    case Spk_OPER_SUB:      return Spk_operSub;
+    case Spk_OPER_LSHIFT:   return Spk_operLShift;
+    case Spk_OPER_RSHIFT:   return Spk_operRShift;
+    case Spk_OPER_LT:       return Spk_operLT;
+    case Spk_OPER_GT:       return Spk_operGT;
+    case Spk_OPER_LE:       return Spk_operLE;
+    case Spk_OPER_GE:       return Spk_operGE;
+    case Spk_OPER_EQ:       return Spk_operEq;
+    case Spk_OPER_NE:       return Spk_operNE;
+    case Spk_OPER_BAND:     return Spk_operBAnd;
+    case Spk_OPER_BXOR:     return Spk_operBXOr;
+    case Spk_OPER_BOR:      return Spk_operBOr;
+    }
+    return 0;
+}
+
+static SpkUnknown *callOperSelector(SpkCallOper oper) {
+    switch (oper) {
+    case Spk_OPER_APPLY:    return Spk_operApply;
+    case Spk_OPER_INDEX:    return Spk_operIndex;
+    }
+    return 0;
+}
+
+static SpkUnknown *exprSelector(SpkStmtKind kind) {
+    switch (kind) {
+    case Spk_EXPR_AND:          return Spk_exprAnd;
+    case Spk_EXPR_ASSIGN:       return Spk_exprAssign;
+    case Spk_EXPR_ATTR:         return Spk_exprAttr;
+    case Spk_EXPR_ATTR_VAR:     return Spk_exprAttrVar;
+    case Spk_EXPR_BINARY:       return Spk_exprBinaryOp;
+    case Spk_EXPR_BLOCK:        return Spk_exprBlock;
+    case Spk_EXPR_CALL:         return Spk_exprCall;
+    case Spk_EXPR_COMPOUND:     return Spk_exprCompound;
+    case Spk_EXPR_COND:         return Spk_exprCond;
+    case Spk_EXPR_ID:           return Spk_exprId;
+    case Spk_EXPR_KEYWORD:      return Spk_exprKeyword;
+    case Spk_EXPR_LITERAL:      return Spk_exprLiteral;
+    case Spk_EXPR_NAME:         return Spk_exprName;
+    case Spk_EXPR_NI:           return Spk_exprNI;
+    case Spk_EXPR_OR:           return Spk_exprOr;
+    case Spk_EXPR_POSTOP:       return Spk_exprPostOp;
+    case Spk_EXPR_PREOP:        return Spk_exprPreOp;
+    case Spk_EXPR_UNARY:        return Spk_exprUnaryOp;
+    }
+    return 0;
+}
+
+static SpkUnknown *stmtSelector(SpkStmtKind kind) {
+    switch (kind) {
+    case Spk_STMT_BREAK:            return Spk_stmtBreak;
+    case Spk_STMT_COMPOUND:         return Spk_stmtCompound;
+    case Spk_STMT_CONTINUE:         return Spk_stmtContinue;
+    case Spk_STMT_DEF_CLASS:        return Spk_stmtDefClass;
+    case Spk_STMT_DEF_METHOD:       return Spk_stmtDefMethod;
+    case Spk_STMT_DEF_MODULE:       return Spk_stmtDefModule;
+    case Spk_STMT_DEF_TYPE:         return Spk_stmtDefType;
+    case Spk_STMT_DEF_VAR:          return Spk_stmtDefVar;
+    case Spk_STMT_DO_WHILE:         return Spk_stmtDoWhile;
+    case Spk_STMT_EXPR:             return Spk_stmtExpr;
+    case Spk_STMT_FOR:              return Spk_stmtFor;
+    case Spk_STMT_IF_ELSE:          return Spk_stmtIfElse;
+    case Spk_STMT_PRAGMA_SOURCE:    return Spk_stmtPragmaSource;
+    case Spk_STMT_RETURN:           return Spk_stmtReturn;
+    case Spk_STMT_WHILE:            return Spk_stmtWhile;
+    case Spk_STMT_YIELD:            return Spk_stmtYield;
+    }
+    return 0;
+}
+
 
 /****************************************************************************/
 /* grammar actions */
@@ -52,6 +140,22 @@ Stmt *SpkParser_NewClassDef(SpkToken *name, SpkToken *super,
                             SpkParser *parser)
 {
     Stmt *newStmt;
+    SpkSymbolNode *superSym;
+    
+    superSym = super
+               ? super->sym
+               : SpkSymbolNode_FromCString(parser->st, "Object");
+    
+    if (parser->tb) {
+        /* XXX: bogus cast */
+        newStmt = (SpkStmt *)Spk_Send(Spk_GLOBAL(theInterpreter),
+                                      parser->tb, stmtSelector(Spk_STMT_DEF_CLASS),
+                                      superSym, X(body), X(metaBody),
+                                      0);
+        Spk_XDECREF(body);
+        Spk_XDECREF(metaBody);
+        return newStmt;
+    }
     
     newStmt = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
     newStmt->kind = Spk_STMT_DEF_CLASS;
@@ -60,10 +164,7 @@ Stmt *SpkParser_NewClassDef(SpkToken *name, SpkToken *super,
     newStmt->expr = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, name, parser);
     newStmt->expr->sym = name->sym;
     newStmt->u.klass.superclassName = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, super, parser);
-    newStmt->u.klass.superclassName->sym
-        = super
-        ? super->sym
-        : SpkSymbolNode_FromCString(parser->st, "Object");
+    newStmt->u.klass.superclassName->sym = superSym;
     return newStmt;
 }
 
@@ -94,6 +195,18 @@ Stmt *SpkParser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom,
 {
     Stmt *newStmt;
     
+    if (parser->tb) {
+        /* XXX: bogus cast */
+        newStmt = (SpkStmt *)Spk_Send(Spk_GLOBAL(theInterpreter),
+                                      parser->tb, stmtSelector(kind),
+                                      X(expr), X(top), X(bottom),
+                                      0);
+        Spk_XDECREF(expr);
+        Spk_XDECREF(top);
+        Spk_XDECREF(bottom);
+        return newStmt;
+    }
+    
     newStmt = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
     newStmt->kind = kind;
     newStmt->top = top;
@@ -113,6 +226,19 @@ Stmt *SpkParser_NewForStmt(Expr *expr1, Expr *expr2, Expr *expr3, Stmt *body,
 {
     Stmt *newStmt;
     
+    if (parser->tb) {
+        /* XXX: bogus cast */
+        newStmt = (SpkStmt *)Spk_Send(Spk_GLOBAL(theInterpreter),
+                                      parser->tb, stmtSelector(Spk_STMT_FOR),
+                                      X(expr1), X(expr2), X(expr3), X(body),
+                                      0);
+        Spk_XDECREF(expr1);
+        Spk_XDECREF(expr2);
+        Spk_XDECREF(expr3);
+        Spk_XDECREF(body);
+        return newStmt;
+    }
+    
     newStmt = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
     newStmt->kind = Spk_STMT_FOR;
     newStmt->top = body;
@@ -127,6 +253,22 @@ Expr *SpkParser_NewExpr(ExprKind kind, SpkOper oper, Expr *cond,
                         SpkToken *token, SpkParser *parser)
 {
     Expr *newExpr;
+    
+    if (parser->tb) {
+        /* XXX: bogus cast */
+        /* XXX: 'oper' is sometimes a meaningless zero */
+        newExpr = (SpkExpr *)Spk_Send(Spk_GLOBAL(theInterpreter),
+                                      parser->tb, exprSelector(kind),
+                                      kind == Spk_EXPR_CALL
+                                      ? callOperSelector(oper)
+                                      : operSelector(oper),
+                                      X(cond), X(left), X(right), /*X(token),*/
+                                      0);
+        Spk_XDECREF(cond);
+        Spk_XDECREF(left);
+        Spk_XDECREF(right);
+        return newExpr;
+    }
     
     newExpr = (Expr *)SpkObject_New(Spk_CLASS(Expr));
     newExpr->kind = kind;
@@ -144,6 +286,17 @@ Expr *SpkParser_NewBlock(Stmt *stmtList, Expr *expr, SpkToken *token,
 {
     Expr *newExpr;
     
+    if (parser->tb) {
+        /* XXX: bogus cast */
+        newExpr = (SpkExpr *)Spk_Send(Spk_GLOBAL(theInterpreter),
+                                      parser->tb, exprSelector(Spk_EXPR_BLOCK),
+                                      X(stmtList), X(expr), /*X(token),*/
+                                      0);
+        Spk_XDECREF(stmtList);
+        Spk_XDECREF(expr);
+        return newExpr;
+    }
+    
     newExpr = (Expr *)SpkObject_New(Spk_CLASS(Expr));
     newExpr->kind = Spk_EXPR_BLOCK;
     newExpr->right = expr;
@@ -157,6 +310,16 @@ Expr *SpkParser_NewKeywordExpr(SpkToken *kw, Expr *arg,
 {
     Expr *newExpr;
     SpkSymbolNode *kwNode;
+    
+    if (parser->tb) {
+        /* XXX: bogus cast */
+        newExpr = (SpkExpr *)Spk_Send(Spk_GLOBAL(theInterpreter),
+                                      parser->tb, exprSelector(Spk_EXPR_KEYWORD),
+                                      0);
+        /* XXX */
+        Spk_XDECREF(arg);
+        return newExpr;
+    }
     
     newExpr = (Expr *)SpkObject_New(Spk_CLASS(Expr));
     newExpr->kind = Spk_EXPR_KEYWORD;
@@ -175,6 +338,12 @@ Expr *SpkParser_AppendKeyword(Expr *expr, SpkToken *kw, Expr *arg,
     Expr *e;
     SpkSymbolNode *kwNode;
     
+    if (parser->tb) {
+        /* XXX */
+        Spk_XDECREF(arg);
+        return expr;
+    }
+    
     kwNode = symbolNodeForToken(kw, parser->st);
     SpkHost_AppendKeyword(&expr->aux.keywords, kwNode->sym);
     for (e = expr->right; e->nextArg; e = e->nextArg)
@@ -189,6 +358,11 @@ Expr *SpkParser_FreezeKeywords(Expr *expr, SpkToken *kw,
 {
     SpkUnknown *tmp;
     SpkSymbolNode *kwNode;
+    
+    if (parser->tb) {
+        /* XXX */
+        return expr;
+    }
     
     kwNode = kw ? symbolNodeForToken(kw, parser->st) : 0;
     if (!expr) {
