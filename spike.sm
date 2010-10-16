@@ -1,0 +1,5 @@
+#!/usr/bin/env spike
+spike.spk
+tree.spk
+expressions.spk
+statements.spk

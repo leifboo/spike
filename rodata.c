@@ -81,6 +81,8 @@ SpkUnknown *Spk_False;
 SpkUnknown *Spk_True;
 
 /* selectors -- parser */
+SpkUnknown *Spk_concat;
+SpkUnknown *Spk_declSpecs;
 SpkUnknown *Spk_exprAnd;
 SpkUnknown *Spk_exprAssign;
 SpkUnknown *Spk_exprAttr;
@@ -99,6 +101,9 @@ SpkUnknown *Spk_exprOr;
 SpkUnknown *Spk_exprPostOp;
 SpkUnknown *Spk_exprPreOp;
 SpkUnknown *Spk_exprUnaryOp;
+SpkUnknown *Spk_left;
+SpkUnknown *Spk_next;
+SpkUnknown *Spk_nextArg;
 SpkUnknown *Spk_operAdd;
 SpkUnknown *Spk_operAddr;
 SpkUnknown *Spk_operApply;
@@ -256,6 +261,8 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_False,                         "False"                       },
     { &Spk_True,                          "True"                        },
     
+    { &Spk_concat,                        "concat"                      },
+    { &Spk_declSpecs,                     "declSpecs"                   },
     { &Spk_exprAnd,                       "exprAnd"                     },
     { &Spk_exprAssign,                    "exprAssign"                  },
     { &Spk_exprAttr,                      "exprAttr"                    },
@@ -274,6 +281,9 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_exprPostOp,                    "exprPostOp"                  },
     { &Spk_exprPreOp,                     "exprPreOp"                   },
     { &Spk_exprUnaryOp,                   "exprUnaryOp"                 },
+    { &Spk_left,                          "left"                        },
+    { &Spk_next,                          "next"                        },
+    { &Spk_nextArg,                       "nextArg"                     },
     { &Spk_operAdd,                       "operAdd"                     },
     { &Spk_operAddr,                      "operAddr"                    },
     { &Spk_operApply,                     "operApply"                   },

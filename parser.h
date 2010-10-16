@@ -29,6 +29,7 @@ SpkExpr *SpkParser_NewClassAttrExpr(struct SpkToken *, struct SpkToken *, struct
                                     SpkParser *);
 SpkExpr *SpkParser_NewExpr(SpkExprKind, SpkOper, SpkExpr *, SpkExpr *, SpkExpr *, struct SpkToken *,
                            SpkParser *);
+SpkExpr *SpkParser_NewCallExpr(SpkOper, SpkExpr *, SpkArgList *, SpkToken *, SpkParser *);
 SpkExpr *SpkParser_NewBlock(SpkStmt *, SpkExpr *, struct SpkToken *, SpkParser *);
 SpkExpr *SpkParser_NewKeywordExpr(struct SpkToken *, SpkExpr *, SpkParser *);
 SpkExpr *SpkParser_AppendKeyword(SpkExpr *, struct SpkToken *, SpkExpr *, SpkParser *);
@@ -36,6 +37,13 @@ SpkExpr *SpkParser_FreezeKeywords(SpkExpr *, struct SpkToken *, SpkParser *);
 SpkExpr *SpkParser_NewCompoundExpr(SpkExpr *, struct SpkToken *, SpkParser *);
 SpkStmt *SpkParser_NewStmt(SpkStmtKind, SpkExpr *, SpkStmt *, SpkStmt *, SpkParser *);
 SpkStmt *SpkParser_NewForStmt(SpkExpr *, SpkExpr *, SpkExpr *, SpkStmt *, SpkParser *);
+
+void SpkParser_SetNextExpr(SpkExpr *, SpkExpr *, SpkParser *);
+void SpkParser_SetLeftExpr(SpkExpr *, SpkExpr *, SpkParser *);
+void SpkParser_SetNextArg(SpkExpr *, SpkExpr *, SpkParser *);
+void SpkParser_SetDeclSpecs(SpkExpr *, SpkExpr *, SpkParser *);
+void SpkParser_SetNextStmt(SpkStmt *, SpkStmt *, SpkParser *);
+void SpkParser_Concat(SpkExpr *, SpkToken *, SpkParser *);
 
 SpkStmt *SpkParser_NewModuleDef(SpkStmt *);
 SpkStmt *SpkParser_ParseFileStream(FILE *, struct SpkSymbolTable *);

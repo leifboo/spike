@@ -1,0 +1,31 @@
+
+
+class XStmt {
+    obj next;
+    obj expr;
+    obj top, bottom;
+    
+    self init expr: e top: t bottom: b {
+        expr = e;
+        top = t;
+        bottom = b;
+        return self;
+    }
+    
+    next = aStmt { next = aStmt; }
+    
+    source(sourcePathname) {
+        // XXX
+        return self;
+    }
+    
+    asModuleDef() {
+        // XXX
+        return self;
+    }
+    
+    check(st, notifier) {
+        stdout.printf("Yip! Yip! Yip!\n");
+    }
+}
+

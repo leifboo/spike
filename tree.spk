@@ -1,0 +1,65 @@
+
+class TreeBuilder {
+    exprAnd(oper, cond, left, right)      { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprAssign(oper, cond, left, right)   { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprAttr(oper, cond, left, right)     { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprAttrVar(oper, cond, left, right)  { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprBinaryOp(oper, cond, left, right) { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprBlock(oper, cond, left, right)    { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprCall(oper, func, fixed, var)      { return CallExpr.new init oper: oper func: func fixed: fixed var: var; }
+    exprCompound(oper, cond, left, right) { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprCond(oper, cond, left, right)     { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprId(oper, cond, left, right)       { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprKeyword(oper, cond, left, right)  { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprLiteral(oper, cond, left, right)  { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprName(oper, cond, left, right)     { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprNI(oper, cond, left, right)       { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprOr(oper, cond, left, right)       { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprPostOp(oper, cond, left, right)   { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprPreOp(oper, cond, left, right)    { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    exprUnaryOp(oper, cond, left, right)  { return XExpr.new init oper: oper cond: cond left: left right: right; }
+    
+    operAdd() {}
+    operAddr() {}
+    operApply() {}
+    operBAnd() {}
+    operBNeg() {}
+    operBOr() {}
+    operBXOr() {}
+    operDiv() {}
+    operEq() {}
+    operGE() {}
+    operGT() {}
+    operInd() {}
+    operIndex() {}
+    operLE() {}
+    operLNeg() {}
+    operLShift() {}
+    operLT() {}
+    operMod() {}
+    operMul() {}
+    operNE() {}
+    operNeg() {}
+    operPos() {}
+    operPred() {}
+    operRShift() {}
+    operSub() {}
+    operSucc() {}
+    
+    stmtBreak(expr, top, bottom)    { return XStmt.new init expr: expr top: top bottom: bottom; }
+    stmtCompound(expr, top, bottom) { return XStmt.new init expr: expr top: top bottom: bottom; }
+    stmtContinue(expr, top, bottom) { return XStmt.new init expr: expr top: top bottom: bottom; }
+    stmtDefClass() {}
+    stmtDefMethod(expr, top, bottom) { return XStmt.new init expr: expr top: top bottom: bottom; }
+    stmtDefModule() {}
+    stmtDefType() {}
+    stmtDefVar() {}
+    stmtDoWhile(expr, top, bottom)  { return XStmt.new init expr: expr top: top bottom: bottom; }
+    stmtExpr(expr, top, bottom)     { return XStmt.new init expr: expr top: top bottom: bottom; }
+    stmtFor(expr, top, bottom)      { return XStmt.new init expr: expr top: top bottom: bottom; }
+    stmtIfElse(expr, top, bottom)   { return XStmt.new init expr: expr top: top bottom: bottom; }
+    stmtPragmaSource() {}
+    stmtReturn(expr, top, bottom)   { return XStmt.new init expr: expr top: top bottom: bottom; }
+    stmtWhile(expr, top, bottom)    { return XStmt.new init expr: expr top: top bottom: bottom; }
+    stmtYield(expr, top, bottom)    { return XStmt.new init expr: expr top: top bottom: bottom; }
+}

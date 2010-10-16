@@ -1,24 +1,3 @@
-#!/usr/bin/env spike
-
-class Color {
-    red() { self.green(); }
-    green() { self.blue(); }
-    blue() { stdout.printf("blue: %s\n", self.printString); }
-}
-
-createClass() {
-    obj myClass;
-    
-    myClass = (Color)
-              subclass: $Foo
-              instVarCount: 4
-              classVarCount: 2;
-    stdout.printf("created class: %s\n", myClass.printString);
-    
-    obj myInstance;
-    myInstance = myClass.new();
-    myInstance.blue();
-}
 
 interpreter(argv) {
     obj sourcePathname = argv[1];
@@ -33,11 +12,16 @@ interpreter(argv) {
     
     st.declareBuiltIn(notifier);
     
-    obj parser = Parser.new(st, null);
+    obj tb = TreeBuilder.new();
+    
+    obj parser = Parser.new(st, tb);
     obj tree = parser.parse(stream);
     tree = tree.source(sourcePathname);
     tree = tree.asModuleDef();
     tree.check(st, notifier);
+    
+    // XXX
+    return;
     
     obj moduleClass = tree.generateCode();
     obj module = moduleClass.new();
@@ -57,7 +41,6 @@ interpreter(argv) {
 }
 
 main(argv) {
-    //createClass();
     if (argv.size > 1)
         return interpreter(argv);
     return 0;

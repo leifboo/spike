@@ -174,7 +174,8 @@ Expr *SpkParser_NewAttrExpr(Expr *obj, SpkToken *attrName,
     Expr *newExpr;
     
     newExpr = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0, dot, parser);
-    newExpr->sym = symbolNodeForToken(attrName, parser->st);
+    if (!parser->tb) /*XXX*/
+        newExpr->sym = symbolNodeForToken(attrName, parser->st);
     return newExpr;
 }
 
@@ -184,6 +185,8 @@ Expr *SpkParser_NewClassAttrExpr(SpkToken *className, SpkToken *attrName,
     Expr *obj, *newExpr;
     
     obj = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, className, parser);
+    if (parser->tb) /*XXX*/
+        return obj;
     obj->sym = className->sym;
     newExpr = SpkParser_NewExpr(Spk_EXPR_ATTR, 0, 0, obj, 0, dot, parser);
     newExpr->sym = symbolNodeForToken(attrName, parser->st);
@@ -259,9 +262,7 @@ Expr *SpkParser_NewExpr(ExprKind kind, SpkOper oper, Expr *cond,
         /* XXX: 'oper' is sometimes a meaningless zero */
         newExpr = (SpkExpr *)Spk_Send(Spk_GLOBAL(theInterpreter),
                                       parser->tb, exprSelector(kind),
-                                      kind == Spk_EXPR_CALL
-                                      ? callOperSelector(oper)
-                                      : operSelector(oper),
+                                      operSelector(oper),
                                       X(cond), X(left), X(right), /*X(token),*/
                                       0);
         Spk_XDECREF(cond);
@@ -276,6 +277,48 @@ Expr *SpkParser_NewExpr(ExprKind kind, SpkOper oper, Expr *cond,
     newExpr->cond = cond;
     newExpr->left = left;
     newExpr->right = right;
+    if (token) {
+        newExpr->lineNo = token->lineNo;
+        switch (kind) {
+        case Spk_EXPR_NAME:
+            newExpr->sym = token->sym;
+            break;
+        case Spk_EXPR_LITERAL:
+            newExpr->aux.literalValue = token->literalValue;
+            break;
+        }
+    }
+    return newExpr;
+}
+
+Expr *SpkParser_NewCallExpr(SpkOper oper,
+                            Expr *func, SpkArgList *args,
+                            SpkToken *token, SpkParser *parser)
+{
+    Expr *newExpr;
+    
+    if (parser->tb) {
+        /* XXX: bogus cast */
+        newExpr = (SpkExpr *)Spk_Send(Spk_GLOBAL(theInterpreter),
+                                      parser->tb, exprSelector(Spk_EXPR_CALL),
+                                      callOperSelector(oper),
+                                      X(func),
+                                      args ? (SpkUnknown *)args->fixed : Spk_GLOBAL(null),
+                                      args && args->var ? (SpkUnknown *)args->var   : Spk_GLOBAL(null),
+                                      /*X(token),*/
+                                      0);
+        Spk_XDECREF(func);
+        Spk_XDECREF(args->fixed);
+        Spk_XDECREF(args->var);
+        return newExpr;
+    }
+    
+    newExpr = (Expr *)SpkObject_New(Spk_CLASS(Expr));
+    newExpr->kind = Spk_EXPR_CALL;
+    newExpr->oper = oper;
+    newExpr->left = func;
+    newExpr->right = args ? args->fixed : 0;
+    newExpr->var   = args ? args->var   : 0;
     if (token)
         newExpr->lineNo = token->lineNo;
     return newExpr;
@@ -383,12 +426,80 @@ Expr *SpkParser_FreezeKeywords(Expr *expr, SpkToken *kw,
 Expr *SpkParser_NewCompoundExpr(Expr *args, SpkToken *token, SpkParser *parser) {
     Expr *arg;
     
+    /* XXX: parser->tb */
+    
     /* convert comma expression to argument list */
     for (arg = args; arg; arg = arg->nextArg) {
         arg->nextArg = arg->next;
         arg->next = 0;
     }
     return SpkParser_NewExpr(Spk_EXPR_COMPOUND, 0, 0, 0, args, token, parser);
+}
+
+void SpkParser_SetNextExpr(SpkExpr *expr, SpkExpr *nextExpr, SpkParser *parser) {
+    if (parser->tb) {
+        SpkUnknown *tmp = Spk_SetAttr(Spk_GLOBAL(theInterpreter),
+                                      (SpkUnknown *)expr, Spk_next, (SpkUnknown *)nextExpr);
+        Spk_DECREF(tmp);
+        Spk_DECREF(nextExpr);
+    } else {
+        expr->next = nextExpr;
+    }
+}
+
+void SpkParser_SetLeftExpr(SpkExpr *expr, SpkExpr *leftExpr, SpkParser *parser) {
+    if (parser->tb) {
+        SpkUnknown *tmp = Spk_SetAttr(Spk_GLOBAL(theInterpreter),
+                                      (SpkUnknown *)expr, Spk_left, (SpkUnknown *)leftExpr);
+        Spk_DECREF(tmp);
+        Spk_DECREF(leftExpr);
+    } else {
+        expr->left = leftExpr;
+    }
+}
+
+void SpkParser_SetNextArg(SpkExpr *expr, SpkExpr *nextArg, SpkParser *parser) {
+    if (parser->tb) {
+        SpkUnknown *tmp = Spk_SetAttr(Spk_GLOBAL(theInterpreter),
+                                      (SpkUnknown *)expr, Spk_nextArg, (SpkUnknown *)nextArg);
+        Spk_DECREF(tmp);
+        Spk_DECREF(nextArg);
+    } else {
+        expr->nextArg = nextArg;
+    }
+}
+
+void SpkParser_SetDeclSpecs(SpkExpr *expr, SpkExpr *declSpecs, SpkParser *parser) {
+    if (parser->tb) {
+        SpkUnknown *tmp = Spk_SetAttr(Spk_GLOBAL(theInterpreter),
+                                      (SpkUnknown *)expr, Spk_declSpecs, (SpkUnknown *)declSpecs);
+        Spk_DECREF(tmp);
+        Spk_DECREF(declSpecs);
+    } else {
+        expr->declSpecs = declSpecs;
+    }
+}
+
+void SpkParser_SetNextStmt(SpkStmt *stmt, SpkStmt *nextStmt, SpkParser *parser) {
+    if (parser->tb) {
+        SpkUnknown *tmp = Spk_SetAttr(Spk_GLOBAL(theInterpreter),
+                                      (SpkUnknown *)stmt, Spk_next, (SpkUnknown *)nextStmt);
+        Spk_DECREF(tmp);
+        Spk_DECREF(nextStmt);
+    } else {
+        stmt->next = nextStmt;
+    }
+}
+
+void SpkParser_Concat(SpkExpr *expr, SpkToken *token, SpkParser *parser) {
+    if (parser->tb) {
+        Spk_Send(Spk_GLOBAL(theInterpreter),
+                 (SpkUnknown *)expr, Spk_concat,
+                 token->literalValue,
+                 0);
+    } else {
+        SpkHost_StringConcat(&expr->aux.literalValue, token->literalValue);
+    }
 }
 
 Stmt *SpkParser_NewModuleDef(Stmt *stmtList) {
@@ -417,6 +528,7 @@ static Stmt *parse(yyscan_t lexer, SpkSymbolTable *st) {
     parserState.root = 0;
     parserState.error = 0;
     parserState.st = st; Spk_INCREF(st);
+    parserState.tb = 0;
     
     parser = SpkParser_ParseAlloc(&malloc);
     while (SpkLexer_GetNextToken(&token, lexer, st)) {
@@ -485,12 +597,43 @@ void SpkParser_Source(SpkStmt **pStmtList, SpkUnknown *source) {
 /*------------------------------------------------------------------------*/
 /* methods */
 
+static SpkUnknown *Parser_init(SpkUnknown *_self, SpkUnknown *symbolTable, SpkUnknown *treeBuilder) {
+    SpkParser *self;
+    SpkSymbolTable *st;
+    
+    self = (SpkParser *)_self;
+    
+    st = Spk_CAST(SymbolTable, symbolTable);
+    if (!st) {
+        Spk_Halt(Spk_HALT_TYPE_ERROR, "a symbol table is required");
+        goto unwind;
+    }
+    
+    Spk_XDECREF(self->st);
+    Spk_INCREF(st);
+    self->st = st;
+    
+    if (treeBuilder == Spk_GLOBAL(null)) {
+        Spk_CLEAR(self->tb);
+    } else {
+        Spk_INCREF(treeBuilder);
+        Spk_XDECREF(self->tb);
+        self->tb = treeBuilder;
+    }
+    
+    Spk_INCREF(_self);
+    return _self;
+    
+ unwind:
+    return 0;
+}
+
 static SpkUnknown *Parser_parse(SpkUnknown *_self,
                                 SpkUnknown *input,
-                                SpkUnknown *symbolTable)
+                                SpkUnknown *arg1)
 {
     SpkParser *self;
-    FILE *stream = 0; const char *string = 0; SpkSymbolTable *st;
+    FILE *stream = 0; const char *string = 0;
     yyscan_t lexer;
     void *parser;
     SpkToken token;
@@ -507,12 +650,6 @@ static SpkUnknown *Parser_parse(SpkUnknown *_self,
         goto unwind;
     }
     
-    st = Spk_CAST(SymbolTable, symbolTable);
-    if (!st) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a symbol table is required");
-        goto unwind;
-    }
-    
     SpkLexer_lex_init(&lexer);
     if (stream) {
         SpkLexer_restart(stream, lexer);
@@ -524,12 +661,8 @@ static SpkUnknown *Parser_parse(SpkUnknown *_self,
     }
     SpkLexer_set_column(1, lexer);
     
-    Spk_XDECREF(self->st);
-    Spk_INCREF(st);
-    self->st = st;
-    
     parser = SpkParser_ParseAlloc(&malloc);
-    while (SpkLexer_GetNextToken(&token, lexer, st)) {
+    while (SpkLexer_GetNextToken(&token, lexer, self->st)) {
         SpkParser_Parse(parser, token.id, token, self);
     }
     if (token.id == -1) {
@@ -551,6 +684,22 @@ static SpkUnknown *Parser_parse(SpkUnknown *_self,
     
  unwind:
     return 0;
+}
+
+
+/*------------------------------------------------------------------------*/
+/* meta-methods */
+
+static SpkUnknown *ClassParser_new(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkUnknown *newParser, *tmp;
+    
+    newParser = Spk_Send(Spk_GLOBAL(theInterpreter), Spk_SUPER, Spk_new, 0);
+    if (!newParser)
+        return 0;
+    tmp = newParser;
+    newParser = Spk_Send(Spk_GLOBAL(theInterpreter), newParser, Spk_init, arg0, arg1, 0);
+    Spk_DECREF(tmp);
+    return newParser;
 }
 
 
@@ -586,7 +735,13 @@ typedef struct SpkParserSubclass {
 } SpkParserSubclass;
 
 static SpkMethodTmpl methods[] = {
-    { "parse", SpkNativeCode_ARGS_2, &Parser_parse },
+    { "init", SpkNativeCode_ARGS_2, &Parser_init },
+    { "parse", SpkNativeCode_ARGS_1, &Parser_parse },
+    { 0 }
+};
+
+static SpkMethodTmpl metaMethods[] = {
+    { "new", SpkNativeCode_ARGS_2, &ClassParser_new },
     { 0 }
 };
 
@@ -600,6 +755,8 @@ SpkClassTmpl Spk_ClassParserTmpl = {
         &Parser_zero,
         &Parser_dealloc
     }, /*meta*/ {
-        0
+        /*accessors*/ 0,
+        metaMethods,
+        /*lvalueMethods*/ 0
     }
 };

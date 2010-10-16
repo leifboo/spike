@@ -75,6 +75,8 @@ extern SpkUnknown *Spk_False;
 extern SpkUnknown *Spk_True;
 
 /* selectors -- parser */
+extern SpkUnknown *Spk_concat;
+extern SpkUnknown *Spk_declSpecs;
 extern SpkUnknown *Spk_exprAnd;
 extern SpkUnknown *Spk_exprAssign;
 extern SpkUnknown *Spk_exprAttr;
@@ -93,6 +95,9 @@ extern SpkUnknown *Spk_exprOr;
 extern SpkUnknown *Spk_exprPostOp;
 extern SpkUnknown *Spk_exprPreOp;
 extern SpkUnknown *Spk_exprUnaryOp;
+extern SpkUnknown *Spk_left;
+extern SpkUnknown *Spk_next;
+extern SpkUnknown *Spk_nextArg;
 extern SpkUnknown *Spk_operAdd;
 extern SpkUnknown *Spk_operAddr;
 extern SpkUnknown *Spk_operApply;

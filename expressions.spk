@@ -1,0 +1,34 @@
+
+
+class XExpr {
+    obj oper;
+    obj declSpecs;
+    obj next, nextArg;
+    obj cond, left, right;
+    
+    self init oper: o cond: c left: l right: r {
+        oper = o;
+        cond = c;
+        left = l;
+        right = r;
+        return self;
+    }
+    
+    declSpecs = ds { declSpecs = ds; }
+    next = anExpr { next = anExpr; }
+    nextArg = anExpr { nextArg = anExpr; }
+    
+    //concat() {}
+    //left() {}
+}
+
+
+class CallExpr : XExpr {
+    obj var;
+    
+    self init oper: o func: func fixed: fixed var: v {
+        super init oper: o cond: null left: func right: fixed;
+        var = v;
+        return self;
+    }
+}
