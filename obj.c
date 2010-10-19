@@ -6,6 +6,7 @@
 #include "class.h"
 #include "heart.h"
 #include "host.h"
+#include "int.h"
 #include "interp.h"
 #include "native.h"
 #include "str.h"
@@ -38,6 +39,10 @@ static SpkUnknown *Object_ne(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg
 static SpkUnknown *Object_compoundExpression(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
     Spk_INCREF(arg0);
     return arg0;
+}
+
+static SpkUnknown *Object_id(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    return SpkInteger_FromCPtrdiff((char *)self - (char *)0);
 }
 
 static SpkUnknown *Object_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
@@ -148,6 +153,7 @@ static SpkMethodTmpl ObjectMethods[] = {
     { "__eq__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Object_eq },
     { "__ne__", SpkNativeCode_BINARY_OPER, &Object_ne },
     { "compoundExpression", SpkNativeCode_ARGS_ARRAY, &Object_compoundExpression },
+    { "id", SpkNativeCode_ARGS_0, &Object_id },
     { "printString", SpkNativeCode_ARGS_0, &Object_printString },
     { 0 }
 };
