@@ -11,7 +11,35 @@ class XExpr {
         cond = c;
         left = l;
         right = r;
+        
+        declSpecs = null;
+        next = null;
+        nextArg = null;
+        
         return self;
+    }
+    
+    graphviz(stream) {
+        stream.printf("    n%d[label=\"%s\"];\n", self.id, self.printString);
+        
+        if (nextArg !== null)
+            nextArg.graphviz(stream);
+        if (next !== null)
+            next.graphviz(stream);
+        
+        if (cond !== null)
+            cond.graphviz(stream);
+        if (left !== null)
+            left.graphviz(stream);
+        if (right !== null)
+            right.graphviz(stream);
+        
+        if (cond !== null)
+            stream.printf("    n%d->n%d[label=\"cond\"];\n", self.id, cond.id);
+        if (left !== null)
+            stream.printf("    n%d->n%d[label=\"left\"];\n", self.id, left.id);
+        if (right !== null)
+            stream.printf("    n%d->n%d[label=\"right\"];\n", self.id, right.id);
     }
     
     declSpecs = ds { declSpecs = ds; }

@@ -9,6 +9,7 @@ class XStmt {
         expr = e;
         top = t;
         bottom = b;
+        next = null;
         return self;
     }
     
@@ -25,7 +26,30 @@ class XStmt {
     }
     
     check(st, notifier) {
+        self.graphviz(stdout);
         stdout.printf("Yip! Yip! Yip!\n");
+    }
+    
+    graphviz(stream) {
+        stream.printf("    n%d[label=\"%s\"];\n", self.id, self.printString);
+        
+        if (next !== null)
+            next.graphviz(stream);
+        if (expr !== null)
+            expr.graphviz(stream);
+        if (top !== null)
+            top.graphviz(stream);
+        if (bottom !== null)
+            bottom.graphviz(stream);
+        
+        if (next !== null)
+            stream.printf("    n%d->n%d[label=\"next\"];\n", self.id, next.id);
+        if (expr !== null)
+            stream.printf("    n%d->n%d[label=\"expr\"];\n", self.id, expr.id);
+        if (top !== null)
+            stream.printf("    n%d->n%d[label=\"top\"];\n", self.id, top.id);
+        if (bottom !== null)
+            stream.printf("    n%d->n%d[label=\"bottom\"];\n", self.id, bottom.id);
     }
 }
 
