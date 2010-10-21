@@ -42,7 +42,7 @@ static SpkUnknown *Object_compoundExpression(SpkUnknown *self, SpkUnknown *arg0,
 }
 
 static SpkUnknown *Object_id(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return SpkInteger_FromCPtrdiff((char *)self - (char *)0);
+    return (SpkUnknown *)SpkInteger_FromCPtrdiff((char *)self - (char *)0);
 }
 
 static SpkUnknown *Object_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {

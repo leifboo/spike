@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
         return 1;
     
     notifier = Spk_Send(Spk_GLOBAL(theInterpreter),
-                        (SpkUnknown *)Spk_CLASS(Notifier),
+                        (SpkUnknown *)Spk_CLASS(XNotifier),
                         Spk_new,
                         Spk_GLOBAL(xstderr),
                         0);

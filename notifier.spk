@@ -1,0 +1,44 @@
+
+
+class Notifier {
+    obj stream, errorTally, source;
+    
+    self init stream: aStream {
+        stream = aStream;
+        errorTally = 0;
+        source = "<unknown>";
+    }
+    
+    self badExpr: expr desc: desc {
+        stream.printf("%s:%u: %s\n", source, expr.lineNo, desc);
+        ++errorTally;
+    }
+    
+    self redefinedSymbol: expr {
+        stream.fprintf("%s:%u: symbol '%s' multiply defined\n"
+                       source, expr.lineNo,
+                       expr.sym.sym.printString);
+        ++errorTally;
+    }
+    
+    self undefinedSymbol: expr {
+        stream.printf("%s:%u: symbol '%s' undefined\n",
+                      source, expr.lineNo,
+                      expr.sym.sym.printString);
+        ++errorTally;
+    }
+    
+    failOnError {
+        if (errorTally > 0)
+            self halt: "errors";
+    }
+    
+    source { return source; }
+    source = pathname { source = pathname; }
+
+} meta {
+    
+    self new stream: aStream {
+        return self.new init stream: aStream;
+    }
+}

@@ -95,6 +95,7 @@ extern SpkUnknown *Spk_exprOr;
 extern SpkUnknown *Spk_exprPostOp;
 extern SpkUnknown *Spk_exprPreOp;
 extern SpkUnknown *Spk_exprUnaryOp;
+extern SpkUnknown *Spk_isType;
 extern SpkUnknown *Spk_left;
 extern SpkUnknown *Spk_next;
 extern SpkUnknown *Spk_nextArg;
@@ -140,6 +141,7 @@ extern SpkUnknown *Spk_stmtPragmaSource;
 extern SpkUnknown *Spk_stmtReturn;
 extern SpkUnknown *Spk_stmtWhile;
 extern SpkUnknown *Spk_stmtYield;
+extern SpkUnknown *Spk_symbolNodeForSymbol;
 
 typedef struct SpkSpecialSelector {
     SpkUnknown **selector;
@@ -151,6 +153,7 @@ extern SpkSpecialSelector Spk_operCallSelectors[Spk_NUM_CALL_OPER];
 
 
 /* integers */
+extern SpkUnknown *Spk_0;
 extern SpkUnknown *Spk_1;
 
 

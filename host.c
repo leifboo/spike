@@ -34,6 +34,7 @@ static const char *haltDesc(int code) {
     case Spk_HALT_ASSERTION_ERROR: desc = "assertion error"; break;
     case Spk_HALT_ERROR:           desc = "error";           break;
     case Spk_HALT_INDEX_ERROR:     desc = "index error";     break;
+    case Spk_HALT_KEY_ERROR:       desc = "key error";       break;
     case Spk_HALT_MEMORY_ERROR:    desc = "memory error";    break;
     case Spk_HALT_RUNTIME_ERROR:   desc = "runtime error";   break;
     case Spk_HALT_TYPE_ERROR:      desc = "type error";      break;

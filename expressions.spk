@@ -1,6 +1,6 @@
 
 
-class XExpr {
+class Expr {
     obj oper;
     obj declSpecs;
     obj next, nextArg;
@@ -51,7 +51,51 @@ class XExpr {
 }
 
 
-class CallExpr : XExpr {
+class NameExpr : Expr {
+    obj sym;
+    // definition
+    obj index, pushOpcode, storeOpcode;
+    // reference
+    obj def;
+    // both
+    obj level;
+    
+    self init oper: o cond: c left: l right: r sym: s {
+        self init oper: o cond: c left: l right: r;
+        sym = s;
+        return self;
+    }
+
+    self definition level: l index: i pushOpcode: po storeOpcode: so {
+        level = l;
+        index = i;
+        if (pushOpcode == Opcode.nop) { /* not built-in scope */
+            pushOpcode = po;
+            storeOpcode = so;
+        }
+    }
+    
+    self reference def: d level: l {
+        def = d;
+        level = l;
+    }
+    
+    isType { return def !== null && def.isTypeDef; }
+}
+
+
+class LiteralExpr : Expr {
+    obj value;
+    
+    self init oper: o cond: c left: l right: r value: v {
+        self init oper: o cond: c left: l right: r;
+        value = v;
+        return self;
+    }
+}
+
+
+class CallExpr : Expr {
     obj var;
     
     self init oper: o func: func fixed: fixed var: v {

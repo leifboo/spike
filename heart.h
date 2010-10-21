@@ -21,8 +21,6 @@ typedef struct SpkHeart {
     struct SpkBehavior *Char;
     struct SpkBehavior *Class;
     struct SpkBehavior *Context;
-    struct SpkBehavior *ContextClass;
-    struct SpkBehavior *Expr;
     struct SpkBehavior *False;
     struct SpkBehavior *Fiber;
     struct SpkBehavior *FileStream;
@@ -35,23 +33,27 @@ typedef struct SpkHeart {
     struct SpkBehavior *Method;
     struct SpkBehavior *MethodContext;
     struct SpkBehavior *Module;
-    struct SpkBehavior *Notifier;
     struct SpkBehavior *Null;
     struct SpkBehavior *Object;
-    struct SpkBehavior *Parser;
     struct SpkBehavior *ProcessorScheduler;
-    struct SpkBehavior *STEntry;
-    struct SpkBehavior *Scope;
-    struct SpkBehavior *Stmt;
     struct SpkBehavior *String;
     struct SpkBehavior *Symbol;
-    struct SpkBehavior *SymbolNode;
-    struct SpkBehavior *SymbolTable;
     struct SpkBehavior *Thunk;
     struct SpkBehavior *True;
     struct SpkBehavior *Uninit;
     struct SpkBehavior *VariableObject;
     struct SpkBehavior *Void;
+    
+    struct SpkBehavior *Parser;
+    
+    struct SpkBehavior *XExpr;
+    struct SpkBehavior *XStmt;
+    struct SpkBehavior *XSymbolNode;
+    struct SpkBehavior *XSTEntry;
+    struct SpkBehavior *XContextClass;
+    struct SpkBehavior *XScope;
+    struct SpkBehavior *XSymbolTable;
+    struct SpkBehavior *XNotifier;
 
 
     /*

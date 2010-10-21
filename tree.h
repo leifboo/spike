@@ -54,7 +54,7 @@ typedef enum SpkExprNameKind {
 } SpkExprNameKind;
 
 
-typedef struct SpkExpr SpkExpr;
+typedef struct SpkExpr SpkExpr, SpkXExpr;
 typedef struct SpkExprList SpkExprList;
 typedef struct SpkArgList SpkArgList;
 typedef struct SpkStmt SpkStmt;
@@ -151,7 +151,7 @@ struct SpkStmt {
 };
 
 
-extern struct SpkClassTmpl Spk_ClassExprTmpl, Spk_ClassStmtTmpl;
+extern struct SpkClassTmpl Spk_ClassXExprTmpl, Spk_ClassXStmtTmpl;
 
 
 #endif /* __spk_tree_h__ */

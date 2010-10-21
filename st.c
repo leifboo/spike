@@ -26,7 +26,7 @@ SpkSymbolNode *SpkSymbolNode_FromSymbol(SpkSymbolTable *st, SpkUnknown *sym) {
         return s;
     }
     
-    s = (SpkSymbolNode *)SpkObject_New(Spk_CLASS(SymbolNode));
+    s = (SpkSymbolNode *)SpkObject_New(Spk_CLASS(XSymbolNode));
     Spk_INCREF(sym);
     Spk_XDECREF(s->sym);
     s->sym = sym;
@@ -68,7 +68,7 @@ int SpkSymbolNode_IsType(SpkSymbolNode *node) {
 SpkSymbolTable *SpkSymbolTable_New() {
     SpkSymbolTable *newSymbolTable;
     
-    newSymbolTable = (SpkSymbolTable *)SpkObject_New(Spk_CLASS(SymbolTable));
+    newSymbolTable = (SpkSymbolTable *)SpkObject_New(Spk_CLASS(XSymbolTable));
     Spk_XDECREF(newSymbolTable->symbolNodes);
     newSymbolTable->symbolNodes = SpkHost_NewSymbolDict();
     return newSymbolTable;
@@ -80,12 +80,12 @@ void SpkSymbolTable_EnterScope(SpkSymbolTable *st, int enterNewContext) {
     
     outerScope = st->currentScope;
     
-    newScope = (SpkScope *)SpkObject_New(Spk_CLASS(Scope));
+    newScope = (SpkScope *)SpkObject_New(Spk_CLASS(XScope));
     Spk_XINCREF(outerScope);
     Spk_XDECREF(newScope->outer);
     newScope->outer = outerScope;
     if (enterNewContext) {
-        newContext = (SpkContextClass *)SpkObject_New(Spk_CLASS(ContextClass));
+        newContext = (SpkContextClass *)SpkObject_New(Spk_CLASS(XContextClass));
         Spk_INCREF(newScope);
         Spk_XDECREF(newContext->scope);
         newContext->scope = newScope;
@@ -201,7 +201,7 @@ SpkUnknown *SpkSymbolTable_Insert(SpkSymbolTable *st, SpkExpr *def,
         return Spk_GLOBAL(xvoid);
     }
     
-    newEntry = (SpkSTEntry *)SpkObject_New(Spk_CLASS(STEntry));
+    newEntry = (SpkSTEntry *)SpkObject_New(Spk_CLASS(XSTEntry));
     Spk_XDECREF(newEntry->scope);
     Spk_XDECREF(newEntry->nextInScope);
     Spk_XDECREF(newEntry->shadow);
@@ -272,6 +272,20 @@ SpkUnknown *SpkSymbolTable_Bind(SpkSymbolTable *st, SpkExpr *expr,
 /*------------------------------------------------------------------------*/
 /* methods */
 
+static SpkUnknown *SymbolNode_isType(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    int isType; SpkUnknown *result;
+    
+    isType = SpkSymbolNode_IsType((SpkSymbolNode *)self);
+    if (Spk_GLOBAL(xtrue)) {
+        result = isType ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse);
+    } else /* compiling "bool.spk"; true & false don't exist yet */ {
+        result = isType ? Spk_1 : Spk_0;
+    }
+    Spk_INCREF(result);
+    return result;
+}
+
+
 static SpkUnknown *SymbolTable_init(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkSymbolTable *self;
     
@@ -286,6 +300,11 @@ static SpkUnknown *SymbolTable_init(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkn
 static SpkUnknown *SymbolTable_declareBuiltIn(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
     SpkSymbolTable *self = (SpkSymbolTable *)_self;
     return SpkStaticChecker_DeclareBuiltIn(self, arg0);
+}
+
+static SpkUnknown *SymbolTable_symbolNodeForSymbol(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkSymbolTable *self = (SpkSymbolTable *)_self;
+    return (SpkUnknown *)SpkSymbolNode_FromSymbol(self, arg0);
 }
 
 
@@ -312,7 +331,7 @@ static SpkUnknown *ClassSymbolTable_new(SpkUnknown *self, SpkUnknown *arg0, SpkU
 
 static void SymbolNode_zero(SpkObject *_self) {
     SpkSymbolNode *self = (SpkSymbolNode *)_self;
-    (*Spk_CLASS(SymbolNode)->superclass->zero)(_self);
+    (*Spk_CLASS(XSymbolNode)->superclass->zero)(_self);
     self->entry = 0;
     self->sym = 0;
 }
@@ -321,7 +340,7 @@ static void SymbolNode_dealloc(SpkObject *_self, SpkUnknown **l) {
     SpkSymbolNode *self = (SpkSymbolNode *)_self;
     Spk_XLDECREF(self->entry, l);
     Spk_XLDECREF(self->sym, l);
-    (*Spk_CLASS(SymbolNode)->superclass->dealloc)(_self, l);
+    (*Spk_CLASS(XSymbolNode)->superclass->dealloc)(_self, l);
 }
 
 
@@ -329,7 +348,7 @@ static void SymbolNode_dealloc(SpkObject *_self, SpkUnknown **l) {
 
 static void STEntry_zero(SpkObject *_self) {
     SpkSTEntry *self = (SpkSTEntry *)_self;
-    (*Spk_CLASS(STEntry)->superclass->zero)(_self);
+    (*Spk_CLASS(XSTEntry)->superclass->zero)(_self);
     self->scope = 0;
     self->nextInScope = 0;
     self->shadow = 0;
@@ -344,7 +363,7 @@ static void STEntry_dealloc(SpkObject *_self, SpkUnknown **l) {
     Spk_XLDECREF(self->shadow, l);
     Spk_XLDECREF(self->sym, l);
     Spk_XLDECREF(self->def, l);
-    (*Spk_CLASS(STEntry)->superclass->dealloc)(_self, l);
+    (*Spk_CLASS(XSTEntry)->superclass->dealloc)(_self, l);
 }
 
 
@@ -352,14 +371,14 @@ static void STEntry_dealloc(SpkObject *_self, SpkUnknown **l) {
 
 static void ContextClass_zero(SpkObject *_self) {
     SpkContextClass *self = (SpkContextClass *)_self;
-    (*Spk_CLASS(ContextClass)->superclass->zero)(_self);
+    (*Spk_CLASS(XContextClass)->superclass->zero)(_self);
     self->scope = 0;
 }
 
 static void ContextClass_dealloc(SpkObject *_self, SpkUnknown **l) {
     SpkContextClass *self = (SpkContextClass *)_self;
     Spk_XLDECREF(self->scope, l);
-    (*Spk_CLASS(ContextClass)->superclass->dealloc)(_self, l);
+    (*Spk_CLASS(XContextClass)->superclass->dealloc)(_self, l);
 }
 
 
@@ -367,7 +386,7 @@ static void ContextClass_dealloc(SpkObject *_self, SpkUnknown **l) {
 
 static void Scope_zero(SpkObject *_self) {
     SpkScope *self = (SpkScope *)_self;
-    (*Spk_CLASS(Scope)->superclass->zero)(_self);
+    (*Spk_CLASS(XScope)->superclass->zero)(_self);
     self->outer = 0;
     self->entryList = 0;
     self->context = 0;
@@ -378,7 +397,7 @@ static void Scope_dealloc(SpkObject *_self, SpkUnknown **l) {
     Spk_XLDECREF(self->outer, l);
     Spk_XLDECREF(self->entryList, l);
     Spk_XLDECREF(self->context, l);
-    (*Spk_CLASS(Scope)->superclass->dealloc)(_self, l);
+    (*Spk_CLASS(XScope)->superclass->dealloc)(_self, l);
 }
 
 
@@ -386,7 +405,7 @@ static void Scope_dealloc(SpkObject *_self, SpkUnknown **l) {
 
 static void SymbolTable_zero(SpkObject *_self) {
     SpkSymbolTable *self = (SpkSymbolTable *)_self;
-    (*Spk_CLASS(SymbolTable)->superclass->zero)(_self);
+    (*Spk_CLASS(XSymbolTable)->superclass->zero)(_self);
     self->currentScope = 0;
     self->symbolNodes = 0;
 }
@@ -397,7 +416,7 @@ static void SymbolTable_dealloc(SpkObject *_self, SpkUnknown **l) {
         SpkSymbolTable_ExitScope(self);
     }
     Spk_XLDECREF(self->symbolNodes, l);
-    (*Spk_CLASS(SymbolTable)->superclass->dealloc)(_self, l);
+    (*Spk_CLASS(XSymbolTable)->superclass->dealloc)(_self, l);
 }
 
 
@@ -430,10 +449,15 @@ typedef struct SpkSymbolTableSubclass {
 } SpkSymbolTableSubclass;
 
 
-SpkClassTmpl Spk_ClassSymbolNodeTmpl = {
-    Spk_HEART_CLASS_TMPL(SymbolNode, Object), {
+static SpkMethodTmpl SymbolNodeMethods[] = {
+    { "isType", SpkNativeCode_ARGS_0, &SymbolNode_isType },
+    { 0 }
+};
+
+SpkClassTmpl Spk_ClassXSymbolNodeTmpl = {
+    Spk_HEART_CLASS_TMPL(XSymbolNode, Object), {
         /*accessors*/ 0,
-        /*methods*/ 0,
+        SymbolNodeMethods,
         /*lvalueMethods*/ 0,
         offsetof(SpkSymbolNodeSubclass, variables),
         /*itemSize*/ 0,
@@ -445,8 +469,8 @@ SpkClassTmpl Spk_ClassSymbolNodeTmpl = {
 };
 
 
-SpkClassTmpl Spk_ClassSTEntryTmpl = {
-    Spk_HEART_CLASS_TMPL(STEntry, Object), {
+SpkClassTmpl Spk_ClassXSTEntryTmpl = {
+    Spk_HEART_CLASS_TMPL(XSTEntry, Object), {
         /*accessors*/ 0,
         /*methods*/ 0,
         /*lvalueMethods*/ 0,
@@ -460,8 +484,8 @@ SpkClassTmpl Spk_ClassSTEntryTmpl = {
 };
 
 
-SpkClassTmpl Spk_ClassContextClassTmpl = {
-    Spk_HEART_CLASS_TMPL(ContextClass, Object), {
+SpkClassTmpl Spk_ClassXContextClassTmpl = {
+    Spk_HEART_CLASS_TMPL(XContextClass, Object), {
         /*accessors*/ 0,
         /*methods*/ 0,
         /*lvalueMethods*/ 0,
@@ -475,8 +499,8 @@ SpkClassTmpl Spk_ClassContextClassTmpl = {
 };
 
 
-SpkClassTmpl Spk_ClassScopeTmpl = {
-    Spk_HEART_CLASS_TMPL(Scope, Object), {
+SpkClassTmpl Spk_ClassXScopeTmpl = {
+    Spk_HEART_CLASS_TMPL(XScope, Object), {
         /*accessors*/ 0,
         /*methods*/ 0,
         /*lvalueMethods*/ 0,
@@ -493,6 +517,7 @@ SpkClassTmpl Spk_ClassScopeTmpl = {
 static SpkMethodTmpl SymbolTableMethods[] = {
     { "init", SpkNativeCode_ARGS_0, &SymbolTable_init },
     { "declareBuiltIn", SpkNativeCode_ARGS_1, &SymbolTable_declareBuiltIn },
+    { "symbolNodeForSymbol:", SpkNativeCode_ARGS_1, &SymbolTable_symbolNodeForSymbol },
     { 0 }
 };
 
@@ -501,8 +526,8 @@ static SpkMethodTmpl ClassSymbolTableMethods[] = {
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassSymbolTableTmpl = {
-    Spk_HEART_CLASS_TMPL(SymbolTable, Object), {
+SpkClassTmpl Spk_ClassXSymbolTableTmpl = {
+    Spk_HEART_CLASS_TMPL(XSymbolTable, Object), {
         /*accessors*/ 0,
         SymbolTableMethods,
         /*lvalueMethods*/ 0,

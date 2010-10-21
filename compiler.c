@@ -20,7 +20,7 @@
 
 
 static SpkUnknown *defaultNotifier(void) {
-    return Spk_Send(Spk_GLOBAL(theInterpreter), (SpkUnknown *)Spk_CLASS(Notifier), Spk_new, Spk_GLOBAL(xstderr), 0);
+    return Spk_Send(Spk_GLOBAL(theInterpreter), (SpkUnknown *)Spk_CLASS(XNotifier), Spk_new, Spk_GLOBAL(xstderr), 0);
 }
 
 

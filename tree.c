@@ -24,7 +24,7 @@ static SpkUnknown *Stmt_check(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *r
     SpkSymbolTable *st;
     
     self = (SpkStmt *)_self;
-    st = Spk_CAST(SymbolTable, arg0);
+    st = Spk_CAST(XSymbolTable, arg0);
     if (!st) {
         Spk_Halt(Spk_HALT_TYPE_ERROR, "a symbol table is required");
         return 0;
@@ -60,7 +60,7 @@ static SpkUnknown *Stmt_source(SpkUnknown *self, SpkUnknown *sourcePathname, Spk
 static void Expr_zero(SpkObject *_self) {
     SpkExpr *self = (SpkExpr *)_self;
     size_t baseSize = offsetof(SpkExpr, kind);
-    (*Spk_CLASS(Expr)->superclass->zero)(_self);
+    (*Spk_CLASS(XExpr)->superclass->zero)(_self);
     memset((char *)self + baseSize,
            0,
            sizeof(SpkExpr) - baseSize);
@@ -105,7 +105,7 @@ static void Expr_dealloc(SpkObject *_self, SpkUnknown **l) {
         break;
     }
         
-    return (*Spk_CLASS(Expr)->superclass->dealloc)(_self, l);
+    return (*Spk_CLASS(XExpr)->superclass->dealloc)(_self, l);
 }
 
 
@@ -114,7 +114,7 @@ static void Expr_dealloc(SpkObject *_self, SpkUnknown **l) {
 static void Stmt_zero(SpkObject *_self) {
     SpkStmt *self = (SpkStmt *)_self;
     size_t baseSize = offsetof(SpkStmt, kind);
-    (*Spk_CLASS(Stmt)->superclass->zero)(_self);
+    (*Spk_CLASS(XStmt)->superclass->zero)(_self);
     memset((char *)self + baseSize,
            0,
            sizeof(SpkStmt) - baseSize);
@@ -148,7 +148,7 @@ static void Stmt_dealloc(SpkObject *_self, SpkUnknown **l) {
         break;
     }
     
-    return (*Spk_CLASS(Stmt)->superclass->dealloc)(_self, l);
+    return (*Spk_CLASS(XStmt)->superclass->dealloc)(_self, l);
 }
 
 
@@ -164,8 +164,8 @@ static SpkMethodTmpl ExprMethods[] = {
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassExprTmpl = {
-    Spk_HEART_CLASS_TMPL(Expr, Object), {
+SpkClassTmpl Spk_ClassXExprTmpl = {
+    Spk_HEART_CLASS_TMPL(XExpr, Object), {
         /*accessors*/ 0,
         ExprMethods,
         /*lvalueMethods*/ 0,
@@ -192,8 +192,8 @@ static SpkMethodTmpl StmtMethods[] = {
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassStmtTmpl = {
-    Spk_HEART_CLASS_TMPL(Stmt, Object), {
+SpkClassTmpl Spk_ClassXStmtTmpl = {
+    Spk_HEART_CLASS_TMPL(XStmt, Object), {
         /*accessors*/ 0,
         StmtMethods,
         /*lvalueMethods*/ 0,

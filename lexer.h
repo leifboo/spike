@@ -12,8 +12,7 @@ struct SpkSymbolTable;
 
 typedef struct SpkToken {
     int id;
-    struct SpkSymbolNode *sym;
-    SpkUnknown *literalValue;
+    SpkUnknown *value;
     unsigned int lineNo;
 } SpkToken;
 
@@ -37,7 +36,7 @@ void SpkLexer_set_column(int, yyscan_t);
 int SpkLexer_lex(yyscan_t);
 int SpkLexer_lex_destroy(yyscan_t);
 
-int SpkLexer_GetNextToken(SpkToken *, yyscan_t, struct SpkSymbolTable *);
+int SpkLexer_GetNextToken(SpkToken *, yyscan_t, SpkUnknown *);
 
 
 #endif /* __spk_lexer_h__ */

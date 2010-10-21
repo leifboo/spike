@@ -28,8 +28,8 @@ interpreter(argv) {
         return 1;
     }
     
-    obj st = SymbolTable.new();
-    obj notifier = Notifier.new(stderr);
+    obj st = XSymbolTable.new();
+    obj notifier = XNotifier.new(stderr);
     
     st.declareBuiltIn(notifier);
     

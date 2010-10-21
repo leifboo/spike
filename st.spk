@@ -1,0 +1,245 @@
+
+
+class SymbolNode {
+    obj /*STEntry*/ entry;
+    obj /*Symbol*/ sym;
+    
+    self init symbol: aSymbol {
+        entry = null;
+        sym = aSymbol;
+        return self;
+    }
+    
+    isType { return entry !== null && entry.isType; }
+    
+} meta {
+    
+    self new symbol: aSymbol {
+        return self.new init symbol: aSymbol;
+    }
+
+}
+
+
+class STEntry {
+    obj /*Scope*/ scope;
+    obj /*STEntry*/ nextInScope;
+    obj /*STEntry*/ shadow;
+    obj /*SymbolNode*/ sym;
+    obj /*Expr*/ def;
+    
+    self init scope: aScope nextInScope: entryList def: anExpr {
+        scope = aScope;
+        nextInScope = entryList;
+        sym = def.sym;
+        def = anExpr;
+        
+        shadow = sym.entry;
+        sym.entry = self;
+        
+        return self;
+    }
+    
+    isType { return def !== null && def.isType; }
+    
+} meta {
+    
+    self new scope: aScope nextInScope: entryList def: anExpr {
+        return self.new init scope: aScope nextInScope: entryList def: anExpr;
+    }
+    
+}
+
+
+class ContextClass {
+    obj /*Scope*/ scope;
+    obj /*unsigned int*/ level;
+    obj /*Opcode*/ pushOpcode, storeOpcode;
+    obj /*unsigned int*/ nDefs;
+    
+    
+    self init scope: aScope {
+        obj outerScope, outerContext;
+        
+        scope = aScope;
+        nDefs = 0;
+        
+        outerScope = scope.outer;
+        if (outerScope === null) {
+            /* built-in scope */
+            level = 0;
+            pushOpcode = Opcode.nop;
+            storeOpcode = Opcode.nop;
+        } else {
+            outerContext = outerScope.context;
+            level = outerContext.level + 1;
+            pushOpcode = Opcode.innerPushOpcode(outerContext.pushOpcode);
+            storeOpcode = Opcode.innerStoreOpcode(outerContext.storeOpcode);
+        }
+        
+        return self;
+    }
+    
+    
+    self newDef: def {
+        /* XXX: We could overlap scopes with the addition of a 'clear'
+           opcode. */
+        def definition
+            level: level index: nDefs++
+            pushOpcode: pushOpcode storeOpcode: storeOpcode;
+    }
+    
+    
+    level { return level; }
+    
+    
+} meta {
+    
+    self new scope: aScope {
+        return self.new init scope: aScope;
+    }
+    
+}
+
+
+class Scope {
+    obj /*Scope*/ outer;
+    obj /*STEntry*/ entryList;
+    obj /*ContextClass*/ context;
+    
+    self init outer: outerScope {
+        outer = outerScope;
+        entryList = null;
+        context = null;
+        return self;
+    }
+    
+    self newEntry: def requestor: requestor {
+        obj newEntry, oldEntry;
+        
+        oldEntry = def.sym.entry;
+        
+        if (oldEntry !== null &&
+            (oldEntry.scope === self ||
+             oldEntry.scope.context.level == 0 /*built-in*/ )) {
+            /* multiply defined */
+            requestor redefinedSymbol: def;
+            return;
+        }
+        
+        newEntry = (STEntry new
+                    scope: self
+                    nextInScope: entryList
+                    def: def);
+        
+        entryList = newEntry;
+        
+        context newDef: def;
+        
+        return newEntry;
+    }
+    
+    context { return context; }
+    context = aContext { context = aContext; }
+    
+} meta {
+    
+    self new outer: outerScope {
+        return self.new init outer: outerScope;
+    }
+    
+}
+
+
+class SymbolTable {
+    obj /*Scope*/ currentScope;
+    obj /*IdentityDictionary*/ symbolNodes;
+    
+    
+    init {
+        currentScope = null;
+        symbolNodes = IdentityDictionary new;
+        return self;
+    }
+    
+    
+    declareBuiltIn(notifier) {
+        // XXX
+    }
+    
+    
+    enterScope(enterNewContext) {
+        obj newScope, newContext;
+        
+        newScope = Scope new outer: currentScope;
+        
+        if (enterNewContext) {
+            newContext = ContextClass new scope: newScope;
+            newScope.context = newContext;
+        } else {
+            newScope.context = currentScope.context;
+        }
+        
+        currentScope = newScope;
+    }
+    
+    
+    exitScope() {
+        obj entry, sym;
+        
+        for (entry = currentScope.entryList; entry !== null; entry = entry.nextInScope) {
+            sym = entry.sym;
+            //assert(sym.entry === entry);
+            sym.entry = entry.shadow;
+        }
+        
+        currentScope = currentScope.outer;
+    }
+    
+    
+    insert(def, requestor) {
+        currentScope newEntry: def requestor: requestor;
+    }
+    
+    
+    lookup(sym) {
+        obj entry;
+        
+        entry = sym.entry;
+        return entry !== null ? entry.def : 0;
+    }
+    
+    
+    bind(expr, requestor) {
+        obj entry;
+        
+        entry = expr.sym.entry;
+        if (entry !== null) {
+            expr reference def: entry.def level: currentScope.context.level;
+        } else {
+            /* undefined */
+            requestor undefinedSymbol: expr;
+        }
+    }
+    
+    
+    self symbolNodeForSymbol: sym {
+        obj node;
+        
+        node = symbolNodes.get(sym);
+        if (node !== null)
+            return node;
+        
+        node = SymbolNode new symbol: sym;
+        symbolNodes[sym] = node;
+        return node;
+    }
+    
+    
+} meta {
+    
+    new {
+        return super.new init;
+    }
+    
+}

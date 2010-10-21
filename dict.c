@@ -20,7 +20,7 @@ struct SpkIdentityDictionary {
 
 
 /*------------------------------------------------------------------------*/
-/* methods */
+/* C API */
 
 SpkUnknown *SpkIdentityDictionary_GetItem(SpkIdentityDictionary *self, SpkUnknown *key) {
     size_t mask, start, i;
@@ -170,6 +170,45 @@ size_t SpkIdentityDictionary_Size(SpkIdentityDictionary *self) {
 
 
 /*------------------------------------------------------------------------*/
+/* methods */
+
+static SpkUnknown *IdentityDictionary_item(SpkUnknown *_self, SpkUnknown *key, SpkUnknown *arg1) {
+    SpkIdentityDictionary *self;
+    SpkUnknown *value;
+    
+    self = (SpkIdentityDictionary *)_self;
+    value = SpkIdentityDictionary_GetItem(self, key);
+    if (!value) {
+        Spk_Halt(Spk_HALT_KEY_ERROR, "");
+        return 0;
+    }
+    return value;
+}
+
+static SpkUnknown *IdentityDictionary_get(SpkUnknown *_self, SpkUnknown *key, SpkUnknown *arg1) {
+    SpkIdentityDictionary *self;
+    SpkUnknown *value;
+    
+    self = (SpkIdentityDictionary *)_self;
+    value = SpkIdentityDictionary_GetItem(self, key);
+    if (!value) {
+        value = Spk_GLOBAL(null);
+        Spk_INCREF(value);
+    }
+    return value;
+}
+
+static SpkUnknown *IdentityDictionary_setItem(SpkUnknown *_self, SpkUnknown *key, SpkUnknown *value) {
+    SpkIdentityDictionary *self;
+    
+    self = (SpkIdentityDictionary *)_self;
+    SpkIdentityDictionary_SetItem(self, key, value);
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
+}
+
+
+/*------------------------------------------------------------------------*/
 /* low-level hooks */
 
 static void IdentityDictionary_zero(SpkObject *_self) {
@@ -208,15 +247,27 @@ typedef struct SpkIdentityDictionarySubclass {
     SpkUnknown *variables[1]; /* stretchy */
 } SpkIdentityDictionarySubclass;
 
+static SpkAccessorTmpl accessors[] = {
+    { "size", Spk_T_SIZE, offsetof(SpkIdentityDictionary, tally), SpkAccessor_READ },
+    { 0 }
+};
+
 static SpkMethodTmpl methods[] = {
+    { "__index__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &IdentityDictionary_item },
+    { "get", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &IdentityDictionary_get },
+    { 0 }
+};
+
+static SpkMethodTmpl lvalueMethods[] = {
+    { "__index__", SpkNativeCode_ARGS_2 | SpkNativeCode_LEAF, &IdentityDictionary_setItem },
     { 0 }
 };
 
 SpkClassTmpl Spk_ClassIdentityDictionaryTmpl = {
     Spk_HEART_CLASS_TMPL(IdentityDictionary, Object), {
-        /*accessors*/ 0,
+        accessors,
         methods,
-        /*lvalueMethods*/ 0,
+        lvalueMethods,
         offsetof(SpkIdentityDictionarySubclass, variables),
         /*itemSize*/ 0,
         &IdentityDictionary_zero,

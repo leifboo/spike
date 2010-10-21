@@ -16,7 +16,7 @@ typedef struct SpkParser {
     SpkObject base;
     SpkStmt *root;
     int error;
-    struct SpkSymbolTable *st;
+    SpkUnknown *st;
     SpkUnknown *tb;
 } SpkParser;
 

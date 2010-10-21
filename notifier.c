@@ -47,7 +47,7 @@ static SpkUnknown *Notifier_badExpr(SpkUnknown *_self, SpkUnknown *arg0, SpkUnkn
     const char *source, *desc;
     
     self = (SpkNotifier *)_self;
-    expr = Spk_CAST(Expr, arg0);
+    expr = Spk_CAST(XExpr, arg0);
     if (!expr) {
         Spk_Halt(Spk_HALT_TYPE_ERROR, "an expression node is required");
         return 0;
@@ -76,7 +76,7 @@ static SpkUnknown *Notifier_redefinedSymbol(SpkUnknown *_self, SpkUnknown *arg0,
     const char *source, *name, *format;
     
     self = (SpkNotifier *)_self;
-    expr = Spk_CAST(Expr, arg0);
+    expr = Spk_CAST(XExpr, arg0);
     if (!expr) {
         Spk_Halt(Spk_HALT_TYPE_ERROR, "an expression node is required");
         return 0;
@@ -105,7 +105,7 @@ static SpkUnknown *Notifier_undefinedSymbol(SpkUnknown *_self, SpkUnknown *arg0,
     const char *source;
     
     self = (SpkNotifier *)_self;
-    expr = Spk_CAST(Expr, arg0);
+    expr = Spk_CAST(XExpr, arg0);
     if (!expr) {
         Spk_Halt(Spk_HALT_TYPE_ERROR, "an expression node is required");
         return 0;
@@ -157,7 +157,7 @@ static SpkUnknown *ClassNotifier_new(SpkUnknown *self, SpkUnknown *arg0, SpkUnkn
 
 static void Notifier_zero(SpkObject *_self) {
     SpkNotifier *self = (SpkNotifier *)_self;
-    (*Spk_CLASS(Notifier)->superclass->zero)(_self);
+    (*Spk_CLASS(XNotifier)->superclass->zero)(_self);
     self->stream = 0;
     self->cStream = 0;
     self->source = 0;
@@ -167,7 +167,7 @@ static void Notifier_dealloc(SpkObject *_self, SpkUnknown **l) {
     SpkNotifier *self = (SpkNotifier *)_self;
     Spk_LDECREF(self->stream, l);
     Spk_XLDECREF(self->source, l);
-    (*Spk_CLASS(Notifier)->superclass->dealloc)(_self, l);
+    (*Spk_CLASS(XNotifier)->superclass->dealloc)(_self, l);
 }
 
 
@@ -199,8 +199,8 @@ static SpkMethodTmpl metaMethods[] = {
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassNotifierTmpl = {
-    Spk_HEART_CLASS_TMPL(Notifier, Object), {
+SpkClassTmpl Spk_ClassXNotifierTmpl = {
+    Spk_HEART_CLASS_TMPL(XNotifier, Object), {
         accessors,
         methods,
         /*lvalueMethods*/ 0,

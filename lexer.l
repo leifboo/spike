@@ -15,8 +15,10 @@ IS			(u|U|l|L)*
 #include <stdlib.h>
 #include "char.h"
 #include "gram.h"
+#include "heart.h"
 #include "host.h"
 #include "lexer.h"
+#include "rodata.h"
 #include "st.h"
 #include "sym.h"
 
@@ -303,36 +305,49 @@ static SpkUnknown *stringFromLiteral(char *str, size_t len) {
     return result;
 }
 
-int SpkLexer_GetNextToken(SpkToken *token, yyscan_t scanner, SpkSymbolTable *st) {
+static SpkUnknown *symbolNodeFromCString(SpkUnknown *st, const char *str) {
+    SpkSymbol *sym = SpkSymbol_FromCString(str);
+    return Spk_Send(Spk_GLOBAL(theInterpreter), st, Spk_symbolNodeForSymbol, sym, 0);
+}
+
+static int isType(SpkUnknown *symbolNode) {
+    SpkUnknown *bool; int result;
+    bool = Spk_Send(Spk_GLOBAL(theInterpreter), symbolNode, Spk_isType, 0);
+    result = (bool == Spk_1 || bool == Spk_GLOBAL(xtrue));
+    Spk_DECREF(bool);
+    return result;
+}
+
+int SpkLexer_GetNextToken(SpkToken *token, yyscan_t scanner, SpkUnknown *st) {
     int id;
     struct yyguts_t * yyg = (struct yyguts_t*)scanner;
     
     id = yylex(scanner);
     token->id = id;
-    token->sym = 0;
+    token->value = 0;
     token->lineNo = yylineno;
     if (id <= 0) {
         return 0;
     }
     switch (id) {
     case Spk_TOKEN_LITERAL_INT:
-        token->literalValue = intFromLiteral(yyget_text(scanner), yyget_leng(scanner));
+        token->value = intFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
     case Spk_TOKEN_LITERAL_FLOAT:
-        token->literalValue = floatFromLiteral(yyget_text(scanner), yyget_leng(scanner));
+        token->value = floatFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
     case Spk_TOKEN_LITERAL_CHAR:
-        token->literalValue = charFromLiteral(yyget_text(scanner), yyget_leng(scanner));
+        token->value = charFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
     case Spk_TOKEN_LITERAL_STR:
-        token->literalValue = stringFromLiteral(yyget_text(scanner), yyget_leng(scanner));
+        token->value = stringFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
     case Spk_TOKEN_LITERAL_SYMBOL:
-        token->literalValue = (SpkUnknown *)SpkSymbol_FromCString(yyget_text(scanner) + 1);
+        token->value = (SpkUnknown *)SpkSymbol_FromCString(yyget_text(scanner) + 1);
         break;
     case Spk_TOKEN_IDENTIFIER:
-        token->sym = SpkSymbolNode_FromCString(st, yyget_text(scanner));
-        if (SpkSymbolNode_IsType(token->sym)) {
+        token->value = symbolNodeFromCString(st, yyget_text(scanner));
+        if (isType(token->value)) {
             token->id = Spk_TOKEN_TYPE_IDENTIFIER;
         }
         break;

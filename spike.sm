@@ -3,3 +3,7 @@ spike.spk
 tree.spk
 expressions.spk
 statements.spk
+st.spk
+opcodes.spk
+operators.spk
+notifier.spk

@@ -39,6 +39,7 @@ enum /*halt codes*/ {
     Spk_HALT_ASSERTION_ERROR,
     Spk_HALT_ERROR,
     Spk_HALT_INDEX_ERROR,
+    Spk_HALT_KEY_ERROR,
     Spk_HALT_MEMORY_ERROR,
     Spk_HALT_RUNTIME_ERROR,
     Spk_HALT_TYPE_ERROR,

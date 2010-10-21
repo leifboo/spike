@@ -45,15 +45,15 @@ SpkClassBootRec Spk_essentialClassBootRec[] = {
     /**/CLASS(Void,    Object),
     /**/CLASS(Char,    Object),
     /**** compiler ****/
-    /**/CLASS(Expr,         Object),
-    /**/CLASS(Stmt,         Object),
-    /**/CLASS(SymbolNode,   Object),
-    /**/CLASS(STEntry,      Object),
-    /**/CLASS(ContextClass, Object),
-    /**/CLASS(Scope,        Object),
-    /**/CLASS(SymbolTable,  Object),
-    /**/CLASS(Parser,       Object),
-    /**/CLASS(Notifier,     Object),
+    /**/CLASS(XExpr,         Object),
+    /**/CLASS(XStmt,         Object),
+    /**/CLASS(XSymbolNode,   Object),
+    /**/CLASS(XSTEntry,      Object),
+    /**/CLASS(XContextClass, Object),
+    /**/CLASS(XScope,        Object),
+    /**/CLASS(XSymbolTable,  Object),
+    /**/CLASS(Parser,        Object),
+    /**/CLASS(XNotifier,     Object),
     0
 };
 
@@ -405,6 +405,7 @@ int Spk_Boot(void) {
        re-initialize the affected classes.  */
     SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Object), &Spk_ClassObjectTmpl.thisClass);
     SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(Array), &Spk_ClassArrayTmpl.thisClass);
+    SpkBehavior_AddMethodsFromTemplate(Spk_CLASS(IdentityDictionary), &Spk_ClassIdentityDictionaryTmpl.thisClass);
     
     initGlobalObjects();
     initGlobalVars();

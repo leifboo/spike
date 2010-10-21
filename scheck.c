@@ -740,7 +740,7 @@ static struct Type {
 static Expr *newNameExpr(void) {
     Expr *newExpr;
     
-    newExpr = (Expr *)SpkObject_New(Spk_CLASS(Expr));        
+    newExpr = (Expr *)SpkObject_New(Spk_CLASS(XExpr));        
     newExpr->kind = Spk_EXPR_NAME;
     return newExpr;
 }
@@ -751,7 +751,7 @@ static void declareBuiltInType(struct Type *bit, SpkSymbolTable *st) {
     
     nameExpr = newNameExpr();
     
-    typeDef = (SpkStmt *)SpkObject_New(Spk_CLASS(Stmt));
+    typeDef = (SpkStmt *)SpkObject_New(Spk_CLASS(XStmt));
     typeDef->kind = Spk_STMT_DEF_TYPE;
     typeDef->expr = nameExpr;
     typeDef->expr->sym = SpkSymbolNode_FromCString(st, bit->name);
@@ -772,7 +772,7 @@ static Expr *newPseudoVariable(struct PseudoVariable *pv, SpkSymbolTable *st) {
 static Stmt *predefinedClassDef(SpkClass *predefClass, StaticChecker *checker) {
     Stmt *newStmt;
     
-    newStmt = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
+    newStmt = (Stmt *)SpkObject_New(Spk_CLASS(XStmt));
     newStmt->kind = Spk_STMT_DEF_CLASS;
     newStmt->expr = newNameExpr();
     newStmt->expr->sym = SpkSymbolNode_FromSymbol(checker->st, predefClass->name);
@@ -784,7 +784,7 @@ static Stmt *predefinedClassDef(SpkClass *predefClass, StaticChecker *checker) {
 static Stmt *globalVarDef(const char *name, StaticChecker *checker) {
     Stmt *newStmt;
     
-    newStmt = (Stmt *)SpkObject_New(Spk_CLASS(Stmt));
+    newStmt = (Stmt *)SpkObject_New(Spk_CLASS(XStmt));
     newStmt->kind = Spk_STMT_DEF_VAR;
     newStmt->expr = newNameExpr();
     newStmt->expr->sym = SpkSymbolNode_FromCString(checker->st, name);
@@ -873,6 +873,8 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     if (Spk_declareBuiltIn) {
         /* XXX: What about the other core classes? */
         _(declareClass(Spk_CLASS(Array), predefList, &checker));
+        _(declareClass(Spk_CLASS(IdentityDictionary), predefList, &checker));
+        _(declareClass(Spk_CLASS(Symbol), predefList, &checker));
         for (classBootRec = Spk_essentialClassBootRec; *classBootRec; ++classBootRec) {
             classVar = (SpkBehavior **)((char *)Spk_heart + (*classBootRec)->classVarOffset);
             _(declareClass(*classVar, predefList, &checker));

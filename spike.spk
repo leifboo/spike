@@ -7,8 +7,8 @@ interpreter(argv) {
         return 1;
     }
     
-    obj st = SymbolTable.new();
-    obj notifier = Notifier.new(stderr);
+    obj st = SymbolTable new;
+    obj notifier = Notifier new stream: stderr;
     
     st.declareBuiltIn(notifier);
     

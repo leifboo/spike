@@ -1,6 +1,6 @@
 
 
-class XStmt {
+class Stmt {
     obj next;
     obj expr;
     obj top, bottom;

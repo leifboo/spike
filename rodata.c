@@ -101,6 +101,7 @@ SpkUnknown *Spk_exprOr;
 SpkUnknown *Spk_exprPostOp;
 SpkUnknown *Spk_exprPreOp;
 SpkUnknown *Spk_exprUnaryOp;
+SpkUnknown *Spk_isType;
 SpkUnknown *Spk_left;
 SpkUnknown *Spk_next;
 SpkUnknown *Spk_nextArg;
@@ -146,6 +147,7 @@ SpkUnknown *Spk_stmtPragmaSource;
 SpkUnknown *Spk_stmtReturn;
 SpkUnknown *Spk_stmtWhile;
 SpkUnknown *Spk_stmtYield;
+SpkUnknown *Spk_symbolNodeForSymbol;
 
 SpkSpecialSelector Spk_operSelectors[Spk_NUM_OPER] = {
     { &Spk___succ__,   0 },
@@ -181,6 +183,7 @@ SpkSpecialSelector Spk_operCallSelectors[Spk_NUM_CALL_OPER] = {
 
 
 /* integers */
+SpkUnknown *Spk_0;
 SpkUnknown *Spk_1;
 
 
@@ -281,6 +284,7 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_exprPostOp,                    "exprPostOp"                  },
     { &Spk_exprPreOp,                     "exprPreOp"                   },
     { &Spk_exprUnaryOp,                   "exprUnaryOp"                 },
+    { &Spk_isType,                        "isType"                      },
     { &Spk_left,                          "left"                        },
     { &Spk_next,                          "next"                        },
     { &Spk_nextArg,                       "nextArg"                     },
@@ -326,11 +330,13 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_stmtReturn,                    "stmtReturn"                  },
     { &Spk_stmtWhile,                     "stmtWhile"                   },
     { &Spk_stmtYield,                     "stmtYield"                   },
+    { &Spk_symbolNodeForSymbol,           "symbolNodeForSymbol:"        },
     
     { 0 }
 };
 
 static IntegerTableEntry integerTable[] = {
+    { &Spk_0, 0 },
     { &Spk_1, 1 },
     { 0 }
 };

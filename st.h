@@ -6,11 +6,11 @@
 #include "obj.h"
 
 
-typedef struct SpkSymbolNode SpkSymbolNode;
+typedef struct SpkSymbolNode SpkSymbolNode, SpkXSymbolNode;
 typedef struct SpkSTEntry SpkSTEntry;
 typedef struct SpkContextClass SpkContextClass;
 typedef struct SpkScope SpkScope;
-typedef struct SpkSymbolTable SpkSymbolTable;
+typedef struct SpkSymbolTable SpkSymbolTable, SpkXSymbolTable;
 
 
 struct SpkSymbolNode {
@@ -68,8 +68,8 @@ SpkUnknown *SpkSymbolTable_Bind(SpkSymbolTable *st, struct SpkExpr *expr,
                                 SpkUnknown *requestor);
 
 
-extern struct SpkClassTmpl Spk_ClassSymbolNodeTmpl, Spk_ClassSTEntryTmpl,
-    Spk_ClassContextClassTmpl, Spk_ClassScopeTmpl, Spk_ClassSymbolTableTmpl;
+extern struct SpkClassTmpl Spk_ClassXSymbolNodeTmpl, Spk_ClassXSTEntryTmpl,
+    Spk_ClassXContextClassTmpl, Spk_ClassXScopeTmpl, Spk_ClassXSymbolTableTmpl;
 
 
 #endif /* __spk_st_h__ */
