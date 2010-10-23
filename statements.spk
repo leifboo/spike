@@ -2,13 +2,8 @@
 
 class Stmt {
     obj next;
-    obj expr;
-    obj top, bottom;
     
-    self init expr: e top: t bottom: b {
-        expr = e;
-        top = t;
-        bottom = b;
+    self init {
         next = null;
         return self;
     }
@@ -25,31 +20,372 @@ class Stmt {
         return self;
     }
     
-    check(st, notifier) {
-        self.graphviz(stdout);
-        stdout.printf("Yip! Yip! Yip!\n");
-    }
-    
     graphviz(stream) {
         stream.printf("    n%d[label=\"%s\"];\n", self.id, self.printString);
         
         if (next !== null)
             next.graphviz(stream);
-        if (expr !== null)
-            expr.graphviz(stream);
-        if (top !== null)
-            top.graphviz(stream);
-        if (bottom !== null)
-            bottom.graphviz(stream);
+        
+        self childrenDo: [
+            obj name, child;
+            if (child !== null)
+                child.graphviz(stream);
+            ];
         
         if (next !== null)
             stream.printf("    n%d->n%d[label=\"next\"];\n", self.id, next.id);
-        if (expr !== null)
-            stream.printf("    n%d->n%d[label=\"expr\"];\n", self.id, expr.id);
-        if (top !== null)
-            stream.printf("    n%d->n%d[label=\"top\"];\n", self.id, top.id);
-        if (bottom !== null)
-            stream.printf("    n%d->n%d[label=\"bottom\"];\n", self.id, bottom.id);
+        
+        self childrenDo: [
+            obj name, child;
+            if (child !== null)
+                stream.printf("    n%d->n%d[label=\"%s\"];\n", self.id, child.id, name);
+            ];
     }
 }
 
+
+//------------------------------------------------------------------------
+// expression statements
+
+class ExprStmt : Stmt {
+    obj expr;
+    
+    self init expr: e top: t bottom: b {
+        super init;
+        expr = e;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("expr", expr);
+    }
+    
+    
+    check(outer, checker, outerPass) {
+        if (expr !== null) {
+            checker.checkExpr(expr, self, checker, outerPass);
+        }
+    }
+}
+
+
+//------------------------------------------------------------------------
+// compound statements
+
+class CompoundStmt : Stmt {
+    obj top;
+    
+    self init expr: e top: t bottom: b {
+        super init;
+        top = t;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("top", top);
+    }
+    
+    
+    check(outer, checker, outerPass) {
+        obj st;
+        
+        if (outerPass != $bind)
+            return;
+        
+        st = checker.symbolTable;
+        st.enterScope(false);
+        
+        checker.checkStmtList(top, self, $define);
+        checker.checkStmtList(top, self, $bind);
+        checker.checkStmtList(top, self, $pass3);
+        
+        st.exitScope();
+    }
+}
+
+
+//------------------------------------------------------------------------
+// control statements
+
+class BreakStmt : Stmt {
+    self init expr: e top: t bottom: b {
+        return super init;
+    }
+    
+    
+    self childrenDo: aBlock {
+    }
+    
+    
+    check(outer, checker, outerPass) {
+    }
+}
+
+
+class ContinueStmt : Stmt {
+    self init expr: e top: t bottom: b {
+        return super init;
+    }
+    
+    
+    self childrenDo: aBlock {
+    }
+    
+    
+    check(outer, checker, outerPass) {
+    }
+}
+
+
+class DoWhileStmt : Stmt {
+    obj expr;
+    obj top;
+    
+    self init expr: e top: t bottom: b {
+        super init;
+        expr = e;
+        top = t;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("expr", expr);
+        aBlock("top", top);
+    }
+    
+    
+    check(outer, checker, outerPass) {
+        checker.checkExpr(expr, self, outerPass);
+        top.check(self, checker, outerPass);
+    }
+}
+
+
+class ForStmt : Stmt {
+    obj init, expr, incr;
+    obj top;
+    
+    self init expr1: expr1 expr2: expr2 expr3: expr3 body: body {
+        super init;
+        init = expr1;
+        expr = expr2;
+        incr = expr3;
+        top = body;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("init", init);
+        aBlock("expr", expr);
+        aBlock("incr", incr);
+        aBlock("top", top);
+    }
+    
+    
+    check(outer, checker, outerPass) {
+        if (init !== null)
+            checker.checkExpr(init, self, outerPass);
+        if (expr !== null)
+            checker.checkExpr(expr, self, outerPass);
+        if (incr !== null)
+            checker.checkExpr(incr, self, outerPass);
+        top.check(self, checker, outerPass);
+    }
+}
+
+
+class IfElseStmt : Stmt {
+    obj expr;
+    obj top, bottom;
+    
+    self init expr: e top: t bottom: b {
+        super init;
+        expr = e;
+        top = t;
+        bottom = b;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("expr", expr);
+        aBlock("top", top);
+        aBlock("bottom", bottom);
+    }
+    
+    
+    check(outer, checker, outerPass) {
+        checker.checkExpr(expr, self, outerPass);
+        top.check(self, checker, outerPass);
+        if (bottom !== null)
+            bottom.check(self, checker, outerPass);
+    }
+}
+
+
+class ReturnStmt : Stmt {
+    obj expr;
+    
+    self init expr: e top: t bottom: b {
+        super init;
+        expr = e;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("expr", expr);
+    }
+    
+    
+    check(outer, checker, outerPass) {
+        if (expr !== null)
+            checker.checkExpr(expr, self, checker, outerPass);
+    }
+}
+
+
+class WhileStmt : Stmt {
+    obj expr;
+    obj top;
+    
+    self init expr: e top: t bottom: b {
+        super init;
+        expr = e;
+        top = t;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("expr", expr);
+        aBlock("top", top);
+    }
+    
+    
+    check(outer, checker, outerPass) {
+        checker.checkExpr(expr, self, outerPass);
+        top.check(self, checker, outerPass);
+    }
+}
+
+
+class YieldStmt : Stmt {
+    obj expr;
+    
+    self init expr: e top: t bottom: b {
+        super init;
+        expr = e;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("expr", expr);
+    }
+    
+    
+    check(outer, checker, outerPass) {
+        if (expr !== null)
+            checker.checkExpr(expr, self, checker, outerPass);
+    }
+}
+
+
+//------------------------------------------------------------------------
+// definition statements
+
+class ClassDef : Stmt {
+}
+
+
+class MethodDef : Stmt {
+    obj expr;
+    obj top, bottom;
+    
+    self init expr: e top: t bottom: b {
+        super init;
+        expr = e;
+        top = t;
+        bottom = b;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("expr", expr);
+        aBlock("top", top);
+        aBlock("bottom", bottom);
+    }
+}
+
+
+class ModuleDef : Stmt {
+}
+
+
+class TypeDef : Stmt {
+}
+
+
+class VarDef : Stmt {
+    obj expr;
+    
+    self init expr: e top: t bottom: b {
+        super init;
+        expr = e;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("expr", expr);
+    }
+    
+    
+    check(outer, checker, outerPass) {
+        obj e, def;
+        
+        checker.checkDeclSpecs(expr.declSpecs, outerPass);
+        
+        for (e = expr; e; e = e.next) {
+            if (e.class === AssignExpr) {
+                def = e.left;
+                checker.checkExpr(e.right, self, outerPass);
+            } else {
+                def = e;
+            }
+            while (def.class === UnaryOpExpr && def.oper == Oper.operInd)
+                def = def.left;
+            if (def.class !== NameExpr) {
+                if (outerPass === $declare)
+                    checker.notifier badExpr: def desc: "invalid variable definition";
+                continue;
+            }
+            if (outerPass === $declare)
+                checker.symbolTable.insert(def, checker.requestor);
+        }
+    }
+}
+
+
+
+//------------------------------------------------------------------------
+// pragma statements
+
+class SourcePragma {
+    obj source;
+    
+    
+    self childrenDo: aBlock {
+    }
+    
+    
+    check(outer, checker, outerPass) {
+        checker.requestor.source = source;
+    }
+}

@@ -285,8 +285,7 @@ Expr *SpkParser_NewExpr(ExprKind kind, SpkOper oper, Expr *cond,
         case Spk_EXPR_LITERAL:
             newExpr = (SpkExpr *)Spk_Send(Spk_GLOBAL(theInterpreter),
                                           parser->tb, exprSelector(kind),
-                                          operSelector(oper),
-                                          X(cond), X(left), X(right), token->value,
+                                          token->value,
                                           0);
             break;
         }

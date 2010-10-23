@@ -6,4 +6,5 @@ statements.spk
 st.spk
 opcodes.spk
 operators.spk
+scheck.spk
 notifier.spk

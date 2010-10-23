@@ -18,7 +18,9 @@ interpreter(argv) {
     obj tree = parser.parse(stream);
     tree = tree.source(sourcePathname);
     tree = tree.asModuleDef();
-    tree.check(st, notifier);
+    
+    obj checker = StaticChecker.new init tree: tree symbolTable: st requestor: notifier;
+    checker.check();
     
     // XXX
     return;

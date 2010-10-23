@@ -1,42 +1,39 @@
 
 class TreeBuilder {
-    exprAnd(oper, cond, left, right)      { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprAssign(oper, cond, left, right)   { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprAttr(oper, cond, left, right)     { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprAttrVar(oper, cond, left, right)  { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprBinaryOp(oper, cond, left, right) { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprBlock(oper, cond, left, right)    { return Expr.new init oper: oper cond: cond left: left right: right; }
+    exprAnd(oper, cond, left, right)      { return AndExpr.new init oper: oper cond: cond left: left right: right; }
+    exprAssign(oper, cond, left, right)   { return AssignExpr.new init oper: oper cond: cond left: left right: right; }
+    exprAttr(oper, cond, left, right)     { return AttrExpr.new init oper: oper cond: cond left: left right: right; }
+    exprAttrVar(oper, cond, left, right)  { return AttrVarExpr.new init oper: oper cond: cond left: left right: right; }
+    exprBinaryOp(oper, cond, left, right) { return BinaryOpExpr.new init oper: oper cond: cond left: left right: right; }
+    exprBlock(stmtList, expr)             { return BlockExpr.new init stmtList: stmtList expr: expr; }
     exprCall(oper, func, fixed, var)      { return CallExpr.new init oper: oper func: func fixed: fixed var: var; }
-    exprCompound(oper, cond, left, right) { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprCond(oper, cond, left, right)     { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprId(oper, cond, left, right)       { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprKeyword(oper, cond, left, right)  { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprLiteral(oper, cond, left, right, value) {
-        return LiteralExpr.new init oper: oper cond: cond left: left right: right value: value;
-    }
-    exprName(oper, cond, left, right, sym) {
-        return NameExpr.new init oper: oper cond: cond left: left right: right sym: sym;
-    }
-    exprNI(oper, cond, left, right)       { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprOr(oper, cond, left, right)       { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprPostOp(oper, cond, left, right)   { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprPreOp(oper, cond, left, right)    { return Expr.new init oper: oper cond: cond left: left right: right; }
-    exprUnaryOp(oper, cond, left, right)  { return Expr.new init oper: oper cond: cond left: left right: right; }
+    exprCompound(oper, cond, left, right) { return CompoundExpr.new init oper: oper cond: cond left: left right: right; }
+    exprCond(oper, cond, left, right)     { return CondExpr.new init oper: oper cond: cond left: left right: right; }
+    exprId(oper, cond, left, right)       { return IdExpr.new init oper: oper cond: cond left: left right: right; }
+    exprKeyword(oper, cond, left, right)  { return KeywordExpr.new init oper: oper cond: cond left: left right: right; }
+    exprLiteral(tokenValue)               { return LiteralExpr.new init tokenValue: tokenValue; }
+    exprName(tokenValue)                  { return NameExpr.new init tokenValue: tokenValue; }
+    exprNI(oper, cond, left, right)       { return NIExpr.new init oper: oper cond: cond left: left right: right; }
+    exprOr(oper, cond, left, right)       { return OrExpr.new init oper: oper cond: cond left: left right: right; }
+    exprPostOp(oper, cond, left, right)   { return PostOpExpr.new init oper: oper cond: cond left: left right: right; }
+    exprPreOp(oper, cond, left, right)    { return PreOpExpr.new init oper: oper cond: cond left: left right: right; }
+    exprUnaryOp(oper, cond, left, right)  { return UnaryOpExpr.new init oper: oper cond: cond left: left right: right; }
     
-    stmtBreak(expr, top, bottom)    { return Stmt.new init expr: expr top: top bottom: bottom; }
-    stmtCompound(expr, top, bottom) { return Stmt.new init expr: expr top: top bottom: bottom; }
-    stmtContinue(expr, top, bottom) { return Stmt.new init expr: expr top: top bottom: bottom; }
+    stmtBreak(expr, top, bottom)    { return BreakStmt.new init expr: expr top: top bottom: bottom; }
+    stmtCompound(expr, top, bottom) { return CompoundStmt.new init expr: expr top: top bottom: bottom; }
+    stmtContinue(expr, top, bottom) { return ContinueStmt.new init expr: expr top: top bottom: bottom; }
     stmtDefClass() {}
-    stmtDefMethod(expr, top, bottom) { return Stmt.new init expr: expr top: top bottom: bottom; }
+    stmtDefMethod(expr, top, bottom) { return MethodDef.new init expr: expr top: top bottom: bottom; }
     stmtDefModule() {}
     stmtDefType() {}
     stmtDefVar() {}
-    stmtDoWhile(expr, top, bottom)  { return Stmt.new init expr: expr top: top bottom: bottom; }
-    stmtExpr(expr, top, bottom)     { return Stmt.new init expr: expr top: top bottom: bottom; }
-    stmtFor(expr, top, bottom)      { return Stmt.new init expr: expr top: top bottom: bottom; }
-    stmtIfElse(expr, top, bottom)   { return Stmt.new init expr: expr top: top bottom: bottom; }
-    stmtPragmaSource() {}
-    stmtReturn(expr, top, bottom)   { return Stmt.new init expr: expr top: top bottom: bottom; }
-    stmtWhile(expr, top, bottom)    { return Stmt.new init expr: expr top: top bottom: bottom; }
-    stmtYield(expr, top, bottom)    { return Stmt.new init expr: expr top: top bottom: bottom; }
+    stmtDoWhile(expr, top, bottom)  { return DoWhileStmt.new init expr: expr top: top bottom: bottom; }
+    stmtExpr(expr, top, bottom)     { return ExprStmt.new init expr: expr top: top bottom: bottom; }
+    stmtFor(expr1, expr2, expr3, body) {
+        return ForStmt.new init expr1: expr1 expr2: expr2 expr3: expr3 body: body;
+    }
+    stmtIfElse(expr, top, bottom)   { return IfElseStmt.new init expr: expr top: top bottom: bottom; }
+    stmtReturn(expr, top, bottom)   { return ReturnStmt.new init expr: expr top: top bottom: bottom; }
+    stmtWhile(expr, top, bottom)    { return WhileStmt.new init expr: expr top: top bottom: bottom; }
+    stmtYield(expr, top, bottom)    { return YieldStmt.new init expr: expr top: top bottom: bottom; }
 }

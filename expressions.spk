@@ -1,21 +1,13 @@
 
 
 class Expr {
-    obj oper;
     obj declSpecs;
     obj next, nextArg;
-    obj cond, left, right;
     
-    self init oper: o cond: c left: l right: r {
-        oper = o;
-        cond = c;
-        left = l;
-        right = r;
-        
+    self init {
         declSpecs = null;
         next = null;
         nextArg = null;
-        
         return self;
     }
     
@@ -27,19 +19,22 @@ class Expr {
         if (next !== null)
             next.graphviz(stream);
         
-        if (cond !== null)
-            cond.graphviz(stream);
-        if (left !== null)
-            left.graphviz(stream);
-        if (right !== null)
-            right.graphviz(stream);
+        self childrenDo: [
+            obj name, child;
+            if (child !== null)
+                child.graphviz(stream);
+            ];
         
-        if (cond !== null)
-            stream.printf("    n%d->n%d[label=\"cond\"];\n", self.id, cond.id);
-        if (left !== null)
-            stream.printf("    n%d->n%d[label=\"left\"];\n", self.id, left.id);
-        if (right !== null)
-            stream.printf("    n%d->n%d[label=\"right\"];\n", self.id, right.id);
+        if (nextArg !== null)
+            stream.printf("    n%d->n%d[label=\"nextArg\"];\n", self.id, nextArg.id);
+        if (next !== null)
+            stream.printf("    n%d->n%d[label=\"next\"];\n", self.id, next.id);
+        
+        self childrenDo: [
+            obj name, child;
+            if (child !== null)
+                stream.printf("    n%d->n%d[label=\"%s\"];\n", self.id, child.id, name);
+            ];
     }
     
     declSpecs = ds { declSpecs = ds; }
@@ -51,6 +46,10 @@ class Expr {
 }
 
 
+
+//------------------------------------------------------------------------
+// primary expressions
+
 class NameExpr : Expr {
     obj sym;
     // definition
@@ -60,12 +59,17 @@ class NameExpr : Expr {
     // both
     obj level;
     
-    self init oper: o cond: c left: l right: r sym: s {
-        self init oper: o cond: c left: l right: r;
-        sym = s;
+    self init tokenValue: v {
+        super init;
+        sym = v;
         return self;
     }
-
+    
+    
+    self childrenDo: aBlock {
+    }
+    
+    
     self definition level: l index: i pushOpcode: po storeOpcode: so {
         level = l;
         index = i;
@@ -75,32 +79,499 @@ class NameExpr : Expr {
         }
     }
     
+    
     self reference def: d level: l {
         def = d;
         level = l;
     }
     
+    
     isType { return def !== null && def.isTypeDef; }
+    
+    
+    check(stmt, checker, pass) {
+        if (pass === $bind)
+            checker.symbolTable.bind(self, checker.requestor);
+    }
 }
 
 
 class LiteralExpr : Expr {
     obj value;
     
-    self init oper: o cond: c left: l right: r value: v {
-        self init oper: o cond: c left: l right: r;
+    self init tokenValue: v {
+        super init;
         value = v;
         return self;
     }
+    
+    self childrenDo: aBlock {
+    }
+    
+    
+    check(stmt, checker, pass) {
+    }
 }
 
 
+class CompoundExpr : Expr {
+    obj right;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        right = r;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("right", right);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkArgList(right, stmt, pass);
+    }
+}
+
+
+class BlockExpr : Expr {
+    obj stmtList, right;
+    obj index, argumentCount, localCount;
+    
+    self init stmtList: l expr: e {
+        super init;
+        stmtList = l;
+        right = e;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("stmtList", stmtList);
+        aBlock("right", right);
+    }
+    
+    
+    check(stmt, checker, outerPass) {
+        obj arg, firstStmt, s, innerPass, st;
+        
+        if (outerPass !== $bind)
+            return;
+        
+        st = checker.symbolTable;
+        st.enterScope(false);
+        
+        firstStmt = stmtList;
+        
+        index = 0;
+        argumentCount = 0;
+        
+        if (firstStmt !== null && firstStmt.class === VarDef) {
+            /* declare block arguments */
+            for (arg = firstStmt.expr; arg; arg = arg.next) {
+                if (arg.class !== NameExpr) {
+                    checker.notifier badExpr: arg desc: "invalid argument definition";
+                    continue;
+                }
+                checker.symbolTable.insert(arg, checker.requestor);
+                ++argumentCount;
+            }
+            
+            /* The 'index' of the block itself is the index of the first
+             * argument.  The interpreter uses this index to find the
+             * destination the block arguments; see Spk_OPCODE_CALL_BLOCK.
+             */
+            index = firstStmt.expr.index;
+            
+            firstStmt = firstStmt.next;
+        }
+        
+        self.checkStmtList(stmt, checker, $define);
+        self.checkStmtList(stmt, checker, $bind);
+        self.checkStmtList(stmt, checker, $pass3);
+        
+        /* XXX: this is only needed for arbitrary nesting */
+        localCount = checker.symbolTable.currentScope.context.nDefs - argumentCount;
+        
+        st.exitScope();
+    }
+    
+    
+    checkStmtList(stmt, checker, innerPass) {
+        if (stmtList !== null)
+            checker.checkStmtList(stmtList, stmt, innerPass);
+        if (right !== null)
+            checker.checkExpr(right, stmt, innerPass);
+    }
+
+}
+
+
+
+//------------------------------------------------------------------------
+// postfix expressions
+
 class CallExpr : Expr {
-    obj var;
+    obj oper;
+    obj left, right, var;
     
     self init oper: o func: func fixed: fixed var: v {
-        super init oper: o cond: null left: func right: fixed;
+        super init;
+        oper = o;
+        left = func;
+        right = fixed;
         var = v;
         return self;
     }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+        aBlock("right", right);
+        aBlock("var", var);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+        checker.checkArgList(right, stmt, pass);
+        if (var !== null)
+            checker.checkExpr(var, stmt, pass);
+    }
 }
+
+
+class AttrExpr : Expr {
+    obj left;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        left = l;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+    }
+}
+
+
+class PostOpExpr : Expr {
+    obj oper;
+    obj left;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        oper = o;
+        left = l;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+    }
+}
+
+
+//------------------------------------------------------------------------
+// unary expressions
+
+class UnaryOpExpr : Expr {
+    obj oper;
+    obj left;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        oper = o;
+        left = l;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+    }
+}
+
+
+class PreOpExpr : Expr {
+    obj oper;
+    obj left;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        oper = o;
+        left = l;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+    }
+}
+
+
+
+//------------------------------------------------------------------------
+// binary expressions
+
+class BinaryOpExpr : Expr {
+    obj oper;
+    obj left, right;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        oper = o;
+        left = l;
+        right = r;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+        aBlock("right", right);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+        checker.checkExpr(right, stmt, pass);
+    }
+}
+
+
+class IdExpr : Expr {
+    obj left, right;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        left = l;
+        right = r;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+        aBlock("right", right);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+        checker.checkExpr(right, stmt, pass);
+    }
+}
+
+
+class NIExpr : Expr {
+    obj left, right;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        left = l;
+        right = r;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+        aBlock("right", right);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+        checker.checkExpr(right, stmt, pass);
+    }
+}
+
+
+class AttrVarExpr : Expr {
+    obj left, right;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        left = l;
+        right = r;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+        aBlock("right", right);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+        checker.checkExpr(right, stmt, pass);
+    }
+}
+
+
+
+//------------------------------------------------------------------------
+// logical expressions
+
+class AndExpr : Expr {
+    obj left, right;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        left = l;
+        right = r;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+        aBlock("right", right);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+        checker.checkExpr(right, stmt, pass);
+    }
+}
+
+
+class OrExpr : Expr {
+    obj left, right;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        left = l;
+        right = r;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+        aBlock("right", right);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+        checker.checkExpr(right, stmt, pass);
+    }
+}
+
+
+
+//------------------------------------------------------------------------
+// conditional expressions
+
+class CondExpr : Expr {
+    obj cond, left, right;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        cond = c;
+        left = l;
+        right = r;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("cond", cond);
+        aBlock("left", left);
+        aBlock("right", right);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(cond, stmt, pass);
+        checker.checkExpr(left, stmt, pass);
+        checker.checkExpr(right, stmt, pass);
+    }
+}
+
+
+
+//------------------------------------------------------------------------
+// keyword expressions
+
+class KeywordExpr : Expr {
+    obj left, right;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        left = l;
+        right = r;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+        aBlock("right", right);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+        checker.checkArgList(right, stmt, pass);
+    }
+}
+
+
+
+//------------------------------------------------------------------------
+// assignment expressions
+
+class AssignExpr : Expr {
+    obj left, right;
+    
+    self init oper: o cond: c left: l right: r {
+        super init;
+        left = l;
+        right = r;
+        return self;
+    }
+    
+    
+    self childrenDo: aBlock {
+        aBlock("left", left);
+        aBlock("right", right);
+    }
+    
+    
+    check(stmt, checker, pass) {
+        checker.checkExpr(left, stmt, pass);
+        checker.checkExpr(right, stmt, pass);
+    }
+}
+
