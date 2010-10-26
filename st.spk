@@ -11,6 +11,7 @@ class SymbolNode {
     }
     
     isType { return entry !== null && entry.isType; }
+    isSelf { return sym === $self; }
     
 } meta {
     

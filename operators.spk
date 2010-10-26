@@ -30,4 +30,13 @@ class Oper {
     operRShift { return 14; }
     operSub { return 12; }
     operSucc { return 0; }
+    
+    
+    operCallSelector(oper) {
+        if (oper === $operApply)
+            return $__apply__;
+        else if (oper === $operIndex)
+            return $__index__;
+        return null;
+    }
 }

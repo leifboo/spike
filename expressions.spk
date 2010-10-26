@@ -11,6 +11,10 @@ class Expr {
         return self;
     }
     
+    
+    isSelf { return false; }
+    
+    
     graphviz(stream) {
         stream.printf("    n%d[label=\"%s\"];\n", self.id, self.printString);
         
@@ -36,6 +40,22 @@ class Expr {
                 stream.printf("    n%d->n%d[label=\"%s\"];\n", self.id, child.id, name);
             ];
     }
+    
+    
+    checkMethodDeclarator(methodDef, outer, checker) {
+        checker.notifier invalidMethodDeclarator: self;
+    }
+    
+    
+    checkMethodDeclaratorLHS(methodDef, rhs, outer, checker) {
+        checker.notifier invalidMethodDeclarator: self;
+    }
+    
+    
+    stripDeclarator() {
+        return null;
+    }
+    
     
     declSpecs = ds { declSpecs = ds; }
     next = anExpr { next = anExpr; }
@@ -87,11 +107,27 @@ class NameExpr : Expr {
     
     
     isType { return def !== null && def.isTypeDef; }
+    isSelf { return sym.isSelf; }
     
     
     check(stmt, checker, pass) {
         if (pass === $bind)
             checker.symbolTable.bind(self, checker.requestor);
+    }
+    
+    
+    checkMethodDeclarator(methodDef, outer, checker) {
+        methodDef name: sym namespace: $nsRValue fixed: null var: null;
+    }
+    
+    
+    checkMethodDeclaratorLHS(methodDef, rhs, outer, checker) {
+        methodDef name: sym namespace: $nsLValue fixed: rhs var: null;
+    }
+    
+    
+    stripDeclarator() {
+        return self;
     }
 }
 
@@ -107,6 +143,8 @@ class LiteralExpr : Expr {
     
     self childrenDo: aBlock {
     }
+    
+    value { return value; }
     
     
     check(stmt, checker, pass) {
@@ -171,7 +209,7 @@ class BlockExpr : Expr {
             /* declare block arguments */
             for (arg = firstStmt.expr; arg; arg = arg.next) {
                 if (arg.class !== NameExpr) {
-                    checker.notifier badExpr: arg desc: "invalid argument definition";
+                    checker.notifier invalidArgumentDefinition: arg;
                     continue;
                 }
                 checker.symbolTable.insert(arg, checker.requestor);
@@ -238,6 +276,57 @@ class CallExpr : Expr {
         checker.checkArgList(right, stmt, pass);
         if (var !== null)
             checker.checkExpr(var, stmt, pass);
+    }
+    
+    
+    checkMethodDeclarator(methodDef, outer, checker) {
+        obj name;
+        
+        if (left.class !== NameExpr) {
+            checker.notifier invalidMethodDeclarator: self;
+            return;
+        }
+        
+        if (left.isSelf) {
+            name = Oper.operCallSelector(oper);
+        } else {
+            /*
+             * XXX: Should we allow "foo[...] {}" as a method
+             * definition?  More generally, could the method
+             * declarator be seen as the application of an inverse
+             * thingy?
+             */
+            if (oper !== $operApply) {
+                checker.notifier invalidMethodDeclarator: self;
+                return;
+            }
+            
+            name = left.sym;
+        }
+        
+        if (outer === null || outer.class !== ClassDef) {
+            /* declare naked functions */
+            checker.symbolTable.insert(left, checker.requestor);
+        }
+        
+        methodDef name: name namespace: $nsRValue fixed: right var: var;
+    }
+    
+    
+    checkMethodDeclaratorLHS(methodDef, rhs, outer, checker) {
+        obj name;
+        
+        if (oper !== $operIndex || !left.isSelf) {
+            checker.notifier invalidMethodDeclarator: self;
+            return;
+        }
+        
+        name = checker.symbolTable symbolNodeForSymbol: $__index__;
+        
+        /* chain-on the new value arg */
+        right.nextArg = rhs;
+        
+        methodDef name: name namespace: $nsLValue fixed: right var: null;
     }
 }
 
@@ -309,6 +398,30 @@ class UnaryOpExpr : Expr {
     check(stmt, checker, pass) {
         checker.checkExpr(left, stmt, pass);
     }
+    
+    
+    checkMethodDeclarator(methodDef, outer, checker) {
+        obj name;
+        
+        /* XXX: This can only be meaningfully composed with Spk_EXPR_CALL. */
+        if (oper === $operInd)
+            return left.checkMethodDeclarator(methodDef, outer, checker);
+        
+        if (!left.isSelf) {
+            checker.notifier invalidMethodDeclarator: self;
+            return;
+        }
+        
+        name = checker.symbolTable.operSelector(oper);
+        methodDef name: name namespace: $nsRValue fixed: null var: null;
+    }
+    
+    
+    stripDeclarator() {
+        if (oper === $operInd)
+            return left.stripDeclarator();
+        return null;
+    }
 }
 
 
@@ -361,6 +474,36 @@ class BinaryOpExpr : Expr {
     check(stmt, checker, pass) {
         checker.checkExpr(left, stmt, pass);
         checker.checkExpr(right, stmt, pass);
+    }
+    
+    
+    checkMethodDeclarator(methodDef, outer, checker) {
+        obj name, fixed;
+        
+        if (!left.isSelf) {
+            checker.notifier invalidMethodDeclarator: self;
+            return;
+        }
+        
+        fixed = null;
+        if (right.class === NameExpr) {
+            name = checker.symbolTable.operSelector(oper);
+            fixed = right;
+        } else if (right.class === LiteralExpr && right.value == 1) {
+            if (oper === $operAdd) {
+                name = checker.symbolTable.operSelector($operSucc);
+            } else if (oper === $operSub) {
+                name = checker.symbolTable.operSelector($operPred);
+            } else {
+                checker.notifier invalidMethodDeclarator: self;
+                return;
+            }
+        } else {
+            checker.notifier invalidMethodDeclarator: self;
+            return;
+        }
+        
+        methodDef name: name namespace: $nsRValue fixed: fixed var: null;
     }
 }
 
@@ -526,6 +669,7 @@ class CondExpr : Expr {
 
 class KeywordExpr : Expr {
     obj left, right;
+    obj keywords;
     
     self init oper: o cond: c left: l right: r {
         super init;
@@ -544,6 +688,19 @@ class KeywordExpr : Expr {
     check(stmt, checker, pass) {
         checker.checkExpr(left, stmt, pass);
         checker.checkArgList(right, stmt, pass);
+    }
+    
+    
+    checkMethodDeclarator(methodDef, outer, checker) {
+        obj name;
+        
+        if (!left.isSelf) {
+            checker.notifier invalidMethodDeclarator: self;
+            return;
+        }
+        
+        name = checker.symbolTable symbolNodeForSymbol: keywords;
+        methodDef name: name namespace: $nsRValue fixed: right var: null;
     }
 }
 
@@ -572,6 +729,16 @@ class AssignExpr : Expr {
     check(stmt, checker, pass) {
         checker.checkExpr(left, stmt, pass);
         checker.checkExpr(right, stmt, pass);
+    }
+    
+    
+    checkMethodDeclarator(methodDef, outer, checker) {
+        if (right.class !== NameExpr) {
+            checker.notifier invalidMethodDeclarator: self;
+            return;
+        }
+        
+        left.checkMethodDeclaratorLHS(methodDef, right, outer, checker);
     }
 }
 

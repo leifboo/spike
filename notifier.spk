@@ -28,6 +28,26 @@ class Notifier {
         ++errorTally;
     }
     
+    self invalidVariableDefinition: expr {
+        stream.printf("%s:%u: invalid variable definition",
+                      source, expr.lineNo);
+    }
+    
+    self invalidArgumentDefinition: expr {
+        stream.printf("%s:%u: invalid argument definition",
+                      source, expr.lineNo);
+    }
+    
+    self invalidMethodDeclarator: expr {
+        stream.printf("%s:%u: invalid method declarator",
+                      source, expr.lineNo);
+    }
+    
+    self nonDefaultArgumentFollowsDefaultArgument: expr {
+        stream.printf("%s:%u: non-default argument follows default argument",
+                      source, expr.lineNo);
+    }
+    
     failOnError {
         if (errorTally > 0)
             self halt: "errors";

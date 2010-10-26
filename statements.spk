@@ -97,11 +97,16 @@ class CompoundStmt : Stmt {
         st = checker.symbolTable;
         st.enterScope(false);
         
-        checker.checkStmtList(top, self, $define);
-        checker.checkStmtList(top, self, $bind);
-        checker.checkStmtList(top, self, $pass3);
+        self.checkStatements(checker, $define);
+        self.checkStatements(checker, $bind);
+        self.checkStatements(checker, $pass3);
         
         st.exitScope();
+    }
+    
+    
+    checkStatements(checker, pass) {
+        checker.checkStmtList(top, self, pass);
     }
 }
 
@@ -115,12 +120,10 @@ class BreakStmt : Stmt {
     }
     
     
-    self childrenDo: aBlock {
-    }
+    self childrenDo: aBlock {}
     
     
-    check(outer, checker, outerPass) {
-    }
+    check(outer, checker, outerPass) {}
 }
 
 
@@ -130,12 +133,10 @@ class ContinueStmt : Stmt {
     }
     
     
-    self childrenDo: aBlock {
-    }
+    self childrenDo: aBlock {}
     
     
-    check(outer, checker, outerPass) {
-    }
+    check(outer, checker, outerPass) {}
 }
 
 
@@ -305,13 +306,22 @@ class ClassDef : Stmt {
 
 class MethodDef : Stmt {
     obj expr;
-    obj top, bottom;
+    obj top;
+    obj name, namespace, fixedArgList, varArg;
+    obj minArgumentCount, maxArgumentCount, localCount;
     
     self init expr: e top: t bottom: b {
         super init;
         expr = e;
         top = t;
-        bottom = b;
+        return self;
+    }
+    
+    self name: n namespace: ns fixed: fixed var: var {
+        name = n;
+        namespace = ns;
+        fixedArgList = fixed;
+        varArg = var;
         return self;
     }
     
@@ -319,7 +329,99 @@ class MethodDef : Stmt {
     self childrenDo: aBlock {
         aBlock("expr", expr);
         aBlock("top", top);
-        aBlock("bottom", bottom);
+    }
+    
+    
+    check(outer, checker, outerPass) {
+        
+        checker.checkDeclSpecs(expr.declSpecs, outerPass);
+        
+        if (outerPass === $bind) {
+            expr.checkMethodDeclarator(self, outer, checker);
+            
+        } else if (outerPass === $define) {
+            obj st, innerPass;
+            
+            st = checker.symbolTable;
+            if (outer === null || outer.class !== ClassDef) {
+                /* naked (global) function -- enter module instance context */
+                st.enterScope(true);
+            }
+            st.enterScope(true);
+            
+            /* declare function arguments */
+            self.declareArguments(checker);
+            
+            self.checkStatements(checker, $define);
+            self.checkStatements(checker, $bind);
+            self.checkStatements(checker, $pass3);
+            
+            localCount = checker.symbolTable.currentScope.context.nDefs -
+                         maxArgumentCount -
+                         (varArg === null ? 0 : 1);
+            
+            st.exitScope();
+            if (outer === null || outer.class !== ClassDef)
+                st.exitScope();
+        }
+    }
+    
+    
+    declareArguments(checker) {
+        obj arg, def;
+        
+        minArgumentCount = maxArgumentCount = 0;
+        
+        for (arg = fixedArgList; arg !== null; arg = arg.nextArg) {
+            def = arg.stripDeclarator();
+            if (def === null)
+                break;
+            
+            checker.checkDeclSpecs(def.declSpecs, $bind);
+            checker.symbolTable.insert(def, checker.requestor);
+            ++minArgumentCount;
+            ++maxArgumentCount;
+        }
+        
+        for ( ; arg !== null; arg = arg.nextArg) {
+            if (arg.class == AssignExpr) {
+                def = arg.left;
+            } else {
+                def = arg;
+                if (def.class === NameExpr) {
+                    checker.notifier nonDefaultArgumentFollowsDefaultArgument: arg;
+                    /* fall though and define it, to reduce the number of errors */
+                }
+            }
+            
+            def = arg.stripDeclarator();
+            if (def === null) {
+                checker.notifier invalidArgumentDefinition: arg;
+                continue;
+            }
+            
+            checker.symbolTable.insert(def, checker.requestor);
+            ++maxArgumentCount;
+        }
+        
+        if (varArg !== null) {
+            if (varArg.class !== NameExpr)
+                checker.notifier invalidArgumentDefinition: varArg;
+            else
+                checker.symbolTable.insert(varArg, checker.requestor);
+        }
+    }
+    
+    
+    checkStatements(checker, innerPass) {
+        obj arg;
+        
+        for (arg = fixedArgList; arg !== null; arg = arg.nextArg) {
+            if (arg.class === AssignExpr)
+                checker.checkExpr(arg.right, self, innerPass);
+        }
+        
+        top.checkStatements(checker, innerPass);
     }
 }
 
@@ -359,11 +461,11 @@ class VarDef : Stmt {
             } else {
                 def = e;
             }
-            while (def.class === UnaryOpExpr && def.oper == Oper.operInd)
+            while (def.class === UnaryOpExpr && def.oper == $operInd)
                 def = def.left;
             if (def.class !== NameExpr) {
                 if (outerPass === $declare)
-                    checker.notifier badExpr: def desc: "invalid variable definition";
+                    checker.notifier invalidVariableDefinition: def;
                 continue;
             }
             if (outerPass === $declare)

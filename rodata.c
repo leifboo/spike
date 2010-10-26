@@ -206,7 +206,6 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk___add__,                       "__add__"                     },
     { &Spk___addr__,                      "__addr__"                    },
     { &Spk___apply__,                     "__apply__"                   },
-    { &Spk___apply__,                     "__apply__"                   },
     { &Spk___band__,                      "__band__"                    },
     { &Spk___bneg__,                      "__bneg__"                    },
     { &Spk___bor__,                       "__bor__"                     },
