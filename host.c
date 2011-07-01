@@ -20,6 +20,9 @@
 #include <string.h>
 
 
+char *Spk_kwSep[2] = { " ", ":" };
+
+
 /****/ void SpkHost_Init(void) {
 }
 
@@ -237,13 +240,13 @@ SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
             break;
         }
         sym = Spk_CAST(Symbol, item);
-        len += strlen(SpkSymbol_AsCString(sym)) + 1;
+        len += strlen(SpkSymbol_AsCString(sym)) + strlen(Spk_kwSep[1]);
         Spk_DECREF(item);
     }
     
     tally = i;
     if (tally > 0)
-        ++len;
+        len += strlen(Spk_kwSep[0]);
     
     str = (char *)malloc(len + 1);
     str[0] = '\0';
@@ -252,7 +255,7 @@ SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
         sym = Spk_CAST(Symbol, kw);
         strcat(str, SpkSymbol_AsCString(sym));
         if (tally > 0)
-            strcat(str, " ");
+            strcat(str, Spk_kwSep[0]);
     }
     for (i = 0; i < size; ++i) {
         SpkUnknown *item = SpkArray_GetItem(kwArray, i);
@@ -262,7 +265,7 @@ SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *builder, SpkUnknown *kw) {
         }
         sym = Spk_CAST(Symbol, item);
         strcat(str, SpkSymbol_AsCString(sym));
-        strcat(str, ":");
+        strcat(str, Spk_kwSep[1]);
         Spk_DECREF(item);
     }
     str[len] = '\0';

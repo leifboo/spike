@@ -80,6 +80,8 @@ libspike_a_SOURCES = \
 	sym.h \
 	tree.c \
 	tree.h \
+	x86gen.c \
+	x86gen.h \
 	$(empty)
 
 spk = \

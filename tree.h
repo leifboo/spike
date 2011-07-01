@@ -54,6 +54,9 @@ typedef enum SpkExprNameKind {
 } SpkExprNameKind;
 
 
+typedef unsigned int Label;
+
+
 typedef struct SpkExpr SpkExpr, SpkXExpr;
 typedef struct SpkExprList SpkExprList;
 typedef struct SpkArgList SpkArgList;
@@ -112,8 +115,8 @@ struct SpkExpr {
             SpkUnknown *initValue; /* XXX: Ugly? */
         } def;
     } u;
-    size_t codeOffset;
-    size_t endLabel;
+    size_t codeOffset, endOffset;
+    Label label, endLabel;
 };
 
 
@@ -148,6 +151,7 @@ struct SpkStmt {
         SpkUnknown *source;
     } u;
     size_t codeOffset;
+    Label label;
 };
 
 

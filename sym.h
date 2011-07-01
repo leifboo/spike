@@ -15,6 +15,7 @@ extern struct SpkClassTmpl Spk_ClassSymbolTmpl;
 SpkSymbol *SpkSymbol_FromCString(const char *str);
 SpkSymbol *SpkSymbol_FromCStringAndLength(const char *str, size_t len);
 const char *SpkSymbol_AsCString(SpkSymbol *);
+size_t SpkSymbol_Hash(SpkSymbol *);
 
 
 #endif /* __spk_sym_h__ */

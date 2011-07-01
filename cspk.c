@@ -11,6 +11,7 @@
 #include "scheck.h"
 #include "st.h"
 #include "tree.h"
+#include "x86gen.h"
 
 #include "float.h"
 #include "int.h"
@@ -18,6 +19,9 @@
 #include "str.h"
 
 #include <stdio.h>
+
+
+extern char *Spk_kwSep[2];
 
 
 #define CLASS_TMPL(c) Spk_Class ## c ## Tmpl
@@ -53,6 +57,13 @@ int main(int argc, char **argv) {
         fprintf(stderr, "usage: %s FILE ...\n", argv[0]);
         return 1;
     }
+    
+#if 1 /* x86 */
+    /* XXX: Hack! */
+    Spk_kwSep[0] = "$$";
+    Spk_kwSep[1] = "$";
+    Spk_declareBuiltIn = 0; /* as in xcspk */
+#endif
     
     if (!Spk_Boot())
         return 1;
@@ -113,7 +124,11 @@ int main(int argc, char **argv) {
         fprintf(stderr, "%s: cannot open '%s'\n", argv[0], outputFilename);
         return 1;
     }
+#if 0
     SpkCxxCodeGen_GenerateCode(tree, stdout /*out*/ );
+#else
+    SpkX86CodeGen_GenerateCode(tree, stdout /*out*/ );
+#endif
     fclose(out);
     
     return 0;

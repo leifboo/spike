@@ -118,8 +118,10 @@ static SpkUnknown *checkVarDefList(Expr *defList,
                 _(badExpr(def, "invalid variable definition", checker));
             continue;
         }
-        if (pass == 1)
+        if (pass == 1) {
             _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
+            expr->u.def.stmt = stmt;
+        }
     }
     Spk_INCREF(Spk_GLOBAL(xvoid));
     return Spk_GLOBAL(xvoid);
@@ -597,15 +599,21 @@ static SpkUnknown *checkClassDef(Stmt *stmt, Stmt *outer, StaticChecker *checker
         
         expr = stmt->u.klass.superclassName->u.ref.def;
         if (expr) {
-            if (expr->kind != Spk_EXPR_NAME || !expr->u.def.stmt) {
+            if (expr->kind == Spk_EXPR_NAME &&
+                expr->u.def.stmt &&
+                expr->u.def.stmt->kind == Spk_STMT_DEF_CLASS)
+            {
+                /* for convenience, cache a direct link to the superclass def */
+                stmt->u.klass.superclassDef = expr->u.def.stmt;
+                _(registerSubclass(stmt, checker));
+            } else if (expr->u.def.pushOpcode == Spk_OPCODE_PUSH_NULL) {
+                /* for class Object, which has no superclass */
+            } else {
                 _(badExpr(stmt->u.klass.superclassName,
                           "invalid superclass specification",
                           checker));
                 break;
             }
-            /* for convenience, cache a direct link to the superclass def */
-            stmt->u.klass.superclassDef = expr->u.def.stmt;
-            _(registerSubclass(stmt, checker));
         } /* else undefined */
         
         _(checkClassBody(stmt->top, stmt, outer, checker, outerPass,

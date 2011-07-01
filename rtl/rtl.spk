@@ -1,0 +1,103 @@
+
+class XObject : null {
+    self == x { return self === x; }
+    self != x { return self !== x; }
+} meta {
+    new { /* XXX */ }
+}
+
+
+class Array : Object {
+    size { /* XXX */ }
+    self[i] { /* XXX */ }
+    self[i] = v { /* XXX */ }
+}
+
+
+class Behavior : Object {
+    obj superclass;
+    obj rvMethodTable;
+    obj lvMethodTable;
+    
+    superclass { return superclass; }
+}
+
+
+// class Char : Object
+
+
+class Class : Behavior {
+    obj name;
+    
+    name { return name; }
+}
+
+
+class IdentityDictionary : Object {
+    size { /* XXX */ }
+    self[k] { /* XXX */ }
+    self[k] = v { /* XXX */ }
+    get(k) { /* XXX */ }
+}
+
+
+
+// class Float : Object
+// class Integer : Object
+
+
+class Metaclass : Behavior {
+    obj thisClass;
+    
+    new { /* XXX ??? */ }
+}
+
+
+// class String : Object
+// class Symbol : Object
+
+
+class Boolean {
+    !self    { self subclassResponsibility; }
+    ~self    { self subclassResponsibility; }
+    self & x { self subclassResponsibility; }
+    self ^ x { self subclassResponsibility; }
+    self | x { self subclassResponsibility; }
+}
+
+class False : Boolean {
+    !self    { return true; }
+    ~self    { return true; }
+    self & x { return false; }
+    self ^ x { return x; }
+    self | x { return x; }
+}
+
+class True : Boolean {
+    !self    { return false; }
+    ~self    { return false; }
+    self & x { return x; }
+    self ^ x { return !x; }
+    self | x { return true; }
+}
+
+
+class Method : Object {
+}
+
+class Function : Object {
+}
+
+class Message : Object {
+    obj ns;
+    obj selector;
+    obj arguments;
+    
+    selector { return selector; }
+    arguments { return arguments; }
+}
+
+
+class Null : Object {}
+class Void : Object {}
+

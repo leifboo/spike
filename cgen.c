@@ -138,8 +138,8 @@ else (n)->codeOffset = cgen->currentOffset; } while (0)
 
 #define SET_EXPR_END(n) \
 do { if (cgen->opcodesEnd) \
-ASSERT((n)->endLabel == cgen->currentOffset, "bad end label"); \
-else (n)->endLabel = cgen->currentOffset; } while (0)
+ASSERT((n)->endOffset == cgen->currentOffset, "bad end label"); \
+else (n)->endOffset = cgen->currentOffset; } while (0)
 
 #define EMIT_LINE_CODE(code) \
 do { if (cgen->lineCodesEnd) *cgen->lineCodesEnd++ = (code); \
@@ -555,7 +555,7 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         encodeUnsignedInt(2, cgen);
         cgen->stackPointer -= 2;
         /* } */
-        _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, expr->endLabel, cgen));
+        _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, expr->endOffset, cgen));
         _(emitCodeForBlock(expr, cgen->generic));
         CHECK_STACKP();
         break;
@@ -715,13 +715,13 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         CHECK_STACKP();
         break;
     case Spk_EXPR_AND:
-        _(emitBranchForExpr(expr->left, 0, expr->right->endLabel,
+        _(emitBranchForExpr(expr->left, 0, expr->right->endOffset,
                             expr->right->codeOffset, 1, cgen));
         _(emitCodeForExpr(expr->right, 0, cgen));
         CHECK_STACKP();
         break;
     case Spk_EXPR_OR:
-        _(emitBranchForExpr(expr->left, 1, expr->right->endLabel,
+        _(emitBranchForExpr(expr->left, 1, expr->right->endOffset,
                             expr->right->codeOffset, 1, cgen));
         _(emitCodeForExpr(expr->right, 0, cgen));
         CHECK_STACKP();
@@ -730,7 +730,7 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         _(emitBranchForExpr(expr->cond, 0, expr->right->codeOffset,
                             expr->left->codeOffset, 0, cgen));
         _(emitCodeForExpr(expr->left, 0, cgen));
-        _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, expr->right->endLabel, cgen));
+        _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, expr->right->endOffset, cgen));
         --cgen->stackPointer;
         _(emitCodeForExpr(expr->right, 0, cgen));
         CHECK_STACKP();
@@ -1084,7 +1084,7 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     OpcodeGen *cgen; BlockCodeGen *bcg;
     Stmt *body;
     Expr *valueExpr, voidDef, voidExpr;
-    size_t endLabel, stackSize;
+    size_t endOffset, stackSize;
     SpkOpcode *opcodesBegin, *lineCodesBegin;
     CodeGen *home;
 
@@ -1143,7 +1143,7 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     if (opcodesBegin) {
         /* now generate code for real */
         
-        endLabel = cgen->currentOffset;
+        endOffset = cgen->currentOffset;
         stackSize = cgen->stackSize;
         rewindOpcodes(cgen, opcodesBegin, lineCodesBegin);
         cgen->currentOffset = outer->u.o.currentOffset;
@@ -1153,7 +1153,7 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
         
         _(emitCodeForBlockBody(body, valueExpr, cgen));
         
-        ASSERT(cgen->currentOffset == endLabel, "bad code size for block");
+        ASSERT(cgen->currentOffset == endOffset, "bad code size for block");
         ASSERT(cgen->stackSize == stackSize, "bad stack size for block");
         
     }
@@ -1377,7 +1377,7 @@ static SpkUnknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
     if (cgen->minArgumentCount < cgen->maxArgumentCount) {
         /* generate code for default argument initializers */
         Expr *arg, *optionalArgList;
-        size_t tally, endLabel = 0;
+        size_t tally, endOffset = 0;
     
         for (arg = stmt->u.method.argList.fixed;
              arg->kind != Spk_EXPR_ASSIGN;
@@ -1389,10 +1389,10 @@ static SpkUnknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
         for (arg = optionalArgList, tally = 0; arg; arg = arg->nextArg, ++tally) {
             ASSERT(arg->kind == Spk_EXPR_ASSIGN, "assignment expected");
             _(emitBranchDisplacement(base, arg->codeOffset, cgen));
-            endLabel = arg->endLabel;
+            endOffset = arg->endOffset;
         }
         /* skip label */
-        _(emitBranchDisplacement(base, endLabel, cgen));
+        _(emitBranchDisplacement(base, endOffset, cgen));
         ASSERT(tally == cgen->maxArgumentCount - cgen->minArgumentCount,
                "wrong number of default arguments");
         

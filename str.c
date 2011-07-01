@@ -306,3 +306,7 @@ char *SpkString_AsCString(SpkString *self) {
 size_t SpkString_Size(SpkString *self) {
     return self->size;
 }
+
+int SpkString_IsEqual(SpkString *a, SpkString *b) {
+    return strcmp(STR(a), STR(b)) == 0;
+}

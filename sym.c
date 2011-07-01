@@ -197,3 +197,7 @@ SpkSymbol *SpkSymbol_FromCStringAndLength(const char *str, size_t len) {
 const char *SpkSymbol_AsCString(SpkSymbol *self) {
     return self->str;
 }
+
+size_t SpkSymbol_Hash(SpkSymbol *self) {
+    return self->hash;
+}
