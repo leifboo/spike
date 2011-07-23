@@ -172,11 +172,11 @@ static void maybeEmitLabel(Label *label, OpcodeGen *cgen) {
 static SpkUnknown *emitBranch(SpkOpcode opcode, Label *target, OpcodeGen *cgen) {
     switch (opcode) {
     case Spk_OPCODE_BRANCH_IF_FALSE:
-        emitOpcode(cgen, "call", "__spike_test");
+        emitOpcode(cgen, "call", "SpikeTest");
         emitOpcode(cgen, "jz", ".L%u", getLabel(target, cgen));
         break;
     case Spk_OPCODE_BRANCH_IF_TRUE:
-        emitOpcode(cgen, "call", "__spike_test");
+        emitOpcode(cgen, "call", "SpikeTest");
         emitOpcode(cgen, "jnz", ".L%u", getLabel(target, cgen));
         break;
     case Spk_OPCODE_BRANCH_ALWAYS:
@@ -273,7 +273,7 @@ static SpkUnknown *emitCodeForName(Expr *expr, int *super, OpcodeGen *cgen) {
         emitOpcode(cgen, "pushl", isVarDef(def) ? "%s" : "$%s", SpkHost_SymbolAsCString(def->sym->sym));
         break;
     case Spk_OPCODE_PUSH_INST_VAR:
-        emitOpcode(cgen, "pushl", "%d(%%esi)", instVarOffset(def, cgen));
+        emitOpcode(cgen, "pushl", "%d(%%edi)", instVarOffset(def, cgen));
         break;
     case Spk_OPCODE_PUSH_LOCAL:
         emitOpcode(cgen, "pushl", "%d(%%ebp)", localVarOffset(def, cgen));
@@ -342,7 +342,7 @@ static SpkUnknown *store(Expr *var, OpcodeGen *cgen) {
         emitOpcode(cgen, "movl", "%%eax, %s", SpkHost_SymbolAsCString(def->sym->sym));
         break;
     case Spk_OPCODE_STORE_INST_VAR:
-        emitOpcode(cgen, "movl", "%%eax, %d(%%esi)", instVarOffset(def, cgen));
+        emitOpcode(cgen, "movl", "%%eax, %d(%%edi)", instVarOffset(def, cgen));
         break;
     case Spk_OPCODE_STORE_LOCAL:
         emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)", localVarOffset(def, cgen));
@@ -386,33 +386,33 @@ static void epilogue(OpcodeGen *cgen) {
 
 static void oper(SpkOper code, int isSuper, OpcodeGen *cgen) {
     static const char *table[] = {
-    "succ",
-    "pred",
-    "addr",
-    "ind",
-    "pos",
-    "neg",
-    "bneg",
-    "lneg",
-    "mul",
-    "div",
-    "mod",
-    "add",
-    "sub",
-    "lshift",
-    "rshift",
-    "lt",
-    "gt",
-    "le",
-    "ge",
-    "eq",
-    "ne",
-    "band",
-    "bxor",
-    "bor"
+    "Succ",
+    "Pred",
+    "Addr",
+    "Ind",
+    "Pos",
+    "Neg",
+    "BNeg",
+    "LNeg",
+    "Mul",
+    "Div",
+    "Mod",
+    "Add",
+    "Sub",
+    "LShift",
+    "RShift",
+    "LT",
+    "GT",
+    "LE",
+    "GE",
+    "Eq",
+    "NE",
+    "BAnd",
+    "BXOr",
+    "BOr"
     };
     
-    emitOpcode(cgen, "call", "__spike_oper_%s%s", table[code], (isSuper ? "_super" : ""));
+    emitOpcode(cgen, "call", "SpikeOper%s%s", table[code], (isSuper ? "Super" : ""));
     emitOpcode(cgen, "addl", "$%d, %%esp",
                (Spk_operSelectors[code].argumentCount + 1) * sizeof(SpkObject *));
     emitOpcode(cgen, "pushl", "%%eax");
@@ -620,14 +620,14 @@ static void emitROData(ModuleCodeGen *cgen) {
     out = cgen->generic->out;
     fprintf(out, "\t.section\t.rodata\n");
     
-    fprintf(out, "\t.align 4\n");
+    fprintf(out, "\t.align\t4\n");
     for (i = 0; i < cgen->intDataSize; ++i) {
         value = cgen->intData[i];
         fprintf(out,
-                ".globl __int_%ld\n"
+                "__int_%ld:\n"
+                "\t.globl\t__int_%ld\n"
                 "\t.type\t__int_%ld, @object\n"
                 "\t.size\t__int_%ld, 8\n"
-                "__int_%ld:\n"
                 "\t.long\tInteger\n"
                 "\t.long\t%ld\n",
                 value, value, value, value, value);
@@ -640,24 +640,24 @@ static void emitROData(ModuleCodeGen *cgen) {
          * "%f" seems fuzzy.
          */
         fprintf(out,
-                ".globl __float_%u\n"
-                "\t.align 16\n"
+                "__float_%u:\n"
+                "\t.globl\t__float_%u\n"
+                "\t.align\t16\n"
                 "\t.type\t__float_%u, @object\n"
                 "\t.size\t__float_%u, 12\n"
-                "__float_%u:\n"
                 "\t.long\tFloat\n"
                 "\t.double\t%f\n",
                 i, i, i, i, cgen->floatData[i]);
     }
 
-    fprintf(out, "\t.align 4\n");
+    fprintf(out, "\t.align\t4\n");
     for (i = 0; i < 256; ++i) {
         if (cgen->charData[i]) {
             fprintf(out,
-                    ".globl __char_%02x\n"
+                    "__char_%02x:\n"
+                    "\t.globl\t__char_%02x\n"
                     "\t.type\t__char_%02x, @object\n"
                     "\t.size\t__char_%02x, 8\n"
-                    "__char_%02x:\n"
                     "\t.long\tChar\n"
                     "\t.long\t%u\n",
                     i, i, i, i, i);
@@ -666,10 +666,10 @@ static void emitROData(ModuleCodeGen *cgen) {
     
     for (i = 0; i < cgen->strDataSize; ++i) {
         fprintf(out,
-                ".globl __str_%u\n"
-                "\t.align 4\n"
-                "\t.type\t__str_%u, @object\n"
                 "__str_%u:\n"
+                "\t.globl\t__str_%u\n"
+                "\t.align\t4\n"
+                "\t.type\t__str_%u, @object\n"
                 "\t.long\tString\n"
                 "\t.long\t%lu\n"
                 "\t.string\t",
@@ -686,10 +686,10 @@ static void emitROData(ModuleCodeGen *cgen) {
     for (i = 0; i < cgen->symDataSize; ++i) {
         const char *sym = SpkSymbol_AsCString(cgen->symData[i]);
         fprintf(out,
-                ".globl __sym_%s\n"
-                "\t.align 4\n"
-                "\t.type\t__sym_%s, @object\n"
                 "__sym_%s:\n"
+                "\t.globl\t__sym_%s\n"
+                "\t.align\t4\n"
+                "\t.type\t__sym_%s, @object\n"
                 "\t.long\tSymbol\n"
                 "\t.long\t%lu\n"
                 "\t.string\t\"%s\"\n"
@@ -848,19 +848,21 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
             break;
         }
         encodeUnsignedInt(argumentCount, cgen);
-        emitOpcode(cgen, "call", "__spike_call");
+        emitOpcode(cgen, "movl", "$%lu, %%ecx", (unsigned long)argumentCount);
+        emitOpcode(cgen, "call", "SpikeCall");
         emitOpcode(cgen, "addl", "$%d, %%esp", argumentCount * sizeof(SpkObject *));
         emitOpcode(cgen, "pushl", "%%eax");
         break;
     case Spk_EXPR_ATTR:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
         _(emitCodeForLiteral(expr->sym->sym, cgen));
-        emitOpcode(cgen, "call", isSuper ? "__spike_get_attr_super" : "__spike_get_attr");
+        emitOpcode(cgen, "call", "SpikeGetAttr%s", (isSuper ? "Super" : ""));
         break;
     case Spk_EXPR_ATTR_VAR:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
         _(emitCodeForExpr(expr->right, 0, cgen));
-        emitOpcode(cgen, "call", isSuper ? "__spike_get_attr_super" : "__spike_get_attr");
+        emitOpcode(cgen, "popl", "%%edx");
+        emitOpcode(cgen, "call", "SpikeGetAttr%s", (isSuper ? "Super" : ""));
         break;
     case Spk_EXPR_PREOP:
     case Spk_EXPR_POSTOP:
@@ -975,8 +977,8 @@ static void squirrel(size_t resultDepth, OpcodeGen *cgen) {
     /* duplicate the last result */
     dupN(1, cgen);
     /* squirrel it away for later */
-    emitOpcode(cgen, "pushl", "$%lu", (unsigned long)(resultDepth + 1));
-    emitOpcode(cgen, "call", "__spike_rot");
+    emitOpcode(cgen, "movl", "$%lu, %%ecx", (unsigned long)(resultDepth + 1));
+    emitOpcode(cgen, "call", "SpikeRotate");
 }
 
 static SpkUnknown *inPlaceOp(Expr *expr, size_t resultDepth, OpcodeGen *cgen) {
@@ -1030,7 +1032,7 @@ static SpkUnknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
         switch (expr->left->kind) {
         case Spk_EXPR_ATTR:
         case Spk_EXPR_ATTR_VAR:
-            emitOpcode(cgen, "call", isSuper ? "__spike_get_attr_super" : "__spike_get_attr");
+            emitOpcode(cgen, "call", "SpikeGetAttr%s", (isSuper ? "Super" : ""));
             break;
         default:
             ASSERT(0, "invalid lvalue");
@@ -1041,7 +1043,7 @@ static SpkUnknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
     switch (expr->left->kind) {
     case Spk_EXPR_ATTR:
     case Spk_EXPR_ATTR_VAR:
-        emitOpcode(cgen, "call", isSuper ? "__spike_set_attr_super" : "__spike_set_attr");
+        emitOpcode(cgen, "call", "SpikeSetAttr%s", (isSuper ? "Super" : ""));
         break;
     default:
         ASSERT(0, "invalid lvalue");
@@ -1078,16 +1080,26 @@ static SpkUnknown *inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
     } else {
         /* get __index__ { */
         dupN(argumentCount + 1, cgen);
-        EMIT_OPCODE(isSuper ? Spk_OPCODE_CALL_SUPER : Spk_OPCODE_CALL);
-        encodeUnsignedInt((unsigned int)expr->left->oper, cgen);
-        encodeUnsignedInt(argumentCount, cgen);
+        emitOpcode(cgen, "movl", "$%lu, %%ecx", (unsigned long)argumentCount);
+        switch (expr->left->oper) {
+        case Spk_OPER_APPLY:
+            emitOpcode(cgen, "call", "SpikeCall%s", (isSuper ? "Super" : ""));
+            break;
+        case Spk_OPER_INDEX:
+            emitOpcode(cgen, "call", "SpikeGetIndex%s", (isSuper ? "Super" : ""));
+            break;
+        default:
+            ASSERT(0, "bad operator");
+        }
+        emitOpcode(cgen, "addl", "$%d, %%esp", argumentCount * sizeof(SpkObject *));
+        emitOpcode(cgen, "pushl", "%%eax");
         /* } get __index__ */
         _(inPlaceOp(expr, 1 + argumentCount + 1, /* receiver, args, result */
                     cgen));
     }
     ++argumentCount; /* new item value */
-    emitOpcode(cgen, "pushl", "$%lu", (unsigned long)argumentCount);
-    emitOpcode(cgen, "call", isSuper ? "__spike_set_index_super" : "__spike_set_index");
+    emitOpcode(cgen, "movl", "$%lu, %%ecx", (unsigned long)argumentCount);
+    emitOpcode(cgen, "call", "SpikeSetIndex%s", (isSuper ? "Super" : ""));
     /* discard 'set' method result, exposing the value that was
        squirrelled away */
     pop(cgen);
@@ -1547,11 +1559,11 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
     
     fprintf(out, "\t.text\n");
     fprintf(out,
-            ".globl %s%s%s%s\n"
-            "\t.align 4\n"
+            "\t.align\t4\n"
+            "%s%s%s%s:\n"
+            "\t.globl\t%s%s%s%s\n"
             "\t.type\t%s%s%s%s, @object\n"
             "\t.size\t%s%s%s%s, 4\n"
-            "%s%s%s%s:\n"
             "\t.long\t%s\n",
             className, suffix, ns, functionName,
             className, suffix, ns, functionName,
@@ -1559,9 +1571,9 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
             className, suffix, ns, functionName,
             codeObjectClass);
     fprintf(out,
-            ".globl %s%s%s%s.code\n"
-            "\t.type\t%s%s%s%s.code, @function\n"
-            "%s%s%s%s.code:\n",
+            "%s%s%s%s.code:\n"
+            "\t.globl\t%s%s%s%s.code\n"
+            "\t.type\t%s%s%s%s.code, @function\n",
             className, suffix, ns, functionName,
             className, suffix, ns, functionName,
             className, suffix, ns, functionName);
@@ -1623,17 +1635,17 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
                 out = cgen->out;
                 
                 fprintf(out, "\t.%s\n", NULL_IS_ZERO ? "bss" : "data");
-                fprintf(out, "\t.align 4\n");
+                fprintf(out, "\t.align\t4\n");
                 
                 for (expr = s->expr; expr; expr = expr->next) {
                     ASSERT(expr->kind == Spk_EXPR_NAME,
                            "initializers not allowed here");
                     sym = SpkHost_SymbolAsCString(expr->sym->sym);
                     fprintf(out,
-                            ".globl %s\n"
+                            "%s:\n"
+                            "\t.globl\t%s\n"
                             "\t.type\t%s, @object\n"
-                            "\t.size\t%s, 4\n"
-                            "%s:\n",
+                            "\t.size\t%s, 4\n",
                             sym, sym, sym, sym);
                     if (NULL_IS_ZERO)
                         fprintf(out, "\t.zero\t4\n");
@@ -1702,12 +1714,12 @@ static SpkUnknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *
     
     fprintf(out,
             "\t.data\n"
-            "\t.align 4\n");
+            "\t.align\t4\n");
     
     fprintf(out,
-            ".globl %s%s\n"
-            "\t.type\t%s%s, @object\n"
-            "%s%s:\n",
+            "%s%s:\n"
+            "\t.globl\t%s%s\n"
+            "\t.type\t%s%s, @object\n",
             sym, suffix, sym, suffix, sym, suffix);
     
     if (meta)
@@ -1768,9 +1780,9 @@ static SpkUnknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *
             continue;
         
         fprintf(out,
-                ".globl %s%s.methodTable.%d\n"
-                "\t.type\t%s%s.methodTable.%d, @object\n"
-                "%s%s.methodTable.%d:\n",
+                "%s%s.methodTable.%d:\n"
+                "\t.globl\t%s%s.methodTable.%d\n"
+                "\t.type\t%s%s.methodTable.%d, @object\n",
                 sym, suffix, ns,
                 sym, suffix, ns,
                 sym, suffix, ns);
