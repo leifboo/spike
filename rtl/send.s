@@ -451,26 +451,46 @@ SpikeSetAttrSuper:
 
 SpikeSendMessageSuperLValue:
 	.globl	SpikeSendMessageSuper
+	pushl	%ebp		# create new stack frame
+	movl	%esp, %ebp
+	pushl	%ebx		# save registers
+	pushl	%esi
+	pushl	%edi
 	movl	4(%ebx), %ebx 	# get superclass
 	movl	$1, %edi	# lvalue namespace
 	jmp	lookupMethod
 
 SpikeSendMessageLValue:
 	.globl	SpikeSendMessage
-	movl	4(%esp,%ecx,4), %esi  # get receiver
+	pushl	%ebp		# create new stack frame
+	movl	%esp, %ebp
+	pushl	%ebx		# save registers
+	pushl	%esi
+	pushl	%edi
+	movl	8(%ebp,%ecx,4), %esi  # get receiver
 	movl	(%esi), %ebx 	# get class
 	movl	$1, %edi	# lvalue namespace
 	jmp	lookupMethod
 
 SpikeSendMessageSuper:
 	.globl	SpikeSendMessageSuper
+	pushl	%ebp		# create new stack frame
+	movl	%esp, %ebp
+	pushl	%ebx		# save registers
+	pushl	%esi
+	pushl	%edi
 	movl	4(%ebx), %ebx 	# get superclass
 	movl	$0, %edi	# rvalue namespace
 	jmp	lookupMethod
 
 SpikeSendMessage:
 	.globl	SpikeSendMessage
-	movl	4(%esp,%ecx,4), %esi  # get receiver
+	pushl	%ebp		# create new stack frame
+	movl	%esp, %ebp
+	pushl	%ebx		# save registers
+	pushl	%esi
+	pushl	%edi
+	movl	8(%ebp,%ecx,4), %esi  # get receiver
 	movl	(%esi), %ebx 	# get class
 	movl	$0, %edi	# rvalue namespace
 	/* fall through */
@@ -499,5 +519,22 @@ lookupMethod:
 callNewMethod:
 	popl	%edx		# restore registers
 	popl	%ecx
-	addl	$444, %eax	# skip Method object header
+	cmpl	4(%eax), %ecx	# minArgumentCount
+	jne	wrongNumberOfArguments
+	cmpl	8(%eax), %ecx	# maxArgumentCount
+	jne	wrongNumberOfArguments
+
+/* allocate and initialize locals */
+	movl	12(%eax), %ecx	# localCount
+	jmp	.L3
+.L2:
+	pushl	$0
+.L3:
+	loop	.L2
+
+	addl	$16, %eax	# skip Method object header
 	jmpl	*%eax		# call it
+
+wrongNumberOfArguments:
+	pushl	$__sym_wrongNumberOfArguments
+	call	SpikeError

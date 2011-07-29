@@ -182,13 +182,27 @@ static int instVarOffset(Expr *def, OpcodeGen *cgen) {
 }
 
 static int localVarOffset(Expr *def, OpcodeGen *cgen) {
+    /* XXX: handle variable & default args */
     int index = (int)def->u.def.index;
     if (def->u.def.index < cgen->maxArgumentCount) {
         /* argument */
-        return sizeof(SpkObject *) * (index + 3); /* skip saved esi, ebp, eip */
+        /* args are pushed in order, so they are reversed in memory */
+        /* skip saved ebp, eip */
+        return sizeof(SpkObject *) * (cgen->maxArgumentCount - index - 1 + 2);
     }
     /* ordinary local variable */
-    return -(sizeof(SpkObject *) * (index + 1));
+    /* skip saved edi, esi, ebx */
+    index -= cgen->maxArgumentCount;
+    return -(sizeof(SpkObject *) * (index + 1 + 3));
+}
+
+static int selfRetOffset(OpcodeGen *cgen) {
+    /*
+     * Both 'self' and the return value occupy the same slot on the
+     * stack.  The "2" accounts for saved %ebp and return address.
+     * XXX: handle variable & default args.
+     */
+    return sizeof(SpkObject *)*(2+cgen->maxArgumentCount);
 }
 
 static int isVarDef(Expr *def) {
@@ -308,7 +322,7 @@ static SpkUnknown *emitCodeForLiteral(SpkUnknown *literal, OpcodeGen *cgen) {
 
 static SpkUnknown *store(Expr *var, OpcodeGen *cgen) {
     Expr *def = var->u.ref.def;
-    emitOpcode(cgen, "movl", "0(%%esp), %%eax");
+    emitOpcode(cgen, "movl", "(%%esp), %%eax");
     switch (def->u.def.storeOpcode) {
     case Spk_OPCODE_STORE_GLOBAL:
         /* currently, the x86 backend is unique in this regard */
@@ -341,21 +355,30 @@ static void prologue(OpcodeGen *cgen) {
         cgen->localCount;
     size_t i;
     
-    emitOpcode(cgen, "pushl", "%%ebp");
-    emitOpcode(cgen, "pushl", "%%esi");
-    emitOpcode(cgen, "movl", "%%esp, %%ebp");
-    emitOpcode(cgen, "movl", "%d(%%ebp), %%esi", sizeof(SpkObject *)*(2+cgen->maxArgumentCount)); /*XXX: actual argument count*/
-    /* XXX: We could emit a 'loop' opcode for a large numbers of locals. */
+    /* stack frame & registers already set up by SpikeSendMessage glue */
+    
+#if 0
+    /*
+     * Allocate and initialize locals.
+     * XXX: We could emit a 'loop' opcode for a large numbers of locals.
+     */
     for (i = 0; i < cgen->localCount; ++i) {
         emitOpcode(cgen, "pushl", "$0");
     }
+#endif
 }
 
 static void epilogue(OpcodeGen *cgen) {
-    emitOpcode(cgen, "movl", "%%ebp, %%esp");
-    emitOpcode(cgen, "popl", "%%esi");
-    emitOpcode(cgen, "popl", "%%ebp");
-    emitOpcode(cgen, "ret", 0);
+    /* restore registers */
+    emitOpcode(cgen, "popl", "%%edi"); /* instVarPointer */
+    emitOpcode(cgen, "popl", "%%esi"); /* self */
+    emitOpcode(cgen, "popl", "%%ebx"); /* methodClass */
+    
+    /* restore caller's stack frame (%ebp) */
+    emitOpcode(cgen, "leave", 0);
+    
+    /* pop arguments and return, leaving result on the stack */
+    emitOpcode(cgen, "ret", "$%lu", sizeof(SpkObject *)*cgen->maxArgumentCount);
 }
 
 static void oper(SpkOper code, int isSuper, OpcodeGen *cgen) {
@@ -387,9 +410,6 @@ static void oper(SpkOper code, int isSuper, OpcodeGen *cgen) {
     };
     
     emitOpcode(cgen, "call", "SpikeOper%s%s", table[code], (isSuper ? "Super" : ""));
-    emitOpcode(cgen, "addl", "$%d, %%esp",
-               (Spk_operSelectors[code].argumentCount + 1) * sizeof(SpkObject *));
-    emitOpcode(cgen, "pushl", "%%eax");
 }
 
 
@@ -784,8 +804,6 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         /* call RTL routine to send message */
         emitOpcode(cgen, "movl", "$%lu, %%ecx", (unsigned long)argumentCount);
         emitOpcode(cgen, "call", "%s%s", routine, (isSuper ? "Super" : ""));
-        emitOpcode(cgen, "addl", "$%d, %%esp", argumentCount * sizeof(SpkObject *));
-        emitOpcode(cgen, "pushl", "%%eax");
         break;
     case Spk_EXPR_ATTR:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
@@ -837,12 +855,12 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         _(emitCodeForExpr(expr->left, 0, cgen));
         _(emitCodeForExpr(expr->right, 0, cgen));
         pop(cgen);
-        emitOpcode(cgen, "cmpl", "0(%%esp), %%eax");
-        emitOpcode(cgen, "movl", "$false, 0(%%esp)");
+        emitOpcode(cgen, "cmpl", "(%%esp), %%eax");
+        emitOpcode(cgen, "movl", "$false, (%%esp)");
         emitOpcode(cgen,
                    expr->kind == Spk_EXPR_ID ? "jne" : "je",
                    ".L%u", getLabel(&expr->endLabel, cgen));
-        emitOpcode(cgen, "movl", "$true, 0(%%esp)");
+        emitOpcode(cgen, "movl", "$true, (%%esp)");
         break;
     case Spk_EXPR_AND:
         _(emitBranchForExpr(expr->left, 0, &expr->right->endLabel,
@@ -872,8 +890,6 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         emitOpcode(cgen, "popl", "%%edx");
         emitOpcode(cgen, "movl", "$%lu, %%ecx", (unsigned long)argumentCount);
         emitOpcode(cgen, "call", "SpikeSendMessage%s", (isSuper ? "Super" : ""));
-        emitOpcode(cgen, "addl", "$%d, %%esp", argumentCount * sizeof(SpkObject *));
-        emitOpcode(cgen, "pushl", "%%eax");
         break;
     case Spk_EXPR_ASSIGN:
         switch (expr->left->kind) {
@@ -1026,8 +1042,6 @@ static SpkUnknown *inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
         default:
             ASSERT(0, "bad operator");
         }
-        emitOpcode(cgen, "addl", "$%d, %%esp", argumentCount * sizeof(SpkObject *));
-        emitOpcode(cgen, "pushl", "%%eax");
         /* } get __index__ */
         _(inPlaceOp(expr, 1 + argumentCount + 1, /* receiver, args, result */
                     cgen));
@@ -1388,8 +1402,9 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
         if (stmt->expr) {
             _(emitCodeForExpr(stmt->expr, 0, cgen));
             pop(cgen);
+            emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)", selfRetOffset(cgen));
         } else {
-            emitOpcode(cgen, "movl", "$void, %%eax");
+            emitOpcode(cgen, "movl", "$void, %d(%%ebp)", selfRetOffset(cgen));
         }
         _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, &cgen->epilogueLabel, cgen));
         break;
@@ -1497,11 +1512,17 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
             "\t.globl\t%s%s%s%s\n"
             "\t.type\t%s%s%s%s, @object\n"
             "\t.size\t%s%s%s%s, 4\n"
+            "\t.long\t%lu\n"
+            "\t.long\t%lu\n"
+            "\t.long\t%lu\n"
             "\t.long\t%s\n",
             className, suffix, ns, functionName,
             className, suffix, ns, functionName,
             className, suffix, ns, functionName,
             className, suffix, ns, functionName,
+            (unsigned long)cgen->minArgumentCount,
+            (unsigned long)cgen->maxArgumentCount,
+            (unsigned long)cgen->localCount,
             codeObjectClass);
     fprintf(out,
             "%s%s%s%s.code:\n"

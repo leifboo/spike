@@ -26,6 +26,6 @@ SpikeTest:
 /* XXX: accept 0, 0.0, (hook?) */
 
 	pushl	$__sym_mustBeBoolean
-	jmp	SpikeError
+	call	SpikeError
 
 	.size	SpikeTest, .-SpikeTest
