@@ -8,9 +8,9 @@ class XObject : null {
 
 
 class Array : Object {
-    size { /* XXX */ }
-    self[i] { /* XXX */ }
-    self[i] = v { /* XXX */ }
+    extern size {}
+    extern self[i] {}
+    extern self[i] = v {}
 }
 
 
@@ -43,7 +43,37 @@ class IdentityDictionary : Object {
 
 
 // class Float : Object
-// class Integer : Object
+
+
+class Integer : Object {
+    
+    // unary operators
+    extern self + 1 {}
+    extern self - 1 {}
+    extern +self    {}
+    extern -self    {}
+    extern ~self    {}
+    
+    // binary operators
+    extern self * x {}
+    extern self / x {}
+    extern self % x {}
+    extern self + x {}
+    extern self - x {}
+    extern self << x {}
+    extern self >> x {}
+    extern self & x {}
+    extern self ^ x {}
+    extern self | x {}
+    
+    // comparison operators
+    extern self < x {}
+    extern self > x {}
+    extern self <= x {}
+    extern self >= x {}
+    extern self == x {}
+    extern self != x {}
+}
 
 
 class Metaclass : Behavior {
