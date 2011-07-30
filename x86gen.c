@@ -1338,8 +1338,8 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
     case Spk_STMT_DEF_MODULE:
         ASSERT(0, "unexpected module node");
         break;
-    case Spk_STMT_DEF_TYPE:
-        ASSERT(0, "unexpected type node");
+    case Spk_STMT_DEF_SPEC:
+        ASSERT(0, "unexpected spec node");
         break;
     case Spk_STMT_DO_WHILE:
         childNextLabel = &stmt->expr->label;
@@ -1578,7 +1578,8 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
     for (s = body->top; s; s = s->next) {
         switch (s->kind) {
         case Spk_STMT_DEF_METHOD:
-            _(emitCodeForMethod(s, meta, cgen));
+            if (!IS_EXTERN(s->expr))
+                _(emitCodeForMethod(s, meta, cgen));
             break;
         case Spk_STMT_DEF_VAR:
             if (cgen->level == 1) {
@@ -1594,6 +1595,8 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
                 for (expr = s->expr; expr; expr = expr->next) {
                     ASSERT(expr->kind == Spk_EXPR_NAME,
                            "initializers not allowed here");
+                    if (IS_EXTERN(expr))
+                        continue;
                     sym = SpkHost_SymbolAsCString(expr->sym->sym);
                     fprintf(out,
                             "%s:\n"

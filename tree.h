@@ -35,7 +35,7 @@ typedef enum SpkStmtKind {
     Spk_STMT_DEF_CLASS,
     Spk_STMT_DEF_METHOD,
     Spk_STMT_DEF_MODULE,
-    Spk_STMT_DEF_TYPE,
+    Spk_STMT_DEF_SPEC,
     Spk_STMT_DEF_VAR,
     Spk_STMT_DO_WHILE,
     Spk_STMT_EXPR,
@@ -52,6 +52,18 @@ typedef enum SpkExprNameKind {
     Spk_EXPR_NAME_DEF,
     Spk_EXPR_NAME_REF
 } SpkExprNameKind;
+
+enum {
+    Spk_SPEC_TYPE           = 0x0F,
+    Spk_SPEC_TYPE_OBJ       = 0x01,
+    Spk_SPEC_TYPE_INT       = 0x02,
+    Spk_SPEC_TYPE_CHAR      = 0x03,
+    
+    Spk_SPEC_STORAGE        = 0xF0,
+    Spk_SPEC_STORAGE_IMPORT = 0x10,
+    Spk_SPEC_STORAGE_EXPORT = 0x20,
+    Spk_SPEC_STORAGE_EXTERN = 0x30
+};
 
 
 typedef unsigned int Label;
@@ -86,7 +98,7 @@ struct SpkExpr {
     SpkObject base;
     SpkExprKind kind;
     SpkOper oper;
-    SpkExpr *declSpecs;
+    SpkExpr *declSpecs; unsigned int specifiers;
     SpkExpr *next, *nextArg, *cond, *left, *right, *var;
     struct SpkSymbolNode *sym;
     unsigned int lineNo;
@@ -148,6 +160,10 @@ struct SpkStmt {
             unsigned int dataSize;
             SpkStmtList predefList, rootClassList;
         } module;
+        struct {
+            unsigned int mask;
+            unsigned int value;
+        } spec;
         SpkUnknown *source;
     } u;
     size_t codeOffset;
@@ -156,6 +172,9 @@ struct SpkStmt {
 
 
 extern struct SpkClassTmpl Spk_ClassXExprTmpl, Spk_ClassXStmtTmpl;
+
+
+#define IS_EXTERN(e) (((e)->specifiers & Spk_SPEC_STORAGE) == Spk_SPEC_STORAGE_EXTERN)
 
 
 #endif /* __spk_tree_h__ */

@@ -310,9 +310,9 @@ static SpkUnknown *symbolNodeFromCString(SpkUnknown *st, const char *str) {
     return Spk_Send(Spk_GLOBAL(theInterpreter), st, Spk_symbolNodeForSymbol, sym, 0);
 }
 
-static int isType(SpkUnknown *symbolNode) {
+static int isSpec(SpkUnknown *symbolNode) {
     SpkUnknown *bool; int result;
-    bool = Spk_Send(Spk_GLOBAL(theInterpreter), symbolNode, Spk_isType, 0);
+    bool = Spk_Send(Spk_GLOBAL(theInterpreter), symbolNode, Spk_isSpec, 0);
     result = (bool == Spk_1 || bool == Spk_GLOBAL(xtrue));
     Spk_DECREF(bool);
     return result;
@@ -347,8 +347,8 @@ int SpkLexer_GetNextToken(SpkToken *token, yyscan_t scanner, SpkUnknown *st) {
         break;
     case Spk_TOKEN_IDENTIFIER:
         token->value = symbolNodeFromCString(st, yyget_text(scanner));
-        if (isType(token->value)) {
-            token->id = Spk_TOKEN_TYPE_IDENTIFIER;
+        if (isSpec(token->value)) {
+            token->id = Spk_TOKEN_SPECIFIER;
         }
         break;
     }

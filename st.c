@@ -46,7 +46,7 @@ SpkSymbolNode *SpkSymbolNode_FromCString(SpkSymbolTable *st, const char *str) {
     return node;
 }
 
-int SpkSymbolNode_IsType(SpkSymbolNode *node) {
+int SpkSymbolNode_IsSpec(SpkSymbolNode *node) {
     SpkExpr *def;
     
     if (0 /*cxxgen*/ ) {
@@ -61,7 +61,7 @@ int SpkSymbolNode_IsType(SpkSymbolNode *node) {
             def->kind == Spk_EXPR_NAME &&
             def->aux.nameKind == Spk_EXPR_NAME_DEF &&
             def->u.def.stmt &&
-            def->u.def.stmt->kind == Spk_STMT_DEF_TYPE);
+            def->u.def.stmt->kind == Spk_STMT_DEF_SPEC);
 }
 
 
@@ -272,14 +272,14 @@ SpkUnknown *SpkSymbolTable_Bind(SpkSymbolTable *st, SpkExpr *expr,
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static SpkUnknown *SymbolNode_isType(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    int isType; SpkUnknown *result;
+static SpkUnknown *SymbolNode_isSpec(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    int isSpec; SpkUnknown *result;
     
-    isType = SpkSymbolNode_IsType((SpkSymbolNode *)self);
+    isSpec = SpkSymbolNode_IsSpec((SpkSymbolNode *)self);
     if (Spk_GLOBAL(xtrue)) {
-        result = isType ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse);
+        result = isSpec ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse);
     } else /* compiling "bool.spk"; true & false don't exist yet */ {
-        result = isType ? Spk_1 : Spk_0;
+        result = isSpec ? Spk_1 : Spk_0;
     }
     Spk_INCREF(result);
     return result;
@@ -450,7 +450,7 @@ typedef struct SpkSymbolTableSubclass {
 
 
 static SpkMethodTmpl SymbolNodeMethods[] = {
-    { "isType", SpkNativeCode_ARGS_0, &SymbolNode_isType },
+    { "isSpec", SpkNativeCode_ARGS_0, &SymbolNode_isSpec },
     { 0 }
 };
 

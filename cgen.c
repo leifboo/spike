@@ -1267,8 +1267,8 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
     case Spk_STMT_DEF_MODULE:
         ASSERT(0, "unexpected module node");
         break;
-    case Spk_STMT_DEF_TYPE:
-        ASSERT(0, "unexpected type node");
+    case Spk_STMT_DEF_SPEC:
+        ASSERT(0, "unexpected spec node");
         break;
     case Spk_STMT_DO_WHILE:
         childNextLabel = stmt->expr->codeOffset;

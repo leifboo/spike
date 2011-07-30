@@ -106,7 +106,7 @@ class NameExpr : Expr {
     }
     
     
-    isType { return def !== null && def.isTypeDef; }
+    isSpec { return def !== null && def.isTypeDef; }
     isSelf { return sym.isSelf; }
     
     

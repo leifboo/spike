@@ -73,18 +73,26 @@ static SpkUnknown *checkExpr(Expr *, Stmt *, StaticChecker *, unsigned int);
 static SpkUnknown *checkOneExpr(Expr *, Stmt *, StaticChecker *, unsigned int);
 
 
-static SpkUnknown *checkDeclSpecs(Expr *declSpecs,
+static SpkUnknown *checkDeclSpecs(unsigned int *specifiers,
+                                  Expr *declSpecs,
                                   StaticChecker *checker,
                                   unsigned int pass)
 {
     Expr *declSpec;
+    Stmt *specDef;
     
-    if (pass != 1) /* XXX: ??? */
-        return;
+    *specifiers = 0;
     
     for (declSpec = declSpecs; declSpec; declSpec = declSpec->next) {
         ASSERT(declSpec->kind == Spk_EXPR_NAME, "identifier expected");
         _(SpkSymbolTable_Bind(checker->st, declSpec, checker->requestor));
+        if (declSpec->u.ref.def) {
+            /* XXX: check for invalid combinations */
+            specDef = declSpec->u.ref.def->u.def.stmt;
+            if (*specifiers & specDef->u.spec.mask)
+                _(badExpr(declSpec, "invalid specifier", checker));
+            *specifiers = (*specifiers & ~specDef->u.spec.mask) | specDef->u.spec.value;
+        }
     }
     
     Spk_INCREF(Spk_GLOBAL(xvoid));
@@ -100,8 +108,10 @@ static SpkUnknown *checkVarDefList(Expr *defList,
                                    unsigned int pass)
 {
     Expr *expr, *def;
+    unsigned int specifiers;
     
-    checkDeclSpecs(defList->declSpecs, checker, pass);
+    if (pass == 1)
+        _(checkDeclSpecs(&specifiers, defList->declSpecs, checker, pass));
     
     for (expr = defList; expr; expr = expr->next) {
         if (expr->kind == Spk_EXPR_ASSIGN) {
@@ -121,6 +131,7 @@ static SpkUnknown *checkVarDefList(Expr *defList,
         if (pass == 1) {
             _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
             expr->u.def.stmt = stmt;
+            expr->specifiers = specifiers;
         }
     }
     Spk_INCREF(Spk_GLOBAL(xvoid));
@@ -279,16 +290,17 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
     SpkSymbolNode *name;
     SpkOper oper;
     unsigned int innerPass;
+    unsigned int specifiers;
     
     expr = stmt->expr;
     body = stmt->top;
     ASSERT(body->kind == Spk_STMT_COMPOUND,
            "compound statement expected");
     
-    checkDeclSpecs(expr->declSpecs, checker, outerPass);
-    
     switch (outerPass) {
     case 1:
+        _(checkDeclSpecs(&specifiers, expr->declSpecs, checker, outerPass));
+        expr->specifiers = specifiers;
         ns = Spk_METHOD_NAMESPACE_RVALUE;
         name = 0;
         /* XXX: This can only be meaningfully composed with Spk_EXPR_CALL. */
@@ -427,7 +439,8 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
             }
             if (def->kind != Spk_EXPR_NAME)
                 break;
-            checkDeclSpecs(def->declSpecs, checker, 1);
+            checkDeclSpecs(&specifiers, def->declSpecs, checker, 1);
+            def->specifiers = specifiers;
             _(SpkSymbolTable_Insert(checker->st, def, checker->requestor));
             ++stmt->u.method.minArgumentCount;
             ++stmt->u.method.maxArgumentCount;
@@ -459,6 +472,10 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
             } else {
                 _(SpkSymbolTable_Insert(checker->st, arg, checker->requestor));
             }
+        }
+        
+        if (IS_EXTERN(expr) && body->top) {
+            _(badExpr(expr, "'extern' method with a non-empty body", checker));
         }
 
         for (innerPass = 1; innerPass <= 3; ++innerPass) {
@@ -670,8 +687,8 @@ static SpkUnknown *checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker,
     case Spk_STMT_DEF_MODULE:
         ASSERT(0, "unexpected module node");
         break;
-    case Spk_STMT_DEF_TYPE:
-        ASSERT(0, "unexpected type node");
+    case Spk_STMT_DEF_SPEC:
+        ASSERT(0, "unexpected spec node");
         break;
     case Spk_STMT_DO_WHILE:
         _(checkExpr(stmt->expr, stmt, checker, outerPass));
@@ -736,12 +753,17 @@ static struct PseudoVariable {
     { 0 }
 };
 
-static struct Type {
+static struct Spec {
     const char *name;
-} builtInTypes[] = {
-    { "obj" },
-    { "int" },
-    { "char" },
+    unsigned int mask;
+    unsigned int value;
+} builtInSpecifiers[] = {
+    { "obj",     Spk_SPEC_TYPE,     Spk_SPEC_TYPE_OBJ  },
+    { "int",     Spk_SPEC_TYPE,     Spk_SPEC_TYPE_INT  },
+    { "char",    Spk_SPEC_TYPE,     Spk_SPEC_TYPE_CHAR },
+    { "import",  Spk_SPEC_STORAGE,  Spk_SPEC_STORAGE_IMPORT },
+    { "export",  Spk_SPEC_STORAGE,  Spk_SPEC_STORAGE_EXPORT },
+    { "extern",  Spk_SPEC_STORAGE,  Spk_SPEC_STORAGE_EXTERN },
     { 0 }
 };
 
@@ -753,19 +775,21 @@ static Expr *newNameExpr(void) {
     return newExpr;
 }
 
-static void declareBuiltInType(struct Type *bit, SpkSymbolTable *st) {
-    SpkExpr *nameExpr;
-    SpkStmt *typeDef;
+static void declareBuiltInSpecifier(struct Spec *bis, SpkSymbolTable *st) {
+    Expr *nameExpr;
+    Stmt *specDef;
     
     nameExpr = newNameExpr();
     
-    typeDef = (SpkStmt *)SpkObject_New(Spk_CLASS(XStmt));
-    typeDef->kind = Spk_STMT_DEF_TYPE;
-    typeDef->expr = nameExpr;
-    typeDef->expr->sym = SpkSymbolNode_FromCString(st, bit->name);
-    typeDef->expr->u.def.stmt = typeDef;
+    specDef = (Stmt *)SpkObject_New(Spk_CLASS(XStmt));
+    specDef->kind = Spk_STMT_DEF_SPEC;
+    specDef->expr = nameExpr;
+    specDef->expr->sym = SpkSymbolNode_FromCString(st, bis->name);
+    specDef->expr->u.def.stmt = specDef;
+    specDef->u.spec.mask = bis->mask;
+    specDef->u.spec.value = bis->value;
     
-    SpkSymbolTable_Insert(st, typeDef->expr, 0);
+    SpkSymbolTable_Insert(st, specDef->expr, 0);
 }
 
 static Expr *newPseudoVariable(struct PseudoVariable *pv, SpkSymbolTable *st) {
@@ -832,7 +856,7 @@ SpkUnknown *SpkStaticChecker_DeclareBuiltIn(SpkSymbolTable *st,
                                             SpkUnknown *requestor)
 {
     struct PseudoVariable *pv;
-    struct Type *bit;
+    struct Spec *bis;
     
     /* XXX: where to exit this scope? */
     SpkSymbolTable_EnterScope(st, 1); /* built-in scope */
@@ -843,8 +867,8 @@ SpkUnknown *SpkStaticChecker_DeclareBuiltIn(SpkSymbolTable *st,
         Spk_DECREF(pvDef);
     }
     
-    for (bit = builtInTypes; bit->name; ++bit) {
-        declareBuiltInType(bit, st);
+    for (bis = builtInSpecifiers; bis->name; ++bis) {
+        declareBuiltInSpecifier(bis, st);
     }
     
     Spk_INCREF(Spk_GLOBAL(xvoid));

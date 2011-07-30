@@ -10,7 +10,7 @@ class SymbolNode {
         return self;
     }
     
-    isType { return entry !== null && entry.isType; }
+    isSpec { return entry !== null && entry.isSpec; }
     isSelf { return sym === $self; }
     
 } meta {
@@ -41,7 +41,7 @@ class STEntry {
         return self;
     }
     
-    isType { return def !== null && def.isType; }
+    isSpec { return def !== null && def.isSpec; }
     
 } meta {
     

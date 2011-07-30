@@ -101,7 +101,7 @@ SpkUnknown *Spk_exprOr;
 SpkUnknown *Spk_exprPostOp;
 SpkUnknown *Spk_exprPreOp;
 SpkUnknown *Spk_exprUnaryOp;
-SpkUnknown *Spk_isType;
+SpkUnknown *Spk_isSpec;
 SpkUnknown *Spk_left;
 SpkUnknown *Spk_next;
 SpkUnknown *Spk_nextArg;
@@ -137,7 +137,7 @@ SpkUnknown *Spk_stmtContinue;
 SpkUnknown *Spk_stmtDefClass;
 SpkUnknown *Spk_stmtDefMethod;
 SpkUnknown *Spk_stmtDefModule;
-SpkUnknown *Spk_stmtDefType;
+SpkUnknown *Spk_stmtDefSpec;
 SpkUnknown *Spk_stmtDefVar;
 SpkUnknown *Spk_stmtDoWhile;
 SpkUnknown *Spk_stmtExpr;
@@ -283,7 +283,7 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_exprPostOp,                    "exprPostOp"                  },
     { &Spk_exprPreOp,                     "exprPreOp"                   },
     { &Spk_exprUnaryOp,                   "exprUnaryOp"                 },
-    { &Spk_isType,                        "isType"                      },
+    { &Spk_isSpec,                        "isSpec"                      },
     { &Spk_left,                          "left"                        },
     { &Spk_next,                          "next"                        },
     { &Spk_nextArg,                       "nextArg"                     },
@@ -319,7 +319,7 @@ static SymbolTableEntry selectorTable[] = {
     { &Spk_stmtDefClass,                  "stmtDefClass"                },
     { &Spk_stmtDefMethod,                 "stmtDefMethod"               },
     { &Spk_stmtDefModule,                 "stmtDefModule"               },
-    { &Spk_stmtDefType,                   "stmtDefType"                 },
+    { &Spk_stmtDefSpec,                   "stmtDefSpec"                 },
     { &Spk_stmtDefVar,                    "stmtDefVar"                  },
     { &Spk_stmtDoWhile,                   "stmtDoWhile"                 },
     { &Spk_stmtExpr,                      "stmtExpr"                    },

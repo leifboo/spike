@@ -60,14 +60,14 @@ closed_statement(r) ::= YIELD            SEMI.                                  
 closed_statement(r) ::= YIELD expr(expr) SEMI.                                  { r = SpkParser_NewStmt(Spk_STMT_YIELD, expr.first, 0, 0, parser); }
 closed_statement(r) ::= expr(expr) compound_statement(stmt).                    { r = SpkParser_NewStmt(Spk_STMT_DEF_METHOD, expr.first, stmt, 0, parser); }
 closed_statement(r) ::= CLASS IDENTIFIER(name) class_body(body).                { r = SpkParser_NewClassDef(&name, 0, body.top, body.bottom, parser); }
-closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) class_body(body).           { r = SpkParser_NewClassDef(&name, 0, body.top, body.bottom, parser); }
+closed_statement(r) ::= CLASS SPECIFIER(name) class_body(body).                 { r = SpkParser_NewClassDef(&name, 0, body.top, body.bottom, parser); }
 closed_statement(r) ::= CLASS IDENTIFIER(name) COLON IDENTIFIER(super) class_body(body).
                                                                                 { r = SpkParser_NewClassDef(&name, &super, body.top, body.bottom, parser); }
-closed_statement(r) ::= CLASS IDENTIFIER(name) COLON TYPE_IDENTIFIER(super) class_body(body).
+closed_statement(r) ::= CLASS IDENTIFIER(name) COLON SPECIFIER(super) class_body(body).
                                                                                 { r = SpkParser_NewClassDef(&name, &super, body.top, body.bottom, parser); }
-closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) COLON IDENTIFIER(super) class_body(body).
+closed_statement(r) ::= CLASS SPECIFIER(name) COLON IDENTIFIER(super) class_body(body).
                                                                                 { r = SpkParser_NewClassDef(&name, &super, body.top, body.bottom, parser); }
-closed_statement(r) ::= CLASS TYPE_IDENTIFIER(name) COLON TYPE_IDENTIFIER(super) class_body(body).
+closed_statement(r) ::= CLASS SPECIFIER(name) COLON SPECIFIER(super) class_body(body).
                                                                                 { r = SpkParser_NewClassDef(&name, &super, body.top, body.bottom, parser); }
 
 %type class_body {SpkStmtPair}
@@ -87,7 +87,7 @@ decl_spec_list(r) ::= decl_spec(declSpec).                                      
 decl_spec_list(r) ::= decl_spec_list(declSpecList) decl_spec(declSpec).         { r = declSpecList; SpkParser_SetNextExpr(r.last, declSpec, parser); r.last = declSpec; }
 
 %type decl_spec {SpkExpr *}
-decl_spec(r) ::= TYPE_IDENTIFIER(name).                                         { r = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, &name, parser); }
+decl_spec(r) ::= SPECIFIER(name).                                               { r = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, &name, parser); }
 
 %type comma_expr {SpkExprList}
 comma_expr(r) ::= colon_expr(expr).                                             { r.first = expr; r.last = expr; }
@@ -210,10 +210,10 @@ postfix_expr(r) ::= postfix_expr(func) LBRACK(t) argument_list(args) RBRACK.    
 postfix_expr(r) ::= postfix_expr(func) LPAREN(t) RPAREN.                        { r = SpkParser_NewCallExpr(Spk_OPER_APPLY, func, 0,     &t, parser); }
 postfix_expr(r) ::= postfix_expr(func) LPAREN(t) argument_list(args) RPAREN.    { r = SpkParser_NewCallExpr(Spk_OPER_APPLY, func, &args, &t, parser); }
 postfix_expr(r) ::= postfix_expr(obj) DOT(t) IDENTIFIER(attr).                  { r = SpkParser_NewAttrExpr(obj, &attr, &t, parser); }
-postfix_expr(r) ::= postfix_expr(obj) DOT(t) TYPE_IDENTIFIER(attr).             { r = SpkParser_NewAttrExpr(obj, &attr, &t, parser); }
+postfix_expr(r) ::= postfix_expr(obj) DOT(t) SPECIFIER(attr).                   { r = SpkParser_NewAttrExpr(obj, &attr, &t, parser); }
 postfix_expr(r) ::= postfix_expr(obj) DOT(t) CLASS(attr).                       { r = SpkParser_NewAttrExpr(obj, &attr, &t, parser); }
-postfix_expr(r) ::= TYPE_IDENTIFIER(name) DOT(t) IDENTIFIER(attr).              { r = SpkParser_NewClassAttrExpr(&name, &attr, &t, parser); }
-postfix_expr(r) ::= TYPE_IDENTIFIER(name) DOT(t) CLASS(attr).                   { r = SpkParser_NewClassAttrExpr(&name, &attr, &t, parser); }
+postfix_expr(r) ::= SPECIFIER(name) DOT(t) IDENTIFIER(attr).                    { r = SpkParser_NewClassAttrExpr(&name, &attr, &t, parser); }
+postfix_expr(r) ::= SPECIFIER(name) DOT(t) CLASS(attr).                         { r = SpkParser_NewClassAttrExpr(&name, &attr, &t, parser); }
 postfix_expr(r) ::= postfix_expr(expr) INC(t).                                  { r = SpkParser_NewExpr(Spk_EXPR_POSTOP, Spk_OPER_SUCC, 0, expr, 0, &t, parser); }
 postfix_expr(r) ::= postfix_expr(expr) DEC(t).                                  { r = SpkParser_NewExpr(Spk_EXPR_POSTOP, Spk_OPER_PRED, 0, expr, 0, &t, parser); }
 
@@ -225,7 +225,7 @@ primary_expr(r) ::= LITERAL_FLOAT(t).                                           
 primary_expr(r) ::= LITERAL_CHAR(t).                                            { r = SpkParser_NewExpr(Spk_EXPR_LITERAL, 0, 0, 0, 0, &t, parser); }
 primary_expr(r) ::= literal_string(expr).                                       { r = expr; }
 primary_expr(r) ::= LPAREN expr(expr) RPAREN.                                   { r = expr.first; }
-primary_expr(r) ::= LPAREN TYPE_IDENTIFIER(name) RPAREN.                        { r = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, &name, parser); }
+primary_expr(r) ::= LPAREN SPECIFIER(name) RPAREN.                              { r = SpkParser_NewExpr(Spk_EXPR_NAME, 0, 0, 0, 0, &name, parser); }
 primary_expr(r) ::= block(expr).                                                { r = expr; }
 primary_expr(r) ::= LCURLY(t) expr(expr) RCURLY.                                { r = SpkParser_NewCompoundExpr(expr.first, &t, parser); }
 

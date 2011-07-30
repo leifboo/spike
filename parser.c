@@ -52,7 +52,7 @@ static SpkSymbolNode *symbolNodeForToken(SpkToken *token, SpkUnknown *st) {
     case Spk_TOKEN_YIELD:    return symbolNodeFromCString(st, "yield");
     
     case Spk_TOKEN_IDENTIFIER:
-    case Spk_TOKEN_TYPE_IDENTIFIER:
+    case Spk_TOKEN_SPECIFIER:
     case Spk_TOKEN_LITERAL_SYMBOL:
         return Spk_CAST(XSymbolNode, token->value);
     }
@@ -129,7 +129,7 @@ static SpkUnknown *stmtSelector(SpkStmtKind kind) {
     case Spk_STMT_DEF_CLASS:        return Spk_stmtDefClass;
     case Spk_STMT_DEF_METHOD:       return Spk_stmtDefMethod;
     case Spk_STMT_DEF_MODULE:       return Spk_stmtDefModule;
-    case Spk_STMT_DEF_TYPE:         return Spk_stmtDefType;
+    case Spk_STMT_DEF_SPEC:         return Spk_stmtDefSpec;
     case Spk_STMT_DEF_VAR:          return Spk_stmtDefVar;
     case Spk_STMT_DO_WHILE:         return Spk_stmtDoWhile;
     case Spk_STMT_EXPR:             return Spk_stmtExpr;

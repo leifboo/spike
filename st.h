@@ -56,7 +56,7 @@ struct SpkSymbolTable {
 
 SpkSymbolNode *SpkSymbolNode_FromSymbol(SpkSymbolTable *st, SpkUnknown *sym);
 SpkSymbolNode *SpkSymbolNode_FromCString(SpkSymbolTable *st, const char *str);
-int SpkSymbolNode_IsType(SpkSymbolNode *node);
+int SpkSymbolNode_IsSpec(SpkSymbolNode *node);
 
 SpkSymbolTable *SpkSymbolTable_New(void);
 void SpkSymbolTable_EnterScope(SpkSymbolTable *st, int enterNewContext);
