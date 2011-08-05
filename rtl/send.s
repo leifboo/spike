@@ -517,14 +517,17 @@ lookupMethod:
 
 /* found it */
 callNewMethod:
-	popl	%edx		# restore registers
-	popl	%ecx
+	popl	%edx		# restore selector
+	popl	%ecx		# restore argumentCount
+
+SpikeCallNewMethod: /* entry point for Function __apply__ */
 	cmpl	4(%eax), %ecx	# minArgumentCount
-	jne	wrongNumberOfArguments
+	jb	wrongNumberOfArguments
 	cmpl	8(%eax), %ecx	# maxArgumentCount
-	jne	wrongNumberOfArguments
+	ja	wrongNumberOfArguments
 
 /* allocate and initialize locals */
+	movl	%ecx, %edi	# save argumentCount
 	movl	12(%eax), %ecx	# localCount
 	jmp	.L3
 .L2:
@@ -532,8 +535,39 @@ callNewMethod:
 .L3:
 	loop	.L2
 
+	movl	%edi, %ecx	# restore argumentCount
+
+/* compute code entry point */
 	addl	$16, %eax	# skip Method object header
-	jmpl	*%eax		# call it
+	pushl	%eax		# save entry point for later
+
+/* set up instance variable pointer in %edi */
+	movl	%ebx, %edi 	# get class
+	movl	$0, %eax 	# tally instance vars...
+	jmp	.L5 		# ...in superclasses
+.L4:
+	addl	16(%edi), %eax	# instVarCount
+.L5:
+	movl	4(%edi), %edi 	# up superclass chain
+	testl	%edi, %edi
+	jne	.L4
+
+	leal	4(%esi,%eax,4), %edi
+
+/*
+ * call the method
+ *
+ * On entry:
+ *     %eax: undefined (instVarTally of superclasses)
+ *     %ecx: argumentCount
+ *     %edx: selector
+ *     %ebx: methodClass
+ *     %esi: self
+ *     %edi: instVarPointer
+ *
+ *     %esp/%ebp point to a fully initialized stack frame
+ */
+	ret			# call it
 
 wrongNumberOfArguments:
 	pushl	$__sym_wrongNumberOfArguments

@@ -1709,13 +1709,30 @@ static SpkUnknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *
         }
     }
 #endif
-
+    /* instVarCount */
+    fprintf(out,
+            "\t.long\t%lu\t/* instVarCount */\n",
+            (unsigned long)
+            (meta
+             ? classDef->u.klass.classVarCount
+             : classDef->u.klass.instVarCount)
+        );
+    
     if (meta) {
         fprintf(out, "\t.long\t%s\t/* thisClass */\n", sym); /* thisClass */
     } else {
         willEmitSym((SpkSymbol *)classDef->expr->sym->sym, cgen);
         fprintf(out, "\t.long\t__sym_%s\t/* name */\n", sym); /* name */
     }
+    
+    /*
+     * XXX: Class objects need slots for class variables up the
+     * superclass chain.  To be totally consistent, and robust with
+     * dynamic linking (opaque superclasses), class objects would have
+     * to be created at runtime.
+     */
+    if (!meta)
+        fprintf(out, "\t.long\t0,0,0,0,0,0,0,0\t/* XXX class variables */\n");
     
     fprintf(out,
             "\t.size\t%s%s, .-%s%s\n",

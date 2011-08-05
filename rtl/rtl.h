@@ -23,6 +23,7 @@ struct Behavior {
     Object base;
     Behavior *superclass;
     Array *methodTable[2];
+    size_t instVarCount;
 };
 
 

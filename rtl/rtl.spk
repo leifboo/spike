@@ -18,6 +18,7 @@ class Behavior : Object {
     obj superclass;
     obj rvMethodTable;
     obj lvMethodTable;
+    obj instVarCount;
     
     superclass { return superclass; }
 }
@@ -113,9 +114,14 @@ class True : Boolean {
 
 
 class Method : Object {
+    obj minArgumentCount;
+    obj maxArgumentCount;
+    obj localCount;
+    // code...
 }
 
-class Function : Object {
+class Function : Method {
+    extern self( /*...args*/ ) {}
 }
 
 class Message : Object {
