@@ -441,6 +441,36 @@ SpikeSetAttrSuper:
 	jmp	SpikeSendMessageSuperLValue
 
 
+/* helper routines */
+
+getClass:
+	cmpl	$0, %esi	# test for null
+	jne	.L11
+
+	movl	$Null, %ebx
+	ret
+.L11:
+	movl	%esi, %eax
+	andl	$3, %eax	# test for object pointer
+	cmpl	$0, %eax
+	jne	.L12
+
+	movl	(%esi), %ebx 	# get class
+	ret
+.L12:
+	cmpl	$2, %eax	# test for SmallInteger
+	jne	.L13
+
+	movl	$Integer, %ebx
+	ret
+
+.L13:
+	pushl	$__sym_badObjectPointer
+	call	SpikeError
+	movl	$0, %ebx
+	ret
+
+
 /*
  * send message bottleneck
  *
@@ -468,7 +498,7 @@ SpikeSendMessageLValue:
 	pushl	%esi
 	pushl	%edi
 	movl	8(%ebp,%ecx,4), %esi  # get receiver
-	movl	(%esi), %ebx 	# get class
+	call	getClass 	# get class
 	movl	$1, %edi	# lvalue namespace
 	jmp	lookupMethod
 
@@ -491,7 +521,7 @@ SpikeSendMessage:
 	pushl	%esi
 	pushl	%edi
 	movl	8(%ebp,%ecx,4), %esi  # get receiver
-	movl	(%esi), %ebx 	# get class
+	call	getClass 	# get class
 	movl	$0, %edi	# rvalue namespace
 	/* fall through */
 
@@ -521,6 +551,7 @@ callNewMethod:
 	popl	%ecx		# restore argumentCount
 
 SpikeCallNewMethod: /* entry point for Function __apply__ */
+	.globl	SpikeCallNewMethod
 	cmpl	4(%eax), %ecx	# minArgumentCount
 	jb	wrongNumberOfArguments
 	cmpl	8(%eax), %ecx	# maxArgumentCount
@@ -529,12 +560,14 @@ SpikeCallNewMethod: /* entry point for Function __apply__ */
 /* allocate and initialize locals */
 	movl	%ecx, %edi	# save argumentCount
 	movl	12(%eax), %ecx	# localCount
+	cmpl	$0, %ecx
+	je	.L4
 	jmp	.L3
 .L2:
 	pushl	$0
 .L3:
 	loop	.L2
-
+.L4:
 	movl	%edi, %ecx	# restore argumentCount
 
 /* compute code entry point */
@@ -544,13 +577,13 @@ SpikeCallNewMethod: /* entry point for Function __apply__ */
 /* set up instance variable pointer in %edi */
 	movl	%ebx, %edi 	# get class
 	movl	$0, %eax 	# tally instance vars...
-	jmp	.L5 		# ...in superclasses
-.L4:
-	addl	16(%edi), %eax	# instVarCount
+	jmp	.L6 		# ...in superclasses
 .L5:
+	addl	16(%edi), %eax	# instVarCount
+.L6:
 	movl	4(%edi), %edi 	# up superclass chain
 	testl	%edi, %edi
-	jne	.L4
+	jne	.L5
 
 	leal	4(%esi,%eax,4), %edi
 

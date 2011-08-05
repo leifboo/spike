@@ -20,7 +20,7 @@ SpikeTest:
 .L2:
 	cmpl	$false, %eax
 	je	.L1
-	cmpl	$null, %eax
+	cmpl	$0, %eax	# null
 	je	.L1
 
 /* XXX: accept 0, 0.0, (hook?) */

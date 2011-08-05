@@ -63,6 +63,7 @@ int main(int argc, char **argv) {
     Spk_kwSep[0] = "$$";
     Spk_kwSep[1] = "$";
     Spk_declareBuiltIn = 0; /* as in xcspk */
+    Spk_declareObject = 0;
 #endif
     
     if (!Spk_Boot())

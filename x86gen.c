@@ -294,10 +294,16 @@ static SpkUnknown *emitCodeForLiteral(SpkUnknown *literal, OpcodeGen *cgen) {
         willEmitSym((SpkSymbol *)literal, cgen->generic);
         emitOpcode(cgen, "pushl", "$__sym_%s", value);
     } else if (klass == Spk_CLASS(Integer)) {
-        /* a negative literal int is currently not possible */
         long value = SpkHost_IntegerAsCLong(literal);
-        willEmitInt(value, cgen->generic);
-        emitOpcode(cgen, "pushl", "$__int_%ld", value);
+        /* a negative literal int is currently not possible */
+        ASSERT(value >= 0, "negative literal int");
+        if (value <= 0x1fffffff) {
+            emitOpcode(cgen, "pushl", "$%ld", (value << 2) | 0x2);
+        } else {
+            /* box */
+            willEmitInt(value, cgen->generic);
+            emitOpcode(cgen, "pushl", "$__int_%ld", value);
+        }
     } else if (klass == Spk_CLASS(Float)) {
         double value = SpkHost_FloatAsCDouble(literal);
         unsigned int index = willEmitFloat(value, cgen->generic);
@@ -651,9 +657,9 @@ static void emitROData(ModuleCodeGen *cgen) {
     for (i = 0; i < cgen->symDataSize; ++i) {
         const char *sym = SpkSymbol_AsCString(cgen->symData[i]);
         fprintf(out,
+                "\t.align\t4\n"
                 "__sym_%s:\n"
                 "\t.globl\t__sym_%s\n"
-                "\t.align\t4\n"
                 "\t.type\t__sym_%s, @object\n"
                 "\t.long\tSymbol\n"
                 "\t.long\t%lu\n"
@@ -1460,7 +1466,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
     SpkUnknown *selector;
     FILE *out;
     const char *codeObjectClass;
-    const char *className, *suffix, *ns, *functionName;
+    const char *className, *suffix, *ns, *functionName, *obj, *code;
     
     selector = stmt->u.method.name->sym;
     memset(&sentinel, 0, sizeof(sentinel));
@@ -1489,6 +1495,9 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
     
     out = cgen->generic->out;
     
+    obj = "";
+    code = ".code";
+    
     if (outer->kind == CODE_GEN_CLASS && outer->level != 1) {
         codeObjectClass = "Method";
         className = SpkHost_SymbolAsCString(outer->u.klass.classDef->expr->sym->sym);
@@ -1497,6 +1506,13 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
         case Spk_METHOD_NAMESPACE_RVALUE: ns = ".0."; break;
         case Spk_METHOD_NAMESPACE_LVALUE: ns = ".1."; break;
         }
+    } else if (selector == Spk_main) {
+        codeObjectClass = "Function";
+        className = "";
+        suffix = "";
+        ns = "spike.";
+        //obj = ".obj";
+        //code = "";
     } else {
         codeObjectClass = "Function";
         className = "";
@@ -1508,29 +1524,29 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
     fprintf(out, "\t.text\n");
     fprintf(out,
             "\t.align\t4\n"
-            "%s%s%s%s:\n"
-            "\t.globl\t%s%s%s%s\n"
-            "\t.type\t%s%s%s%s, @object\n"
-            "\t.size\t%s%s%s%s, 4\n"
+            "%s%s%s%s%s:\n"
+            "\t.globl\t%s%s%s%s%s\n"
+            "\t.type\t%s%s%s%s%s, @object\n"
+            "\t.size\t%s%s%s%s%s, 16\n"
+            "\t.long\t%s\n"
             "\t.long\t%lu\n"
             "\t.long\t%lu\n"
-            "\t.long\t%lu\n"
-            "\t.long\t%s\n",
-            className, suffix, ns, functionName,
-            className, suffix, ns, functionName,
-            className, suffix, ns, functionName,
-            className, suffix, ns, functionName,
+            "\t.long\t%lu\n",
+            className, suffix, ns, functionName, obj,
+            className, suffix, ns, functionName, obj,
+            className, suffix, ns, functionName, obj,
+            className, suffix, ns, functionName, obj,
+            codeObjectClass,
             (unsigned long)cgen->minArgumentCount,
             (unsigned long)cgen->maxArgumentCount,
-            (unsigned long)cgen->localCount,
-            codeObjectClass);
+            (unsigned long)cgen->localCount);
     fprintf(out,
-            "%s%s%s%s.code:\n"
-            "\t.globl\t%s%s%s%s.code\n"
-            "\t.type\t%s%s%s%s.code, @function\n",
-            className, suffix, ns, functionName,
-            className, suffix, ns, functionName,
-            className, suffix, ns, functionName);
+            "%s%s%s%s%s:\n"
+            "\t.globl\t%s%s%s%s%s\n"
+            "\t.type\t%s%s%s%s%s, @function\n",
+            className, suffix, ns, functionName, code,
+            className, suffix, ns, functionName, code,
+            className, suffix, ns, functionName, code);
     
     prologue(cgen);
     

@@ -19,6 +19,7 @@
 
 
 int Spk_declareBuiltIn = 1;
+int Spk_declareObject = 1;
 
 
 #define ASSERT(c, msg) \
@@ -901,7 +902,8 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     
     predefList->first = predefList->last = 0;
     /* 'Object' is always needed -- see SpkParser_NewClassDef() */
-    _(declareClass(Spk_CLASS(Object), predefList, &checker));
+    if (Spk_declareObject) /* Well, almost always. */
+        _(declareClass(Spk_CLASS(Object), predefList, &checker));
     if (Spk_declareBuiltIn) {
         /* XXX: What about the other core classes? */
         _(declareClass(Spk_CLASS(Array), predefList, &checker));

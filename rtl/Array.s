@@ -6,10 +6,10 @@ Array.0.size:
 	.globl	Array.0.size
 	.type	Array.0.size, @object
 	.size	Array.0.size, 4
-	.long	0
-	.long	0
-	.long	0
 	.long	Method
+	.long	0
+	.long	0
+	.long	0
 Array.0.size.code:
 	.globl	Array.0.size.code
 	.type	Array.0.size.code, @function
@@ -29,10 +29,10 @@ Array.0.__index__:
 	.globl	Array.0.__index__
 	.type	Array.0.__index__, @object
 	.size	Array.0.__index__, 4
+	.long	Method
 	.long	1
 	.long	1
 	.long	0
-	.long	Method
 Array.0.__index__.code:
 	.globl	Array.0.__index__.code
 	.type	Array.0.__index__.code, @function
@@ -52,10 +52,10 @@ Array.1.__index__:
 	.globl	Array.1.__index__
 	.type	Array.1.__index__, @object
 	.size	Array.1.__index__, 4
+	.long	Method
 	.long	2
 	.long	2
 	.long	0
-	.long	Method
 Array.1.__index__.code:
 	.globl	Array.1.__index__.code
 	.type	Array.1.__index__.code, @function

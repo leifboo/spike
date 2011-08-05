@@ -1,5 +1,5 @@
 
-class XObject : null {
+class Object : null {
     self == x { return self === x; }
     self != x { return self !== x; }
 } meta {
@@ -85,7 +85,12 @@ class Metaclass : Behavior {
 
 
 // class String : Object
-// class Symbol : Object
+
+
+class Symbol : Object {
+    obj hash;
+    // str...
+}
 
 
 class Boolean {
@@ -137,3 +142,16 @@ class Message : Object {
 class Null : Object {}
 class Void : Object {}
 
+
+// This is here just to make the compiler generate symbols.
+class Junk {
+    __ind__ {}
+    __addr__ {}
+    
+    typeError {}
+    rangeError {}
+    mustBeBoolean{}
+    badObjectPointer {}
+    doesNotUnderstand {}
+    wrongNumberOfArguments {}
+}
