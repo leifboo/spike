@@ -557,3 +557,31 @@ Integer.0.__ne__.code:
 	ret	$4
 	.size	Integer.0.__ne__.code, .-Integer.0.__ne__.code
 
+
+/*------------------------------------------------------------------------*/
+/*
+ * unboxing
+ */
+
+	.text
+	.align	4
+Integer.0.unboxed:
+	.globl	Integer.0.unboxed
+	.type	Integer.0.unboxed, @object
+	.size	Integer.0.unboxed, 16
+	.long	Method
+	.long	0
+	.long	0
+	.long	0
+Integer.0.unboxed.code:
+	.globl	Integer.0.unboxed.code
+	.type	Integer.0.unboxed.code, @function
+	movl	%esi, 8(%ebp)	# fake, safe result for Spike code is 'self'
+	movl	%esi, %eax	# real result for C/asm code...
+	sarl	$2, %eax	# ...is also 'self', but unboxed
+	popl	%edi
+	popl	%esi
+	popl	%ebx
+	leave
+	ret	$0
+	.size	Integer.0.unboxed.code, .-Integer.0.unboxed.code

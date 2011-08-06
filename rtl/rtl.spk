@@ -74,6 +74,9 @@ class Integer : Object {
     extern self >= x {}
     extern self == x {}
     extern self != x {}
+    
+    // unboxing
+    extern unboxed {}
 }
 
 
@@ -126,6 +129,14 @@ class Method : Object {
 }
 
 class Function : Method {
+    extern self( /*...args*/ ) {}
+}
+
+
+class CThunk : Object {
+    obj signature;
+    obj pointer;
+    
     extern self( /*...args*/ ) {}
 }
 

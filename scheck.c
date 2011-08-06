@@ -368,6 +368,7 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
             if (!outer || outer->kind != Spk_STMT_DEF_CLASS) {
                 /* declare naked functions */
                 _(SpkSymbolTable_Insert(checker->st, expr->left, checker->requestor));
+                expr->left->specifiers = specifiers;
             }
             stmt->u.method.argList.fixed = expr->right;
             stmt->u.method.argList.var = expr->var;
@@ -759,12 +760,13 @@ static struct Spec {
     unsigned int mask;
     unsigned int value;
 } builtInSpecifiers[] = {
-    { "obj",     Spk_SPEC_TYPE,     Spk_SPEC_TYPE_OBJ  },
-    { "int",     Spk_SPEC_TYPE,     Spk_SPEC_TYPE_INT  },
-    { "char",    Spk_SPEC_TYPE,     Spk_SPEC_TYPE_CHAR },
-    { "import",  Spk_SPEC_STORAGE,  Spk_SPEC_STORAGE_IMPORT },
-    { "export",  Spk_SPEC_STORAGE,  Spk_SPEC_STORAGE_EXPORT },
-    { "extern",  Spk_SPEC_STORAGE,  Spk_SPEC_STORAGE_EXTERN },
+    { "obj",     Spk_SPEC_TYPE,       Spk_SPEC_TYPE_OBJ  },
+    { "int",     Spk_SPEC_TYPE,       Spk_SPEC_TYPE_INT  },
+    { "char",    Spk_SPEC_TYPE,       Spk_SPEC_TYPE_CHAR },
+    { "import",  Spk_SPEC_STORAGE,    Spk_SPEC_STORAGE_IMPORT },
+    { "export",  Spk_SPEC_STORAGE,    Spk_SPEC_STORAGE_EXPORT },
+    { "extern",  Spk_SPEC_STORAGE,    Spk_SPEC_STORAGE_EXTERN },
+    { "cdecl",   Spk_SPEC_CALL_CONV,  Spk_SPEC_CALL_CONV_C },
     { 0 }
 };
 

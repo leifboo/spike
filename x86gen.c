@@ -264,7 +264,10 @@ static SpkUnknown *emitCodeForName(Expr *expr, int *super, OpcodeGen *cgen) {
     
     switch (def->u.def.pushOpcode) {
     case Spk_OPCODE_PUSH_GLOBAL:
-        emitOpcode(cgen, "pushl", isVarDef(def) ? "%s" : "$%s", SpkHost_SymbolAsCString(def->sym->sym));
+        emitOpcode(cgen, "pushl",
+                   isVarDef(def) ? "%s%s" : "$%s%s",
+                   SpkHost_SymbolAsCString(def->sym->sym),
+                   (IS_EXTERN(def) && IS_CDECL(def)) ? ".thunk" : "");
         break;
     case Spk_OPCODE_PUSH_INST_VAR:
         emitOpcode(cgen, "pushl", "%d(%%edi)", instVarOffset(def, cgen));
@@ -375,6 +378,10 @@ static void prologue(OpcodeGen *cgen) {
 }
 
 static void epilogue(OpcodeGen *cgen) {
+    if (cgen->localCount != 0) {
+        /* discard locals */
+        emitOpcode(cgen, "addl", "$%lu, %%esp", (unsigned long)4*cgen->localCount); 
+    }
     /* restore registers */
     emitOpcode(cgen, "popl", "%%edi"); /* instVarPointer */
     emitOpcode(cgen, "popl", "%%esi"); /* self */
@@ -1581,6 +1588,45 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
     return 0;
 }
 
+
+static SpkUnknown *emitCThunk(Stmt *stmt, CodeGen *cgen) {
+    const char *sym, *suffix;
+    FILE *out;
+    
+    ASSERT(cgen->level == 1, "C functions must be global");
+    
+    out = cgen->out;
+    
+    /* XXX: comdat */
+    sym = SpkHost_SymbolAsCString(stmt->u.method.name->sym);
+    suffix = ".thunk";
+    
+    fprintf(out,
+            "\t.data\n"
+            "\t.align\t4\n"
+            "%s%s:\n"
+            "\t.type\t%s%s, @object\n",
+            sym, suffix, sym, suffix);
+    
+    fprintf(out,
+            "\t.long\tCThunk\n" /* klass */
+            "\t.long\tInteger\n" /* signature */
+            "\t.long\t%s\n", sym /* pointer */
+        );
+    
+    fprintf(out,
+            "\t.size\t%s%s, .-%s%s\n",
+            sym, suffix, sym, suffix);
+    fprintf(out, "\n");
+    
+    Spk_INCREF(Spk_GLOBAL(xvoid));
+    return Spk_GLOBAL(xvoid);
+    
+ unwind:
+    return 0;
+}
+
+
 /****************************************************************************/
 /* classes */
 
@@ -1594,8 +1640,12 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
     for (s = body->top; s; s = s->next) {
         switch (s->kind) {
         case Spk_STMT_DEF_METHOD:
-            if (!IS_EXTERN(s->expr))
+            if (IS_EXTERN(s->expr)) {
+                if (IS_CDECL(s->expr))
+                    _(emitCThunk(s, cgen));
+            } else {
                 _(emitCodeForMethod(s, meta, cgen));
+            }
             break;
         case Spk_STMT_DEF_VAR:
             if (cgen->level == 1) {

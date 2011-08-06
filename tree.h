@@ -54,15 +54,18 @@ typedef enum SpkExprNameKind {
 } SpkExprNameKind;
 
 enum {
-    Spk_SPEC_TYPE           = 0x0F,
-    Spk_SPEC_TYPE_OBJ       = 0x01,
-    Spk_SPEC_TYPE_INT       = 0x02,
-    Spk_SPEC_TYPE_CHAR      = 0x03,
+    Spk_SPEC_TYPE           = 0x0000000F,
+    Spk_SPEC_TYPE_OBJ       = 0x00000001,
+    Spk_SPEC_TYPE_INT       = 0x00000002,
+    Spk_SPEC_TYPE_CHAR      = 0x00000003,
     
-    Spk_SPEC_STORAGE        = 0xF0,
-    Spk_SPEC_STORAGE_IMPORT = 0x10,
-    Spk_SPEC_STORAGE_EXPORT = 0x20,
-    Spk_SPEC_STORAGE_EXTERN = 0x30
+    Spk_SPEC_STORAGE        = 0x000000F0,
+    Spk_SPEC_STORAGE_IMPORT = 0x00000010,
+    Spk_SPEC_STORAGE_EXPORT = 0x00000020,
+    Spk_SPEC_STORAGE_EXTERN = 0x00000030,
+    
+    Spk_SPEC_CALL_CONV      = 0x00000F00,
+    Spk_SPEC_CALL_CONV_C    = 0x00000100
 };
 
 
@@ -175,6 +178,7 @@ extern struct SpkClassTmpl Spk_ClassXExprTmpl, Spk_ClassXStmtTmpl;
 
 
 #define IS_EXTERN(e) (((e)->specifiers & Spk_SPEC_STORAGE) == Spk_SPEC_STORAGE_EXTERN)
+#define IS_CDECL(e) (((e)->specifiers & Spk_SPEC_CALL_CONV) == Spk_SPEC_CALL_CONV_C)
 
 
 #endif /* __spk_tree_h__ */
