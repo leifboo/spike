@@ -561,13 +561,11 @@ SpikeCallNewMethod: /* entry point for Function __apply__ */
 	movl	%ecx, %edi	# save argumentCount
 	movl	12(%eax), %ecx	# localCount
 	cmpl	$0, %ecx
-	je	.L4
-	jmp	.L3
+	je	.L3
 .L2:
 	pushl	$0
-.L3:
 	loop	.L2
-.L4:
+.L3:
 	movl	%edi, %ecx	# restore argumentCount
 
 /* compute code entry point */
@@ -577,13 +575,13 @@ SpikeCallNewMethod: /* entry point for Function __apply__ */
 /* set up instance variable pointer in %edi */
 	movl	%ebx, %edi 	# get class
 	movl	$0, %eax 	# tally instance vars...
-	jmp	.L6 		# ...in superclasses
-.L5:
+	jmp	.L5 		# ...in superclasses
+.L4:
 	addl	16(%edi), %eax	# instVarCount
-.L6:
+.L5:
 	movl	4(%edi), %edi 	# up superclass chain
 	testl	%edi, %edi
-	jne	.L5
+	jne	.L4
 
 	leal	4(%esi,%eax,4), %edi
 

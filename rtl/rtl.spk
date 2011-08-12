@@ -3,7 +3,10 @@ class Object : null {
     self == x { return self === x; }
     self != x { return self !== x; }
 } meta {
-    new { /* XXX */ }
+    self new { return self basicNew; }
+    self new: anInteger { return self basicNew: anInteger; }
+    self basicNew { return self basicNew: 0; }
+    extern self basicNew: anInteger {}
 }
 
 

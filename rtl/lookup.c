@@ -7,9 +7,6 @@
 extern Behavior Metaclass;
 
 
-#define LOOKUP_DEBUG 0
-
-
 Method *SpikeLookupMethod(Behavior *behavior, unsigned int ns, Symbol *selector)
 {
     Array *methodTable;
