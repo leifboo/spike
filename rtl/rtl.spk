@@ -24,7 +24,11 @@ class Behavior : Object {
 }
 
 
-// class Char : Object
+// XXX
+class Char : Object {
+    obj value;
+    extern unboxed {}
+}
 
 
 class Class : Behavior {
@@ -87,7 +91,12 @@ class Metaclass : Behavior {
 }
 
 
-// class String : Object
+// XXX
+class String : Object {
+    obj len;
+    // str...
+    extern unboxed {}
+}
 
 
 class Symbol : Object {

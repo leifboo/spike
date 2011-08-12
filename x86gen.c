@@ -618,9 +618,9 @@ static void emitROData(ModuleCodeGen *cgen) {
          * "%f" seems fuzzy.
          */
         fprintf(out,
+                "\t.align\t16\n"
                 "__float_%u:\n"
                 "\t.globl\t__float_%u\n"
-                "\t.align\t16\n"
                 "\t.type\t__float_%u, @object\n"
                 "\t.size\t__float_%u, 12\n"
                 "\t.long\tFloat\n"
@@ -644,9 +644,9 @@ static void emitROData(ModuleCodeGen *cgen) {
     
     for (i = 0; i < cgen->strDataSize; ++i) {
         fprintf(out,
+                "\t.align\t4\n"
                 "__str_%u:\n"
                 "\t.globl\t__str_%u\n"
-                "\t.align\t4\n"
                 "\t.type\t__str_%u, @object\n"
                 "\t.long\tString\n"
                 "\t.long\t%lu\n"
