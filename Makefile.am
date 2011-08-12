@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-bin_PROGRAMS = spike cspk
+bin_PROGRAMS = spike cspk spikex
 noinst_PROGRAMS = xcspk
 noinst_LIBRARIES = libspike.a
 
@@ -14,6 +14,8 @@ cspk_LDADD = libspike.a
 
 xcspk_SOURCES = xcspk.c
 xcspk_LDADD = libspike.a
+
+spikex_SOURCES = spikex.c
 
 
 libspike_a_SOURCES = \

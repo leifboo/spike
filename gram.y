@@ -251,7 +251,7 @@ expr_list(r) ::= expr_list(args) COMMA decl_spec_list(declSpecList) colon_expr(a
                                                                                 { r = args; SpkParser_SetNextArg(r.last, arg, parser); r.last = arg; SpkParser_SetDeclSpecs(arg, declSpecList.first, parser); }
 
 %syntax_error {
-    printf("syntax error! token %d, line %u\n", TOKEN.id, TOKEN.lineNo);
+    fprintf(stderr, "syntax error! token %d, line %u\n", TOKEN.id, TOKEN.lineNo);
     parser->error = 1;
 }
 
