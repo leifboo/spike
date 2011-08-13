@@ -1,4 +1,7 @@
 
+/*------------------------------------------------------------------------*/
+/* basicNew: */
+
 	.text
 	.align	4
 Object.class.0.basicNew$:
@@ -58,3 +61,61 @@ Object.class.0.basicNew$.code:
 	leave
 	ret	$4
 	.size	Object.class.0.basicNew$.code, .-Object.class.0.basicNew$.code
+
+
+/*------------------------------------------------------------------------*/
+/* boxing/unboxing */
+
+	.text
+	.align	4
+Object.class.0.box$:
+	.globl	Object.class.0.box$
+	.type	Object.class.0.box$, @object
+	.size	Object.class.0.box$, 16
+	.long	Method
+	.long	1
+	.long	1
+	.long	0
+Object.class.0.box$.code:
+	.globl	Object.class.0.box$.code
+	.type	Object.class.0.box$.code, @function
+	movl	8(%ebp), %eax	# get pointer arg
+	movl	%eax, 12(%ebp)	# provisional result
+	andl	$3, %eax	# test for CObject
+	cmpl	$3, %eax
+	jne	.L3
+	movl	8(%ebp), %eax	# get pointer arg
+	andl	$~3, %eax	# discard flags
+	movl	(%eax), %eax	# get result
+	movl	%eax, 12(%ebp)	# store result
+.L3:
+	popl	%edi
+	popl	%esi
+	popl	%ebx
+	leave
+	ret	$4
+	.size	Object.class.0.box$.code, .-Object.class.0.box$.code
+
+
+	.text
+	.align	4
+Object.0.unboxed:
+	.globl	Object.0.unboxed
+	.type	Object.0.unboxed, @object
+	.size	Object.0.unboxed, 16
+	.long	Method
+	.long	0
+	.long	0
+	.long	0
+Object.0.unboxed.code:
+	.globl	Object.0.unboxed.code
+	.type	Object.0.unboxed.code, @function
+	movl	%esi, %eax	# real result is object pointer
+	movl	%eax, 8(%ebp)	# fake result is the same
+	popl	%edi
+	popl	%esi
+	popl	%ebx
+	leave
+	ret	$0
+	.size	Object.0.unboxed.code, .-Object.0.unboxed.code
+

@@ -1589,8 +1589,8 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
 }
 
 
-static SpkUnknown *emitCThunk(Stmt *stmt, CodeGen *cgen) {
-    const char *sym, *suffix;
+static SpkUnknown *emitCFunction(Stmt *stmt, CodeGen *cgen) {
+    const char *sym, *suffix, *signature;
     FILE *out;
     
     ASSERT(cgen->level == 1, "C functions must be global");
@@ -1608,10 +1608,20 @@ static SpkUnknown *emitCThunk(Stmt *stmt, CodeGen *cgen) {
             "\t.type\t%s%s, @object\n",
             sym, suffix, sym, suffix);
     
+    /* Currently, the "signature" is simply the return type (used for
+       boxing). */
+    switch (stmt->expr->specifiers & Spk_SPEC_TYPE) {
+    case 0:
+    case Spk_SPEC_TYPE_OBJ:  signature = "Object";  break;
+    case Spk_SPEC_TYPE_INT:  signature = "Integer"; break;
+    case Spk_SPEC_TYPE_CHAR: signature = "Char";    break;
+    }
     fprintf(out,
-            "\t.long\tCThunk\n" /* klass */
-            "\t.long\tInteger\n" /* signature */
-            "\t.long\t%s\n", sym /* pointer */
+            "\t.long\tCFunction\n" /* klass */
+            "\t.long\t%s\n" /* signature */
+            "\t.long\t%s\n", /* pointer */
+            signature,
+            sym
         );
     
     fprintf(out,
@@ -1642,7 +1652,7 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
         case Spk_STMT_DEF_METHOD:
             if (IS_EXTERN(s->expr)) {
                 if (IS_CDECL(s->expr))
-                    _(emitCThunk(s, cgen));
+                    _(emitCFunction(s, cgen));
             } else {
                 _(emitCodeForMethod(s, meta, cgen));
             }

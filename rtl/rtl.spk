@@ -2,11 +2,13 @@
 class Object : null {
     self == x { return self === x; }
     self != x { return self !== x; }
+    extern unboxed {}
 } meta {
     self new { return self basicNew; }
     self new: anInteger { return self basicNew: anInteger; }
     self basicNew { return self basicNew: 0; }
     extern self basicNew: anInteger {}
+    extern self box: aPointer {}
 }
 
 
@@ -84,6 +86,9 @@ class Integer : Object {
     
     // unboxing
     extern unboxed {}
+    
+} meta {
+    extern self box: aPointer {}
 }
 
 
@@ -145,12 +150,18 @@ class Function : Method {
 }
 
 
-class CThunk : Object {
+class CObject : Object {
+    extern unboxed {}
+}
+
+class CFunction : Object {
     obj signature;
     obj pointer;
     
     extern self( /*...args*/ ) {}
+    extern unboxed {}
 }
+
 
 class Message : Object {
     obj ns;

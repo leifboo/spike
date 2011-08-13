@@ -560,8 +560,41 @@ Integer.0.__ne__.code:
 
 /*------------------------------------------------------------------------*/
 /*
- * unboxing
+ * boxing/unboxing
  */
+
+	.text
+	.align	4
+Integer.class.0.box$:
+	.globl	Integer.class.0.box$
+	.type	Integer.class.0.box$, @object
+	.size	Integer.class.0.box$, 16
+	.long	Method
+	.long	1
+	.long	1
+	.long	0
+Integer.class.0.box$.code:
+	.globl	Integer.class.0.box$.code
+	.type	Integer.class.0.box$.code, @function
+	movl	8(%ebp), %eax	# get pointer arg
+	movl	%eax, 12(%ebp)	# provisional result
+	andl	$3, %eax	# test for CObject
+	cmpl	$3, %eax
+	jne	.L8
+	movl	8(%ebp), %eax	# get pointer arg
+	andl	$~3, %eax	# discard flags
+	movl	(%eax), %eax	# get result
+	sall	$2, %eax	# box it
+	orl	$2, %eax
+	movl	%eax, 12(%ebp)	# store result
+.L8:
+	popl	%edi
+	popl	%esi
+	popl	%ebx
+	leave
+	ret	$4
+	.size	Integer.class.0.box$.code, .-Integer.class.0.box$.code
+
 
 	.text
 	.align	4

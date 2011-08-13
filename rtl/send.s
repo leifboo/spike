@@ -463,8 +463,13 @@ getClass:
 
 	movl	$Integer, %ebx
 	ret
-
 .L13:
+	cmpl	$3, %eax	# test for CObject (aligned pointer)
+	jne	.L14
+
+	movl	$CObject, %ebx
+	ret
+.L14:
 	pushl	$__sym_badObjectPointer
 	call	SpikeError
 	movl	$0, %ebx
