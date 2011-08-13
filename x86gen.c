@@ -821,6 +821,7 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     case Spk_EXPR_ATTR:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
         _(emitCodeForLiteral(expr->sym->sym, cgen));
+        emitOpcode(cgen, "popl", "%%edx");
         emitOpcode(cgen, "call", "SpikeGetAttr%s", (isSuper ? "Super" : ""));
         break;
     case Spk_EXPR_ATTR_VAR:

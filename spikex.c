@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     
     pid = fork();
     if (!pid) {
-        execlp("gcc", "gcc", "-g",
+        execlp("gcc", "gcc", "-g", "-I.",
                assembly,
                "rtl/Array.s",
                "rtl/CFunction.s",
@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
                "rtl/rot.s",
                "rtl/send.s",
                "rtl/singletons.s",
+               "rtl/String.c",
                "rtl/String.s",
                "rtl/test.s",
                "rtl/lookup.c",

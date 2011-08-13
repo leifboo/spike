@@ -87,6 +87,9 @@ class Integer : Object {
     // unboxing
     extern unboxed {}
     
+    // printing
+    printString { return String fromInteger: self; }
+    
 } meta {
     extern self box: aPointer {}
 }
@@ -99,11 +102,34 @@ class Metaclass : Behavior {
 }
 
 
-// XXX
 class String : Object {
-    obj len;
+    obj size;
     // str...
+    
+    // binary operators
+    self + x { return String_add(self.asCObject, x.asCObject); }
+    
+    // comparison operators
+    self <  x { return String_lt(self.asCObject, x.asCObject); }
+    self >  x { return String_gt(self.asCObject, x.asCObject); }
+    self <= x { return String_le(self.asCObject, x.asCObject); }
+    self >= x { return String_ge(self.asCObject, x.asCObject); }
+    self == x { return String_eq(self.asCObject, x.asCObject); }
+    self != x { return String_ne(self.asCObject, x.asCObject); }
+    
+    // accessing
+    size { return String_size(self.asCObject); }
+    self[i] { return String_item(self.asCObject, i); }
+    printString { return String_printString(self.asCObject); }
+    
+    // unboxing
     extern unboxed {}
+    extern asCObject {} // to suppress unboxing
+    
+} meta {
+    
+    self fromInteger: anInteger { return String_fromInteger(anInteger); }
+
 }
 
 
@@ -189,3 +215,17 @@ class Junk {
     doesNotUnderstand {}
     wrongNumberOfArguments {}
 }
+
+
+extern cdecl obj String_add(s1, s2) {}
+extern cdecl obj String_lt(s1, s2) {}
+extern cdecl obj String_gt(s1, s2) {}
+extern cdecl obj String_le(s1, s2) {}
+extern cdecl obj String_ge(s1, s2) {}
+extern cdecl obj String_eq(s1, s2) {}
+extern cdecl obj String_ne(s1, s2) {}
+extern cdecl int String_size(s) {}
+extern cdecl obj String_item(s, i) {}
+extern cdecl obj String_printString(s) {}
+extern cdecl obj String_fromInteger(i) {}
+
