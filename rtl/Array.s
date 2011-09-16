@@ -2,6 +2,35 @@
 	.text
 
 	.align	4
+Array.0.init$:
+	.globl	Array.0.init$
+	.type	Array.0.init$, @object
+	.size	Array.0.init$, 16
+	.long	Method
+	.long	1
+	.long	1
+	.long	0
+Array.0.init$.code:
+	.globl	Array.0.init$.code
+	.type	Array.0.init$.code, @function
+	movl	8(%ebp), %edx	# get size arg
+	movl	%edx, %eax
+	andl	$3, %eax	# test for SmallInteger
+	cmpl	$2, %eax
+	je	.L1
+	pushl	$__sym_typeError
+	call	SpikeError
+.L1:
+	sarl	$2, %edx	# unbox size
+	movl	%edx, 0(%edi)	# save it
+	popl	%edi
+	popl	%esi
+	popl	%ebx
+	leave
+	ret	$4
+	.size	Array.0.init$.code, .-Array.0.init$.code
+
+	.align	4
 Array.0.size:
 	.globl	Array.0.size
 	.type	Array.0.size, @object
@@ -77,7 +106,7 @@ typeRangeCheck:
 	movl	%edx, %eax
 	andl	$3, %eax	# test for SmallInteger
 	cmpl	$2, %eax
-	jne	.L2
+	je	.L2
 	pushl	$__sym_typeError
 	call	SpikeError
 .L2:

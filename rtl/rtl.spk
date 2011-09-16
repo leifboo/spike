@@ -13,9 +13,16 @@ class Object : null {
 
 
 class Array : Object {
+    obj size;
+    
+    extern self init: anInteger {}
     extern size {}
     extern self[i] {}
     extern self[i] = v {}
+    printString { return "<XXX Array printString>"; }    
+} meta {
+    self new { return self new: 0; }
+    self new: size { return (self basicNew: size) init: size; }
 }
 
 
