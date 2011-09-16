@@ -997,6 +997,7 @@ static SpkUnknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
         switch (expr->left->kind) {
         case Spk_EXPR_ATTR:
         case Spk_EXPR_ATTR_VAR:
+            emitOpcode(cgen, "popl", "%%edx");
             emitOpcode(cgen, "call", "SpikeGetAttr%s", (isSuper ? "Super" : ""));
             break;
         default:
@@ -1008,6 +1009,10 @@ static SpkUnknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
     switch (expr->left->kind) {
     case Spk_EXPR_ATTR:
     case Spk_EXPR_ATTR_VAR:
+        // XXX: re-think this whole thing
+        emitOpcode(cgen, "popl", "%%eax");
+        emitOpcode(cgen, "popl", "%%edx");
+        emitOpcode(cgen, "pushl", "%%eax");
         emitOpcode(cgen, "call", "SpikeSetAttr%s", (isSuper ? "Super" : ""));
         break;
     default:

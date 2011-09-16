@@ -9,7 +9,7 @@ SpikeRotate:
 	movl	%esp, %ebp
 
 	subl	$1, %ecx	# can't rotate less than 2 args
-	jae	.L2
+	jbe	.L2
 
 	addl	$8, %ebp	# point to 1st arg
 	movl	0(%ebp), %eax	# save it on the stack

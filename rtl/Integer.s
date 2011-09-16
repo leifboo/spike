@@ -83,7 +83,7 @@ Integer.0.__neg__.code:
 	.globl	Integer.0.__neg__.code
 	.type	Integer.0.__neg__.code, @function
 	xorl	$~3, %esi
-	addl	$1, %esi
+	addl	$4, %esi
 	movl	%esi, 8(%ebp)
 	popl	%edi
 	popl	%esi

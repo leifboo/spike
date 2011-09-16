@@ -485,7 +485,7 @@ getClass:
  */
 
 SpikeSendMessageSuperLValue:
-	.globl	SpikeSendMessageSuper
+	.globl	SpikeSendMessageSuperLValue
 	pushl	%ebp		# create new stack frame
 	movl	%esp, %ebp
 	pushl	%ebx		# save registers
@@ -496,7 +496,7 @@ SpikeSendMessageSuperLValue:
 	jmp	lookupMethod
 
 SpikeSendMessageLValue:
-	.globl	SpikeSendMessage
+	.globl	SpikeSendMessageLValue
 	pushl	%ebp		# create new stack frame
 	movl	%esp, %ebp
 	pushl	%ebx		# save registers
