@@ -552,32 +552,89 @@ lookupMethod:
 
 /* found it */
 callNewMethod:
-	popl	%edx		# restore selector
-	popl	%ecx		# restore argumentCount
+
+/* set up Method's instance variable pointer in %edi */
+	leal	4(%eax), %edi
+
+	popl	%eax		# discard selector
+	popl	%edx		# get argumentCount
 
 SpikeCallNewMethod: /* entry point for Function __apply__ */
 	.globl	SpikeCallNewMethod
-	cmpl	4(%eax), %ecx	# minArgumentCount
+
+/*
+ *     |------------|
+ *     | self/rslt  | receiver / space for result
+ *     |------------|
+ *     | arg 1      | args pushed by caller left-to-right
+ *     | arg 2      |
+ *     | ...        |
+ *     | arg N      |
+ *     |------------| <- missing args inserted here
+ *     | ret addr   |
+ *     | saved %ebp |
+ *     |------------| <- %ebp
+ *     | saved %ebx |
+ *     | saved %esi |
+ *     | saved %edi |
+ *     |------------| -12(%%ebp), %esp on entry
+ *     | local 1    |
+ *     | local 2    |
+ *     | ...        |
+ *     | local N    |
+ *     |------------| <- %esp on exit
+ */
+
+	cmpl	0(%edi), %edx	# minArgumentCount
 	jb	wrongNumberOfArguments
-	cmpl	8(%eax), %ecx	# maxArgumentCount
+	movl	4(%edi), %eax	# maxArgumentCount
+	cmpl	%eax, %edx
 	ja	wrongNumberOfArguments
 
+	andl	$0x7FFFFFFF, %eax	# get max fixed arg count
+	subl	%edx, %eax		# calc missingArgumentCount
+	jbe	allocInitLocals
+
+/* insert missing (optional fixed) args */
+insertMissingArgs:
+	movl	%eax, %ecx	# save missingArgumentCount for loop below
+
+	shll	$2, %eax	# allocate space
+	subl	%eax, %esp
+
+	movl	-12(%ebp), %eax	# copy reg save area
+	movl	%eax, (%esp)
+	movl	-8(%ebp), %eax
+	movl	%eax, 4(%esp)
+	movl	-4(%ebp), %eax
+	movl	%eax, 8(%esp)
+	movl	(%ebp), %eax
+	movl	%eax, 12(%esp)
+	movl	4(%ebp), %eax
+	movl	%eax, 16(%esp)
+
+	leal	20(%esp), %ebp	# point to 1st inserted arg
+.L6:
+	movl	$0, (%ebp)	# zero inserted args
+	addl	$4, %ebp
+	loop	.L6
+
+	leal	12(%esp), %ebp	# adjust frame pointer
+
 /* allocate and initialize locals */
-	movl	%ecx, %edi	# save argumentCount
-	movl	12(%eax), %ecx	# localCount
+allocInitLocals:
+	movl	8(%edi), %ecx	# localCount
 	cmpl	$0, %ecx
 	je	.L3
 .L2:
 	pushl	$0
 	loop	.L2
 .L3:
-	movl	%edi, %ecx	# restore argumentCount
-
 /* compute code entry point */
-	addl	$16, %eax	# skip Method object header
-	pushl	%eax		# save entry point for later
+	addl	$12, %edi	# skip Method instance variables
+	pushl	%edi		# save entry point for later
 
-/* set up instance variable pointer in %edi */
+/* set up receiver's instance variable pointer in %edi */
 	movl	%ebx, %edi 	# get class
 	movl	$0, %eax 	# tally instance vars...
 	jmp	.L5 		# ...in superclasses
@@ -594,9 +651,9 @@ SpikeCallNewMethod: /* entry point for Function __apply__ */
  * call the method
  *
  * On entry:
- *     %eax: undefined (instVarTally of superclasses)
- *     %ecx: argumentCount
- *     %edx: selector
+ *     %eax: undefined
+ *     %ecx: undefined
+ *     %edx: argumentCount
  *     %ebx: methodClass
  *     %esi: self
  *     %edi: instVarPointer

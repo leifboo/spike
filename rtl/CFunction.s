@@ -7,13 +7,13 @@ CFunction.0.__apply__:
 	.size	CFunction.0.__apply__, 4
 	.long	Method
 	.long	0		# minArgumentCount
-	.long	~0		# maxArgumentCount
+	.long	0x80000000	# maxArgumentCount
 	.long	0		# localCount
 CFunction.0.__apply__.code:
 	.globl	CFunction.0.__apply__.code
 	.type	CFunction.0.__apply__.code, @function
 
-	movl	%ecx, %ebx	# remember arg count
+	movl	%edx, %ebx	# remember arg count
 
 /* copy, reverse, and unbox args */
 	movl	$0, %esi	# start at last arg

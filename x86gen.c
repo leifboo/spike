@@ -182,8 +182,16 @@ static int instVarOffset(Expr *def, OpcodeGen *cgen) {
 }
 
 static int localVarOffset(Expr *def, OpcodeGen *cgen) {
-    /* XXX: handle variable & default args */
-    int index = (int)def->u.def.index;
+    int index;
+    
+    index = (int)def->u.def.index;
+    
+    if (cgen->varArgList) {
+        /* all vars are below %ebp */
+        /* skip saved edx, edi, esi, ebx */
+        return -(sizeof(SpkObject *) * (index + 1 + 4));
+    }
+    
     if (def->u.def.index < cgen->maxArgumentCount) {
         /* argument */
         /* args are pushed in order, so they are reversed in memory */
@@ -194,15 +202,6 @@ static int localVarOffset(Expr *def, OpcodeGen *cgen) {
     /* skip saved edi, esi, ebx */
     index -= cgen->maxArgumentCount;
     return -(sizeof(SpkObject *) * (index + 1 + 3));
-}
-
-static int selfRetOffset(OpcodeGen *cgen) {
-    /*
-     * Both 'self' and the return value occupy the same slot on the
-     * stack.  The "2" accounts for saved %ebp and return address.
-     * XXX: handle variable & default args.
-     */
-    return sizeof(SpkObject *)*(2+cgen->maxArgumentCount);
 }
 
 static int isVarDef(Expr *def) {
@@ -357,24 +356,6 @@ static void pop(OpcodeGen *cgen) {
 }
 
 static void prologue(OpcodeGen *cgen) {
-    /* XXX: account for these */
-    size_t variadic = cgen->varArgList ? 1 : 0;
-    size_t contextSize =
-        cgen->maxArgumentCount + variadic +
-        cgen->localCount;
-    size_t i;
-    
-    /* stack frame & registers already set up by SpikeSendMessage glue */
-    
-#if 0
-    /*
-     * Allocate and initialize locals.
-     * XXX: We could emit a 'loop' opcode for a large numbers of locals.
-     */
-    for (i = 0; i < cgen->localCount; ++i) {
-        emitOpcode(cgen, "pushl", "$0");
-    }
-#endif
 }
 
 static void epilogue(OpcodeGen *cgen) {
@@ -382,16 +363,36 @@ static void epilogue(OpcodeGen *cgen) {
         /* discard locals */
         emitOpcode(cgen, "addl", "$%lu, %%esp", (unsigned long)4*cgen->localCount); 
     }
+    
+    if (cgen->varArgList) {
+        emitOpcode(cgen, "popl", "%%edx"); /* argumentCount */
+        emitOpcode(cgen, "sall", "$4, %%edx"); /* convert to byte count */
+    }
+    
     /* restore registers */
     emitOpcode(cgen, "popl", "%%edi"); /* instVarPointer */
     emitOpcode(cgen, "popl", "%%esi"); /* self */
     emitOpcode(cgen, "popl", "%%ebx"); /* methodClass */
     
+    /* save result */
+    if (cgen->varArgList)
+        emitOpcode(cgen, "movl", "%%eax, 8(%%ebp,%%edx)");
+    else
+        emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)",
+                   sizeof(SpkObject *)*(2+cgen->maxArgumentCount));
+    
     /* restore caller's stack frame (%ebp) */
     emitOpcode(cgen, "leave", 0);
     
     /* pop arguments and return, leaving result on the stack */
-    emitOpcode(cgen, "ret", "$%lu", sizeof(SpkObject *)*cgen->maxArgumentCount);
+    if (cgen->varArgList) {
+        /* ret %edx */
+        emitOpcode(cgen, "popl", "%%eax"); /* return address */
+        emitOpcode(cgen, "addl", "%%edx, %%esp"); 
+        emitOpcode(cgen, "jmp", "*%%eax");  /* return */
+    } else {
+        emitOpcode(cgen, "ret", "$%lu", sizeof(SpkObject *)*cgen->maxArgumentCount);
+    }
 }
 
 static void oper(SpkOper code, int isSuper, OpcodeGen *cgen) {
@@ -1196,6 +1197,7 @@ static SpkUnknown *emitCodeForBlockBody(Stmt *body, Expr *valueExpr,
     Stmt *s;
     Label start;
     
+    start = 0;
     defineLabel(&start, cgen);
     maybeEmitLabel(&start, cgen);
     for (s = body; s; s = s->next) {
@@ -1275,12 +1277,6 @@ static SpkUnknown *emitCodeForInitializer(Expr *expr, OpcodeGen *cgen) {
     
     maybeEmitLabel(&expr->label, cgen);
     
-    /*
-     * XXX: Could this be merged with our goofy prologue code?  Just
-     * evaluate the initializer and leave it on the stack. OTOH,
-     * out-of-order var refs could yield undefined results, as they
-     * access slots below %esp.
-     */
     _(emitCodeForExpr(expr->right, 0, cgen));
     /* similar to store(), but with a definition instead of a
        reference */
@@ -1421,9 +1417,8 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
         if (stmt->expr) {
             _(emitCodeForExpr(stmt->expr, 0, cgen));
             pop(cgen);
-            emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)", selfRetOffset(cgen));
         } else {
-            emitOpcode(cgen, "movl", "$void, %d(%%ebp)", selfRetOffset(cgen));
+            emitOpcode(cgen, "movl", "$void, %%eax");
         }
         _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, &cgen->epilogueLabel, cgen));
         break;
@@ -1458,10 +1453,10 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
 /* methods */
 
 static SpkUnknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
-    ASSERT(!cgen->varArgList, "XXX var args");
+    //ASSERT(!cgen->varArgList, "XXX var args");
     
     if (cgen->minArgumentCount < cgen->maxArgumentCount) {
-        ASSERT(0, "XXX default argument initializers");
+        //ASSERT(0, "XXX default argument initializers");
     }
     
     Spk_INCREF(Spk_GLOBAL(xvoid));
@@ -1499,7 +1494,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
     cgen->minArgumentCount = stmt->u.method.minArgumentCount;
     cgen->maxArgumentCount = stmt->u.method.maxArgumentCount;
     cgen->varArgList = stmt->u.method.argList.var ? 1 : 0;
-    cgen->localCount = stmt->u.method.localCount;
+    cgen->localCount = stmt->u.method.localCount + cgen->varArgList;
     cgen->epilogueLabel = 0;
     
     body = stmt->top;
@@ -1551,7 +1546,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
             className, suffix, ns, functionName, obj,
             codeObjectClass,
             (unsigned long)cgen->minArgumentCount,
-            (unsigned long)cgen->maxArgumentCount,
+            (unsigned long)(cgen->maxArgumentCount + (cgen->varArgList ? 0x80000000 : 0)),
             (unsigned long)cgen->localCount);
     fprintf(out,
             "%s%s%s%s%s:\n"
