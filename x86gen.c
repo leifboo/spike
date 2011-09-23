@@ -366,7 +366,7 @@ static void epilogue(OpcodeGen *cgen) {
     
     if (cgen->varArgList) {
         emitOpcode(cgen, "popl", "%%edx"); /* argumentCount */
-        emitOpcode(cgen, "sall", "$4, %%edx"); /* convert to byte count */
+        emitOpcode(cgen, "shll", "$2, %%edx"); /* convert to byte count */
     }
     
     /* restore registers */
@@ -1456,7 +1456,57 @@ static SpkUnknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
     //ASSERT(!cgen->varArgList, "XXX var args");
     
     if (cgen->minArgumentCount < cgen->maxArgumentCount) {
-        //ASSERT(0, "XXX default argument initializers");
+        /* generate code for default argument initializers */
+        Expr *arg, *optionalArgList;
+        size_t tally;
+        Label skip, table;
+        FILE *out;
+        
+        out = cgen->generic->out;
+        
+        for (arg = stmt->u.method.argList.fixed;
+             arg->kind != Spk_EXPR_ASSIGN;
+             arg = arg->nextArg)
+            ;
+        optionalArgList = arg;
+        
+        skip = table = 0;
+        defineLabel(&skip, cgen);
+        defineLabel(&table, cgen);
+        
+        if (cgen->varArgList) {
+            /* range check */
+            emitOpcode(cgen, "cmpl", "$%lu, %%edx", cgen->maxArgumentCount);
+            emitOpcode(cgen, "jae", ".L%u", getLabel(&skip, cgen));
+        }
+        
+        /* switch jump */
+        emitOpcode(cgen, "subl", "$%lu, %%edx", cgen->minArgumentCount);
+        emitOpcode(cgen, "shll", "$2, %%edx"); /* convert to byte offset */
+        emitOpcode(cgen, "movl", ".L%u(%%edx), %%eax", getLabel(&table, cgen));
+        emitOpcode(cgen, "jmp", "*%%eax");
+        
+        /* switch table */
+        fprintf(out, "\t.section\t.rodata\n");
+        fprintf(out, "\t.align\t4\n");
+        maybeEmitLabel(&table, cgen);
+        for (arg = optionalArgList, tally = 0; arg; arg = arg->nextArg, ++tally) {
+            ASSERT(arg->kind == Spk_EXPR_ASSIGN, "assignment expected");
+            fprintf(out, "\t.long\t.L%u\n", getLabel(&arg->label, cgen));
+        }
+        if (!cgen->varArgList)
+            fprintf(out, "\t.long\t.L%u\n", getLabel(&skip, cgen));
+        fprintf(out, "\t.text\n");
+        
+        ASSERT(tally == cgen->maxArgumentCount - cgen->minArgumentCount,
+               "wrong number of default arguments");
+        
+        /* assignments */
+        for (arg = optionalArgList; arg; arg = arg->nextArg) {
+            _(emitCodeForInitializer(arg, cgen));
+        }
+        
+        maybeEmitLabel(&skip, cgen);
     }
     
     Spk_INCREF(Spk_GLOBAL(xvoid));
