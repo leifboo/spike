@@ -356,16 +356,84 @@ static void pop(OpcodeGen *cgen) {
 }
 
 static void prologue(OpcodeGen *cgen) {
+    Label loop, skip;
+    
+    if (!cgen->varArgList) {
+        /* nothing to do -- shared prologue did all the work */
+        return;
+    }
+    
+    /* discard local variable area */
+    emitOpcode(cgen, "addl", "$%lu, %%esp", (unsigned long)4*cgen->localCount); 
+    
+    /* save argument count for epilogue */
+    emitOpcode(cgen, "pushl", "%%edx");
+    
+    if (cgen->maxArgumentCount) {
+        /* copy fixed arguments */
+        emitOpcode(cgen, "movl", "$%lu, %%ecx", cgen->maxArgumentCount);
+        loop = 0;
+        defineLabel(&loop, cgen);
+        emitOpcode(cgen, "cmpl", "$%lu, %%edx", cgen->maxArgumentCount);
+        emitOpcode(cgen, "jae", ".L%u", getLabel(&loop, cgen));
+        emitOpcode(cgen, "movl", "$%lu, %%edx", cgen->maxArgumentCount);
+        maybeEmitLabel(&loop, cgen);
+        emitOpcode(cgen, "pushl", "4(%%ebp,%%edx,4)");
+        emitOpcode(cgen, "decl", "%%edx");
+        emitOpcode(cgen, "loop", ".L%u", getLabel(&loop, cgen));
+    }
+    
+    /* create var arg array */
+    skip = 0;
+    defineLabel(&skip, cgen);
+    emitOpcode(cgen, "pushl", "$Array");
+    emitOpcode(cgen, "leal", "8(%%ebp), %%eax");
+    emitOpcode(cgen, "orl", "$3, %%eax"); /* map to CObject */
+    emitOpcode(cgen, "pushl", "%%eax");
+    emitOpcode(cgen, "movl", "-16(%%ebp), %%eax"); /* compute excess arg count */
+    emitOpcode(cgen, "subl", "$%lu, %%eax", cgen->maxArgumentCount);
+    emitOpcode(cgen, "jae", ".L%u", getLabel(&skip, cgen));
+    emitOpcode(cgen, "movl", "$0, %%eax");
+    maybeEmitLabel(&skip, cgen);
+    emitOpcode(cgen, "sall", "$2, %%eax"); /* box it */
+    emitOpcode(cgen, "orl", "$2, %%eax");
+    emitOpcode(cgen, "pushl", "%%eax");
+    emitOpcode(cgen, "movl", "$__sym_withContentsOfStack$size$, %%edx");
+    emitOpcode(cgen, "movl", "$2, %%ecx");
+    emitOpcode(cgen, "call", "SpikeSendMessage"); /* leave result on stack */
+    
+    /* restore %edx */
+    emitOpcode(cgen, "movl", "-16(%%ebp), %%edx");
+    
+    if (cgen->localCount > 1) {
+        /* reallocate locals */
+        emitOpcode(cgen, "movl", "$%lu, %%ecx", cgen->localCount - 1);
+        loop = 0;
+        defineLabel(&loop, cgen);
+        maybeEmitLabel(&loop, cgen);
+        emitOpcode(cgen, "pushl", "$0");
+        emitOpcode(cgen, "loop", ".L%u", getLabel(&loop, cgen));
+    }
 }
 
 static void epilogue(OpcodeGen *cgen) {
-    if (cgen->localCount != 0) {
-        /* discard locals */
+    /* discard locals */
+    if (cgen->varArgList) {
+        emitOpcode(cgen, "addl", "$%lu, %%esp",
+                   (unsigned long)4*(cgen->localCount + cgen->maxArgumentCount)); 
+    } else if (cgen->localCount != 0) {
         emitOpcode(cgen, "addl", "$%lu, %%esp", (unsigned long)4*cgen->localCount); 
     }
     
     if (cgen->varArgList) {
+        Label skip;
+        skip = 0;
+        defineLabel(&skip, cgen);
         emitOpcode(cgen, "popl", "%%edx"); /* argumentCount */
+        emitOpcode(cgen, "cmpl", "$%lu, %%edx", cgen->maxArgumentCount);
+        emitOpcode(cgen, "jae", ".L%u", getLabel(&skip, cgen));
+        emitOpcode(cgen, "movl", "$%lu, %%edx", cgen->maxArgumentCount);
+        maybeEmitLabel(&skip, cgen);
         emitOpcode(cgen, "shll", "$2, %%edx"); /* convert to byte count */
     }
     
@@ -790,7 +858,6 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         }
         if (expr->var) {
             _(emitCodeForExpr(expr->var, 0, cgen));
-            emitOpcode(cgen, "call", "SpikePushVarArgs");
         }
         /* evaluate selector */
         switch (expr->left->kind) {
@@ -815,8 +882,14 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
             }
             break;
         }
+        if (expr->var) {
+            /* push var args */
+            emitOpcode(cgen, "call", "SpikePushVarArgs");
+            emitOpcode(cgen, "addl", "$%lu, %%ecx", (unsigned long)argumentCount);
+        } else {
+            emitOpcode(cgen, "movl", "$%lu, %%ecx", (unsigned long)argumentCount);
+        }
         /* call RTL routine to send message */
-        emitOpcode(cgen, "movl", "$%lu, %%ecx", (unsigned long)argumentCount);
         emitOpcode(cgen, "call", "%s%s", routine, (isSuper ? "Super" : ""));
         break;
     case Spk_EXPR_ATTR:

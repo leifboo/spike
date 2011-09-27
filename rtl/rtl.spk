@@ -16,6 +16,7 @@ class Array : Object {
     obj size;
     
     extern self init: anInteger {}
+    extern self initWithContentsOfStack: end {}
     extern size {}
     extern self[i] {}
     extern self[i] = v {}
@@ -23,6 +24,7 @@ class Array : Object {
 } meta {
     self new { return self new: 0; }
     self new: size { return (self basicNew: size) init: size; }
+    self withContentsOfStack: end size: size { return (self new: size) initWithContentsOfStack: end; }
 }
 
 
@@ -206,8 +208,13 @@ class Message : Object {
 }
 
 
-class Null : Object {}
-class Void : Object {}
+class Null : Object {
+    printString { return "null"; }
+}
+
+class Void : Object {
+    printString { return "void"; }
+}
 
 
 // This is here just to make the compiler generate symbols.
