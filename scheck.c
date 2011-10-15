@@ -45,6 +45,7 @@ typedef struct StaticChecker {
     SpkSymbolTable *st;
     StmtList *rootClassList;
     SpkUnknown *requestor;
+    Stmt *currentMethod;
 } StaticChecker;
 
 
@@ -165,6 +166,8 @@ static SpkUnknown *checkBlock(Expr *expr, Stmt *stmt, StaticChecker *checker,
     if (outerPass != 2) {
         goto leave;
     }
+    
+    ++checker->currentMethod->u.method.blockCount;
     
     SpkSymbolTable_EnterScope(checker->st, 0);
     
@@ -292,6 +295,8 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
     SpkOper oper;
     unsigned int innerPass;
     unsigned int specifiers;
+    
+    checker->currentMethod = stmt;
     
     expr = stmt->expr;
     body = stmt->top;
@@ -502,6 +507,8 @@ static SpkUnknown *checkMethodDef(Stmt *stmt,
         
         break;
     }
+    
+    checker->currentMethod = 0;
     
     Spk_INCREF(Spk_GLOBAL(xvoid));
     return Spk_GLOBAL(xvoid);
@@ -900,6 +907,7 @@ SpkUnknown *SpkStaticChecker_Check(Stmt *tree,
     
     checker.st = st;
     checker.requestor = requestor;
+    checker.currentMethod = 0;
     SpkSymbolTable_EnterScope(checker.st, 1); /* global scope */
     
     predefList->first = predefList->last = 0;

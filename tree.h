@@ -148,6 +148,7 @@ struct SpkStmt {
             size_t minArgumentCount;
             size_t maxArgumentCount;
             size_t localCount;
+            unsigned int blockCount;
         } method;
         struct {
             SpkExpr *superclassName;

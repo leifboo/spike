@@ -8,6 +8,7 @@
 
 typedef struct Array    Array;
 typedef struct Behavior Behavior;
+typedef struct Context  Context;
 typedef struct Message  Message;
 typedef struct Method   Method;
 typedef struct Object   Object;
@@ -40,6 +41,25 @@ struct Method {
     size_t maxArgumentCount;
     size_t localCount;
     char code[1];
+};
+
+
+struct Context {
+    Object base;
+    Context *homeContext;            /* %ebp */
+    union {
+        struct /* MethodContext */ {
+            Behavior *methodClass;   /* %ebx */
+            Object *receiver;        /* %esi */
+            Object **instVarPointer; /* %edi */
+            void *stackp;            /* %esp */
+        } m;
+        struct /* BlockContext */ {
+            size_t nargs;
+            void *pc;
+        } b;
+    } u;
+    Object *var[1];
 };
 
 

@@ -131,6 +131,9 @@ class String : Object {
     self[i] { return String_item(self.asCObject, i); }
     printString { return String_printString(self.asCObject); }
     
+    // enumerating
+    self do: aBlock { obj i, s; s = self.size; for (i = 0; i < s; ++i) aBlock(self[i]); }
+    
     // unboxing
     extern unboxed {}
     extern asCObject {} // to suppress unboxing
@@ -181,6 +184,25 @@ class Method : Object {
 }
 
 class Function : Method {
+    extern self( /*...args*/ ) {}
+}
+
+
+class Context : Object {
+    obj homeContext;
+}
+
+class MethodContext : Context {
+    obj methodClass;
+    obj receiver;
+    obj instVarPointer;
+    obj stackp;
+}
+
+class BlockContext : Context {
+    obj nargs;
+    obj pc;
+    
     extern self( /*...args*/ ) {}
 }
 
