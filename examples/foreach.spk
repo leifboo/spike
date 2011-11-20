@@ -4,7 +4,7 @@ abc() {
     obj alphabet;
     
     alphabet = "abcdefghijklmnopqrstuvwxyz";
-    alphabet do: [obj letter;
+    alphabet do: [ :letter |
         stdout.printf("%c ", letter);
         ];
     stdout.putc('\n');

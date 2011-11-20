@@ -5,7 +5,7 @@ class Foo {
     
     // invalid argument definitions
     red(a, -b) {
-        return [obj x + y; return a;];
+        return [ :(x + y) | return a; ];
     }
     green(a, b, c, ... +d) {}
     

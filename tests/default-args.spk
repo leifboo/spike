@@ -14,7 +14,7 @@ hgg2(required, answer = 42, foo = "hey", weird = answer, ...extra) {
     stdout.printf("weird is %d", weird);
     if (extra.size > 0) {
         stdout.printf("; extra contains");
-        extra do: [obj x; stdout.printf(" %d", x);];
+        extra do: [ :x | stdout.printf(" %d", x); ];
         stdout.printf(".\n");
     } else {
         stdout.printf(".\n");

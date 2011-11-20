@@ -34,7 +34,7 @@ primes(kmax) {
 
 main(argv) {
     primes(100) do: [
-        arg prime;
+        :prime |
         printf("%d\n", prime);
         ];
     return 0;

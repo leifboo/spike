@@ -176,7 +176,7 @@ class Bar : Foo {
         obj f;
         f = self.getFunc();
         f();
-        f = [; self.blub()];
+        f = [self.blub()];
         f().doStuff(1, 2, 3);
     }
     doStuff(x, y, z) {

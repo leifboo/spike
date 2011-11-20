@@ -52,10 +52,10 @@ main(argv) {
     gremlin = Gremlin.new();
     gremlin.anotherGizmo = zeroToTen();
     
-    result = gremlin eachGizmoDo: [obj gizmo; printf("%s\n", gizmo.printString); gizmo];
+    result = gremlin eachGizmoDo: [ :gizmo | printf("%s\n", gizmo.printString); gizmo ];
     printf("The result is %s.\n", result.printString);
     
-    gremlin.crash([obj g; g.red()]);
+    gremlin.crash([ :g | g.red() ]);
     
     return 0;
 }

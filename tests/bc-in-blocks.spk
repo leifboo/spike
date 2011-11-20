@@ -10,17 +10,17 @@ abc(j) {
     for (i = 0; i < alphabet.len; ++i) {
         letter = alphabet[i];
         stdout.printf("%c ", letter);
-        child(i, j, [obj x; stdout.printf("%s\n", x); break;]);
+        child(i, j, [ :x | stdout.printf("%s\n", x); break; ]);
     }
     for (i = 0; i < alphabet.len; ++i) {
         letter = alphabet[i];
         stdout.printf("%c ", letter);
-        child(i, j, [obj x; stdout.printf("%s\n", x); continue;]);
+        child(i, j, [ :x | stdout.printf("%s\n", x); continue; ]);
     }
     for (i = 0; i < alphabet.len; ++i) {
         letter = alphabet[i];
         stdout.printf("%c ", letter);
-        child(i, j, [obj x; stdout.printf("%s\n", x); return;]);
+        child(i, j, [ :x | stdout.printf("%s\n", x); return; ]);
     }
     stdout.puts("not reached");
 }

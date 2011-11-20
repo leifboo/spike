@@ -90,6 +90,7 @@ struct SpkArgList {
 
 struct SpkStmtList {
     SpkStmt *first, *last;
+    SpkExpr *expr;
 };
 
 struct SpkStmtPair {
@@ -108,6 +109,7 @@ struct SpkExpr {
     union {
         SpkUnknown *literalValue;
         struct {
+            SpkExpr *argList;
             SpkStmt *stmtList;
             size_t argumentCount;
             size_t localCount;

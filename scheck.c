@@ -160,7 +160,7 @@ static SpkUnknown *checkBlock(Expr *expr, Stmt *stmt, StaticChecker *checker,
                               unsigned int outerPass)
 {
     Expr *arg;
-    Stmt *firstStmt, *s;
+    Stmt *s;
     unsigned int innerPass;
     
     if (outerPass != 2) {
@@ -171,12 +171,11 @@ static SpkUnknown *checkBlock(Expr *expr, Stmt *stmt, StaticChecker *checker,
     
     SpkSymbolTable_EnterScope(checker->st, 0);
     
-    firstStmt = expr->aux.block.stmtList;
     expr->u.def.index = 0;
     
-    if (firstStmt && firstStmt->kind == Spk_STMT_DEF_VAR) {
+    if (expr->aux.block.argList) {
         /* declare block arguments */
-        for (arg = firstStmt->expr; arg; arg = arg->next) {
+        for (arg = expr->aux.block.argList; arg; arg = arg->nextArg) {
             if (arg->kind != Spk_EXPR_NAME) {
                 _(badExpr(arg, "invalid argument definition", checker));
                 continue;
@@ -189,14 +188,12 @@ static SpkUnknown *checkBlock(Expr *expr, Stmt *stmt, StaticChecker *checker,
          * argument.  The interpreter uses this index to find the
          * destination the block arguments; see Spk_OPCODE_CALL_BLOCK.
          */
-        expr->u.def.index = firstStmt->expr->u.def.index;
-        
-        firstStmt = firstStmt->next;
+        expr->u.def.index = expr->aux.block.argList->u.def.index;
     }
     
     for (innerPass = 1; innerPass <= 3; ++innerPass) {
         if (expr->aux.block.stmtList) {
-            for (s = firstStmt; s; s = s->next) {
+            for (s = expr->aux.block.stmtList; s; s = s->next) {
                 _(checkStmt(s, stmt, checker, innerPass));
             }
         }

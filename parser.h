@@ -30,7 +30,7 @@ SpkExpr *SpkParser_NewClassAttrExpr(struct SpkToken *, struct SpkToken *, struct
 SpkExpr *SpkParser_NewExpr(SpkExprKind, SpkOper, SpkExpr *, SpkExpr *, SpkExpr *, struct SpkToken *,
                            SpkParser *);
 SpkExpr *SpkParser_NewCallExpr(SpkOper, SpkExpr *, SpkArgList *, SpkToken *, SpkParser *);
-SpkExpr *SpkParser_NewBlock(SpkStmt *, SpkExpr *, struct SpkToken *, SpkParser *);
+SpkExpr *SpkParser_NewBlock(SpkExpr *, SpkStmt *, SpkExpr *, struct SpkToken *, SpkParser *);
 SpkExpr *SpkParser_NewKeywordExpr(struct SpkToken *, SpkExpr *, SpkParser *);
 SpkExpr *SpkParser_AppendKeyword(SpkExpr *, struct SpkToken *, SpkExpr *, SpkParser *);
 SpkExpr *SpkParser_FreezeKeywords(SpkExpr *, struct SpkToken *, SpkParser *);

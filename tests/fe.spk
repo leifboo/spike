@@ -14,7 +14,7 @@ abc() {
     puts("");
     
     obj aBlock;
-    aBlock = [obj a, b, c;
+    aBlock = [ :a :b :c |
               printf("little girl voice: %c %c %c\n", a, b, c); ];
     
     aBlock('a', 'b', 'c');
@@ -24,17 +24,17 @@ abc() {
     letters = tuple('j', 'k');
     aBlock('i', ...letters);
     
-    alphabet do: [obj l; printf("%c ", l);];
+    alphabet do: [ :l | printf("%c ", l); ];
     puts("");
     
-    alphabet do: [obj l;
+    alphabet do: [ :l |
         printf("%c ", l);
         ];
     puts("");
     
     varargs("Now", "I", "know", "my", "ABCs.");
     
-    alphabet do: [obj l; printf("%c ", l); if (l == 'g') return "hey"; ];
+    alphabet do: [ :l | printf("%c ", l); if (l == 'g') return "hey"; ];
     puts("ERROR: not reached");
 }
 
@@ -43,7 +43,7 @@ tuple(...args) {
 }
 
 varargs(...args) {
-    args do: [obj a; printf("%s\n", a);];
+    args do: [ :a | printf("%s\n", a); ];
 }
 
 main(argv) {

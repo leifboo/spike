@@ -348,7 +348,7 @@ Expr *SpkParser_NewCallExpr(SpkOper oper,
     return newExpr;
 }
 
-Expr *SpkParser_NewBlock(Stmt *stmtList, Expr *expr, SpkToken *token,
+Expr *SpkParser_NewBlock(Expr *argList, Stmt *stmtList, Expr *expr, SpkToken *token,
                          SpkParser *parser)
 {
     Expr *newExpr;
@@ -357,8 +357,9 @@ Expr *SpkParser_NewBlock(Stmt *stmtList, Expr *expr, SpkToken *token,
         /* XXX: bogus cast */
         newExpr = (SpkExpr *)Spk_Send(Spk_GLOBAL(theInterpreter),
                                       parser->tb, exprSelector(Spk_EXPR_BLOCK),
-                                      X(stmtList), X(expr), /*X(token),*/
+                                      X(argList), X(stmtList), X(expr), /*X(token),*/
                                       0);
+        Spk_XDECREF(argList);
         Spk_XDECREF(stmtList);
         Spk_XDECREF(expr);
         return newExpr;
@@ -367,6 +368,7 @@ Expr *SpkParser_NewBlock(Stmt *stmtList, Expr *expr, SpkToken *token,
     newExpr = (Expr *)SpkObject_New(Spk_CLASS(XExpr));
     newExpr->kind = Spk_EXPR_BLOCK;
     newExpr->right = expr;
+    newExpr->aux.block.argList = argList;
     newExpr->aux.block.stmtList = stmtList;
     newExpr->lineNo = token->lineNo;
     return newExpr;

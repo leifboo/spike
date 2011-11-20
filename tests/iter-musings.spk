@@ -64,7 +64,7 @@ class Foo {
     }
     iterate(a) {
         obj callback;
-        callback = [obj item; self.mcallback(item)];
+        callback = [ :item | self.mcallback(item) ];
         a forEachItem: callback;
         
         obj tally, iter, item;
@@ -78,9 +78,9 @@ class Foo {
         printf("There are %d items.\n", tally);
         
         tally = 0;
-        a do: [obj each;
+        a do: [ :each |
                show(each);
-               ++tally;];
+               ++tally; ];
         printf("There are indeed %d items.\n", tally);
     }
     

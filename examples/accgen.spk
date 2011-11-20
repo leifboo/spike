@@ -9,7 +9,7 @@ xxx(n) {
 }
 
 foo(n) {
-    return [obj i; n += i];
+    return [ :i | n += i ];
 }
 
 main(argv) {

@@ -1,7 +1,7 @@
 #!/usr/bin/env spike
 
 fib() {
-    return [ ;
+    return [
         obj a, b, tmp;
         
         a = 0;

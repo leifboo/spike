@@ -7,8 +7,8 @@ page33() {
     obj incrementBlock, sumBlock;
     obj sum, index;
     
-    incrementBlock = [index += 1 ];
-    sumBlock = [sum + index * index ];
+    incrementBlock = [ index += 1 ];
+    sumBlock = [ sum + index * index ];
     sum = 0;
     index = 1;
     sum = sumBlock();
@@ -20,7 +20,7 @@ page33() {
     
     obj amount;
     amount = 1;
-    timesRepeat(4, [amount += amount]);
+    timesRepeat(4, [ amount += amount ]);
     stdout.printf("The amount is %d.\n", amount);
 }
 
@@ -46,8 +46,8 @@ amusingProblem() {
     obj range;
     range = Range.new().init(0, aBlockArray.size);
     range do:
-        [obj anIndex;
-         aBlockArray[anIndex] = [anotherArray[anIndex] * 2]
+        [ :anIndex |
+         aBlockArray[anIndex] = [ anotherArray[anIndex] * 2 ]
             ];
     
     obj i, result;
