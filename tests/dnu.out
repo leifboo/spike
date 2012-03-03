@@ -1,6 +1,6 @@
-I don't understand ('hey',) with args (42,)!
-I don't understand 'tomato' with args ()!
+I don't understand $hey: with args { 42 }!
+I don't understand $tomato with args {}!
 tomato is 42
-I don't understand '__add__' with args (42,)!
-I don't understand '__apply__' with args ()!
-I don't understand '__apply__' with args (1, 2, 3)!
+I don't understand $__add__ with args { 42 }!
+I don't understand $__apply__ with args {}!
+I don't understand $__apply__ with args { 1, 2, 3 }!

@@ -3,8 +3,9 @@
 
 class Foo {
     self doesNotUnderstand: aMessage {
-        stdout.printf("I don't understand %s\n",
-                      aMessage.selector.printString);
+        stdout.printf("I don't understand %s with args %s!\n",
+                      aMessage.selector.printString,
+                      aMessage.arguments.printString);
         return 42;
     }
 }

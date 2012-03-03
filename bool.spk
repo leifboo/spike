@@ -5,6 +5,7 @@ class Boolean {
     self & x { self subclassResponsibility; }
     self ^ x { self subclassResponsibility; }
     self | x { self subclassResponsibility; }
+    printString { self subclassResponsibility; }
 }
 
 class False : Boolean {
@@ -13,6 +14,7 @@ class False : Boolean {
     self & x { return false; }
     self ^ x { return x; }
     self | x { return x; }
+    printString { return "false"; }
 }
 
 class True : Boolean {
@@ -21,6 +23,7 @@ class True : Boolean {
     self & x { return x; }
     self ^ x { return !x; }
     self | x { return true; }
+    printString { return "true"; }
 }
 
 (Boolean) { return (Boolean); }

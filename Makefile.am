@@ -155,7 +155,6 @@ TESTS = \
 	examples/point.spk \
 	examples/primes.spk \
 	tests/attr.spk \
-	tests/bad-imports.spk \
 	tests/bc-in-blocks.spk \
 	tests/cycle.spk \
 	tests/default-args.spk \
@@ -181,9 +180,10 @@ TESTS = \
 	$(empty)
 
 XFAIL_TESTS = \
-	tests/bad-imports.spk \
+	examples/primes.spk \
 	tests/bc-in-blocks.spk \
 	tests/empty.spk \
+	tests/kw-permutations.spk \
 	tests/no-main.spk \
 	tests/pi.spk \
 	tests/syntax-error.spk \
@@ -210,8 +210,6 @@ test_io = \
 	examples/point.out \
 	examples/primes.out \
 	tests/attr.out \
-	tests/bad-imports.err \
-	tests/bad-imports.out \
 	tests/cycle.err \
 	tests/cycle.out \
 	tests/default-args.out \

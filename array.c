@@ -5,6 +5,8 @@
 #include "heart.h"
 #include "int.h"
 #include "native.h"
+#include "rodata.h"
+#include "str.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -80,6 +82,36 @@ static SpkUnknown *Array_do(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg
 
 
 /*------------------------------------------------------------------------*/
+/* methods -- printing */
+
+static SpkUnknown *Array_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
+    SpkArray *self;
+    size_t i;
+    SpkString *result, *s, *comma;
+    
+    self = (SpkArray *)_self;
+    
+    if (self->size == 0)
+        return (SpkUnknown *)SpkString_FromCString("{}");
+    
+    result = SpkString_FromCString("{ ");
+    comma = SpkString_FromCString(", ");
+    
+    for (i = 0; i < self->size; ++i) {
+        s = (SpkString *)Spk_Attr(Spk_GLOBAL(theInterpreter), ARRAY(self)[i], Spk_printString);
+        if (!s)
+            return 0; /* unwind */
+        SpkString_Concat(&result, s);
+        if (i + 1 < self->size)
+            SpkString_Concat(&result, comma);
+    }
+    
+    SpkString_Concat(&result, SpkString_FromCString(" }"));
+    return (SpkUnknown *)result;
+}
+
+
+/*------------------------------------------------------------------------*/
 /* low-level hooks */
 
 static void Array_zero(SpkObject *_self) {
@@ -133,6 +165,8 @@ static SpkMethodTmpl methods[] = {
     { "__index__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_item },
     /* enumerating */
     { "do:", SpkNativeCode_ARGS_1, &Array_do },
+    /* printing */
+    { "printString", SpkNativeCode_ARGS_0, &Array_printString },
     { 0 }
 };
 

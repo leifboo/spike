@@ -9,7 +9,7 @@ bar is a XBar
 uninit
 42
 uninit
-'XBar'
+$XBar
 a metaclass
 
 55
@@ -40,5 +40,5 @@ left true!
 
 prec
 left hey!
-left False
+left false
 yeah!

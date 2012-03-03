@@ -1,7 +1,7 @@
 The global var is 666.
-'hey'
+"hey"
 42
-[1, 2, 3, 4, 5, 6, 7, 8, 9]
-'tomato'
-The result is 'tomato'.
-I don't understand 'huh'!
+{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }
+"tomato"
+The result is "tomato".
+I don't understand '$huh'!

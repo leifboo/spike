@@ -1,22 +1,22 @@
 1
 2
 3
-()
+{}
 
 1
 2
 3
-(4, 5, 6)
+{ 4, 5, 6 }
 foo arg: 4
 foo arg: 5
 foo arg: 6
 
-'a'
-'b'
-'c'
-('hello', 'world', 4, 5, 6)
-foo arg: 'hello'
-foo arg: 'world'
+"a"
+"b"
+"c"
+{ "hello", "world", 4, 5, 6 }
+foo arg: "hello"
+foo arg: "world"
 foo arg: 4
 foo arg: 5
 foo arg: 6
@@ -24,22 +24,22 @@ foo arg: 6
 4
 5
 6
-()
+{}
 
-v: (4, 5, 6)
+v: { 4, 5, 6 }
 v arg: 4
 v arg: 5
 v arg: 6
 
-v: ()
+v: {}
 
 4
-(5, 6)
+{ 5, 6 }
 v1 arg: 5
 v1 arg: 6
 
-'help'
-(4, 5, 6)
+"help"
+{ 4, 5, 6 }
 v1 arg: 4
 v1 arg: 5
 v1 arg: 6
@@ -56,28 +56,28 @@ zoo
 1
 2
 3
-('y', 'z')
-foo arg: 'y'
-foo arg: 'z'
+{ "y", "z" }
+foo arg: "y"
+foo arg: "z"
 
 1
-'y'
-'z'
+"y"
+"z"
 
-'a' <- leaf1
-'b' <- leaf2
-'y' <- leaf1
-'z' <- leaf2
+"a" <- leaf1
+"b" <- leaf2
+"y" <- leaf1
+"z" <- leaf2
 1 <- leaf1
 2 <- leaf2
 1
 2
 3
-('y',)
-foo arg: 'y'
+{ "y" }
+foo arg: "y"
 
 1 <- leaf1
-'y' <- leaf2
+"y" <- leaf2
 1 <- leaf1
 2 <- leaf2
 4 <- a4

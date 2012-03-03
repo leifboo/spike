@@ -311,36 +311,6 @@ SpkUnknown *SpkHost_FindSymbol(SpkUnknown *symbolDict, SpkUnknown *method) {
 
 
 /*------------------------------------------------------------------------*/
-/* literal dictionaries */
-
-SpkUnknown *SpkHost_NewLiteralDict(void) {
-    /* XXX: IdentityDictionary doesn't really do the job.  It works
-     * for Symbols, but it fails to uniquify strings, integers,
-     * floats...
-     */
-    return (SpkUnknown *)SpkIdentityDictionary_New();
-}
-
-unsigned int SpkHost_InsertLiteral(SpkUnknown *literalDict, SpkUnknown *literal) {
-    SpkIdentityDictionary *dict;
-    SpkUnknown *value;
-    unsigned int index;
-    
-    dict = Spk_CAST(IdentityDictionary, literalDict);
-    value = SpkIdentityDictionary_GetItem(dict, literal);
-    if (value) {
-        index = SpkInteger_AsCLong((SpkInteger *)Spk_CAST(Integer, value));
-    } else {
-        index = SpkIdentityDictionary_Size(dict);
-        value = (SpkUnknown *)SpkInteger_FromCLong(index);
-        SpkIdentityDictionary_SetItem(dict, literal, value);
-    }
-    Spk_DECREF(value);
-    return index;
-}
-
-
-/*------------------------------------------------------------------------*/
 /* arguments  */
 
 /*****/ int SpkHost_IsArgs(SpkUnknown *op) {

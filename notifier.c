@@ -10,6 +10,7 @@
 #include "tree.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 
 struct SpkNotifier {
@@ -128,7 +129,7 @@ static SpkUnknown *Notifier_failOnError(SpkUnknown *_self, SpkUnknown *arg0, Spk
     
     self = (SpkNotifier *)_self;
     if (self->errorTally > 0) {
-        Spk_Halt(Spk_HALT_ERROR, "errors");
+        exit(1);
         return 0;
     }
     Spk_INCREF(Spk_GLOBAL(xvoid));

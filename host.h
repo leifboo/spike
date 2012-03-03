@@ -55,11 +55,6 @@ SpkUnknown *SpkHost_FindSymbol(SpkUnknown *, SpkUnknown *);
                                SpkUnknown **, SpkUnknown **);
 
 
-/* literal dictionaries */
-SpkUnknown *SpkHost_NewLiteralDict(void);
-unsigned int SpkHost_InsertLiteral(SpkUnknown *, SpkUnknown *);
-
-
 /* arguments */
 /*****/ int SpkHost_IsArgs(SpkUnknown *);
 /**/ size_t SpkHost_ArgsSize(SpkUnknown *);

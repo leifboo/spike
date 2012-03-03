@@ -38,6 +38,7 @@ interpreter(argv) {
     tree = tree.source(sourcePathname);
     tree = tree.asModuleDef();
     tree.check(st, notifier);
+    notifier failOnError;
     
     obj moduleClass = tree.generateCode();
     obj module = moduleClass.new();

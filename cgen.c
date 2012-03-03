@@ -1,6 +1,7 @@
 
 #include "cgen.h"
 
+#include "float.h"
 #include "heart.h"
 #include "host.h"
 #include "module.h"
@@ -8,6 +9,8 @@
 #include "obj.h"
 #include "rodata.h"
 #include "st.h"
+#include "str.h"
+#include "sym.h"
 #include "tree.h"
 
 #include <stdlib.h>
@@ -100,13 +103,38 @@ typedef struct ClassCodeGen {
     SpkUnknown *source;
 } ClassCodeGen;
 
+typedef struct RodataEntry {
+    union {
+        long intValue;
+        double floatValue;
+        char charValue;
+        SpkString *strValue;
+        SpkSymbol *symValue;
+    } u;
+    unsigned int index;
+} RodataEntry;
+
 typedef struct ModuleCodeGen {
     struct CodeGen *generic;
     SpkModuleTmpl *moduleTmpl;
     
     SpkUnknown **rodata;
     unsigned int rodataSize, rodataAllocSize;
-    SpkUnknown *rodataMap;
+    
+    RodataEntry *intData;
+    unsigned int intDataSize, intDataAllocSize;
+    
+    RodataEntry *floatData;
+    unsigned int floatDataSize, floatDataAllocSize;
+    
+    RodataEntry charData[256];
+    unsigned int charDataSize;
+    
+    RodataEntry *strData;
+    unsigned int strDataSize, strDataAllocSize;
+    
+    RodataEntry *symData;
+    unsigned int symDataSize, symDataAllocSize;
 } ModuleCodeGen;
 
 typedef struct CodeGen {
@@ -446,31 +474,185 @@ static void rewindOpcodes(OpcodeGen *cgen,
 /****************************************************************************/
 /* rodata */
 
-static unsigned int getLiteralIndex(SpkUnknown *literal, OpcodeGen *cgen) {
-    unsigned int index;
+static unsigned int getIntLiteralIndex(long value, ModuleCodeGen *cgen) {
+    unsigned int i;
     
-    index = SpkHost_InsertLiteral(cgen->generic->module->rodataMap, literal);
-    if (index < cgen->generic->module->rodataSize) {
-        return index;
+    for (i = 0; i < cgen->intDataSize; ++i) {
+        if (cgen->intData[i].u.intValue == value)
+            return cgen->intData[i].index;
     }
     
-    ++cgen->generic->module->rodataSize;
+    ++cgen->intDataSize;
     
-    if (cgen->generic->module->rodataSize >
-        cgen->generic->module->rodataAllocSize) {
-        cgen->generic->module->rodataAllocSize
-            = (cgen->generic->module->rodataAllocSize
-               ? cgen->generic->module->rodataAllocSize * 2
+    if (cgen->intDataSize >
+        cgen->intDataAllocSize) {
+        cgen->intDataAllocSize
+            = (cgen->intDataAllocSize
+               ? cgen->intDataAllocSize * 2
                : 2);
-        cgen->generic->module->rodata
-            = (SpkUnknown **)realloc(
-                cgen->generic->module->rodata,
-                cgen->generic->module->rodataAllocSize * sizeof(SpkUnknown *)
+        cgen->intData
+            = (RodataEntry *)realloc(
+                cgen->intData,
+                cgen->intDataAllocSize * sizeof(RodataEntry)
                 );
     }
     
-    cgen->generic->module->rodata[index] = literal;
-    Spk_INCREF(literal);
+    cgen->intData[i].u.intValue = value;
+    cgen->intData[i].index = cgen->rodataSize;
+    
+    return cgen->intData[i].index;
+}
+
+static unsigned int getFloatLiteralIndex(double value, ModuleCodeGen *cgen) {
+    unsigned int i;
+    
+    for (i = 0; i < cgen->floatDataSize; ++i) {
+        if (cgen->floatData[i].u.floatValue == value)
+            return cgen->floatData[i].index;
+    }
+    
+    ++cgen->floatDataSize;
+    
+    if (cgen->floatDataSize >
+        cgen->floatDataAllocSize) {
+        cgen->floatDataAllocSize
+            = (cgen->floatDataAllocSize
+               ? cgen->floatDataAllocSize * 2
+               : 2);
+        cgen->floatData
+            = (RodataEntry *)realloc(
+                cgen->floatData,
+                cgen->floatDataAllocSize * sizeof(RodataEntry)
+                );
+    }
+    
+    cgen->floatData[i].u.floatValue = value;
+    cgen->floatData[i].index = cgen->rodataSize;
+    
+    return cgen->floatData[i].index;
+}
+
+static unsigned int getCharLiteralIndex(unsigned int value, ModuleCodeGen *cgen) {
+    unsigned int i;
+    
+    value = value % 256;
+    
+    for (i = 0; i < cgen->charDataSize; ++i) {
+        if (cgen->charData[i].u.charValue == value)
+            return cgen->charData[i].index;
+    }
+    
+    cgen->charData[i].u.charValue == value;
+    cgen->charData[i].index = cgen->rodataSize;
+    cgen->charDataSize++;
+    
+    return cgen->charData[i].index;
+}
+
+static unsigned int getStrLiteralIndex(SpkString *value, ModuleCodeGen *cgen) {
+    unsigned int i;
+    
+    for (i = 0; i < cgen->strDataSize; ++i) {
+        if (SpkString_IsEqual(cgen->strData[i].u.strValue, value))
+            return cgen->strData[i].index;
+    }
+    
+    ++cgen->strDataSize;
+    
+    if (cgen->strDataSize >
+        cgen->strDataAllocSize) {
+        cgen->strDataAllocSize
+            = (cgen->strDataAllocSize
+               ? cgen->strDataAllocSize * 2
+               : 2);
+        cgen->strData
+            = (RodataEntry *)realloc(
+                cgen->strData,
+                cgen->strDataAllocSize * sizeof(RodataEntry)
+                );
+    }
+    
+    cgen->strData[i].u.strValue = value; Spk_INCREF(value);
+    cgen->strData[i].index = cgen->rodataSize;
+    
+    return cgen->strData[i].index;
+}
+
+static unsigned int getSymLiteralIndex(SpkSymbol *value, ModuleCodeGen *cgen) {
+    unsigned int i;
+    
+    for (i = 0; i < cgen->symDataSize; ++i) {
+        if (cgen->symData[i].u.symValue == value)
+            return cgen->symData[i].index;
+    }
+    
+    ++cgen->symDataSize;
+    
+    if (cgen->symDataSize >
+        cgen->symDataAllocSize) {
+        cgen->symDataAllocSize
+            = (cgen->symDataAllocSize
+               ? cgen->symDataAllocSize * 2
+               : 2);
+        cgen->symData
+            = (RodataEntry *)realloc(
+                cgen->symData,
+                cgen->symDataAllocSize * sizeof(RodataEntry)
+                );
+    }
+    
+    cgen->symData[i].u.symValue = value; Spk_INCREF(value);
+    cgen->symData[i].index = cgen->rodataSize;
+    
+    return cgen->symData[i].index;
+}
+
+static unsigned int getLiteralIndex(SpkUnknown *literal, OpcodeGen *cgen) {
+    SpkBehavior *klass;
+    ModuleCodeGen *mcg;
+    unsigned int index;
+    
+    klass = ((SpkObject *)literal)->klass;
+    mcg = cgen->generic->module;
+    
+    if (klass == Spk_CLASS(Integer)) {
+        long value = SpkHost_IntegerAsCLong(literal);
+        index = getIntLiteralIndex(value, mcg);
+    } else if (klass == Spk_CLASS(Float)) {
+        double value = SpkHost_FloatAsCDouble(literal);
+        index = getFloatLiteralIndex(value, mcg);
+    } else if (klass == Spk_CLASS(Char)) {
+        unsigned int value = (unsigned char)SpkHost_CharAsCChar(literal);
+        index = getCharLiteralIndex(value, mcg);
+    } else if (klass == Spk_CLASS(String)) {
+        index = getStrLiteralIndex((SpkString *)literal, mcg);
+    } else if (klass == Spk_CLASS(Symbol)) {
+        index = getSymLiteralIndex((SpkSymbol *)literal, mcg);
+    } else {
+        /* XXX: accommodate hack in generatePredef() */
+        index = getSymLiteralIndex((SpkSymbol *)literal, mcg);
+    }
+    
+    if (index < mcg->rodataSize) {
+        return index;
+    }
+    
+    ++mcg->rodataSize;
+    
+    if (mcg->rodataSize >
+        mcg->rodataAllocSize) {
+        mcg->rodataAllocSize
+            = (mcg->rodataAllocSize
+               ? mcg->rodataAllocSize * 2
+               : 2);
+        mcg->rodata
+            = (SpkUnknown **)realloc(
+                mcg->rodata,
+                mcg->rodataAllocSize * sizeof(SpkUnknown *)
+                );
+    }
+    
+    mcg->rodata[index] = literal; Spk_INCREF(literal);
     
     return index;
 }
@@ -1136,7 +1318,7 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     }
     
     body = expr->aux.block.stmtList;
-
+    
     /* dry run to compute offsets */
     _(emitCodeForBlockBody(body, valueExpr, cgen));
     
@@ -1945,11 +2127,6 @@ SpkModuleTmpl *SpkCodeGen_GenerateCode(Stmt *tree) {
     cgen->generic = &gcgen;
     cgen->generic->kind = CODE_GEN_MODULE;
     
-    cgen->rodataMap = SpkHost_NewLiteralDict();
-    if (!cgen->rodataMap) {
-        goto unwind;
-    }
-    
     /* Create the module template. */
     cgen->moduleTmpl = (SpkModuleTmpl *)malloc(sizeof(SpkModuleTmpl));
     memset(cgen->moduleTmpl, 0, sizeof(SpkModuleTmpl));
@@ -1967,11 +2144,9 @@ SpkModuleTmpl *SpkCodeGen_GenerateCode(Stmt *tree) {
     cgen->moduleTmpl->literals = cgen->rodata;
     cgen->moduleTmpl->literalCount = cgen->rodataSize;
     
-    Spk_DECREF(cgen->rodataMap);
     return cgen->moduleTmpl;
     
  unwind:
-    Spk_XDECREF(cgen->rodataMap);
     free(cgen->moduleTmpl);
     return 0;
 }
