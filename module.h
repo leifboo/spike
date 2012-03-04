@@ -1,61 +1,61 @@
 
-#ifndef __spk_module_h__
-#define __spk_module_h__
+#ifndef __module_h__
+#define __module_h__
 
 
 #include "class.h"
 
 
 enum {
-    Spk_LITERAL_SYMBOL,
-    Spk_LITERAL_INTEGER,
-    Spk_LITERAL_FLOAT,
-    Spk_LITERAL_CHAR,
-    Spk_LITERAL_STRING
+    LITERAL_SYMBOL,
+    LITERAL_INTEGER,
+    LITERAL_FLOAT,
+    LITERAL_CHAR,
+    LITERAL_STRING
 };
 
 
-typedef struct SpkLiteralTmpl {
+typedef struct LiteralTmpl {
     unsigned int kind;
     int intValue;
     double floatValue;
     const char *stringValue;
-} SpkLiteralTmpl;
+} LiteralTmpl;
 
 
-typedef struct SpkModuleTmpl {
+typedef struct ModuleTmpl {
     /* C code */
-    SpkClassTmpl moduleClass;
+    ClassTmpl moduleClass;
     size_t literalCount;
-    SpkLiteralTmpl *literalTable;
+    LiteralTmpl *literalTable;
     /* bytecode */
-    SpkClassTmplList classList;
-    SpkUnknown **literals;
-} SpkModuleTmpl;
+    ClassTmplList classList;
+    Unknown **literals;
+} ModuleTmpl;
 
 
-typedef struct SpkModule {
-    SpkObject base;
-} SpkModule;
+typedef struct Module {
+    Object base;
+} Module;
 
 
-typedef struct SpkModuleClass {
-    SpkClass base;
+typedef struct ModuleClass {
+    Class base;
     size_t literalCount;
-    SpkUnknown **literals;
-    SpkModuleTmpl *tmpl;
-} SpkModuleClass;
+    Unknown **literals;
+    ModuleTmpl *tmpl;
+} ModuleClass;
 
 
-#define SpkModule_VARIABLES(op) ((SpkUnknown **)((char *)(op) + ((SpkObject *)(op))->klass->instVarOffset) + Spk_CLASS(Module)->instVarBaseIndex)
-#define SpkModule_LITERALS(op) (((SpkModuleClass *)(op->base.klass))->literals)
+#define Module_VARIABLES(op) ((Unknown **)((char *)(op) + ((Object *)(op))->klass->instVarOffset) + CLASS(Module)->instVarBaseIndex)
+#define Module_LITERALS(op) (((ModuleClass *)(op->base.klass))->literals)
 
 
-extern struct SpkClassTmpl Spk_ClassModuleTmpl, Spk_ClassThunkTmpl;
+extern struct ClassTmpl ClassModuleTmpl, ClassThunkTmpl;
 
 
-void SpkModule_InitLiteralsFromTemplate(SpkBehavior *, SpkModuleTmpl *);
-SpkModuleClass *SpkModuleClass_New(SpkModuleTmpl *);
+void Module_InitLiteralsFromTemplate(Behavior *, ModuleTmpl *);
+ModuleClass *ModuleClass_New(ModuleTmpl *);
 
 
-#endif /* __spk_module_h__ */
+#endif /* __module_h__ */

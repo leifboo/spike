@@ -1,45 +1,45 @@
 
-#ifndef __spk_obj_h__
-#define __spk_obj_h__
+#ifndef __obj_h__
+#define __obj_h__
 
 
 #include "om.h"
 #include <stddef.h>
 
 
-typedef struct SpkObject {
-    SpkUnknown base;
-    struct SpkBehavior *klass;
-} SpkObject;
+typedef struct Object {
+    Unknown base;
+    struct Behavior *klass;
+} Object;
 
-typedef struct SpkObjectSubclass {
-    SpkObject base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkObjectSubclass;
+typedef struct ObjectSubclass {
+    Object base;
+    Unknown *variables[1]; /* stretchy */
+} ObjectSubclass;
 
-typedef struct SpkVariableObject {
-    SpkObject base;
+typedef struct VariableObject {
+    Object base;
     size_t size;
-} SpkVariableObject;
+} VariableObject;
 
-typedef struct SpkVariableObjectSubclass {
-    SpkVariableObject base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkVariableObjectSubclass;
-
-
-SpkObject *Spk_Cast(struct SpkBehavior *, SpkUnknown *);
-
-SpkObject *SpkObject_New(struct SpkBehavior *);
-SpkObject *SpkObject_NewVar(struct SpkBehavior *, size_t);
+typedef struct VariableObjectSubclass {
+    VariableObject base;
+    Unknown *variables[1]; /* stretchy */
+} VariableObjectSubclass;
 
 
-extern struct SpkClassTmpl Spk_ClassObjectTmpl, Spk_ClassVariableObjectTmpl;
+Object *Cast(struct Behavior *, Unknown *);
+
+Object *Object_New(struct Behavior *);
+Object *Object_NewVar(struct Behavior *, size_t);
 
 
-#define SpkVariableObject_ITEM_BASE(op) (((char *)op) + ((SpkVariableObject *)op)->base.klass->instanceSize)
-
-#define Spk_CAST(c, op) ((Spk ## c *)Spk_Cast(Spk_CLASS(c), (SpkUnknown *)(op)))
+extern struct ClassTmpl ClassObjectTmpl, ClassVariableObjectTmpl;
 
 
-#endif /* __spk_obj_h__ */
+#define VariableObject_ITEM_BASE(op) (((char *)op) + ((VariableObject *)op)->base.klass->instanceSize)
+
+#define CAST(c, op) ((c *)Cast(CLASS(c), (Unknown *)(op)))
+
+
+#endif /* __obj_h__ */

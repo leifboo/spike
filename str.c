@@ -10,44 +10,44 @@
 #include <string.h>
 
 
-#define BOOL(cond) ((cond) ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse))
-#define STR(op) ((char *)SpkVariableObject_ITEM_BASE(op))
+#define BOOL(cond) ((cond) ? GLOBAL(xtrue) : GLOBAL(xfalse))
+#define STR(op) ((char *)VariableObject_ITEM_BASE(op))
 #define LEN(op) ((op)->size - 1)
 
 
 /*------------------------------------------------------------------------*/
 /* method helpers */
 
-static SpkUnknown *String_binaryLogicalOper(SpkString *self, SpkUnknown *arg0, SpkOper oper) {
-    SpkString *arg;
-    SpkUnknown *result;
+static Unknown *String_binaryLogicalOper(String *self, Unknown *arg0, Oper oper) {
+    String *arg;
+    Unknown *result;
     
-    arg = Spk_CAST(String, arg0);
+    arg = CAST(String, arg0);
     if (!arg) switch (oper) {
-    case Spk_OPER_EQ:
+    case OPER_EQ:
         /* XXX: 0 == 0.0 */
-        Spk_INCREF(Spk_GLOBAL(xfalse));
-        return Spk_GLOBAL(xfalse);
-    case Spk_OPER_NE:
-        Spk_INCREF(Spk_GLOBAL(xtrue));
-        return Spk_GLOBAL(xtrue);
+        INCREF(GLOBAL(xfalse));
+        return GLOBAL(xfalse);
+    case OPER_NE:
+        INCREF(GLOBAL(xtrue));
+        return GLOBAL(xtrue);
     default:
-        Spk_Halt(Spk_HALT_ASSERTION_ERROR, "XXX");
+        Halt(HALT_ASSERTION_ERROR, "XXX");
         return 0;
     }
     
     switch (oper) {
-    case Spk_OPER_LT: result = BOOL(strcmp(STR(self), STR(arg)) < 0);  break;
-    case Spk_OPER_GT: result = BOOL(strcmp(STR(self), STR(arg)) > 0);  break;
-    case Spk_OPER_LE: result = BOOL(strcmp(STR(self), STR(arg)) <= 0); break;
-    case Spk_OPER_GE: result = BOOL(strcmp(STR(self), STR(arg)) >= 0); break;
-    case Spk_OPER_EQ: result = BOOL(strcmp(STR(self), STR(arg)) == 0); break;
-    case Spk_OPER_NE: result = BOOL(strcmp(STR(self), STR(arg)) != 0); break;
+    case OPER_LT: result = BOOL(strcmp(STR(self), STR(arg)) < 0);  break;
+    case OPER_GT: result = BOOL(strcmp(STR(self), STR(arg)) > 0);  break;
+    case OPER_LE: result = BOOL(strcmp(STR(self), STR(arg)) <= 0); break;
+    case OPER_GE: result = BOOL(strcmp(STR(self), STR(arg)) >= 0); break;
+    case OPER_EQ: result = BOOL(strcmp(STR(self), STR(arg)) == 0); break;
+    case OPER_NE: result = BOOL(strcmp(STR(self), STR(arg)) != 0); break;
     default:
-        Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+        Halt(HALT_ASSERTION_ERROR, "not reached");
         return 0;
     }
-    Spk_INCREF(result);
+    INCREF(result);
     return result;
 }
 
@@ -55,119 +55,119 @@ static SpkUnknown *String_binaryLogicalOper(SpkString *self, SpkUnknown *arg0, S
 /*------------------------------------------------------------------------*/
 /* methods -- operators */
 
-/* Spk_OPER_ADD */
-static SpkUnknown *String_add(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkString *self, *arg, *result;
+/* OPER_ADD */
+static Unknown *String_add(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    String *self, *arg, *result;
     size_t resultLen;
     
-    self = (SpkString *)_self;
-    arg = Spk_CAST(String, arg0);
+    self = (String *)_self;
+    arg = CAST(String, arg0);
     if (!arg) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        Halt(HALT_TYPE_ERROR, "a string is required");
         return 0;
     }
     resultLen = LEN(self) + LEN(arg);
-    result = (SpkString *)SpkObject_NewVar(Spk_CLASS(String), resultLen + 1);
+    result = (String *)Object_NewVar(CLASS(String), resultLen + 1);
     if (!result)
         return 0;
     memcpy(STR(result), STR(self), LEN(self));
     memcpy(STR(result) + LEN(self), STR(arg), arg->size);
-    return (SpkUnknown *)result;
+    return (Unknown *)result;
 }
 
-/* Spk_OPER_LT */
-static SpkUnknown *String_lt(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return String_binaryLogicalOper((SpkString *)self, arg0, Spk_OPER_LT);
+/* OPER_LT */
+static Unknown *String_lt(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return String_binaryLogicalOper((String *)self, arg0, OPER_LT);
 }
 
-/* Spk_OPER_GT */
-static SpkUnknown *String_gt(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return String_binaryLogicalOper((SpkString *)self, arg0, Spk_OPER_GT);
+/* OPER_GT */
+static Unknown *String_gt(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return String_binaryLogicalOper((String *)self, arg0, OPER_GT);
 }
 
-/* Spk_OPER_LE */
-static SpkUnknown *String_le(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return String_binaryLogicalOper((SpkString *)self, arg0, Spk_OPER_LE);
+/* OPER_LE */
+static Unknown *String_le(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return String_binaryLogicalOper((String *)self, arg0, OPER_LE);
 }
 
-/* Spk_OPER_GE */
-static SpkUnknown *String_ge(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return String_binaryLogicalOper((SpkString *)self, arg0, Spk_OPER_GE);
+/* OPER_GE */
+static Unknown *String_ge(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return String_binaryLogicalOper((String *)self, arg0, OPER_GE);
 }
 
-/* Spk_OPER_EQ */
-static SpkUnknown *String_eq(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return String_binaryLogicalOper((SpkString *)self, arg0, Spk_OPER_EQ);
+/* OPER_EQ */
+static Unknown *String_eq(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return String_binaryLogicalOper((String *)self, arg0, OPER_EQ);
 }
 
-/* Spk_OPER_NE */
-static SpkUnknown *String_ne(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return String_binaryLogicalOper((SpkString *)self, arg0, Spk_OPER_NE);
+/* OPER_NE */
+static Unknown *String_ne(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return String_binaryLogicalOper((String *)self, arg0, OPER_NE);
 }
 
-/* Spk_OPER_GET_ITEM */
-static SpkUnknown *String_item(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkString *self; SpkInteger *arg;
+/* OPER_GET_ITEM */
+static Unknown *String_item(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    String *self; Integer *arg;
     ptrdiff_t index;
     
-    self = (SpkString *)_self;
-    arg = Spk_CAST(Integer, arg0);
+    self = (String *)_self;
+    arg = CAST(Integer, arg0);
     if (!arg) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
+        Halt(HALT_TYPE_ERROR, "an integer is required");
         return 0;
     }
-    index = SpkInteger_AsCPtrdiff(arg);
+    index = Integer_AsCPtrdiff(arg);
     if (index < 0 || LEN(self) <= (size_t)index) {
-        Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
+        Halt(HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
-    return (SpkUnknown *)SpkChar_FromCChar(STR(self)[index]);
+    return (Unknown *)Char_FromCChar(STR(self)[index]);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* methods -- attributes */
 
-static SpkUnknown *String_size(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return (SpkUnknown *)SpkInteger_FromCPtrdiff(LEN((SpkString *)self));
+static Unknown *String_size(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return (Unknown *)Integer_FromCPtrdiff(LEN((String *)self));
 }
 
 
 /*------------------------------------------------------------------------*/
 /* methods -- enumerating */
 
-static SpkUnknown *String_do(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkString *self;
+static Unknown *String_do(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    String *self;
     size_t i;
-    SpkChar *c;
-    SpkUnknown *result;
+    Char *c;
+    Unknown *result;
     
-    self = (SpkString *)_self;
+    self = (String *)_self;
     for (i = 0; i < LEN(self); ++i) {
-        c = SpkChar_FromCChar(STR(self)[i]);
-        result = Spk_Call(Spk_GLOBAL(theInterpreter), arg0, Spk_OPER_APPLY, c, 0);
-        Spk_DECREF(c);
+        c = Char_FromCChar(STR(self)[i]);
+        result = Call(GLOBAL(theInterpreter), arg0, OPER_APPLY, c, 0);
+        DECREF(c);
         if (!result)
             return 0; /* unwind */
-        Spk_DECREF(result);
+        DECREF(result);
     }
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* methods -- printing */
 
-static SpkUnknown *String_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkString *self;
-    SpkString *result;
+static Unknown *String_printString(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    String *self;
+    String *result;
     char *d, *s; const char *subst;
     char c;
     
-    self = (SpkString *)_self;
-    result = SpkString_FromCStringAndLength(0, 2*LEN(self) + 2);
-    d = SpkString_AsCString(result);
+    self = (String *)_self;
+    result = String_FromCStringAndLength(0, 2*LEN(self) + 2);
+    d = String_AsCString(result);
     s = STR(self);
     *d++ = '"';
     while ((c = *s++)) {
@@ -196,46 +196,46 @@ static SpkUnknown *String_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUn
     *d++ = '"';
     *d = '\0';
     result->size = d - STR(result) + 1;
-    return (SpkUnknown *)result;
+    return (Unknown *)result;
 }
 
 
 /*------------------------------------------------------------------------*/
 /* class tmpl */
 
-typedef SpkVariableObjectSubclass SpkStringSubclass;
+typedef VariableObjectSubclass StringSubclass;
 
-static SpkMethodTmpl methods[] = {
+static MethodTmpl methods[] = {
     /* operators */
 #if 0 /*XXX*/
-    { "__mul__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_mul    },
-    { "__mod__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_mod    },
+    { "__mul__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &String_mul    },
+    { "__mod__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &String_mod    },
 #endif
-    { "__add__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_add    },
-    { "__lt__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_lt     },
-    { "__gt__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_gt     },
-    { "__le__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_le     },
-    { "__ge__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_ge     },
-    { "__eq__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_eq     },
-    { "__ne__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &String_ne     },
+    { "__add__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &String_add    },
+    { "__lt__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &String_lt     },
+    { "__gt__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &String_gt     },
+    { "__le__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &String_le     },
+    { "__ge__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &String_ge     },
+    { "__eq__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &String_eq     },
+    { "__ne__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &String_ne     },
     /* call operators */
-    { "__index__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &String_item },
+    { "__index__", NativeCode_ARGS_1 | NativeCode_LEAF, &String_item },
     /* attributes */
-    { "len", SpkNativeCode_ARGS_0, &String_size },
-    { "size", SpkNativeCode_ARGS_0, &String_size },
+    { "len", NativeCode_ARGS_0, &String_size },
+    { "size", NativeCode_ARGS_0, &String_size },
     /* enumerating */
-    { "do:", SpkNativeCode_ARGS_1, &String_do },
+    { "do:", NativeCode_ARGS_1, &String_do },
     /* printing */
-    { "printString", SpkNativeCode_ARGS_0, &String_printString },
+    { "printString", NativeCode_ARGS_0, &String_printString },
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassStringTmpl = {
-    Spk_HEART_CLASS_TMPL(String, Object), {
+ClassTmpl ClassStringTmpl = {
+    HEART_CLASS_TMPL(String, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkStringSubclass, variables),
+        offsetof(StringSubclass, variables),
         sizeof(char)
     }, /*meta*/ {
         0
@@ -246,15 +246,15 @@ SpkClassTmpl Spk_ClassStringTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SpkString *SpkString_FromCString(const char *str) {
-    return SpkString_FromCStringAndLength(str, strlen(str));
+String *String_FromCString(const char *str) {
+    return String_FromCStringAndLength(str, strlen(str));
 }
 
-SpkString *SpkString_FromCStringAndLength(const char *str, size_t len) {
-    SpkString *result;
+String *String_FromCStringAndLength(const char *str, size_t len) {
+    String *result;
     char *buffer;
     
-    result = (SpkString *)SpkObject_NewVar(Spk_CLASS(String), len + 1);
+    result = (String *)Object_NewVar(CLASS(String), len + 1);
     if (!result)
         return 0;
     buffer = STR(result);
@@ -264,49 +264,49 @@ SpkString *SpkString_FromCStringAndLength(const char *str, size_t len) {
     return result;
 }
 
-SpkString *SpkString_FromCStream(FILE *stream, size_t size) {
-    SpkString *result;
+String *String_FromCStream(FILE *stream, size_t size) {
+    String *result;
     char *buffer;
     
-    result = (SpkString *)SpkObject_NewVar(Spk_CLASS(String), size);
+    result = (String *)Object_NewVar(CLASS(String), size);
     if (!result)
         return 0;
     buffer = STR(result);
     if (!fgets(buffer, size, stream)) {
-        Spk_DECREF(result);
+        DECREF(result);
         return 0;
     }
     result->size = strlen(buffer) + 1;
     return result;
 }
 
-SpkString *SpkString_Concat(SpkString **var, SpkString *newPart) {
-    SpkString *self, *result;
+String *String_Concat(String **var, String *newPart) {
+    String *self, *result;
     size_t resultLen;
     
     self = *var;
     resultLen = LEN(self) + LEN(newPart);
-    result = (SpkString *)SpkObject_NewVar(Spk_CLASS(String), resultLen + 1);
+    result = (String *)Object_NewVar(CLASS(String), resultLen + 1);
     if (!result) {
         *var = 0;
-        Spk_DECREF(self);
+        DECREF(self);
         return 0;
     }
     memcpy(STR(result), STR(self), LEN(self));
     memcpy(STR(result) + LEN(self), STR(newPart), newPart->size);
-    Spk_DECREF(self);
+    DECREF(self);
     *var = result;
     return result;
 }
 
-char *SpkString_AsCString(SpkString *self) {
+char *String_AsCString(String *self) {
     return STR(self);
 }
 
-size_t SpkString_Size(SpkString *self) {
+size_t String_Size(String *self) {
     return self->size;
 }
 
-int SpkString_IsEqual(SpkString *a, SpkString *b) {
+int String_IsEqual(String *a, String *b) {
     return strcmp(STR(a), STR(b)) == 0;
 }

@@ -19,20 +19,20 @@
 #include <string.h>
 
 
-static SpkUnknown *defaultNotifier(void) {
-    return Spk_Send(Spk_GLOBAL(theInterpreter), (SpkUnknown *)Spk_CLASS(XNotifier), Spk_new, Spk_GLOBAL(xstderr), 0);
+static Unknown *defaultNotifier(void) {
+    return Send(GLOBAL(theInterpreter), (Unknown *)CLASS(XNotifier), new, GLOBAL(xstderr), 0);
 }
 
 
-static SpkModuleTmpl *compileTree(SpkStmt **pTree, /* destroys reference */
-                                  SpkSymbolTable *st,
-                                  SpkUnknown *notifier)
+static ModuleTmpl *compileTree(Stmt **pTree, /* destroys reference */
+                                  SymbolTable *st,
+                                  Unknown *notifier)
 {
-    SpkStmt *tree;
-    SpkUnknown *tmp = 0;
-    SpkModuleTmpl *moduleTmpl = 0;
+    Stmt *tree;
+    Unknown *tmp = 0;
+    ModuleTmpl *moduleTmpl = 0;
     
-    tree = SpkParser_NewModuleDef(*pTree);
+    tree = Parser_NewModuleDef(*pTree);
     if (!tree) {
         tree = *pTree;
         *pTree = 0;
@@ -40,72 +40,72 @@ static SpkModuleTmpl *compileTree(SpkStmt **pTree, /* destroys reference */
     }
     *pTree = 0;
     
-    tmp = SpkStaticChecker_Check(tree, st, notifier);
+    tmp = StaticChecker_Check(tree, st, notifier);
     if (!tmp)
         goto unwind;
     
-    tmp = Spk_Send(Spk_GLOBAL(theInterpreter), notifier, Spk_failOnError, 0);
+    tmp = Send(GLOBAL(theInterpreter), notifier, failOnError, 0);
     if (!tmp)
         goto unwind;
     
-    moduleTmpl = SpkCodeGen_GenerateCode(tree);
+    moduleTmpl = CodeGen_GenerateCode(tree);
     
-    Spk_DECREF(tmp);
-    Spk_DECREF(tree);
+    DECREF(tmp);
+    DECREF(tree);
     
     return moduleTmpl;
     
  unwind:
-    Spk_XDECREF(tmp);
-    Spk_DECREF(tree);
+    XDECREF(tmp);
+    DECREF(tree);
     return 0;
 }
 
 
-struct SpkModuleTmpl *SpkCompiler_CompileFileStream(FILE *stream) {
-    SpkUnknown *notifier = 0;
-    SpkSymbolTable *st = 0;
-    SpkStmt *tree = 0;
-    SpkModuleTmpl *moduleTmpl = 0;
-    SpkUnknown *tmp = 0;
+struct ModuleTmpl *Compiler_CompileFileStream(FILE *stream) {
+    Unknown *notifier = 0;
+    SymbolTable *st = 0;
+    Stmt *tree = 0;
+    ModuleTmpl *moduleTmpl = 0;
+    Unknown *tmp = 0;
     
     notifier = defaultNotifier();
     if (!notifier)
         goto unwind;
     
-    st = SpkSymbolTable_New();
+    st = SymbolTable_New();
     if (!st)
         goto unwind;
-    tmp = SpkStaticChecker_DeclareBuiltIn(st, notifier);
+    tmp = StaticChecker_DeclareBuiltIn(st, notifier);
     if (!tmp)
         goto unwind;
-    Spk_DECREF(tmp);
+    DECREF(tmp);
     
-    tree = SpkParser_ParseFileStream(stream, st);
+    tree = Parser_ParseFileStream(stream, st);
     if (!tree)
         goto unwind;
     
     moduleTmpl = compileTree(&tree, st, notifier);
     
-    Spk_DECREF(notifier);
-    Spk_DECREF(st);
+    DECREF(notifier);
+    DECREF(st);
     
     return moduleTmpl;
     
  unwind:
-    Spk_XDECREF(notifier);
-    Spk_XDECREF(st);
+    XDECREF(notifier);
+    XDECREF(st);
     return 0;
 }
 
 
-SpkModuleTmpl *SpkCompiler_CompileFile(const char *pathname) {
+ModuleTmpl *Compiler_CompileFile(const char *pathname) {
     FILE *stream = 0;
-    SpkUnknown *notifier = 0;
-    SpkSymbolTable *st = 0;
-    SpkStmt *tree = 0;
-    SpkUnknown *tmp = 0;
-    SpkModuleTmpl *moduleTmpl = 0;
+    Unknown *notifier = 0;
+    SymbolTable *st = 0;
+    Stmt *tree = 0;
+    Unknown *tmp = 0;
+    ModuleTmpl *moduleTmpl = 0;
     
     stream = fopen(pathname, "r");
     if (!stream) {
@@ -118,84 +118,84 @@ SpkModuleTmpl *SpkCompiler_CompileFile(const char *pathname) {
     if (!notifier)
         goto unwind;
     
-    st = SpkSymbolTable_New();
+    st = SymbolTable_New();
     if (!st)
         goto unwind;
-    tmp = SpkStaticChecker_DeclareBuiltIn(st, notifier);
+    tmp = StaticChecker_DeclareBuiltIn(st, notifier);
     if (!tmp)
         goto unwind;
-    Spk_DECREF(tmp);
+    DECREF(tmp);
     
-    tree = SpkParser_ParseFileStream(stream, st);
+    tree = Parser_ParseFileStream(stream, st);
     if (!tree)
         goto unwind;
     
-    tmp = SpkHost_StringFromCString(pathname);
-    SpkParser_Source(&tree, tmp);
+    tmp = Host_StringFromCString(pathname);
+    Parser_Source(&tree, tmp);
     
     moduleTmpl = compileTree(&tree, st, notifier);
     
     fclose(stream);
-    Spk_DECREF(notifier);
-    Spk_DECREF(st);
-    Spk_DECREF(tmp);
+    DECREF(notifier);
+    DECREF(st);
+    DECREF(tmp);
     
     return moduleTmpl;
     
  unwind:
     if (stream)
         fclose(stream);
-    Spk_XDECREF(notifier);
-    Spk_XDECREF(st);
-    Spk_XDECREF(tmp);
+    XDECREF(notifier);
+    XDECREF(st);
+    XDECREF(tmp);
     return 0;
 }
 
 
-SpkModuleTmpl *SpkCompiler_CompileString(const char *string) {
-    SpkUnknown *notifier = 0;
-    SpkSymbolTable *st = 0;
-    SpkStmt *tree = 0;
-    SpkModuleTmpl *moduleTmpl = 0;
-    SpkUnknown *tmp = 0;
+ModuleTmpl *Compiler_CompileString(const char *string) {
+    Unknown *notifier = 0;
+    SymbolTable *st = 0;
+    Stmt *tree = 0;
+    ModuleTmpl *moduleTmpl = 0;
+    Unknown *tmp = 0;
     
     notifier = defaultNotifier();
     if (!notifier)
         goto unwind;
     
-    st = SpkSymbolTable_New();
+    st = SymbolTable_New();
     if (!st)
         goto unwind;
-    tmp = SpkStaticChecker_DeclareBuiltIn(st, notifier);
+    tmp = StaticChecker_DeclareBuiltIn(st, notifier);
     if (!tmp)
         goto unwind;
-    Spk_DECREF(tmp);
+    DECREF(tmp);
     
-    tree = SpkParser_ParseString(string, st);
+    tree = Parser_ParseString(string, st);
     if (!tree)
         goto unwind;
     
     moduleTmpl = compileTree(&tree, st, notifier);
     
-    Spk_DECREF(notifier);
-    Spk_DECREF(st);
+    DECREF(notifier);
+    DECREF(st);
     
     return moduleTmpl;
     
  unwind:
-    Spk_XDECREF(notifier);
-    Spk_XDECREF(st);
+    XDECREF(notifier);
+    XDECREF(st);
     return 0;
 }
 
 
-SpkModuleTmpl *SpkCompiler_CompileModule(const char *pathname) {
+ModuleTmpl *Compiler_CompileModule(const char *pathname) {
     FILE *moduleStream = 0, *stream = 0;
-    SpkUnknown *notifier = 0;
-    SpkSymbolTable *st = 0;
-    SpkStmt *tree = 0, **treeTail, *s;
-    SpkUnknown *tmp = 0;
-    SpkModuleTmpl *moduleTmpl = 0;
+    Unknown *notifier = 0;
+    SymbolTable *st = 0;
+    Stmt *tree = 0, **treeTail, *s;
+    Unknown *tmp = 0;
+    ModuleTmpl *moduleTmpl = 0;
     char buffer[1024], *b;
     size_t len;
     
@@ -210,10 +210,10 @@ SpkModuleTmpl *SpkCompiler_CompileModule(const char *pathname) {
     if (!notifier)
         goto unwind;
     
-    st = SpkSymbolTable_New();
+    st = SymbolTable_New();
     if (!st)
         goto unwind;
-    tmp = SpkStaticChecker_DeclareBuiltIn(st, notifier);
+    tmp = StaticChecker_DeclareBuiltIn(st, notifier);
     if (!tmp)
         goto unwind;
     
@@ -235,16 +235,16 @@ SpkModuleTmpl *SpkCompiler_CompileModule(const char *pathname) {
                 goto unwind;
             }
             
-            *treeTail = SpkParser_ParseFileStream(stream, st);
+            *treeTail = Parser_ParseFileStream(stream, st);
             if (!treeTail)
                 goto unwind;
             
             fclose(stream);
             stream = 0;
             
-            Spk_DECREF(tmp);
-            tmp = SpkHost_StringFromCString(pathname);
-            SpkParser_Source(treeTail, tmp);
+            DECREF(tmp);
+            tmp = Host_StringFromCString(pathname);
+            Parser_Source(treeTail, tmp);
             
             for (s = *treeTail; s->next; s = s->next)
                 ;
@@ -258,9 +258,9 @@ SpkModuleTmpl *SpkCompiler_CompileModule(const char *pathname) {
     moduleTmpl = compileTree(&tree, st, notifier);
     
     fclose(moduleStream);
-    Spk_DECREF(notifier);
-    Spk_DECREF(st);
-    Spk_DECREF(tmp);
+    DECREF(notifier);
+    DECREF(st);
+    DECREF(tmp);
     
     return moduleTmpl;
     
@@ -269,8 +269,8 @@ unwind:
         fclose(stream);
     if (moduleStream)
         fclose(moduleStream);
-    Spk_XDECREF(notifier);
-    Spk_XDECREF(st);
-    Spk_XDECREF(tmp);
+    XDECREF(notifier);
+    XDECREF(st);
+    XDECREF(tmp);
     return 0;
 }

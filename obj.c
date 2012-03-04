@@ -19,124 +19,124 @@
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static SpkUnknown *Object_eq(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkUnknown *result;
+static Unknown *Object_eq(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    Unknown *result;
 
-    result = (self == arg0 ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse));
-    Spk_INCREF(result);
+    result = (self == arg0 ? GLOBAL(xtrue) : GLOBAL(xfalse));
+    INCREF(result);
     return result;
 }
 
-static SpkUnknown *Object_ne(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkUnknown *temp, *result;
+static Unknown *Object_ne(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    Unknown *temp, *result;
     
-    temp = Spk_Oper(Spk_GLOBAL(theInterpreter), self, Spk_OPER_EQ, arg0, 0);
-    result = Spk_Oper(Spk_GLOBAL(theInterpreter), temp, Spk_OPER_LNEG, 0);
-    Spk_DECREF(temp);
+    temp = SendOper(GLOBAL(theInterpreter), self, OPER_EQ, arg0, 0);
+    result = SendOper(GLOBAL(theInterpreter), temp, OPER_LNEG, 0);
+    DECREF(temp);
     return result;
 }
 
-static SpkUnknown *Object_compoundExpression(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    Spk_INCREF(arg0);
+static Unknown *Object_compoundExpression(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    INCREF(arg0);
     return arg0;
 }
 
-static SpkUnknown *Object_id(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return (SpkUnknown *)SpkInteger_FromCPtrdiff((char *)self - (char *)0);
+static Unknown *Object_id(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return (Unknown *)Integer_FromCPtrdiff((char *)self - (char *)0);
 }
 
-static SpkUnknown *Object_printString(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+static Unknown *Object_printString(Unknown *self, Unknown *arg0, Unknown *arg1) {
     static const char *format = "<%s instance at %p>";
     const char *className;
-    SpkString *result;
+    String *result;
     size_t len;
     char *str;
     
-    className = SpkBehavior_NameAsCString(((SpkObject *)self)->klass);
+    className = Behavior_NameAsCString(((Object *)self)->klass);
     len = strlen(format) + strlen(className) + 2*sizeof(void*); /* assumes %p is hex */
-    result = SpkString_FromCStringAndLength(0, len);
+    result = String_FromCStringAndLength(0, len);
     if (!result)
         return 0;
-    str = SpkString_AsCString(result);
+    str = String_AsCString(result);
     sprintf(str, format, className, self);
     result->size = strlen(str) + 1;
-    return (SpkUnknown *)result;
+    return (Unknown *)result;
 }
 
 
 /*------------------------------------------------------------------------*/
 /* meta-methods */
 
-static SpkUnknown *ClassObject_new(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
+static Unknown *ClassObject_new(Unknown *self, Unknown *arg0, Unknown *arg1) {
     /* Answer a new instance of the receiver. */
-    return (SpkUnknown *)SpkObject_New((SpkBehavior *)self);
+    return (Unknown *)Object_New((Behavior *)self);
 }
 
-static SpkUnknown *ClassVariableObject_new(SpkUnknown *_self, SpkUnknown *nItemsObj, SpkUnknown *arg1) {
+static Unknown *ClassVariableObject_new(Unknown *_self, Unknown *nItemsObj, Unknown *arg1) {
     /* Answer a new instance of the receiver. */
-    SpkClass *self;
+    Class *self;
     long nItems;
     
-    self = (SpkClass *)_self;
+    self = (Class *)_self;
     if (self->base.itemSize == 0) {
-        Spk_Halt(Spk_HALT_VALUE_ERROR, "bad item size in class object");
+        Halt(HALT_VALUE_ERROR, "bad item size in class object");
         return 0;
     }
-    if (!SpkHost_IsInteger(nItemsObj)) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer object is required");
+    if (!Host_IsInteger(nItemsObj)) {
+        Halt(HALT_TYPE_ERROR, "an integer object is required");
         return 0;
     }
-    nItems = SpkHost_IntegerAsCLong(nItemsObj);
+    nItems = Host_IntegerAsCLong(nItemsObj);
     if (nItems < 0) {
-        Spk_Halt(Spk_HALT_VALUE_ERROR, "number of items cannot be negative");
+        Halt(HALT_VALUE_ERROR, "number of items cannot be negative");
         return 0;
     }
     
-    return (SpkUnknown *)SpkObject_NewVar((SpkBehavior *)self, nItems);
+    return (Unknown *)Object_NewVar((Behavior *)self, nItems);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* low-level hooks */
 
-static void Object_zero(SpkObject *self) {
-    SpkUnknown **variables;
-    SpkBehavior *klass;
+static void Object_zero(Object *self) {
+    Unknown **variables;
+    Behavior *klass;
     size_t instVarTotal, i;
     
     klass = self->klass;
     
-    variables = (SpkUnknown **)((char *)self + klass->instVarOffset);
+    variables = (Unknown **)((char *)self + klass->instVarOffset);
     instVarTotal = klass->instVarBaseIndex + klass->instVarCount;
     
     for (i = 0; i < instVarTotal; ++i) {
-        Spk_INCREF(Spk_GLOBAL(uninit));
-        variables[i] = Spk_GLOBAL(uninit);
+        INCREF(GLOBAL(uninit));
+        variables[i] = GLOBAL(uninit);
     }
 }
 
-static void Object_dealloc(SpkObject *self, SpkUnknown **l) {
-    SpkUnknown **variables;
-    SpkBehavior *klass;
+static void Object_dealloc(Object *self, Unknown **l) {
+    Unknown **variables;
+    Behavior *klass;
     size_t instVarTotal, i;
     
     klass = self->klass;
     
-    variables = (SpkUnknown **)((char *)self + klass->instVarOffset);
+    variables = (Unknown **)((char *)self + klass->instVarOffset);
     instVarTotal = klass->instVarBaseIndex + klass->instVarCount;
     
     for (i = 0; i < instVarTotal; ++i) {
-        Spk_LDECREF(variables[i], l);
+        LDECREF(variables[i], l);
     }
     
-    Spk_LDECREF(klass, l);
+    LDECREF(klass, l);
     self->klass = 0;
 }
 
-static void VariableObject_zero(SpkObject *_self) {
-    SpkVariableObject *self = (SpkVariableObject *)_self;
-    (*Spk_CLASS(VariableObject)->superclass->zero)(_self);
-    memset(SpkVariableObject_ITEM_BASE(self), 0,
+static void VariableObject_zero(Object *_self) {
+    VariableObject *self = (VariableObject *)_self;
+    (*CLASS(VariableObject)->superclass->zero)(_self);
+    memset(VariableObject_ITEM_BASE(self), 0,
            self->size * self->base.klass->itemSize);
 }
 
@@ -144,31 +144,31 @@ static void VariableObject_zero(SpkObject *_self) {
 /*------------------------------------------------------------------------*/
 /* class templates */
 
-static SpkAccessorTmpl ObjectAccessors[] = {
-    { "class", Spk_T_OBJECT, offsetof(SpkObject, klass), SpkAccessor_READ },
+static AccessorTmpl ObjectAccessors[] = {
+    { "class", T_OBJECT, offsetof(Object, klass), Accessor_READ },
     { 0 }
 };
 
-static SpkMethodTmpl ObjectMethods[] = {
-    { "__eq__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Object_eq },
-    { "__ne__", SpkNativeCode_BINARY_OPER, &Object_ne },
-    { "compoundExpression", SpkNativeCode_ARGS_ARRAY, &Object_compoundExpression },
-    { "id", SpkNativeCode_ARGS_0, &Object_id },
-    { "printString", SpkNativeCode_ARGS_0, &Object_printString },
+static MethodTmpl ObjectMethods[] = {
+    { "__eq__", NativeCode_BINARY_OPER | NativeCode_LEAF, &Object_eq },
+    { "__ne__", NativeCode_BINARY_OPER, &Object_ne },
+    { "compoundExpression", NativeCode_ARGS_ARRAY, &Object_compoundExpression },
+    { "id", NativeCode_ARGS_0, &Object_id },
+    { "printString", NativeCode_ARGS_0, &Object_printString },
     { 0 }
 };
 
-static SpkMethodTmpl ClassObjectMethods[] = {
-    { "new", SpkNativeCode_ARGS_0, &ClassObject_new },
+static MethodTmpl ClassObjectMethods[] = {
+    { "new", NativeCode_ARGS_0, &ClassObject_new },
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassObjectTmpl = {
-    "Object", offsetof(SpkHeart, Object), 0, {
+ClassTmpl ClassObjectTmpl = {
+    "Object", offsetof(Heart, Object), 0, {
         ObjectAccessors,
         ObjectMethods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkObjectSubclass, variables),
+        offsetof(ObjectSubclass, variables),
         /*itemSize*/ 0,
         &Object_zero,
         &Object_dealloc
@@ -180,21 +180,21 @@ SpkClassTmpl Spk_ClassObjectTmpl = {
 };
 
 
-static SpkMethodTmpl VariableObjectMethods[] = {
+static MethodTmpl VariableObjectMethods[] = {
     { 0 }
 };
 
-static SpkMethodTmpl ClassVariableObjectMethods[] = {
-    { "new", SpkNativeCode_ARGS_1, &ClassVariableObject_new },
+static MethodTmpl ClassVariableObjectMethods[] = {
+    { "new", NativeCode_ARGS_1, &ClassVariableObject_new },
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassVariableObjectTmpl = {
-    Spk_HEART_CLASS_TMPL(VariableObject, Object), {
+ClassTmpl ClassVariableObjectTmpl = {
+    HEART_CLASS_TMPL(VariableObject, Object), {
         /*accessors*/ 0,
         VariableObjectMethods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkVariableObjectSubclass, variables),
+        offsetof(VariableObjectSubclass, variables),
         /*itemSize*/ 0,
         &VariableObject_zero
     }, /*meta*/ {
@@ -208,14 +208,14 @@ SpkClassTmpl Spk_ClassVariableObjectTmpl = {
 /*------------------------------------------------------------------------*/
 /* casting */
 
-SpkObject *Spk_Cast(SpkBehavior *target, SpkUnknown *unk) {
-    SpkObject *op;
-    SpkBehavior *c;
+Object *Cast(Behavior *target, Unknown *unk) {
+    Object *op;
+    Behavior *c;
     
-    op = (SpkObject *)unk;
+    op = (Object *)unk;
     for (c = op->klass; c; c = c->superclass) {
         if (c == target) {
-            return (SpkObject *)op;
+            return (Object *)op;
         }
     }
     return 0;
@@ -225,29 +225,29 @@ SpkObject *Spk_Cast(SpkBehavior *target, SpkUnknown *unk) {
 /*------------------------------------------------------------------------*/
 /* object memory */
 
-SpkObject *SpkObject_New(SpkBehavior *klass) {
-    SpkObject *newObject;
+Object *Object_New(Behavior *klass) {
+    Object *newObject;
     
-    newObject = (SpkObject *)SpkObjMem_Alloc(klass->instanceSize);
+    newObject = (Object *)ObjMem_Alloc(klass->instanceSize);
     if (!newObject) {
         return 0;
     }
-    newObject->klass = klass;  Spk_INCREF(klass);
+    newObject->klass = klass;  INCREF(klass);
     /* XXX: 'zero' should be called 'uninit'; and, for symmetry,
-       should be called from SpkObjMem_Alloc() */
+       should be called from ObjMem_Alloc() */
     (*klass->zero)(newObject);
     return newObject;
 }
 
-SpkObject *SpkObject_NewVar(SpkBehavior *klass, size_t size) {
-    SpkObject *newObject;
+Object *Object_NewVar(Behavior *klass, size_t size) {
+    Object *newObject;
     
-    newObject = (SpkObject *)SpkObjMem_Alloc(klass->instanceSize + size * klass->itemSize);
+    newObject = (Object *)ObjMem_Alloc(klass->instanceSize + size * klass->itemSize);
     if (!newObject) {
         return 0;
     }
-    newObject->klass = klass;  Spk_INCREF(klass);
-    ((SpkVariableObject *)newObject)->size = size;
+    newObject->klass = klass;  INCREF(klass);
+    ((VariableObject *)newObject)->size = size;
     (*klass->zero)(newObject);
     return newObject;
 }

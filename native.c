@@ -10,14 +10,14 @@
 #include <stdarg.h>
 
 
-SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCode) {
-    SpkMethod *newMethod;
+Method *NewNativeMethod(NativeCodeFlags flags, NativeCode nativeCode) {
+    Method *newMethod;
     size_t argumentCount, variadic;
     size_t size;
-    SpkOpcode *ip;
+    Opcode *ip;
     
     size = 0;
-    if (flags & SpkNativeCode_LEAF) {
+    if (flags & NativeCode_LEAF) {
         size += 5; /* leaf, arg, native */
     } else {
         size += 13; /* save, ... rett */
@@ -25,12 +25,12 @@ SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
     size += 2; /* restore, ret */
     
     variadic = 0;
-    switch (flags & SpkNativeCode_SIGNATURE_MASK) {
-    case SpkNativeCode_ARGS_0: argumentCount = 0; break;
-    case SpkNativeCode_ARGS_1: argumentCount = 1; break;
-    case SpkNativeCode_ARGS_2: argumentCount = 2; break;
+    switch (flags & NativeCode_SIGNATURE_MASK) {
+    case NativeCode_ARGS_0: argumentCount = 0; break;
+    case NativeCode_ARGS_1: argumentCount = 1; break;
+    case NativeCode_ARGS_2: argumentCount = 2; break;
         
-    case SpkNativeCode_ARGS_ARRAY:
+    case NativeCode_ARGS_ARRAY:
         argumentCount = 0;
         variadic = 1;
         break;
@@ -38,43 +38,43 @@ SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
     default: assert(0); /* XXX */
     }
     
-    newMethod = SpkMethod_New(size);
+    newMethod = Method_New(size);
     newMethod->nativeCode = nativeCode;
     
-    ip = SpkMethod_OPCODES(newMethod);
-    if (flags & SpkNativeCode_LEAF) {
-        assert(!variadic && "SpkNativeCode_ARGS_ARRAY cannot be combined with SpkNativeCode_LEAF");
-        *ip++ = Spk_OPCODE_LEAF;
-        *ip++ = Spk_OPCODE_ARG;
-        *ip++ = (SpkOpcode)argumentCount;
-        *ip++ = (SpkOpcode)argumentCount;
-        *ip++ = Spk_OPCODE_NATIVE;
+    ip = Method_OPCODES(newMethod);
+    if (flags & NativeCode_LEAF) {
+        assert(!variadic && "NativeCode_ARGS_ARRAY cannot be combined with NativeCode_LEAF");
+        *ip++ = OPCODE_LEAF;
+        *ip++ = OPCODE_ARG;
+        *ip++ = (Opcode)argumentCount;
+        *ip++ = (Opcode)argumentCount;
+        *ip++ = OPCODE_NATIVE;
     } else {
         size_t stackSize = 4;
         size_t contextSize =
             stackSize +
             argumentCount + variadic;
-        *ip++ = Spk_OPCODE_SAVE;
-        *ip++ = (SpkOpcode)contextSize;
-        *ip++ = (SpkOpcode)stackSize;
-        *ip++ = variadic ? Spk_OPCODE_ARG_VA : Spk_OPCODE_ARG;
-        *ip++ = (SpkOpcode)argumentCount;
-        *ip++ = (SpkOpcode)argumentCount;
-        *ip++ = Spk_OPCODE_NATIVE;
+        *ip++ = OPCODE_SAVE;
+        *ip++ = (Opcode)contextSize;
+        *ip++ = (Opcode)stackSize;
+        *ip++ = variadic ? OPCODE_ARG_VA : OPCODE_ARG;
+        *ip++ = (Opcode)argumentCount;
+        *ip++ = (Opcode)argumentCount;
+        *ip++ = OPCODE_NATIVE;
         
         /* skip trampoline code */
-        *ip++ = Spk_OPCODE_BRANCH_ALWAYS;
+        *ip++ = OPCODE_BRANCH_ALWAYS;
         *ip++ = 6;
         
         /* trampolines for re-entering interpreted code */
-        *ip++ = Spk_OPCODE_SEND_MESSAGE_NS_VAR_VA;
-        *ip++ = Spk_OPCODE_RET_TRAMP;
-        *ip++ = Spk_OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA;
-        *ip++ = Spk_OPCODE_RET_TRAMP;
+        *ip++ = OPCODE_SEND_MESSAGE_NS_VAR_VA;
+        *ip++ = OPCODE_RET_TRAMP;
+        *ip++ = OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA;
+        *ip++ = OPCODE_RET_TRAMP;
     }
     
-    *ip++ = Spk_OPCODE_RESTORE_SENDER;
-    *ip++ = Spk_OPCODE_RET;
+    *ip++ = OPCODE_RESTORE_SENDER;
+    *ip++ = OPCODE_RET;
     
     return newMethod;
 }
@@ -83,30 +83,30 @@ SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags flags, SpkNativeCode nativeCod
 /*------------------------------------------------------------------------*/
 /* routines to send messages from native code */
 
-SpkUnknown *Spk_SendMessage(SpkInterpreter *interpreter,
-                            SpkUnknown *obj,
+Unknown *SendMessage(Interpreter *interpreter,
+                            Unknown *obj,
                             unsigned int ns,
-                            SpkUnknown *selector,
-                            SpkUnknown *argumentArray)
+                            Unknown *selector,
+                            Unknown *argumentArray)
 {
-    return SpkInterpreter_SendMessage(interpreter, obj, ns, selector, argumentArray);
+    return Interpreter_SendMessage(interpreter, obj, ns, selector, argumentArray);
 }
 
-static SpkUnknown *vSendMessage(SpkInterpreter *interpreter,
-                                SpkUnknown *obj, unsigned int ns, SpkUnknown *selector, va_list ap)
+static Unknown *vSendMessage(Interpreter *interpreter,
+                                Unknown *obj, unsigned int ns, Unknown *selector, va_list ap)
 {
-    SpkUnknown *argumentList, *result;
+    Unknown *argumentList, *result;
 
-    argumentList = SpkHost_ArgsFromVAList(ap);
-    result = Spk_SendMessage(interpreter, obj, ns, selector, argumentList);
-    Spk_DECREF(argumentList);
+    argumentList = Host_ArgsFromVAList(ap);
+    result = SendMessage(interpreter, obj, ns, selector, argumentList);
+    DECREF(argumentList);
     return result;
 }
 
-static SpkUnknown *sendMessage(SpkInterpreter *interpreter,
-                               SpkUnknown *obj, unsigned int ns, SpkUnknown *selector, ...)
+static Unknown *sendMessage(Interpreter *interpreter,
+                               Unknown *obj, unsigned int ns, Unknown *selector, ...)
 {
-    SpkUnknown *result;
+    Unknown *result;
     va_list ap;
     
     va_start(ap, selector);
@@ -115,62 +115,62 @@ static SpkUnknown *sendMessage(SpkInterpreter *interpreter,
     return result;
 }
 
-SpkUnknown *Spk_Oper(SpkInterpreter *interpreter, SpkUnknown *obj, SpkOper oper, ...) {
-    SpkUnknown *result;
+Unknown *SendOper(Interpreter *interpreter, Unknown *obj, Oper oper, ...) {
+    Unknown *result;
     va_list ap;
     
     va_start(ap, oper);
-    result = Spk_VOper(interpreter, obj, oper, ap);
+    result = VSendOper(interpreter, obj, oper, ap);
     va_end(ap);
     return result;
 }
 
-SpkUnknown *Spk_VOper(SpkInterpreter *interpreter, SpkUnknown *obj, SpkOper oper, va_list ap) {
-    return vSendMessage(interpreter, obj, Spk_METHOD_NAMESPACE_RVALUE, *Spk_operSelectors[oper].selector, ap);
+Unknown *VSendOper(Interpreter *interpreter, Unknown *obj, Oper oper, va_list ap) {
+    return vSendMessage(interpreter, obj, METHOD_NAMESPACE_RVALUE, *operSelectors[oper].selector, ap);
 }
 
-SpkUnknown *Spk_Call(SpkInterpreter *interpreter, SpkUnknown *obj, SpkCallOper oper, ...) {
-    SpkUnknown *result;
+Unknown *Call(Interpreter *interpreter, Unknown *obj, CallOper oper, ...) {
+    Unknown *result;
     va_list ap;
     
     va_start(ap, oper);
-    result = Spk_VCall(interpreter, obj, oper, ap);
+    result = VCall(interpreter, obj, oper, ap);
     va_end(ap);
     return result;
 }
 
-SpkUnknown *Spk_VCall(SpkInterpreter *interpreter, SpkUnknown *obj, SpkCallOper oper, va_list ap) {
-    return vSendMessage(interpreter, obj, Spk_METHOD_NAMESPACE_RVALUE, *Spk_operCallSelectors[oper].selector, ap);
+Unknown *VCall(Interpreter *interpreter, Unknown *obj, CallOper oper, va_list ap) {
+    return vSendMessage(interpreter, obj, METHOD_NAMESPACE_RVALUE, *operCallSelectors[oper].selector, ap);
 }
 
-SpkUnknown *Spk_Attr(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *name) {
-    return Spk_SendMessage(interpreter, obj, Spk_METHOD_NAMESPACE_RVALUE, name, Spk_emptyArgs);
+Unknown *Attr(Interpreter *interpreter, Unknown *obj, Unknown *name) {
+    return SendMessage(interpreter, obj, METHOD_NAMESPACE_RVALUE, name, emptyArgs);
 }
 
-SpkUnknown *Spk_SetAttr(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *name, SpkUnknown *value) {
-    return sendMessage(interpreter, obj, Spk_METHOD_NAMESPACE_LVALUE, name, value, 0);
+Unknown *SetAttr(Interpreter *interpreter, Unknown *obj, Unknown *name, Unknown *value) {
+    return sendMessage(interpreter, obj, METHOD_NAMESPACE_LVALUE, name, value, 0);
 }
 
-SpkUnknown *Spk_Send(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *selector, ...) {
-    SpkUnknown *result;
+Unknown *Send(Interpreter *interpreter, Unknown *obj, Unknown *selector, ...) {
+    Unknown *result;
     va_list ap;
     
     va_start(ap, selector);
-    result = Spk_VSend(interpreter, obj, selector, ap);
+    result = VSend(interpreter, obj, selector, ap);
     va_end(ap);
     return result;
 }
 
-SpkUnknown *Spk_VSend(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *selector, va_list ap) {
-    return vSendMessage(interpreter, obj, Spk_METHOD_NAMESPACE_RVALUE, selector, ap);
+Unknown *VSend(Interpreter *interpreter, Unknown *obj, Unknown *selector, va_list ap) {
+    return vSendMessage(interpreter, obj, METHOD_NAMESPACE_RVALUE, selector, ap);
 }
 
-SpkUnknown *Spk_SendWithArguments(SpkInterpreter *interpreter, SpkUnknown *obj, SpkUnknown *name,
-                                  SpkUnknown *argumentArray)
+Unknown *SendWithArguments(Interpreter *interpreter, Unknown *obj, Unknown *name,
+                                  Unknown *argumentArray)
 {
-    return Spk_SendMessage(interpreter,
+    return SendMessage(interpreter,
                            obj,
-                           Spk_METHOD_NAMESPACE_RVALUE,
+                           METHOD_NAMESPACE_RVALUE,
                            name,
                            argumentArray);
 }
@@ -179,34 +179,34 @@ SpkUnknown *Spk_SendWithArguments(SpkInterpreter *interpreter, SpkUnknown *obj, 
 /*------------------------------------------------------------------------*/
 /* halting */
 
-void Spk_Halt(int code, const char *message) {
-    SpkHost_Halt(code, message);
+void Halt(int code, const char *message) {
+    Host_Halt(code, message);
 }
 
-void Spk_HaltWithFormat(int code, const char *format, ...) {
+void HaltWithFormat(int code, const char *format, ...) {
     va_list args;
     
     va_start(args, format);
-    SpkHost_VHaltWithFormat(code, format, args);
+    Host_VHaltWithFormat(code, format, args);
     va_end(args);
 }
 
-void Spk_HaltWithString(int code, SpkUnknown *message) {
-    SpkHost_HaltWithString(code, message);
+void HaltWithString(int code, Unknown *message) {
+    Host_HaltWithString(code, message);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* argument processing */
 
-int Spk_IsArgs(SpkUnknown *op) {
-    return SpkHost_IsArgs(op);
+int IsArgs(Unknown *op) {
+    return Host_IsArgs(op);
 }
 
-size_t Spk_ArgsSize(SpkUnknown *args) {
-    return SpkHost_ArgsSize(args);
+size_t ArgsSize(Unknown *args) {
+    return Host_ArgsSize(args);
 }
 
-SpkUnknown *Spk_GetArg(SpkUnknown *args, size_t index) {
-    return SpkHost_GetArg(args, index);
+Unknown *GetArg(Unknown *args, size_t index) {
+    return Host_GetArg(args, index);
 }

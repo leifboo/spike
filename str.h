@@ -1,25 +1,25 @@
 
-#ifndef __spk_str_h__
-#define __spk_str_h__
+#ifndef __str_h__
+#define __str_h__
 
 
 #include "obj.h"
 #include <stdio.h>
 
 
-typedef SpkVariableObject SpkString;
+typedef VariableObject String;
 
 
-extern struct SpkClassTmpl Spk_ClassStringTmpl;
+extern struct ClassTmpl ClassStringTmpl;
 
 
-SpkString *SpkString_FromCString(const char *);
-SpkString *SpkString_FromCStringAndLength(const char *, size_t);
-SpkString *SpkString_FromCStream(FILE *, size_t);
-SpkString *SpkString_Concat(SpkString **, SpkString *);
-char *SpkString_AsCString(SpkString *);
-size_t SpkString_Size(SpkString *);
-int SpkString_IsEqual(SpkString *, SpkString *);
+String *String_FromCString(const char *);
+String *String_FromCStringAndLength(const char *, size_t);
+String *String_FromCStream(FILE *, size_t);
+String *String_Concat(String **, String *);
+char *String_AsCString(String *);
+size_t String_Size(String *);
+int String_IsEqual(String *, String *);
 
 
-#endif /* __spk_str_h__ */
+#endif /* __str_h__ */

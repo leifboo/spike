@@ -7,24 +7,24 @@
 #include <stdlib.h>
 
 
-SpkUnknown *SpkObjMem_Alloc(size_t size) {
-    SpkUnknown *op;
+Unknown *ObjMem_Alloc(size_t size) {
+    Unknown *op;
     
-    op = (SpkUnknown *)malloc(size);
+    op = (Unknown *)malloc(size);
     if (!op) {
-        Spk_Halt(Spk_HALT_MEMORY_ERROR, "out of memory");
+        Halt(HALT_MEMORY_ERROR, "out of memory");
         return 0;
     }
     op->refCount = 1;
     return op;
 }
 
-void SpkObjMem_Dealloc(SpkUnknown *current) {
-    SpkUnknown *l;
+void ObjMem_Dealloc(Unknown *current) {
+    Unknown *l;
     
     l = 0;
     while (1) {
-        (*((SpkObject *)current)->klass->dealloc)((SpkObject *)current, &l);
+        (*((Object *)current)->klass->dealloc)((Object *)current, &l);
         free(current);
         current = l;
         if (!current)

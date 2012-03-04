@@ -1,19 +1,19 @@
 
-#ifndef __spk_float_h__
-#define __spk_float_h__
+#ifndef __float_h__
+#define __float_h__
 
 
 #include "obj.h"
 
 
-typedef struct SpkFloat SpkFloat;
+typedef struct Float Float;
 
 
-extern struct SpkClassTmpl Spk_ClassFloatTmpl;
+extern struct ClassTmpl ClassFloatTmpl;
 
 
-SpkFloat *SpkFloat_FromCDouble(double);
-double SpkFloat_AsCDouble(SpkFloat *);
+Float *Float_FromCDouble(double);
+double Float_AsCDouble(Float *);
 
 
-#endif /* __spk_float_h__ */
+#endif /* __float_h__ */

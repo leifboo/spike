@@ -1,44 +1,44 @@
 
-#ifndef __spk_class_h__
-#define __spk_class_h__
+#ifndef __class_h__
+#define __class_h__
 
 
 #include "behavior.h"
 
 
-typedef struct SpkClassTmpl {
+typedef struct ClassTmpl {
     /* C code */
     const char *name;
     size_t classVarOffset;
     size_t superclassVarOffset;
-    SpkBehaviorTmpl thisClass;
-    SpkBehaviorTmpl metaclass;
+    BehaviorTmpl thisClass;
+    BehaviorTmpl metaclass;
     /* bytecode */
-    struct SpkClassTmpl *next, *nextInScope;
-    SpkUnknown *symbol;
+    struct ClassTmpl *next, *nextInScope;
+    Unknown *symbol;
     size_t classVarIndex;
     size_t superclassVarIndex;
-    SpkUnknown *superclassName; /* XXX: kludge for C bytecode gen */
-} SpkClassTmpl;
+    Unknown *superclassName; /* XXX: kludge for C bytecode gen */
+} ClassTmpl;
 
 
-typedef struct SpkClass {
-    SpkBehavior base;
-    SpkUnknown *name;
-} SpkClass;
+typedef struct Class {
+    Behavior base;
+    Unknown *name;
+} Class;
 
 
-extern struct SpkClassTmpl Spk_ClassClassTmpl;
+extern struct ClassTmpl ClassClassTmpl;
 
 
-SpkClass *SpkClass_New(SpkUnknown *name, SpkBehavior *superclass, size_t instVarCount, size_t classVarCount);
-SpkClass *SpkClass_EmptyFromTemplate(SpkClassTmpl *tmpl, SpkBehavior *superclass, SpkBehavior *Metaclass, struct SpkModule *module);
-SpkClass *SpkClass_FromTemplate(SpkClassTmpl *tmpl, SpkBehavior *superclass, struct SpkModule *module);
-void SpkClass_InitFromTemplate(SpkClass *self, SpkClassTmpl *tmpl, SpkBehavior *superclass, struct SpkModule *module);
-SpkUnknown *SpkClass_Name(SpkClass *);
+Class *Class_New(Unknown *name, Behavior *superclass, size_t instVarCount, size_t classVarCount);
+Class *Class_EmptyFromTemplate(ClassTmpl *tmpl, Behavior *superclass, Behavior *Metaclass, struct Module *module);
+Class *Class_FromTemplate(ClassTmpl *tmpl, Behavior *superclass, struct Module *module);
+void Class_InitFromTemplate(Class *self, ClassTmpl *tmpl, Behavior *superclass, struct Module *module);
+Unknown *Class_Name(Class *);
 
 
-#define Spk_CLASS_TMPL(n, s, m) #n, offsetof(m, n), offsetof(m, s)
+#define CLASS_TMPL(n, s, m) #n, offsetof(m, n), offsetof(m, s)
 
 
-#endif /* __spk_class_h__ */
+#endif /* __class_h__ */

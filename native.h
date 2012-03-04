@@ -1,6 +1,6 @@
 
-#ifndef __spk_native_h__
-#define __spk_native_h__
+#ifndef __native_h__
+#define __native_h__
 
 
 #include "obj.h"
@@ -10,67 +10,67 @@
 #include <stddef.h>
 
 
-struct SpkInterpreter;
-struct SpkMethod;
+struct Interpreter;
+struct Method;
 
 
-#define Spk_SUPER (0)
+#define SUPER (0)
 
 
-typedef unsigned int SpkNativeCodeFlags;
+typedef unsigned int NativeCodeFlags;
 
-enum /*SpkNativeCodeFlags*/ {
-    SpkNativeCode_ARGS_0              = 0x0000,
-    SpkNativeCode_ARGS_1              = 0x0001,
-    SpkNativeCode_ARGS_2              = 0x0002,
-    SpkNativeCode_ARGS_ARRAY          = 0x0003,
-    SpkNativeCode_ARGS_KEYWORDS       = 0x0004,
-    SpkNativeCode_ARGS_ARRAY_KEYWORDS = 0x0007,
-    SpkNativeCode_SIGNATURE_MASK      = 0x000f,
+enum /*NativeCodeFlags*/ {
+    NativeCode_ARGS_0              = 0x0000,
+    NativeCode_ARGS_1              = 0x0001,
+    NativeCode_ARGS_2              = 0x0002,
+    NativeCode_ARGS_ARRAY          = 0x0003,
+    NativeCode_ARGS_KEYWORDS       = 0x0004,
+    NativeCode_ARGS_ARRAY_KEYWORDS = 0x0007,
+    NativeCode_SIGNATURE_MASK      = 0x000f,
     
-    SpkNativeCode_LEAF                = 0x0010,
+    NativeCode_LEAF                = 0x0010,
     
-    SpkNativeCode_UNARY_OPER          = SpkNativeCode_ARGS_0,
-    SpkNativeCode_BINARY_OPER         = SpkNativeCode_ARGS_1,
-    SpkNativeCode_TERNARY_OPER        = SpkNativeCode_ARGS_2
+    NativeCode_UNARY_OPER          = NativeCode_ARGS_0,
+    NativeCode_BINARY_OPER         = NativeCode_ARGS_1,
+    NativeCode_TERNARY_OPER        = NativeCode_ARGS_2
 };
 
 enum /*halt codes*/ {
-    Spk_HALT_ASSERTION_ERROR,
-    Spk_HALT_ERROR,
-    Spk_HALT_INDEX_ERROR,
-    Spk_HALT_KEY_ERROR,
-    Spk_HALT_MEMORY_ERROR,
-    Spk_HALT_RUNTIME_ERROR,
-    Spk_HALT_TYPE_ERROR,
-    Spk_HALT_VALUE_ERROR
+    HALT_ASSERTION_ERROR,
+    HALT_ERROR,
+    HALT_INDEX_ERROR,
+    HALT_KEY_ERROR,
+    HALT_MEMORY_ERROR,
+    HALT_RUNTIME_ERROR,
+    HALT_TYPE_ERROR,
+    HALT_VALUE_ERROR
 };
 
 
-typedef SpkUnknown *(*SpkNativeCode)(SpkUnknown *, SpkUnknown *, SpkUnknown *);
+typedef Unknown *(*NativeCode)(Unknown *, Unknown *, Unknown *);
 
 
-struct SpkMethod *Spk_NewNativeMethod(SpkNativeCodeFlags, SpkNativeCode);
+struct Method *NewNativeMethod(NativeCodeFlags, NativeCode);
 
-SpkUnknown *Spk_SendMessage(struct SpkInterpreter *, SpkUnknown *, unsigned int, SpkUnknown *, SpkUnknown *);
+Unknown *SendMessage(struct Interpreter *, Unknown *, unsigned int, Unknown *, Unknown *);
 
-SpkUnknown *Spk_Oper(struct SpkInterpreter *, SpkUnknown *, SpkOper, ...);
-SpkUnknown *Spk_VOper(struct SpkInterpreter *, SpkUnknown *, SpkOper, va_list);
-SpkUnknown *Spk_Call(struct SpkInterpreter *, SpkUnknown *, SpkCallOper, ...);
-SpkUnknown *Spk_VCall(struct SpkInterpreter *, SpkUnknown *, SpkCallOper, va_list);
-SpkUnknown *Spk_Attr(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *);
-SpkUnknown *Spk_SetAttr(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, SpkUnknown *);
-SpkUnknown *Spk_Send(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, ...);
-SpkUnknown *Spk_VSend(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, va_list);
-SpkUnknown *Spk_SendWithArguments(struct SpkInterpreter *, SpkUnknown *, SpkUnknown *, SpkUnknown *);
+Unknown *SendOper(struct Interpreter *, Unknown *, Oper, ...);
+Unknown *VSendOper(struct Interpreter *, Unknown *, Oper, va_list);
+Unknown *Call(struct Interpreter *, Unknown *, CallOper, ...);
+Unknown *VCall(struct Interpreter *, Unknown *, CallOper, va_list);
+Unknown *Attr(struct Interpreter *, Unknown *, Unknown *);
+Unknown *SetAttr(struct Interpreter *, Unknown *, Unknown *, Unknown *);
+Unknown *Send(struct Interpreter *, Unknown *, Unknown *, ...);
+Unknown *VSend(struct Interpreter *, Unknown *, Unknown *, va_list);
+Unknown *SendWithArguments(struct Interpreter *, Unknown *, Unknown *, Unknown *);
 
-void Spk_Halt(int, const char *);
-void Spk_HaltWithFormat(int, const char *, ...);
-void Spk_HaltWithString(int, SpkUnknown *);
+void Halt(int, const char *);
+void HaltWithFormat(int, const char *, ...);
+void HaltWithString(int, Unknown *);
 
-int Spk_IsArgs(SpkUnknown *);
-size_t Spk_ArgsSize(SpkUnknown *);
-SpkUnknown *Spk_GetArg(SpkUnknown *, size_t);
+int IsArgs(Unknown *);
+size_t ArgsSize(Unknown *);
+Unknown *GetArg(Unknown *, size_t);
 
 
-#endif /* __spk_native_h__ */
+#endif /* __native_h__ */

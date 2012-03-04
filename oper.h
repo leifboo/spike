@@ -1,48 +1,48 @@
 
-#ifndef __spk_oper_h__
-#define __spk_oper_h__
+#ifndef __oper_h__
+#define __oper_h__
 
 
-typedef unsigned int SpkOper;
+typedef unsigned int Oper;
 
-enum /*SpkOper*/ {
-    Spk_OPER_SUCC,
-    Spk_OPER_PRED,
-    Spk_OPER_ADDR,
-    Spk_OPER_IND,
-    Spk_OPER_POS,
-    Spk_OPER_NEG,
-    Spk_OPER_BNEG,
-    Spk_OPER_LNEG,
-    Spk_OPER_MUL,
-    Spk_OPER_DIV,
-    Spk_OPER_MOD,
-    Spk_OPER_ADD,
-    Spk_OPER_SUB,
-    Spk_OPER_LSHIFT,
-    Spk_OPER_RSHIFT,
-    Spk_OPER_LT,
-    Spk_OPER_GT,
-    Spk_OPER_LE,
-    Spk_OPER_GE,
-    Spk_OPER_EQ,
-    Spk_OPER_NE,
-    Spk_OPER_BAND,
-    Spk_OPER_BXOR,
-    Spk_OPER_BOR,
+enum /*Oper*/ {
+    OPER_SUCC,
+    OPER_PRED,
+    OPER_ADDR,
+    OPER_IND,
+    OPER_POS,
+    OPER_NEG,
+    OPER_BNEG,
+    OPER_LNEG,
+    OPER_MUL,
+    OPER_DIV,
+    OPER_MOD,
+    OPER_ADD,
+    OPER_SUB,
+    OPER_LSHIFT,
+    OPER_RSHIFT,
+    OPER_LT,
+    OPER_GT,
+    OPER_LE,
+    OPER_GE,
+    OPER_EQ,
+    OPER_NE,
+    OPER_BAND,
+    OPER_BXOR,
+    OPER_BOR,
 
-    Spk_NUM_OPER
+    NUM_OPER
 };
 
 
-typedef unsigned int SpkCallOper;
+typedef unsigned int CallOper;
 
-enum /*SpkCallOper*/ {
-    Spk_OPER_APPLY,
-    Spk_OPER_INDEX,
+enum /*CallOper*/ {
+    OPER_APPLY,
+    OPER_INDEX,
     
-    Spk_NUM_CALL_OPER
+    NUM_CALL_OPER
 };
 
 
-#endif /* __spk_oper_h__ */
+#endif /* __oper_h__ */

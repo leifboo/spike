@@ -1,24 +1,24 @@
 
-#ifndef __spk_dict_h__
-#define __spk_dict_h__
+#ifndef __dict_h__
+#define __dict_h__
 
 
 #include "obj.h"
 
 
-typedef struct SpkIdentityDictionary SpkIdentityDictionary;
+typedef struct IdentityDictionary IdentityDictionary;
 
 
-extern struct SpkClassTmpl Spk_ClassIdentityDictionaryTmpl;
+extern struct ClassTmpl ClassIdentityDictionaryTmpl;
 
 
-SpkUnknown *SpkIdentityDictionary_GetItem(SpkIdentityDictionary *self, SpkUnknown *key);
-SpkUnknown *SpkIdentityDictionary_KeyWithValue(SpkIdentityDictionary *self, SpkUnknown *value);
-void SpkIdentityDictionary_SetItem(SpkIdentityDictionary *self, SpkUnknown *key, SpkUnknown *value);
-SpkIdentityDictionary *SpkIdentityDictionary_New(void);
-int SpkIdentityDictionary_Next(SpkIdentityDictionary *, size_t *,
-                               SpkUnknown **, SpkUnknown **);
-size_t SpkIdentityDictionary_Size(SpkIdentityDictionary *);
+Unknown *IdentityDictionary_GetItem(IdentityDictionary *self, Unknown *key);
+Unknown *IdentityDictionary_KeyWithValue(IdentityDictionary *self, Unknown *value);
+void IdentityDictionary_SetItem(IdentityDictionary *self, Unknown *key, Unknown *value);
+IdentityDictionary *IdentityDictionary_New(void);
+int IdentityDictionary_Next(IdentityDictionary *, size_t *,
+                               Unknown **, Unknown **);
+size_t IdentityDictionary_Size(IdentityDictionary *);
 
 
-#endif /* __spk_dict_h__ */
+#endif /* __dict_h__ */

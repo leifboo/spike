@@ -1,16 +1,16 @@
 
-#ifndef __spk_disasm_h__
-#define __spk_disasm_h__
+#ifndef __disasm_h__
+#define __disasm_h__
 
 
 #include <stdio.h>
 
 
-struct SpkModuleTmpl;
+struct ModuleTmpl;
 
 
-void SpkDisassembler_DisassembleModule(struct SpkModuleTmpl *, FILE *);
-void SpkDisassembler_DisassembleModuleAsCCode(struct SpkModuleTmpl *, FILE *);
+void Disassembler_DisassembleModule(struct ModuleTmpl *, FILE *);
+void Disassembler_DisassembleModuleAsCCode(struct ModuleTmpl *, FILE *);
 
 
-#endif /* __spk_disasm_h__ */
+#endif /* __disasm_h__ */

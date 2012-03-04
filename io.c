@@ -16,8 +16,8 @@
 #include <string.h>
 
 
-struct SpkFileStream {
-    SpkObject base;
+struct FileStream {
+    Object base;
     FILE *stream;
 };
 
@@ -25,15 +25,15 @@ struct SpkFileStream {
 /*------------------------------------------------------------------------*/
 /* attributes */
 
-static SpkUnknown *FileStream_eof(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkFileStream *self;
-    SpkUnknown *result;
+static Unknown *FileStream_eof(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    FileStream *self;
+    Unknown *result;
     
-    self = (SpkFileStream *)_self;
+    self = (FileStream *)_self;
     result = self->stream
-             ? (feof(self->stream) ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse))
-             : Spk_GLOBAL(xtrue);
-    Spk_INCREF(result);
+             ? (feof(self->stream) ? GLOBAL(xtrue) : GLOBAL(xfalse))
+             : GLOBAL(xtrue);
+    INCREF(result);
     return result;
 }
 
@@ -41,96 +41,96 @@ static SpkUnknown *FileStream_eof(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknow
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static SpkUnknown *FileStream_close(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkFileStream *self;
+static Unknown *FileStream_close(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    FileStream *self;
     
-    self = (SpkFileStream *)_self;
+    self = (FileStream *)_self;
     if (self->stream) {
         fclose(self->stream);
         self->stream = 0;
     }
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
-static SpkUnknown *FileStream_flush(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkFileStream *self;
+static Unknown *FileStream_flush(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    FileStream *self;
     
-    self = (SpkFileStream *)_self;
+    self = (FileStream *)_self;
     if (self->stream)
         fflush(self->stream);
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
-static SpkUnknown *FileStream_getc(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkFileStream *self;
+static Unknown *FileStream_getc(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    FileStream *self;
     int c;
     
-    self = (SpkFileStream *)_self;
+    self = (FileStream *)_self;
     if (!self->stream) {
-        Spk_INCREF(Spk_GLOBAL(null));
-        return Spk_GLOBAL(null);
+        INCREF(GLOBAL(null));
+        return GLOBAL(null);
     }
     c = fgetc(self->stream);
     if (c == EOF) {
-        Spk_INCREF(Spk_GLOBAL(null));
-        return Spk_GLOBAL(null);
+        INCREF(GLOBAL(null));
+        return GLOBAL(null);
     }
-    return (SpkUnknown *)SpkChar_FromCChar((char)c);
+    return (Unknown *)Char_FromCChar((char)c);
 }
 
-static SpkUnknown *FileStream_gets(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkFileStream *self;
-    SpkInteger *size;
-    SpkUnknown *result;
+static Unknown *FileStream_gets(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    FileStream *self;
+    Integer *size;
+    Unknown *result;
     
-    self = (SpkFileStream *)_self;
-    size = Spk_CAST(Integer, arg0);
+    self = (FileStream *)_self;
+    size = CAST(Integer, arg0);
     if (!size) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
+        Halt(HALT_TYPE_ERROR, "an integer is required");
         return 0;
     }
     if (!self->stream) {
-        Spk_INCREF(Spk_GLOBAL(null));
-        return Spk_GLOBAL(null);
+        INCREF(GLOBAL(null));
+        return GLOBAL(null);
     }
-    result = (SpkUnknown *)SpkString_FromCStream(self->stream, (size_t)SpkInteger_AsCPtrdiff(size));
+    result = (Unknown *)String_FromCStream(self->stream, (size_t)Integer_AsCPtrdiff(size));
     if (!result) {
-        Spk_INCREF(Spk_GLOBAL(null));
-        return Spk_GLOBAL(null);
+        INCREF(GLOBAL(null));
+        return GLOBAL(null);
     }
     return result;
 }
 
-static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkFileStream *self;
-    SpkArray *args; size_t nArgs, argIndex;
-    SpkUnknown *formatObj = 0; SpkString *formatString; char *format = 0; size_t formatSize;
+static Unknown *FileStream_printf(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    FileStream *self;
+    Array *args; size_t nArgs, argIndex;
+    Unknown *formatObj = 0; String *formatString; char *format = 0; size_t formatSize;
     char c, convOp, *f, *chunk;
-    SpkUnknown *arg = 0; SpkChar *charArg; SpkInteger *intArg; SpkFloat *floatArg; SpkString *strArg;
+    Unknown *arg = 0; Char *charArg; Integer *intArg; Float *floatArg; String *strArg;
     static const char *convOps = "cdeEfgGinopsuxX%";
     
-    self = (SpkFileStream *)_self;
-    args = Spk_CAST(Array, arg0);
+    self = (FileStream *)_self;
+    args = CAST(Array, arg0);
     if (!args) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "an array is required");
+        Halt(HALT_TYPE_ERROR, "an array is required");
         goto unwind;
     }
-    nArgs = SpkArray_Size(args);
+    nArgs = Array_Size(args);
     if (nArgs == 0) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "wrong number of arguments");
+        Halt(HALT_TYPE_ERROR, "wrong number of arguments");
         goto unwind;
     }
-    formatObj = SpkArray_GetItem(args, 0);
-    formatString = Spk_CAST(String, formatObj);
+    formatObj = Array_GetItem(args, 0);
+    formatString = CAST(String, formatObj);
     if (!formatString) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        Halt(HALT_TYPE_ERROR, "a string is required");
         goto unwind;
     }
-    formatSize = SpkString_Size(formatString);
+    formatSize = String_Size(formatString);
     format = (char *)malloc(formatSize);
-    memcpy(format, SpkString_AsCString(formatString), formatSize);
+    memcpy(format, String_AsCString(formatString), formatSize);
     
     argIndex = 1;
     f = chunk = format;
@@ -152,7 +152,7 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
             c = *++f;
         while (c && !strchr(convOps, c));
         if (!c) {
-            Spk_Halt(Spk_HALT_VALUE_ERROR, "invalid conversion specification");
+            Halt(HALT_VALUE_ERROR, "invalid conversion specification");
             goto unwind;
         }
         
@@ -160,7 +160,7 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
         c = *++f;
         if (convOp == '%') {
             if (f - chunk != 2) {
-                Spk_Halt(Spk_HALT_VALUE_ERROR, "invalid conversion specification");
+                Halt(HALT_VALUE_ERROR, "invalid conversion specification");
                 goto unwind;
             }
             fputc('%', self->stream);
@@ -171,47 +171,47 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
         
         /* consume an argument */
         if (argIndex >= nArgs) {
-            Spk_Halt(Spk_HALT_TYPE_ERROR, "too few arguments");
+            Halt(HALT_TYPE_ERROR, "too few arguments");
             goto unwind;
         }
-        Spk_XDECREF(arg);
-        arg = SpkArray_GetItem(args, argIndex++);
+        XDECREF(arg);
+        arg = Array_GetItem(args, argIndex++);
         
         switch (convOp) {
         case 'c':
-            charArg = Spk_CAST(Char, arg);
+            charArg = CAST(Char, arg);
             if (!charArg) {
-                Spk_Halt(Spk_HALT_TYPE_ERROR, "character expected");
+                Halt(HALT_TYPE_ERROR, "character expected");
                 goto unwind;
             }
-            fprintf(self->stream, chunk, (int)SpkChar_AsCChar(charArg));
+            fprintf(self->stream, chunk, (int)Char_AsCChar(charArg));
             break;
         case 'd': case 'i': case 'o': case 'u': case 'x':
-            intArg = Spk_CAST(Integer, arg);
+            intArg = CAST(Integer, arg);
             if (!intArg) {
-                Spk_Halt(Spk_HALT_TYPE_ERROR, "integer expected");
+                Halt(HALT_TYPE_ERROR, "integer expected");
                 goto unwind;
             }
-            fprintf(self->stream, chunk, SpkInteger_AsCLong(intArg));
+            fprintf(self->stream, chunk, Integer_AsCLong(intArg));
             break;
         case 'e': case 'E': case 'f': case 'g': case 'G':
-            floatArg = Spk_CAST(Float, arg);
+            floatArg = CAST(Float, arg);
             if (!floatArg) {
-                Spk_Halt(Spk_HALT_TYPE_ERROR, "float expected");
+                Halt(HALT_TYPE_ERROR, "float expected");
                 goto unwind;
             }
-            fprintf(self->stream, chunk, SpkFloat_AsCDouble(floatArg));
+            fprintf(self->stream, chunk, Float_AsCDouble(floatArg));
             break;
         case 's':
-            strArg = Spk_CAST(String, arg);
+            strArg = CAST(String, arg);
             if (!strArg) {
-                Spk_Halt(Spk_HALT_TYPE_ERROR, "string expected");
+                Halt(HALT_TYPE_ERROR, "string expected");
                 goto unwind;
             }
-            fprintf(self->stream, chunk, SpkString_AsCString(strArg));
+            fprintf(self->stream, chunk, String_AsCString(strArg));
             break;
         default:
-            Spk_Halt(Spk_HALT_ASSERTION_ERROR, "conversion letter not implemented");
+            Halt(HALT_ASSERTION_ERROR, "conversion letter not implemented");
             goto unwind;
         }
         
@@ -220,130 +220,130 @@ static SpkUnknown *FileStream_printf(SpkUnknown *_self, SpkUnknown *arg0, SpkUnk
     }
     
     if (argIndex != nArgs) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "too many arguments");
+        Halt(HALT_TYPE_ERROR, "too many arguments");
         goto unwind;
     }
     
     free(format);
-    Spk_DECREF(formatObj);
-    Spk_XDECREF(arg);
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    DECREF(formatObj);
+    XDECREF(arg);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     free(format);
-    Spk_XDECREF(formatObj);
-    Spk_XDECREF(arg);
+    XDECREF(formatObj);
+    XDECREF(arg);
     return 0;
 }
 
-static SpkUnknown *FileStream_putc(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkFileStream *self;
-    SpkChar *c;
+static Unknown *FileStream_putc(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    FileStream *self;
+    Char *c;
     
-    self = (SpkFileStream *)_self;
-    c = Spk_CAST(Char, arg0);
+    self = (FileStream *)_self;
+    c = CAST(Char, arg0);
     if (!c) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a character is required");
+        Halt(HALT_TYPE_ERROR, "a character is required");
         return 0;
     }
     if (self->stream)
-        fputc(SpkChar_AsCChar(c), self->stream);
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+        fputc(Char_AsCChar(c), self->stream);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
-static SpkUnknown *FileStream_puts(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkFileStream *self;
-    SpkString *s;
+static Unknown *FileStream_puts(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    FileStream *self;
+    String *s;
     
-    self = (SpkFileStream *)_self;
-    s = Spk_CAST(String, arg0);
+    self = (FileStream *)_self;
+    s = CAST(String, arg0);
     if (!s) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        Halt(HALT_TYPE_ERROR, "a string is required");
         return 0;
     }
     if (self->stream)
-        fputs(SpkString_AsCString(s), self->stream);
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+        fputs(String_AsCString(s), self->stream);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
-static SpkUnknown *FileStream_reopen(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkFileStream *self;
-    SpkString *pathnameString, *modeString;
+static Unknown *FileStream_reopen(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    FileStream *self;
+    String *pathnameString, *modeString;
     char *pathname, *mode;
-    SpkUnknown *result;
+    Unknown *result;
     
-    self = (SpkFileStream *)_self;
-    pathnameString = Spk_CAST(String, arg0);
+    self = (FileStream *)_self;
+    pathnameString = CAST(String, arg0);
     if (!pathnameString) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        Halt(HALT_TYPE_ERROR, "a string is required");
         return 0;
     }
-    modeString = Spk_CAST(String, arg1);
+    modeString = CAST(String, arg1);
     if (!modeString) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        Halt(HALT_TYPE_ERROR, "a string is required");
         return 0;
     }
-    pathname = SpkString_AsCString(pathnameString);
-    mode = SpkString_AsCString(modeString);
+    pathname = String_AsCString(pathnameString);
+    mode = String_AsCString(modeString);
     if (self->stream)
         self->stream = freopen(pathname, mode, self->stream);
     else
         self->stream = fopen(pathname, mode);
-    result = self->stream ? (SpkUnknown *)self : Spk_GLOBAL(null);
-    Spk_INCREF(result);
+    result = self->stream ? (Unknown *)self : GLOBAL(null);
+    INCREF(result);
     return result;
 }
 
-static SpkUnknown *FileStream_rewind(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkFileStream *self;
+static Unknown *FileStream_rewind(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    FileStream *self;
     
-    self = (SpkFileStream *)_self;
+    self = (FileStream *)_self;
     if (self->stream)
         rewind(self->stream);
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* meta-methods */
 
-static SpkUnknown *ClassFileStream_open(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkString *pathnameString, *modeString;
+static Unknown *ClassFileStream_open(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    String *pathnameString, *modeString;
     char *pathname, *mode;
     FILE *stream;
-    SpkUnknown *tmp;
-    SpkFileStream *newStream;
+    Unknown *tmp;
+    FileStream *newStream;
     
-    pathnameString = Spk_CAST(String, arg0);
+    pathnameString = CAST(String, arg0);
     if (!pathnameString) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        Halt(HALT_TYPE_ERROR, "a string is required");
         return 0;
     }
-    modeString = Spk_CAST(String, arg1);
+    modeString = CAST(String, arg1);
     if (!modeString) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+        Halt(HALT_TYPE_ERROR, "a string is required");
         return 0;
     }
-    pathname = SpkString_AsCString(pathnameString);
-    mode = SpkString_AsCString(modeString);
+    pathname = String_AsCString(pathnameString);
+    mode = String_AsCString(modeString);
     
     stream = fopen(pathname, mode);
     if (!stream) {
-        Spk_INCREF(Spk_GLOBAL(null));
-        return Spk_GLOBAL(null);
+        INCREF(GLOBAL(null));
+        return GLOBAL(null);
     }
     
-    tmp = Spk_Send(Spk_GLOBAL(theInterpreter), self, Spk_new, 0);
+    tmp = Send(GLOBAL(theInterpreter), self, new, 0);
     if (!tmp)
         return 0;
-    newStream = Spk_CAST(FileStream, tmp);
+    newStream = CAST(FileStream, tmp);
     if (!newStream) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "FileStream expected");
-        Spk_DECREF(tmp);
+        Halt(HALT_TYPE_ERROR, "FileStream expected");
+        DECREF(tmp);
         return 0;
     }
     
@@ -354,67 +354,67 @@ static SpkUnknown *ClassFileStream_open(SpkUnknown *self, SpkUnknown *arg0, SpkU
      */
     newStream->stream = stream;
     
-    return (SpkUnknown *)newStream;
+    return (Unknown *)newStream;
 }
 
 
 /*------------------------------------------------------------------------*/
 /* low-level hooks */
 
-static void FileStream_zero(SpkObject *_self) {
-    SpkFileStream *self = (SpkFileStream *)_self;
-    (*Spk_CLASS(FileStream)->superclass->zero)(_self);
+static void FileStream_zero(Object *_self) {
+    FileStream *self = (FileStream *)_self;
+    (*CLASS(FileStream)->superclass->zero)(_self);
     self->stream = 0;
 }
 
-static void FileStream_dealloc(SpkObject *_self, SpkUnknown **l) {
-    SpkFileStream *self = (SpkFileStream *)_self;
+static void FileStream_dealloc(Object *_self, Unknown **l) {
+    FileStream *self = (FileStream *)_self;
     if (self->stream &&
         /* XXX: clumsy */
         self->stream != stdin &&
         self->stream != stdout &&
         self->stream != stderr)
         fclose(self->stream);
-    (*Spk_CLASS(FileStream)->superclass->dealloc)(_self, l);
+    (*CLASS(FileStream)->superclass->dealloc)(_self, l);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* class tmpl */
 
-typedef struct SpkFileStreamSubclass {
-    SpkFileStream base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkFileStreamSubclass;
+typedef struct FileStreamSubclass {
+    FileStream base;
+    Unknown *variables[1]; /* stretchy */
+} FileStreamSubclass;
 
-static SpkMethodTmpl methods[] = {
+static MethodTmpl methods[] = {
     /* attributes */
-    { "eof", SpkNativeCode_ARGS_0, &FileStream_eof },
+    { "eof", NativeCode_ARGS_0, &FileStream_eof },
     /* methods */
-    { "close",  SpkNativeCode_ARGS_0, &FileStream_close },
-    { "flush",  SpkNativeCode_ARGS_0, &FileStream_flush },
-    { "getc",   SpkNativeCode_ARGS_0, &FileStream_getc },
-    { "gets",   SpkNativeCode_ARGS_1, &FileStream_gets },
-    { "open",   SpkNativeCode_ARGS_2, &FileStream_reopen },
-    { "printf", SpkNativeCode_ARGS_ARRAY, &FileStream_printf },
-    { "putc",   SpkNativeCode_ARGS_1, &FileStream_putc },
-    { "puts",   SpkNativeCode_ARGS_1, &FileStream_puts },
-    { "reopen", SpkNativeCode_ARGS_2, &FileStream_reopen },
-    { "rewind", SpkNativeCode_ARGS_0, &FileStream_rewind },
+    { "close",  NativeCode_ARGS_0, &FileStream_close },
+    { "flush",  NativeCode_ARGS_0, &FileStream_flush },
+    { "getc",   NativeCode_ARGS_0, &FileStream_getc },
+    { "gets",   NativeCode_ARGS_1, &FileStream_gets },
+    { "open",   NativeCode_ARGS_2, &FileStream_reopen },
+    { "printf", NativeCode_ARGS_ARRAY, &FileStream_printf },
+    { "putc",   NativeCode_ARGS_1, &FileStream_putc },
+    { "puts",   NativeCode_ARGS_1, &FileStream_puts },
+    { "reopen", NativeCode_ARGS_2, &FileStream_reopen },
+    { "rewind", NativeCode_ARGS_0, &FileStream_rewind },
     { 0 }
 };
 
-static SpkMethodTmpl metaMethods[] = {
-    { "open",   SpkNativeCode_ARGS_2, &ClassFileStream_open },
+static MethodTmpl metaMethods[] = {
+    { "open",   NativeCode_ARGS_2, &ClassFileStream_open },
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassFileStreamTmpl = {
-    Spk_HEART_CLASS_TMPL(FileStream, Object), {
+ClassTmpl ClassFileStreamTmpl = {
+    HEART_CLASS_TMPL(FileStream, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkFileStreamSubclass, variables),
+        offsetof(FileStreamSubclass, variables),
         0,
         &FileStream_zero,
         &FileStream_dealloc
@@ -429,13 +429,13 @@ SpkClassTmpl Spk_ClassFileStreamTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-int SpkIO_Boot(void) {
-    Spk_GLOBAL(xstdin)->stream = stdin;
-    Spk_GLOBAL(xstdout)->stream = stdout;
-    Spk_GLOBAL(xstderr)->stream = stderr;
+int IO_Boot(void) {
+    GLOBAL(xstdin)->stream = stdin;
+    GLOBAL(xstdout)->stream = stdout;
+    GLOBAL(xstderr)->stream = stderr;
     return 1;
 }
 
-FILE *SpkFileStream_AsCFileStream(SpkFileStream *self) {
+FILE *FileStream_AsCFileStream(FileStream *self) {
     return self->stream;
 }

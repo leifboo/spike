@@ -13,7 +13,8 @@
 #include "tree.h"
 
 /* XXX: cross-compile -- all sizeof/offsetof in this file are suspect */
-#include "rtl/rtl.h"
+/*#include "rtl/rtl.h"*/
+#define OFFSETOF_CONTEXT_VAR 24
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -21,22 +22,13 @@
 
 
 #define ASSERT(c, msg) \
-do if (!(c)) { Spk_Halt(Spk_HALT_ASSERTION_ERROR, (msg)); goto unwind; } \
+do if (!(c)) { Halt(HALT_ASSERTION_ERROR, (msg)); goto unwind; } \
 while (0)
 
 #define _(c) do { \
-SpkUnknown *_tmp = (c); \
+Unknown *_tmp = (c); \
 if (!_tmp) goto unwind; \
-Spk_DECREF(_tmp); } while (0)
-
-
-typedef SpkExprKind ExprKind;
-typedef SpkStmtKind StmtKind;
-typedef SpkExpr Expr;
-typedef SpkExprList ExprList;
-typedef SpkArgList ArgList;
-typedef SpkStmt Stmt;
-typedef SpkStmtList StmtList;
+DECREF(_tmp); } while (0)
 
 
 typedef enum CodeGenKind {
@@ -74,7 +66,7 @@ typedef struct OpcodeGen {
 typedef struct ClassCodeGen {
     struct CodeGen *generic;
     Stmt *classDef;
-    SpkUnknown *source;
+    Unknown *source;
 } ClassCodeGen;
 
 typedef struct ModuleCodeGen {
@@ -90,10 +82,10 @@ typedef struct ModuleCodeGen {
     
     char charData[256];
     
-    SpkString **strData;
+    String **strData;
     unsigned int strDataSize, strDataAllocSize;
     
-    SpkSymbol **symData;
+    Symbol **symData;
     unsigned int symDataSize, symDataAllocSize;
 } ModuleCodeGen;
 
@@ -117,8 +109,8 @@ typedef struct CodeGen {
 static unsigned int willEmitInt(long, CodeGen *);
 static unsigned int willEmitFloat(double, CodeGen *);
 static void willEmitChar(unsigned int, CodeGen *);
-static unsigned int willEmitStr(SpkString *, CodeGen *);
-static unsigned int willEmitSym(SpkSymbol *, CodeGen *);
+static unsigned int willEmitStr(String *, CodeGen *);
+static unsigned int willEmitSym(Symbol *, CodeGen *);
 
 
 static void emitOpcode(OpcodeGen *cgen,
@@ -155,22 +147,22 @@ static void maybeEmitLabel(Label *label, OpcodeGen *cgen) {
         fprintf(cgen->generic->out, ".L%u:\n", *label);
 }
 
-static SpkUnknown *emitBranch(SpkOpcode opcode, Label *target, OpcodeGen *cgen) {
+static Unknown *emitBranch(Opcode opcode, Label *target, OpcodeGen *cgen) {
     switch (opcode) {
-    case Spk_OPCODE_BRANCH_IF_FALSE:
+    case OPCODE_BRANCH_IF_FALSE:
         emitOpcode(cgen, "call", "SpikeTest");
         emitOpcode(cgen, "jz", ".L%u", getLabel(target, cgen));
         break;
-    case Spk_OPCODE_BRANCH_IF_TRUE:
+    case OPCODE_BRANCH_IF_TRUE:
         emitOpcode(cgen, "call", "SpikeTest");
         emitOpcode(cgen, "jnz", ".L%u", getLabel(target, cgen));
         break;
-    case Spk_OPCODE_BRANCH_ALWAYS:
+    case OPCODE_BRANCH_ALWAYS:
         emitOpcode(cgen, "jmp", ".L%u", getLabel(target, cgen));
         break;
     }
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
 static void dupN(unsigned long n, OpcodeGen *cgen) {
@@ -182,7 +174,7 @@ static void dupN(unsigned long n, OpcodeGen *cgen) {
 }
 
 static int instVarOffset(Expr *def, OpcodeGen *cgen) {
-    return sizeof(SpkObject *) * def->u.def.index;
+    return sizeof(Object *) * def->u.def.index;
 }
 
 static int offsetOfIndex(unsigned int i, OpcodeGen *cgen) {
@@ -192,25 +184,25 @@ static int offsetOfIndex(unsigned int i, OpcodeGen *cgen) {
     
     if (cgen->blockCount) {
         /* all vars are in MethodContext on heap at %ebp */
-        return offsetof(Context, var) + sizeof(SpkObject *) * index;
+        return OFFSETOF_CONTEXT_VAR + sizeof(Object *) * index;
     }
     
     if (cgen->varArgList) {
         /* all vars are below %ebp */
         /* skip saved edx, edi, esi, ebx */
-        return -(sizeof(SpkObject *) * (index + 1 + 4));
+        return -(sizeof(Object *) * (index + 1 + 4));
     }
     
     if (index < cgen->maxArgumentCount) {
         /* argument */
         /* args are pushed in order, so they are reversed in memory */
         /* skip saved ebp, eip */
-        return sizeof(SpkObject *) * (cgen->maxArgumentCount - index - 1 + 2);
+        return sizeof(Object *) * (cgen->maxArgumentCount - index - 1 + 2);
     }
     /* ordinary local variable */
     /* skip saved edi, esi, ebx */
     index -= cgen->maxArgumentCount;
-    return -(sizeof(SpkObject *) * (index + 1 + 3));
+    return -(sizeof(Object *) * (index + 1 + 3));
 }
 
 static int localVarOffset(Expr *def, OpcodeGen *cgen) {
@@ -219,18 +211,18 @@ static int localVarOffset(Expr *def, OpcodeGen *cgen) {
 
 static int isVarDef(Expr *def) {
     return
-        def->aux.nameKind == Spk_EXPR_NAME_DEF &&
+        def->aux.nameKind == EXPR_NAME_DEF &&
         def->u.def.stmt &&
-        def->u.def.stmt->kind == Spk_STMT_DEF_VAR;
+        def->u.def.stmt->kind == STMT_DEF_VAR;
 }
 
 static int isVarRef(Expr *expr) {
     return
-        expr->aux.nameKind = Spk_EXPR_NAME_REF &&
+        expr->aux.nameKind = EXPR_NAME_REF &&
         isVarDef(expr->u.ref.def);
 }
 
-static SpkUnknown *emitCodeForName(Expr *expr, int *super, OpcodeGen *cgen) {
+static Unknown *emitCodeForName(Expr *expr, int *super, OpcodeGen *cgen) {
     Expr *def;
     const char *builtin;
     
@@ -241,27 +233,27 @@ static SpkUnknown *emitCodeForName(Expr *expr, int *super, OpcodeGen *cgen) {
         /* built-in */
         ASSERT(def->u.def.pushOpcode, "missing push opcode for built-in");
         switch (def->u.def.pushOpcode) {
-        case Spk_OPCODE_PUSH_SELF:
+        case OPCODE_PUSH_SELF:
             builtin = "%%esi";
             break;
-        case Spk_OPCODE_PUSH_SUPER:
+        case OPCODE_PUSH_SUPER:
             ASSERT(super, "invalid use of 'super'");
             *super = 1;
             builtin = "%%esi";
             break;
-        case Spk_OPCODE_PUSH_FALSE:
+        case OPCODE_PUSH_FALSE:
             builtin = "$false";
             break;
-        case Spk_OPCODE_PUSH_TRUE:
+        case OPCODE_PUSH_TRUE:
             builtin = "$true";
             break;
-        case Spk_OPCODE_PUSH_NULL:
+        case OPCODE_PUSH_NULL:
             builtin = "$0";
             break;
-        case Spk_OPCODE_PUSH_VOID:
+        case OPCODE_PUSH_VOID:
             builtin = "$void";
             break;
-        case Spk_OPCODE_PUSH_CONTEXT:
+        case OPCODE_PUSH_CONTEXT:
             /* XXX */
             builtin = "%%ebp";
             ASSERT(0, "XXX 'thisContext' not supported by x86 backend");
@@ -275,16 +267,16 @@ static SpkUnknown *emitCodeForName(Expr *expr, int *super, OpcodeGen *cgen) {
     }
     
     switch (def->u.def.pushOpcode) {
-    case Spk_OPCODE_PUSH_GLOBAL:
+    case OPCODE_PUSH_GLOBAL:
         emitOpcode(cgen, "pushl",
                    isVarDef(def) ? "%s%s" : "$%s%s",
-                   SpkHost_SymbolAsCString(def->sym->sym),
+                   Host_SymbolAsCString(def->sym->sym),
                    (IS_EXTERN(def) && IS_CDECL(def)) ? ".thunk" : "");
         break;
-    case Spk_OPCODE_PUSH_INST_VAR:
+    case OPCODE_PUSH_INST_VAR:
         emitOpcode(cgen, "pushl", "%d(%%edi)", instVarOffset(def, cgen));
         break;
-    case Spk_OPCODE_PUSH_LOCAL:
+    case OPCODE_PUSH_LOCAL:
         emitOpcode(cgen, "pushl", "%d(%%ebp)", localVarOffset(def, cgen));
         break;
     default:
@@ -293,23 +285,23 @@ static SpkUnknown *emitCodeForName(Expr *expr, int *super, OpcodeGen *cgen) {
     }
     
  leave:
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
 }
 
-static SpkUnknown *emitCodeForLiteral(SpkUnknown *literal, OpcodeGen *cgen) {
-    SpkBehavior *klass;
+static Unknown *emitCodeForLiteral(Unknown *literal, OpcodeGen *cgen) {
+    Behavior *klass;
     
-    klass = ((SpkObject *)literal)->klass;
-    if (klass == Spk_CLASS(Symbol)) {
-        const char *value = SpkHost_SymbolAsCString(literal);
-        willEmitSym((SpkSymbol *)literal, cgen->generic);
+    klass = ((Object *)literal)->klass;
+    if (klass == CLASS(Symbol)) {
+        const char *value = Host_SymbolAsCString(literal);
+        willEmitSym((Symbol *)literal, cgen->generic);
         emitOpcode(cgen, "pushl", "$__sym_%s", value);
-    } else if (klass == Spk_CLASS(Integer)) {
-        long value = SpkHost_IntegerAsCLong(literal);
+    } else if (klass == CLASS(Integer)) {
+        long value = Host_IntegerAsCLong(literal);
         /* a negative literal int is currently not possible */
         ASSERT(value >= 0, "negative literal int");
         if (value <= 0x1fffffff) {
@@ -319,46 +311,46 @@ static SpkUnknown *emitCodeForLiteral(SpkUnknown *literal, OpcodeGen *cgen) {
             willEmitInt(value, cgen->generic);
             emitOpcode(cgen, "pushl", "$__int_%ld", value);
         }
-    } else if (klass == Spk_CLASS(Float)) {
-        double value = SpkHost_FloatAsCDouble(literal);
+    } else if (klass == CLASS(Float)) {
+        double value = Host_FloatAsCDouble(literal);
         unsigned int index = willEmitFloat(value, cgen->generic);
         emitOpcode(cgen, "pushl", "$__float_%u", index);
-    } else if (klass == Spk_CLASS(Char)) {
-        unsigned int value = (unsigned char)SpkHost_CharAsCChar(literal);
+    } else if (klass == CLASS(Char)) {
+        unsigned int value = (unsigned char)Host_CharAsCChar(literal);
         willEmitChar(value, cgen->generic);
         emitOpcode(cgen, "pushl", "$__char_%02x", value);
-    } else if (klass == Spk_CLASS(String)) {
-        unsigned int index = willEmitStr((SpkString *)literal, cgen->generic);
+    } else if (klass == CLASS(String)) {
+        unsigned int index = willEmitStr((String *)literal, cgen->generic);
         emitOpcode(cgen, "pushl", "$__str_%u", index);
     } else {
         ASSERT(0, "unknown class of literal");
     }
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
 }
 
-static SpkUnknown *store(Expr *var, OpcodeGen *cgen) {
+static Unknown *store(Expr *var, OpcodeGen *cgen) {
     Expr *def = var->u.ref.def;
     emitOpcode(cgen, "movl", "(%%esp), %%eax");
     switch (def->u.def.storeOpcode) {
-    case Spk_OPCODE_STORE_GLOBAL:
+    case OPCODE_STORE_GLOBAL:
         /* currently, the x86 backend is unique in this regard */
         ASSERT(isVarDef(def), "invalid lvalue");
-        emitOpcode(cgen, "movl", "%%eax, %s", SpkHost_SymbolAsCString(def->sym->sym));
+        emitOpcode(cgen, "movl", "%%eax, %s", Host_SymbolAsCString(def->sym->sym));
         break;
-    case Spk_OPCODE_STORE_INST_VAR:
+    case OPCODE_STORE_INST_VAR:
         emitOpcode(cgen, "movl", "%%eax, %d(%%edi)", instVarOffset(def, cgen));
         break;
-    case Spk_OPCODE_STORE_LOCAL:
+    case OPCODE_STORE_LOCAL:
         emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)", localVarOffset(def, cgen));
         break;
     }
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -485,7 +477,7 @@ static void epilogue(OpcodeGen *cgen) {
         emitOpcode(cgen, "movl", "%%eax, 8(%%ebp,%%edx)");
     else
         emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)",
-                   sizeof(SpkObject *)*(2+cgen->maxArgumentCount));
+                   sizeof(Object *)*(2+cgen->maxArgumentCount));
     
     /* restore caller's stack frame (%ebp) */
     emitOpcode(cgen, "popl", "%%ebp");
@@ -497,11 +489,11 @@ static void epilogue(OpcodeGen *cgen) {
         emitOpcode(cgen, "addl", "%%edx, %%esp"); 
         emitOpcode(cgen, "jmp", "*%%eax");  /* return */
     } else {
-        emitOpcode(cgen, "ret", "$%lu", sizeof(SpkObject *)*cgen->maxArgumentCount);
+        emitOpcode(cgen, "ret", "$%lu", sizeof(Object *)*cgen->maxArgumentCount);
     }
 }
 
-static void oper(SpkOper code, int isSuper, OpcodeGen *cgen) {
+static void oper(Oper code, int isSuper, OpcodeGen *cgen) {
     static const char *table[] = {
     "Succ",
     "Pred",
@@ -605,14 +597,14 @@ static void willEmitChar(unsigned int value, CodeGen *gcgen) {
     cgen->charData[value % 256] = 1;
 }
 
-static unsigned int willEmitStr(SpkString *value, CodeGen *gcgen) {
+static unsigned int willEmitStr(String *value, CodeGen *gcgen) {
     ModuleCodeGen *cgen;
     unsigned int i;
     
     cgen = gcgen->module;
     
     for (i = 0; i < cgen->strDataSize; ++i) {
-        if (SpkString_IsEqual(cgen->strData[i], value))
+        if (String_IsEqual(cgen->strData[i], value))
             return i;
     }
     
@@ -625,9 +617,9 @@ static unsigned int willEmitStr(SpkString *value, CodeGen *gcgen) {
                ? cgen->strDataAllocSize * 2
                : 2);
         cgen->strData
-            = (SpkString **)realloc(
+            = (String **)realloc(
                 cgen->strData,
-                cgen->strDataAllocSize * sizeof(SpkString *)
+                cgen->strDataAllocSize * sizeof(String *)
                 );
     }
     
@@ -636,7 +628,7 @@ static unsigned int willEmitStr(SpkString *value, CodeGen *gcgen) {
     return i;
 }
 
-static unsigned int willEmitSym(SpkSymbol *value, CodeGen *gcgen) {
+static unsigned int willEmitSym(Symbol *value, CodeGen *gcgen) {
     ModuleCodeGen *cgen;
     unsigned int i;
     
@@ -656,9 +648,9 @@ static unsigned int willEmitSym(SpkSymbol *value, CodeGen *gcgen) {
                ? cgen->symDataAllocSize * 2
                : 2);
         cgen->symData
-            = (SpkSymbol **)realloc(
+            = (Symbol **)realloc(
                 cgen->symData,
-                cgen->symDataAllocSize * sizeof(SpkSymbol *)
+                cgen->symDataAllocSize * sizeof(Symbol *)
                 );
     }
     
@@ -667,12 +659,12 @@ static unsigned int willEmitSym(SpkSymbol *value, CodeGen *gcgen) {
     return i;
 }
 
-static void printStringLiteral(SpkString *value, FILE *out) {
+static void printStringLiteral(String *value, FILE *out) {
     const char *s, *subst;
     char c;
     
     fputc('\"', out);
-    s = SpkString_AsCString(value);
+    s = String_AsCString(value);
     while ((c = *s++)) {
         /* XXX: numeric escape codes */
         subst = 0;
@@ -759,7 +751,7 @@ static void emitROData(ModuleCodeGen *cgen) {
                 "\t.long\t%lu\n"
                 "\t.string\t",
                 i, i, i,
-                (unsigned long)SpkString_Size(cgen->strData[i]));
+                (unsigned long)String_Size(cgen->strData[i]));
         printStringLiteral(cgen->strData[i], out);
         fprintf(out,
                 "\n"
@@ -769,7 +761,7 @@ static void emitROData(ModuleCodeGen *cgen) {
     }
     
     for (i = 0; i < cgen->symDataSize; ++i) {
-        const char *sym = SpkSymbol_AsCString(cgen->symData[i]);
+        const char *sym = Symbol_AsCString(cgen->symData[i]);
         fprintf(out,
                 "\t.align\t4\n"
                 "__sym_%s:\n"
@@ -780,7 +772,7 @@ static void emitROData(ModuleCodeGen *cgen) {
                 "\t.string\t\"%s\"\n"
                 "\t.size\t__sym_%s, .-__sym_%s\n",
                 sym, sym, sym,
-                (unsigned long)SpkSymbol_Hash(cgen->symData[i]),
+                (unsigned long)Symbol_Hash(cgen->symData[i]),
                 sym, sym, sym);
     }
     
@@ -791,20 +783,20 @@ static void emitROData(ModuleCodeGen *cgen) {
 /****************************************************************************/
 /* pseudo-opcodes */
 
-static SpkUnknown *emitCodeForInt(int intValue, OpcodeGen *cgen) {
-    SpkUnknown *intObj = 0;
+static Unknown *emitCodeForInt(int intValue, OpcodeGen *cgen) {
+    Unknown *intObj = 0;
     
-    intObj = SpkHost_IntegerFromCLong(intValue);
+    intObj = Host_IntegerFromCLong(intValue);
     if (!intObj) {
         goto unwind;
     }
     _(emitCodeForLiteral(intObj, cgen));
-    Spk_DECREF(intObj);
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    DECREF(intObj);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
-    Spk_XDECREF(intObj);
+    XDECREF(intObj);
     return 0;
 }
 
@@ -812,32 +804,32 @@ static SpkUnknown *emitCodeForInt(int intValue, OpcodeGen *cgen) {
 /****************************************************************************/
 /* expressions */
 
-static SpkUnknown *emitCodeForOneExpr(Expr *, int *, OpcodeGen *);
-static SpkUnknown *emitBranchForExpr(Expr *expr, int, Label *, Label *, int,
+static Unknown *emitCodeForOneExpr(Expr *, int *, OpcodeGen *);
+static Unknown *emitBranchForExpr(Expr *expr, int, Label *, Label *, int,
                                      OpcodeGen *);
-static SpkUnknown *emitBranchForOneExpr(Expr *, int, Label *, Label *, int,
+static Unknown *emitBranchForOneExpr(Expr *, int, Label *, Label *, int,
                                         OpcodeGen *);
-static SpkUnknown *inPlaceOp(Expr *, size_t, OpcodeGen *);
-static SpkUnknown *inPlaceAttrOp(Expr *, OpcodeGen *);
-static SpkUnknown *inPlaceIndexOp(Expr *, OpcodeGen *);
-static SpkUnknown *emitCodeForBlock(Expr *, CodeGen *);
-static SpkUnknown *emitCodeForStmt(Stmt *, Label *, Label *, Label *, OpcodeGen *);
+static Unknown *inPlaceOp(Expr *, size_t, OpcodeGen *);
+static Unknown *inPlaceAttrOp(Expr *, OpcodeGen *);
+static Unknown *inPlaceIndexOp(Expr *, OpcodeGen *);
+static Unknown *emitCodeForBlock(Expr *, CodeGen *);
+static Unknown *emitCodeForStmt(Stmt *, Label *, Label *, Label *, OpcodeGen *);
 
-static SpkUnknown *emitCodeForExpr(Expr *expr, int *super, OpcodeGen *cgen) {
+static Unknown *emitCodeForExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     for ( ; expr->next; expr = expr->next) {
         _(emitCodeForOneExpr(expr, super, cgen));
         pop(cgen);
     }
     _(emitCodeForOneExpr(expr, super, cgen));
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
 }
 
-static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
+static Unknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     Expr *arg;
     size_t argumentCount;
     int isSuper;
@@ -849,20 +841,20 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     maybeEmitLabel(&expr->label, cgen);
     
     switch (expr->kind) {
-    case Spk_EXPR_LITERAL:
+    case EXPR_LITERAL:
         _(emitCodeForLiteral(expr->aux.literalValue, cgen));
         break;
-    case Spk_EXPR_NAME:
+    case EXPR_NAME:
         _(emitCodeForName(expr, super, cgen));
         break;
-    case Spk_EXPR_BLOCK:
+    case EXPR_BLOCK:
         emitOpcode(cgen, "pushl", "%%ebp");
         emitOpcode(cgen, "pushl", "$%lu", (unsigned long)expr->aux.block.argumentCount);
         emitOpcode(cgen, "call", "SpikeBlockCopy");
-        _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, &expr->endLabel, cgen));
+        _(emitBranch(OPCODE_BRANCH_ALWAYS, &expr->endLabel, cgen));
         _(emitCodeForBlock(expr, cgen->generic));
         break;
-    case Spk_EXPR_COMPOUND:
+    case EXPR_COMPOUND:
         emitOpcode(cgen, "pushl", "__spike_xxx_push_context"); /* XXX */
         for (arg = expr->right, argumentCount = 0;
              arg;
@@ -874,11 +866,11 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         }
         emitOpcode(cgen, "call", "__spike_xxx_compoundExpression"); /* XXX */
         break;
-    case Spk_EXPR_CALL:
+    case EXPR_CALL:
         /* evaluate receiver */
         switch (expr->left->kind) {
-        case Spk_EXPR_ATTR:
-        case Spk_EXPR_ATTR_VAR:
+        case EXPR_ATTR:
+        case EXPR_ATTR_VAR:
             _(emitCodeForExpr(expr->left->left, &isSuper, cgen));
             break;
         default:
@@ -896,22 +888,22 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         }
         /* evaluate selector */
         switch (expr->left->kind) {
-        case Spk_EXPR_ATTR:
+        case EXPR_ATTR:
             _(emitCodeForLiteral(expr->left->sym->sym, cgen));
             emitOpcode(cgen, "popl", "%%edx");
             routine = "SpikeSendMessage";
             break;
-        case Spk_EXPR_ATTR_VAR:
+        case EXPR_ATTR_VAR:
             _(emitCodeForExpr(expr->left->right, 0, cgen));
             emitOpcode(cgen, "popl", "%%edx");
             routine = "SpikeSendMessage";
             break;
         default:
             switch (expr->oper) {
-            case Spk_OPER_APPLY:
+            case OPER_APPLY:
                 routine = "SpikeCall";
                 break;
-            case Spk_OPER_INDEX:
+            case OPER_INDEX:
                 routine = "SpikeGetIndex";
                 break;
             }
@@ -927,82 +919,82 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         /* call RTL routine to send message */
         emitOpcode(cgen, "call", "%s%s", routine, (isSuper ? "Super" : ""));
         break;
-    case Spk_EXPR_ATTR:
+    case EXPR_ATTR:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
         _(emitCodeForLiteral(expr->sym->sym, cgen));
         emitOpcode(cgen, "popl", "%%edx");
         emitOpcode(cgen, "call", "SpikeGetAttr%s", (isSuper ? "Super" : ""));
         break;
-    case Spk_EXPR_ATTR_VAR:
+    case EXPR_ATTR_VAR:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
         _(emitCodeForExpr(expr->right, 0, cgen));
         emitOpcode(cgen, "popl", "%%edx");
         emitOpcode(cgen, "call", "SpikeGetAttr%s", (isSuper ? "Super" : ""));
         break;
-    case Spk_EXPR_PREOP:
-    case Spk_EXPR_POSTOP:
+    case EXPR_PREOP:
+    case EXPR_POSTOP:
         switch (expr->left->kind) {
-        case Spk_EXPR_NAME:
+        case EXPR_NAME:
             _(emitCodeForExpr(expr->left, 0, cgen));
-            if (expr->kind == Spk_EXPR_POSTOP) {
+            if (expr->kind == EXPR_POSTOP) {
                 dupN(1, cgen);
             }
             oper(expr->oper, 0, cgen);
             _(store(expr->left, cgen));
-            if (expr->kind == Spk_EXPR_POSTOP) {
+            if (expr->kind == EXPR_POSTOP) {
                 pop(cgen);
             }
             break;
-        case Spk_EXPR_ATTR:
-        case Spk_EXPR_ATTR_VAR:
+        case EXPR_ATTR:
+        case EXPR_ATTR_VAR:
             _(inPlaceAttrOp(expr, cgen));
             break;
-        case Spk_EXPR_CALL:
+        case EXPR_CALL:
             _(inPlaceIndexOp(expr, cgen));
             break;
         default:
             ASSERT(0, "invalid lvalue");
         }
         break;
-    case Spk_EXPR_UNARY:
+    case EXPR_UNARY:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
         oper(expr->oper, isSuper, cgen);
         break;
-    case Spk_EXPR_BINARY:
+    case EXPR_BINARY:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
         _(emitCodeForExpr(expr->right, 0, cgen));
         oper(expr->oper, isSuper, cgen);
         break;
-    case Spk_EXPR_ID:
-    case Spk_EXPR_NI:
+    case EXPR_ID:
+    case EXPR_NI:
         _(emitCodeForExpr(expr->left, 0, cgen));
         _(emitCodeForExpr(expr->right, 0, cgen));
         pop(cgen);
         emitOpcode(cgen, "cmpl", "(%%esp), %%eax");
         emitOpcode(cgen, "movl", "$false, (%%esp)");
         emitOpcode(cgen,
-                   expr->kind == Spk_EXPR_ID ? "jne" : "je",
+                   expr->kind == EXPR_ID ? "jne" : "je",
                    ".L%u", getLabel(&expr->endLabel, cgen));
         emitOpcode(cgen, "movl", "$true, (%%esp)");
         break;
-    case Spk_EXPR_AND:
+    case EXPR_AND:
         _(emitBranchForExpr(expr->left, 0, &expr->right->endLabel,
                             &expr->right->label, 1, cgen));
         _(emitCodeForExpr(expr->right, 0, cgen));
         break;
-    case Spk_EXPR_OR:
+    case EXPR_OR:
         _(emitBranchForExpr(expr->left, 1, &expr->right->endLabel,
                             &expr->right->label, 1, cgen));
         _(emitCodeForExpr(expr->right, 0, cgen));
         break;
-    case Spk_EXPR_COND:
+    case EXPR_COND:
         _(emitBranchForExpr(expr->cond, 0, &expr->right->label,
                             &expr->left->label, 0, cgen));
         _(emitCodeForExpr(expr->left, 0, cgen));
-        _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, &expr->right->endLabel, cgen));
+        _(emitBranch(OPCODE_BRANCH_ALWAYS, &expr->right->endLabel, cgen));
         _(emitCodeForExpr(expr->right, 0, cgen));
         break;
-    case Spk_EXPR_KEYWORD:
+    case EXPR_KEYWORD:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
         for (arg = expr->right, argumentCount = 0;
              arg;
@@ -1014,10 +1006,10 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         emitOpcode(cgen, "movl", "$%lu, %%ecx", (unsigned long)argumentCount);
         emitOpcode(cgen, "call", "SpikeSendMessage%s", (isSuper ? "Super" : ""));
         break;
-    case Spk_EXPR_ASSIGN:
+    case EXPR_ASSIGN:
         switch (expr->left->kind) {
-        case Spk_EXPR_NAME:
-            if (expr->oper == Spk_OPER_EQ) {
+        case EXPR_NAME:
+            if (expr->oper == OPER_EQ) {
                 _(emitCodeForExpr(expr->right, 0, cgen));
             } else {
                 _(emitCodeForExpr(expr->left, 0, cgen));
@@ -1026,11 +1018,11 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
             }
             _(store(expr->left, cgen));
             break;
-        case Spk_EXPR_ATTR:
-        case Spk_EXPR_ATTR_VAR:
+        case EXPR_ATTR:
+        case EXPR_ATTR_VAR:
             _(inPlaceAttrOp(expr, cgen));
             break;
-        case Spk_EXPR_CALL:
+        case EXPR_CALL:
             _(inPlaceIndexOp(expr, cgen));
             break;
         default:
@@ -1040,8 +1032,8 @@ static SpkUnknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     
     maybeEmitLabel(&expr->endLabel, cgen);
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1055,29 +1047,29 @@ static void squirrel(size_t resultDepth, OpcodeGen *cgen) {
     emitOpcode(cgen, "call", "SpikeRotate");
 }
 
-static SpkUnknown *inPlaceOp(Expr *expr, size_t resultDepth, OpcodeGen *cgen) {
+static Unknown *inPlaceOp(Expr *expr, size_t resultDepth, OpcodeGen *cgen) {
     if (expr->right) {
         _(emitCodeForExpr(expr->right, 0, cgen));
-    } else if (expr->kind == Spk_EXPR_POSTOP) {
+    } else if (expr->kind == EXPR_POSTOP) {
         /* e.g., "a[i]++" -- squirrel away the original value */
         squirrel(resultDepth, cgen);
     }
     
     oper(expr->oper, 0, cgen);
     
-    if (expr->kind != Spk_EXPR_POSTOP) {
+    if (expr->kind != EXPR_POSTOP) {
         /* e.g., "++a[i]" -- squirrel away the new value */
         squirrel(resultDepth, cgen);
     }
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
 }
 
-static SpkUnknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
+static Unknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
     size_t argumentCount;
     int isSuper;
     
@@ -1086,11 +1078,11 @@ static SpkUnknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
     _(emitCodeForExpr(expr->left->left, &isSuper, cgen));
     /* get/set common attr */
     switch (expr->left->kind) {
-    case Spk_EXPR_ATTR:
+    case EXPR_ATTR:
         _(emitCodeForLiteral(expr->left->sym->sym, cgen));
         ++argumentCount;
         break;
-    case Spk_EXPR_ATTR_VAR:
+    case EXPR_ATTR_VAR:
         _(emitCodeForExpr(expr->left->right, 0, cgen));
         ++argumentCount;
         break;
@@ -1098,14 +1090,14 @@ static SpkUnknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
         ASSERT(0, "invalid lvalue");
     }
     /* rhs */
-    if (expr->oper == Spk_OPER_EQ) {
+    if (expr->oper == OPER_EQ) {
         _(emitCodeForExpr(expr->right, 0, cgen));
         squirrel(1 + argumentCount + 1 /* receiver, args, new value */, cgen);
     } else {
         dupN(argumentCount + 1, cgen);
         switch (expr->left->kind) {
-        case Spk_EXPR_ATTR:
-        case Spk_EXPR_ATTR_VAR:
+        case EXPR_ATTR:
+        case EXPR_ATTR_VAR:
             emitOpcode(cgen, "popl", "%%edx");
             emitOpcode(cgen, "call", "SpikeGetAttr%s", (isSuper ? "Super" : ""));
             break;
@@ -1116,8 +1108,8 @@ static SpkUnknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
                     cgen));
     }
     switch (expr->left->kind) {
-    case Spk_EXPR_ATTR:
-    case Spk_EXPR_ATTR_VAR:
+    case EXPR_ATTR:
+    case EXPR_ATTR_VAR:
         // XXX: re-think this whole thing
         emitOpcode(cgen, "popl", "%%eax");
         emitOpcode(cgen, "popl", "%%edx");
@@ -1131,19 +1123,19 @@ static SpkUnknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
        squirrelled away */
     pop(cgen);
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
 }
 
-static SpkUnknown *inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
+static Unknown *inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
     Expr *arg;
     size_t argumentCount;
     int isSuper;
     
-    ASSERT(expr->left->oper == Spk_OPER_INDEX, "invalid lvalue");
+    ASSERT(expr->left->oper == OPER_INDEX, "invalid lvalue");
     /* get/set common receiver */
     _(emitCodeForExpr(expr->left->left, &isSuper, cgen));
     /* get/set common arguments */
@@ -1153,7 +1145,7 @@ static SpkUnknown *inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
         _(emitCodeForExpr(arg, 0, cgen));
     }
     /* rhs */
-    if (expr->oper == Spk_OPER_EQ) {
+    if (expr->oper == OPER_EQ) {
         _(emitCodeForExpr(expr->right, 0, cgen));
         squirrel(1 + argumentCount + 1 /* receiver, args, new value */, cgen);
     } else {
@@ -1161,10 +1153,10 @@ static SpkUnknown *inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
         dupN(argumentCount + 1, cgen);
         emitOpcode(cgen, "movl", "$%lu, %%ecx", (unsigned long)argumentCount);
         switch (expr->left->oper) {
-        case Spk_OPER_APPLY:
+        case OPER_APPLY:
             emitOpcode(cgen, "call", "SpikeCall%s", (isSuper ? "Super" : ""));
             break;
-        case Spk_OPER_INDEX:
+        case OPER_INDEX:
             emitOpcode(cgen, "call", "SpikeGetIndex%s", (isSuper ? "Super" : ""));
             break;
         default:
@@ -1181,14 +1173,14 @@ static SpkUnknown *inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
        squirrelled away */
     pop(cgen);
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
 }
 
-static SpkUnknown *emitBranchForExpr(Expr *expr, int cond,
+static Unknown *emitBranchForExpr(Expr *expr, int cond,
                                      Label *label, Label *fallThroughLabel,
                                      int dup, OpcodeGen *cgen)
 {
@@ -1199,31 +1191,31 @@ static SpkUnknown *emitBranchForExpr(Expr *expr, int cond,
     }
     _(emitBranchForOneExpr(expr, cond, label, fallThroughLabel, dup, cgen));
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
 }
 
-static SpkUnknown *emitBranchForOneExpr(Expr *expr, int cond,
+static Unknown *emitBranchForOneExpr(Expr *expr, int cond,
                                         Label *label, Label *fallThroughLabel,
                                         int dup, OpcodeGen *cgen)
 {
-    SpkOpcode pushOpcode;
+    Opcode pushOpcode;
     
     switch (expr->kind) {
-    case Spk_EXPR_NAME:
+    case EXPR_NAME:
         pushOpcode = expr->u.ref.def->u.def.pushOpcode;
-        if (pushOpcode == Spk_OPCODE_PUSH_FALSE ||
-            pushOpcode == Spk_OPCODE_PUSH_TRUE) {
-            int killCode = pushOpcode == Spk_OPCODE_PUSH_TRUE ? cond : !cond;
+        if (pushOpcode == OPCODE_PUSH_FALSE ||
+            pushOpcode == OPCODE_PUSH_TRUE) {
+            int killCode = pushOpcode == OPCODE_PUSH_TRUE ? cond : !cond;
             maybeEmitLabel(&expr->label, cgen);
             if (killCode) {
                 if (dup) {
-                    emitOpcode(cgen, "pushl", pushOpcode == Spk_OPCODE_PUSH_TRUE ? "$true" : "$false");
+                    emitOpcode(cgen, "pushl", pushOpcode == OPCODE_PUSH_TRUE ? "$true" : "$false");
                 }
-                _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, label, cgen));
+                _(emitBranch(OPCODE_BRANCH_ALWAYS, label, cgen));
             }
             maybeEmitLabel(&expr->endLabel, cgen);
             break;
@@ -1238,14 +1230,14 @@ static SpkUnknown *emitBranchForOneExpr(Expr *expr, int cond,
             dupN(1, cgen);
         }
         _(emitBranch(cond
-                     ? Spk_OPCODE_BRANCH_IF_TRUE
-                     : Spk_OPCODE_BRANCH_IF_FALSE,
+                     ? OPCODE_BRANCH_IF_TRUE
+                     : OPCODE_BRANCH_IF_FALSE,
                      label, cgen));
         if (dup) {
             pop(cgen);
         }
         break;
-    case Spk_EXPR_AND:
+    case EXPR_AND:
         maybeEmitLabel(&expr->label, cgen);
         if (cond) {
             /* branch if true */
@@ -1262,7 +1254,7 @@ static SpkUnknown *emitBranchForOneExpr(Expr *expr, int cond,
         }
         maybeEmitLabel(&expr->endLabel, cgen);
         break;
-    case Spk_EXPR_OR:
+    case EXPR_OR:
         maybeEmitLabel(&expr->label, cgen);
         if (cond) {
             /* branch if true */
@@ -1279,27 +1271,27 @@ static SpkUnknown *emitBranchForOneExpr(Expr *expr, int cond,
         }
         maybeEmitLabel(&expr->endLabel, cgen);
         break;
-    case Spk_EXPR_COND:
+    case EXPR_COND:
         maybeEmitLabel(&expr->label, cgen);
         _(emitBranchForExpr(expr->cond, 0, &expr->right->label,
                             &expr->left->label, 0, cgen));
         _(emitBranchForExpr(expr->left, cond, label, fallThroughLabel,
                             dup, cgen));
-        _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, fallThroughLabel, cgen));
+        _(emitBranch(OPCODE_BRANCH_ALWAYS, fallThroughLabel, cgen));
         _(emitBranchForExpr(expr->right, cond, label, fallThroughLabel,
                             dup, cgen));
         maybeEmitLabel(&expr->endLabel, cgen);
         break;
     }
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
 }
 
-static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
+static Unknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     CodeGen gcgen;
     OpcodeGen *cgen; BlockCodeGen *bcg;
     Stmt *body;
@@ -1310,10 +1302,10 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
 
     memset(&voidDef, 0, sizeof(voidDef));
     memset(&voidExpr, 0, sizeof(voidExpr));
-    voidDef.kind = Spk_EXPR_NAME;
-    voidDef.sym = 0 /*SpkSymbolNode_FromCString(st, "void")*/ ;
-    voidDef.u.def.pushOpcode = Spk_OPCODE_PUSH_VOID;
-    voidExpr.kind = Spk_EXPR_NAME;
+    voidDef.kind = EXPR_NAME;
+    voidDef.sym = 0 /*SymbolNode_FromCString(st, "void")*/ ;
+    voidDef.u.def.pushOpcode = OPCODE_PUSH_VOID;
+    voidExpr.kind = EXPR_NAME;
     voidExpr.sym = voidDef.sym;
     voidExpr.u.ref.def = &voidDef;
     
@@ -1400,16 +1392,16 @@ static SpkUnknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     emitOpcode(cgen, "call", "SpikeResumeCaller");
     
     /* upon resume, loop */
-    _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, &start, cgen));
+    _(emitBranch(OPCODE_BRANCH_ALWAYS, &start, cgen));
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
 }
 
-static SpkUnknown *emitCodeForInitializer(Expr *expr, OpcodeGen *cgen) {
+static Unknown *emitCodeForInitializer(Expr *expr, OpcodeGen *cgen) {
     Expr *def;
     
     maybeEmitLabel(&expr->label, cgen);
@@ -1418,30 +1410,30 @@ static SpkUnknown *emitCodeForInitializer(Expr *expr, OpcodeGen *cgen) {
     /* similar to store(), but with a definition instead of a
        reference */
     def = expr->left;
-    ASSERT(def->kind == Spk_EXPR_NAME, "name expected");
-    ASSERT(def->u.def.storeOpcode == Spk_OPCODE_STORE_LOCAL, "local variable expected");
+    ASSERT(def->kind == EXPR_NAME, "name expected");
+    ASSERT(def->u.def.storeOpcode == OPCODE_STORE_LOCAL, "local variable expected");
     pop(cgen);
     emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)", localVarOffset(def, cgen));
     
     maybeEmitLabel(&expr->endLabel, cgen);
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
 }
 
-static SpkUnknown *emitCodeForVarDefList(Expr *defList, OpcodeGen *cgen) {
+static Unknown *emitCodeForVarDefList(Expr *defList, OpcodeGen *cgen) {
     Expr *expr;
     
     for (expr = defList; expr; expr = expr->next) {
-        if (expr->kind == Spk_EXPR_ASSIGN) {
+        if (expr->kind == EXPR_ASSIGN) {
             _(emitCodeForInitializer(expr, cgen));
         }
     }
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1450,10 +1442,10 @@ static SpkUnknown *emitCodeForVarDefList(Expr *defList, OpcodeGen *cgen) {
 /****************************************************************************/
 /* statements */
 
-static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *cgen);
-static SpkUnknown *emitCodeForClass(Stmt *stmt, CodeGen *cgen);
+static Unknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *cgen);
+static Unknown *emitCodeForClass(Stmt *stmt, CodeGen *cgen);
 
-static SpkUnknown *emitCodeForStmt(Stmt *stmt,
+static Unknown *emitCodeForStmt(Stmt *stmt,
                                    Label *parentNextLabel,
                                    Label *breakLabel,
                                    Label *continueLabel,
@@ -1468,32 +1460,32 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
     maybeEmitLabel(&stmt->label, cgen);
     
     switch (stmt->kind) {
-    case Spk_STMT_BREAK:
+    case STMT_BREAK:
         ASSERT(breakLabel, "break not allowed here");
-        _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, breakLabel, cgen));
+        _(emitBranch(OPCODE_BRANCH_ALWAYS, breakLabel, cgen));
         break;
-    case Spk_STMT_COMPOUND:
+    case STMT_COMPOUND:
         for (s = stmt->top; s; s = s->next) {
             _(emitCodeForStmt(s, nextLabel, breakLabel, continueLabel, cgen));
         }
         break;
-    case Spk_STMT_CONTINUE:
+    case STMT_CONTINUE:
         ASSERT(continueLabel, "continue not allowed here");
-        _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, continueLabel, cgen));
+        _(emitBranch(OPCODE_BRANCH_ALWAYS, continueLabel, cgen));
         break;
-    case Spk_STMT_DEF_METHOD:
-    case Spk_STMT_DEF_CLASS:
+    case STMT_DEF_METHOD:
+    case STMT_DEF_CLASS:
         break;
-    case Spk_STMT_DEF_VAR:
+    case STMT_DEF_VAR:
         _(emitCodeForVarDefList(stmt->expr, cgen));
         break;
-    case Spk_STMT_DEF_MODULE:
+    case STMT_DEF_MODULE:
         ASSERT(0, "unexpected module node");
         break;
-    case Spk_STMT_DEF_SPEC:
+    case STMT_DEF_SPEC:
         ASSERT(0, "unexpected spec node");
         break;
-    case Spk_STMT_DO_WHILE:
+    case STMT_DO_WHILE:
         childNextLabel = &stmt->expr->label;
         defineLabel(&stmt->top->label, cgen);
         _(emitCodeForStmt(stmt->top, childNextLabel, nextLabel,
@@ -1501,13 +1493,13 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
         _(emitBranchForExpr(stmt->expr, 1, &stmt->top->label, nextLabel,
                             0, cgen));
         break;
-    case Spk_STMT_EXPR:
+    case STMT_EXPR:
         if (stmt->expr) {
             _(emitCodeForExpr(stmt->expr, 0, cgen));
             pop(cgen);
         }
         break;
-    case Spk_STMT_FOR:
+    case STMT_FOR:
         childNextLabel = stmt->incr
                          ? &stmt->incr->label
                          : (stmt->expr
@@ -1518,7 +1510,7 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
             pop(cgen);
         }
         if (stmt->expr) {
-            _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, &stmt->expr->label,
+            _(emitBranch(OPCODE_BRANCH_ALWAYS, &stmt->expr->label,
                          cgen));
         }
         defineLabel(&stmt->top->label, cgen);
@@ -1532,43 +1524,43 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
             _(emitBranchForExpr(stmt->expr, 1, &stmt->top->label,
                                 nextLabel, 0, cgen));
         } else {
-            _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, &stmt->top->label,
+            _(emitBranch(OPCODE_BRANCH_ALWAYS, &stmt->top->label,
                          cgen));
         }
         break;
-    case Spk_STMT_IF_ELSE:
+    case STMT_IF_ELSE:
         elseLabel = stmt->bottom ? &stmt->bottom->label : nextLabel;
         _(emitBranchForExpr(stmt->expr, 0, elseLabel, &stmt->top->label,
                             0, cgen));
         _(emitCodeForStmt(stmt->top, nextLabel, breakLabel, continueLabel,
                           cgen));
         if (stmt->bottom) {
-            _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, nextLabel, cgen));
+            _(emitBranch(OPCODE_BRANCH_ALWAYS, nextLabel, cgen));
             _(emitCodeForStmt(stmt->bottom, nextLabel, breakLabel,
                               continueLabel, cgen));
         }
         break;
-    case Spk_STMT_PRAGMA_SOURCE:
+    case STMT_PRAGMA_SOURCE:
         break;
-    case Spk_STMT_RETURN:
+    case STMT_RETURN:
         if (stmt->expr) {
             _(emitCodeForExpr(stmt->expr, 0, cgen));
             pop(cgen);
         } else {
             emitOpcode(cgen, "movl", "$void, %%eax");
         }
-        _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, &cgen->epilogueLabel, cgen));
+        _(emitBranch(OPCODE_BRANCH_ALWAYS, &cgen->epilogueLabel, cgen));
         break;
-    case Spk_STMT_WHILE:
+    case STMT_WHILE:
         childNextLabel = &stmt->expr->label;
-        _(emitBranch(Spk_OPCODE_BRANCH_ALWAYS, &stmt->expr->label, cgen));
+        _(emitBranch(OPCODE_BRANCH_ALWAYS, &stmt->expr->label, cgen));
         defineLabel(&stmt->top->label, cgen);
         _(emitCodeForStmt(stmt->top, childNextLabel, nextLabel,
                           childNextLabel, cgen));
         _(emitBranchForExpr(stmt->expr, 1, &stmt->top->label, nextLabel,
                             0, cgen));
         break;
-    case Spk_STMT_YIELD:
+    case STMT_YIELD:
         if (stmt->expr) {
             _(emitCodeForExpr(stmt->expr, 0, cgen));
         } else {
@@ -1578,8 +1570,8 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
         break;
     }
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1589,7 +1581,7 @@ static SpkUnknown *emitCodeForStmt(Stmt *stmt,
 /****************************************************************************/
 /* methods */
 
-static SpkUnknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
+static Unknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
     //ASSERT(!cgen->varArgList, "XXX var args");
     
     if (cgen->minArgumentCount < cgen->maxArgumentCount) {
@@ -1602,7 +1594,7 @@ static SpkUnknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
         out = cgen->generic->out;
         
         for (arg = stmt->u.method.argList.fixed;
-             arg->kind != Spk_EXPR_ASSIGN;
+             arg->kind != EXPR_ASSIGN;
              arg = arg->nextArg)
             ;
         optionalArgList = arg;
@@ -1628,7 +1620,7 @@ static SpkUnknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
         fprintf(out, "\t.align\t4\n");
         maybeEmitLabel(&table, cgen);
         for (arg = optionalArgList, tally = 0; arg; arg = arg->nextArg, ++tally) {
-            ASSERT(arg->kind == Spk_EXPR_ASSIGN, "assignment expected");
+            ASSERT(arg->kind == EXPR_ASSIGN, "assignment expected");
             fprintf(out, "\t.long\t.L%u\n", getLabel(&arg->label, cgen));
         }
         if (!cgen->varArgList)
@@ -1646,26 +1638,26 @@ static SpkUnknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
         maybeEmitLabel(&skip, cgen);
     }
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
 }
 
-static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
+static Unknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
     CodeGen gcgen;
     OpcodeGen *cgen; MethodCodeGen *mcg;
     Stmt *body, *s;
     Stmt sentinel;
-    SpkUnknown *selector;
+    Unknown *selector;
     FILE *out;
     const char *codeObjectClass;
     const char *className, *suffix, *ns, *functionName, *obj, *code;
     
     selector = stmt->u.method.name->sym;
     memset(&sentinel, 0, sizeof(sentinel));
-    sentinel.kind = Spk_STMT_RETURN;
+    sentinel.kind = STMT_RETURN;
     
     /* push method code generator */
     cgen = &gcgen.u.o;
@@ -1686,7 +1678,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
     cgen->epilogueLabel = 0;
     
     body = stmt->top;
-    ASSERT(body->kind == Spk_STMT_COMPOUND,
+    ASSERT(body->kind == STMT_COMPOUND,
            "compound statement expected");
     
     out = cgen->generic->out;
@@ -1696,13 +1688,13 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
     
     if (outer->kind == CODE_GEN_CLASS && outer->level != 1) {
         codeObjectClass = "Method";
-        className = SpkHost_SymbolAsCString(outer->u.klass.classDef->expr->sym->sym);
+        className = Host_SymbolAsCString(outer->u.klass.classDef->expr->sym->sym);
         suffix = meta ? ".class" : "";
         switch (stmt->u.method.ns) {
-        case Spk_METHOD_NAMESPACE_RVALUE: ns = ".0."; break;
-        case Spk_METHOD_NAMESPACE_LVALUE: ns = ".1."; break;
+        case METHOD_NAMESPACE_RVALUE: ns = ".0."; break;
+        case METHOD_NAMESPACE_LVALUE: ns = ".1."; break;
         }
-    } else if (selector == Spk_main) {
+    } else if (selector == _main) {
         codeObjectClass = "Function";
         className = "";
         suffix = "";
@@ -1715,7 +1707,7 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
         suffix = "";
         ns = "";
     }
-    functionName = SpkHost_SymbolAsCString(selector);
+    functionName = Host_SymbolAsCString(selector);
     
     fprintf(out, "\t.text\n");
     fprintf(out,
@@ -1761,8 +1753,8 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
     
     for (s = body->top; s; s = s->next) {
         switch (s->kind) {
-        case Spk_STMT_DEF_CLASS:
-        case Spk_STMT_DEF_METHOD:
+        case STMT_DEF_CLASS:
+        case STMT_DEF_METHOD:
             ASSERT(0, "nested class/method not supported by x86 backend");
             break;
         default:
@@ -1770,15 +1762,15 @@ static SpkUnknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
         }
     }
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
 }
 
 
-static SpkUnknown *emitCFunction(Stmt *stmt, CodeGen *cgen) {
+static Unknown *emitCFunction(Stmt *stmt, CodeGen *cgen) {
     const char *sym, *suffix, *signature;
     FILE *out;
     
@@ -1787,7 +1779,7 @@ static SpkUnknown *emitCFunction(Stmt *stmt, CodeGen *cgen) {
     out = cgen->out;
     
     /* XXX: comdat */
-    sym = SpkHost_SymbolAsCString(stmt->u.method.name->sym);
+    sym = Host_SymbolAsCString(stmt->u.method.name->sym);
     suffix = ".thunk";
     
     fprintf(out,
@@ -1799,11 +1791,11 @@ static SpkUnknown *emitCFunction(Stmt *stmt, CodeGen *cgen) {
     
     /* Currently, the "signature" is simply the return type (used for
        boxing). */
-    switch (stmt->expr->specifiers & Spk_SPEC_TYPE) {
+    switch (stmt->expr->specifiers & SPEC_TYPE) {
     case 0:
-    case Spk_SPEC_TYPE_OBJ:  signature = "Object";  break;
-    case Spk_SPEC_TYPE_INT:  signature = "Integer"; break;
-    case Spk_SPEC_TYPE_CHAR: signature = "Char";    break;
+    case SPEC_TYPE_OBJ:  signature = "Object";  break;
+    case SPEC_TYPE_INT:  signature = "Integer"; break;
+    case SPEC_TYPE_CHAR: signature = "Char";    break;
     }
     fprintf(out,
             "\t.long\tCFunction\n" /* klass */
@@ -1818,8 +1810,8 @@ static SpkUnknown *emitCFunction(Stmt *stmt, CodeGen *cgen) {
             sym, suffix, sym, suffix);
     fprintf(out, "\n");
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -1829,16 +1821,16 @@ static SpkUnknown *emitCFunction(Stmt *stmt, CodeGen *cgen) {
 /****************************************************************************/
 /* classes */
 
-static SpkUnknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
+static Unknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
     Stmt *s;
     Expr *expr;
     
-    ASSERT(body->kind == Spk_STMT_COMPOUND,
+    ASSERT(body->kind == STMT_COMPOUND,
            "compound statement expected");
     
     for (s = body->top; s; s = s->next) {
         switch (s->kind) {
-        case Spk_STMT_DEF_METHOD:
+        case STMT_DEF_METHOD:
             if (IS_EXTERN(s->expr)) {
                 if (IS_CDECL(s->expr))
                     _(emitCFunction(s, cgen));
@@ -1846,7 +1838,7 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
                 _(emitCodeForMethod(s, meta, cgen));
             }
             break;
-        case Spk_STMT_DEF_VAR:
+        case STMT_DEF_VAR:
             if (cgen->level == 1) {
                 /* global variable definition */
                 FILE *out;
@@ -1858,11 +1850,11 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
                 fprintf(out, "\t.align\t4\n");
                 
                 for (expr = s->expr; expr; expr = expr->next) {
-                    ASSERT(expr->kind == Spk_EXPR_NAME,
+                    ASSERT(expr->kind == EXPR_NAME,
                            "initializers not allowed here");
                     if (IS_EXTERN(expr))
                         continue;
-                    sym = SpkHost_SymbolAsCString(expr->sym->sym);
+                    sym = Host_SymbolAsCString(expr->sym->sym);
                     fprintf(out,
                             "%s:\n"
                             "\t.globl\t%s\n"
@@ -1874,17 +1866,17 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
                 fprintf(out, "\n");
             } else {
                 for (expr = s->expr; expr; expr = expr->next) {
-                    ASSERT(expr->kind == Spk_EXPR_NAME,
+                    ASSERT(expr->kind == EXPR_NAME,
                            "initializers not allowed here");
                 }
             }
             break;
-        case Spk_STMT_DEF_CLASS:
+        case STMT_DEF_CLASS:
             _(emitCodeForClass(s, cgen));
             break;
-        case Spk_STMT_PRAGMA_SOURCE:
-            Spk_INCREF(s->u.source);
-            Spk_XDECREF(cgen->u.klass.source);
+        case STMT_PRAGMA_SOURCE:
+            INCREF(s->u.source);
+            XDECREF(cgen->u.klass.source);
             cgen->u.klass.source = s->u.source;
             break;
         default:
@@ -1892,34 +1884,34 @@ static SpkUnknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
         }
     }
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
 unwind:
     return 0;
 }
 
-static SpkUnknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *cgen) {
+static Unknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *cgen) {
     Stmt *body = meta ? classDef->bottom : classDef->top;
     FILE *out;
     const char *sym, *superSym, *suffix;
-    SpkMethodNamespace ns;
+    MethodNamespace ns;
     int i;
-    int methodTally[Spk_NUM_METHOD_NAMESPACES];
+    int methodTally[NUM_METHOD_NAMESPACES];
     
     out = cgen->out;
-    sym = SpkHost_SymbolAsCString(classDef->expr->sym->sym);
-    superSym = classDef->u.klass.superclassName->u.ref.def->u.def.pushOpcode == Spk_OPCODE_PUSH_NULL
+    sym = Host_SymbolAsCString(classDef->expr->sym->sym);
+    superSym = classDef->u.klass.superclassName->u.ref.def->u.def.pushOpcode == OPCODE_PUSH_NULL
                ? 0 /* Class 'Object' has no superclass. */
-               : SpkHost_SymbolAsCString(classDef->u.klass.superclassName->sym->sym);
+               : Host_SymbolAsCString(classDef->u.klass.superclassName->sym->sym);
     suffix = meta ? ".class" : "";
     
-    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+    for (ns = 0; ns < NUM_METHOD_NAMESPACES; ++ns) {
         Stmt *s;
             
         methodTally[ns] = 0;
         for (s = body ? body->top : 0; s; s = s->next) {
-            if (s->kind == Spk_STMT_DEF_METHOD &&
+            if (s->kind == STMT_DEF_METHOD &&
                 s->u.method.ns == ns)
             {
                 ++methodTally[ns];
@@ -1950,19 +1942,19 @@ static SpkUnknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *
         fprintf(out, "\t.long\t0\t/* superclass */\n"); /* superclass */
     
 #if 0 /* XXX: too complicated; how to hash at compile time? */
-    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+    for (ns = 0; ns < NUM_METHOD_NAMESPACES; ++ns) {
         fprintf(out, "\t.long\t0\t/* methodDict[%d] */\n", ns); /* methodDict[ns] */
     }
-    for (i = 0; i < Spk_NUM_OPER; ++i) {
+    for (i = 0; i < NUM_OPER; ++i) {
         fprintf(out, "\t.long\t0\t/* operTable[%d] */\n", i); /* operTable[i] */
     }
-    for (i = 0; i < Spk_NUM_CALL_OPER; ++i) {
+    for (i = 0; i < NUM_CALL_OPER; ++i) {
         fprintf(out, "\t.long\t0\t/* operCallTable[%d] */\n", i); /* operCallTable[i] */
     }
     fprintf(out, "\t.long\t0\t/* assignInd */\n"); /* assignInd */
     fprintf(out, "\t.long\t0\t/* assignIndex */\n"); /* assignIndex */
 #else
-    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+    for (ns = 0; ns < NUM_METHOD_NAMESPACES; ++ns) {
         if (methodTally[ns]) {
             fprintf(out,
                     "\t.long\t%s%s.methodTable.%d\t/* methodTable[%d] */\t\n",
@@ -1986,7 +1978,7 @@ static SpkUnknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *
     if (meta) {
         fprintf(out, "\t.long\t%s\t/* thisClass */\n", sym); /* thisClass */
     } else {
-        willEmitSym((SpkSymbol *)classDef->expr->sym->sym, cgen);
+        willEmitSym((Symbol *)classDef->expr->sym->sym, cgen);
         fprintf(out, "\t.long\t__sym_%s\t/* name */\n", sym); /* name */
     }
     
@@ -2005,7 +1997,7 @@ static SpkUnknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *
     
     /* A method table is simply an Array of symbol/method key/value pairs. */
     
-    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+    for (ns = 0; ns < NUM_METHOD_NAMESPACES; ++ns) {
         Stmt *s;
         
         if (!methodTally[ns])
@@ -2028,11 +2020,11 @@ static SpkUnknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *
 #endif
         
         for (s = body->top; s; s = s->next) {
-            if (s->kind == Spk_STMT_DEF_METHOD &&
+            if (s->kind == STMT_DEF_METHOD &&
                 s->u.method.ns == ns)
             {
-                const char *selector = SpkHost_SymbolAsCString(s->u.method.name->sym);
-                willEmitSym((SpkSymbol *)s->u.method.name->sym, cgen);
+                const char *selector = Host_SymbolAsCString(s->u.method.name->sym);
+                willEmitSym((Symbol *)s->u.method.name->sym, cgen);
                 fprintf(out,
                         "\t.long\t__sym_%s, %s%s.%d.%s\n",
                         selector,
@@ -2049,14 +2041,14 @@ static SpkUnknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *
     
     fprintf(out, "\n");
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
 unwind:
     return 0;
 }
 
-static SpkUnknown *emitCodeForClass(Stmt *stmt, CodeGen *outer) {
+static Unknown *emitCodeForClass(Stmt *stmt, CodeGen *outer) {
     CodeGen gcgen;
     ClassCodeGen *cgen;
     
@@ -2078,8 +2070,8 @@ static SpkUnknown *emitCodeForClass(Stmt *stmt, CodeGen *outer) {
     }
     _(emitCodeForClassBody(stmt->top, 0, cgen->generic));
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -2087,7 +2079,7 @@ static SpkUnknown *emitCodeForClass(Stmt *stmt, CodeGen *outer) {
 
 /****************************************************************************/
 
-static SpkUnknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
+static Unknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
     CodeGen gcgen;
     ClassCodeGen *cgen;
     
@@ -2104,8 +2096,8 @@ static SpkUnknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
     
     _(emitCodeForClassBody(stmt->top, 0, cgen->generic));
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;
@@ -2113,14 +2105,14 @@ static SpkUnknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
 
 /****************************************************************************/
 
-SpkUnknown *SpkX86CodeGen_GenerateCode(Stmt *tree, FILE *out) {
+Unknown *X86CodeGen_GenerateCode(Stmt *tree, FILE *out) {
     Stmt *rootClassList;
     Stmt *s;
     CodeGen gcgen;
     ModuleCodeGen *cgen;
     
-    ASSERT(tree->kind == Spk_STMT_DEF_MODULE, "module node expected");
-    ASSERT(tree->top->kind == Spk_STMT_COMPOUND, "compound statement expected");
+    ASSERT(tree->kind == STMT_DEF_MODULE, "module node expected");
+    ASSERT(tree->top->kind == STMT_COMPOUND, "compound statement expected");
     
     rootClassList = tree->u.module.rootClassList.first;
     
@@ -2136,8 +2128,8 @@ SpkUnknown *SpkX86CodeGen_GenerateCode(Stmt *tree, FILE *out) {
     
     emitROData(cgen);
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
     
  unwind:
     return 0;

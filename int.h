@@ -1,21 +1,21 @@
 
-#ifndef __spk_int_h__
-#define __spk_int_h__
+#ifndef __int_h__
+#define __int_h__
 
 
 #include "obj.h"
 
 
-typedef struct SpkInteger SpkInteger;
+typedef struct Integer Integer;
 
 
-extern struct SpkClassTmpl Spk_ClassIntegerTmpl;
+extern struct ClassTmpl ClassIntegerTmpl;
 
 
-SpkInteger *SpkInteger_FromCLong(long);
-SpkInteger *SpkInteger_FromCPtrdiff(ptrdiff_t);
-long SpkInteger_AsCLong(SpkInteger *);
-ptrdiff_t SpkInteger_AsCPtrdiff(SpkInteger *);
+Integer *Integer_FromCLong(long);
+Integer *Integer_FromCPtrdiff(ptrdiff_t);
+long Integer_AsCLong(Integer *);
+ptrdiff_t Integer_AsCPtrdiff(Integer *);
 
 
-#endif /* __spk_int_h__ */
+#endif /* __int_h__ */

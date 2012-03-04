@@ -1,26 +1,26 @@
 
-#ifndef __spk_metaclass_h__
-#define __spk_metaclass_h__
+#ifndef __metaclass_h__
+#define __metaclass_h__
 
 
 #include "behavior.h"
 
 
-struct SpkModule;
+struct Module;
 
 
-typedef struct SpkMetaclass {
-    SpkBehavior base;
-    struct SpkClass *thisClass; /* sole instance */
+typedef struct Metaclass {
+    Behavior base;
+    struct Class *thisClass; /* sole instance */
     /* XXX: Should 'thisClass' be a weak reference? */
-} SpkMetaclass;
+} Metaclass;
 
 
-extern struct SpkClassTmpl Spk_ClassMetaclassTmpl;
+extern struct ClassTmpl ClassMetaclassTmpl;
 
 
-SpkMetaclass *SpkMetaclass_New(SpkMetaclass *superMeta, size_t instVarCount);
-SpkMetaclass *SpkMetaclass_FromTemplate(struct SpkBehaviorTmpl *tmpl, SpkMetaclass *superMeta, struct SpkModule *module);
+Metaclass *Metaclass_New(Metaclass *superMeta, size_t instVarCount);
+Metaclass *Metaclass_FromTemplate(struct BehaviorTmpl *tmpl, Metaclass *superMeta, struct Module *module);
 
 
-#endif /* __spk_metaclass_h__ */
+#endif /* __metaclass_h__ */

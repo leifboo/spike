@@ -12,13 +12,13 @@
 #include <stdlib.h>
 
 
-struct SpkChar {
-    SpkObject base;
+struct Char {
+    Object base;
     char value;
 };
 
 
-#define BOOL(cond) ((cond) ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse))
+#define BOOL(cond) ((cond) ? GLOBAL(xtrue) : GLOBAL(xfalse))
 
 
 /* XXX: There are only 256 of these objects... */
@@ -27,81 +27,81 @@ struct SpkChar {
 /*------------------------------------------------------------------------*/
 /* method helpers */
 
-static SpkUnknown *Char_unaryOper(SpkChar *self, SpkOper oper) {
-    SpkChar *result;
+static Unknown *Char_unaryOper(Char *self, Oper oper) {
+    Char *result;
     
-    result = (SpkChar *)SpkObject_New(Spk_CLASS(Char));
+    result = (Char *)Object_New(CLASS(Char));
     switch (oper) {
-    case Spk_OPER_SUCC: result->value = self->value + 1; break;
-    case Spk_OPER_PRED: result->value = self->value - 1; break;
-    case Spk_OPER_POS:  result->value = +self->value;    break;
-    case Spk_OPER_NEG:  result->value = -self->value;    break;
-    case Spk_OPER_BNEG: result->value = ~self->value;    break;
+    case OPER_SUCC: result->value = self->value + 1; break;
+    case OPER_PRED: result->value = self->value - 1; break;
+    case OPER_POS:  result->value = +self->value;    break;
+    case OPER_NEG:  result->value = -self->value;    break;
+    case OPER_BNEG: result->value = ~self->value;    break;
     default:
-        Spk_Halt(Spk_HALT_VALUE_ERROR, "bad operator");
-        Spk_DECREF(result);
+        Halt(HALT_VALUE_ERROR, "bad operator");
+        DECREF(result);
         return 0;
     }
-    return (SpkUnknown *)result;
+    return (Unknown *)result;
 }
 
-static SpkUnknown *Char_binaryOper(SpkChar *self, SpkUnknown *arg0, SpkOper oper) {
-    SpkChar *arg, *result;
+static Unknown *Char_binaryOper(Char *self, Unknown *arg0, Oper oper) {
+    Char *arg, *result;
     
-    arg = Spk_CAST(Char, arg0);
+    arg = CAST(Char, arg0);
     if (!arg) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a Char object is required");
+        Halt(HALT_TYPE_ERROR, "a Char object is required");
         return 0;
     }
-    result = (SpkChar *)SpkObject_New(Spk_CLASS(Char));
+    result = (Char *)Object_New(CLASS(Char));
     switch (oper) {
-    case Spk_OPER_MUL:    result->value = self->value * arg->value;  break;
-    case Spk_OPER_DIV:    result->value = self->value / arg->value;  break;
-    case Spk_OPER_MOD:    result->value = self->value % arg->value;  break;
-    case Spk_OPER_ADD:    result->value = self->value + arg->value;  break;
-    case Spk_OPER_SUB:    result->value = self->value - arg->value;  break;
-    case Spk_OPER_LSHIFT: result->value = self->value << arg->value; break;
-    case Spk_OPER_RSHIFT: result->value = self->value >> arg->value; break;
-    case Spk_OPER_BAND:   result->value = self->value & arg->value;  break;
-    case Spk_OPER_BXOR:   result->value = self->value ^ arg->value;  break;
-    case Spk_OPER_BOR:    result->value = self->value | arg->value;  break;
+    case OPER_MUL:    result->value = self->value * arg->value;  break;
+    case OPER_DIV:    result->value = self->value / arg->value;  break;
+    case OPER_MOD:    result->value = self->value % arg->value;  break;
+    case OPER_ADD:    result->value = self->value + arg->value;  break;
+    case OPER_SUB:    result->value = self->value - arg->value;  break;
+    case OPER_LSHIFT: result->value = self->value << arg->value; break;
+    case OPER_RSHIFT: result->value = self->value >> arg->value; break;
+    case OPER_BAND:   result->value = self->value & arg->value;  break;
+    case OPER_BXOR:   result->value = self->value ^ arg->value;  break;
+    case OPER_BOR:    result->value = self->value | arg->value;  break;
     default:
-        Spk_Halt(Spk_HALT_VALUE_ERROR, "bad operator");
-        Spk_DECREF(result);
+        Halt(HALT_VALUE_ERROR, "bad operator");
+        DECREF(result);
         return 0;
     }
-    return (SpkUnknown *)result;
+    return (Unknown *)result;
 }
 
-static SpkUnknown *Char_binaryLogicalOper(SpkChar *self, SpkUnknown *arg0, SpkOper oper) {
-    SpkChar *arg;
-    SpkUnknown *result;
+static Unknown *Char_binaryLogicalOper(Char *self, Unknown *arg0, Oper oper) {
+    Char *arg;
+    Unknown *result;
     
-    arg = Spk_CAST(Char, arg0);
+    arg = CAST(Char, arg0);
     if (!arg) switch (oper) {
-    case Spk_OPER_EQ:
-        Spk_INCREF(Spk_GLOBAL(xfalse));
-        return Spk_GLOBAL(xfalse);
-    case Spk_OPER_NE:
-        Spk_INCREF(Spk_GLOBAL(xtrue));
-        return Spk_GLOBAL(xtrue);
+    case OPER_EQ:
+        INCREF(GLOBAL(xfalse));
+        return GLOBAL(xfalse);
+    case OPER_NE:
+        INCREF(GLOBAL(xtrue));
+        return GLOBAL(xtrue);
     default:
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a Char object is required");
+        Halt(HALT_TYPE_ERROR, "a Char object is required");
         return 0;
     }
     
     switch (oper) {
-    case Spk_OPER_LT: result = BOOL(self->value < arg->value);  break;
-    case Spk_OPER_GT: result = BOOL(self->value > arg->value);  break;
-    case Spk_OPER_LE: result = BOOL(self->value <= arg->value); break;
-    case Spk_OPER_GE: result = BOOL(self->value >= arg->value); break;
-    case Spk_OPER_EQ: result = BOOL(self->value == arg->value); break;
-    case Spk_OPER_NE: result = BOOL(self->value != arg->value); break;
+    case OPER_LT: result = BOOL(self->value < arg->value);  break;
+    case OPER_GT: result = BOOL(self->value > arg->value);  break;
+    case OPER_LE: result = BOOL(self->value <= arg->value); break;
+    case OPER_GE: result = BOOL(self->value >= arg->value); break;
+    case OPER_EQ: result = BOOL(self->value == arg->value); break;
+    case OPER_NE: result = BOOL(self->value != arg->value); break;
     default:
-        Spk_Halt(Spk_HALT_VALUE_ERROR, "bad operator");
+        Halt(HALT_VALUE_ERROR, "bad operator");
         return 0;
     }
-    Spk_INCREF(result);
+    INCREF(result);
     return result;
 }
 
@@ -109,161 +109,161 @@ static SpkUnknown *Char_binaryLogicalOper(SpkChar *self, SpkUnknown *arg0, SpkOp
 /*------------------------------------------------------------------------*/
 /* methods -- operators */
 
-/* Spk_OPER_SUCC */
-static SpkUnknown *Char_succ(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_unaryOper((SpkChar *)self, Spk_OPER_SUCC);
+/* OPER_SUCC */
+static Unknown *Char_succ(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_unaryOper((Char *)self, OPER_SUCC);
 }
 
-/* Spk_OPER_PRED */
-static SpkUnknown *Char_pred(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_unaryOper((SpkChar *)self, Spk_OPER_PRED);
+/* OPER_PRED */
+static Unknown *Char_pred(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_unaryOper((Char *)self, OPER_PRED);
 }
 
-/* Spk_OPER_POS */
-static SpkUnknown *Char_pos(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_unaryOper((SpkChar *)self, Spk_OPER_POS);
+/* OPER_POS */
+static Unknown *Char_pos(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_unaryOper((Char *)self, OPER_POS);
 }
 
-/* Spk_OPER_NEG */
-static SpkUnknown *Char_neg(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_unaryOper((SpkChar *)self, Spk_OPER_NEG);
+/* OPER_NEG */
+static Unknown *Char_neg(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_unaryOper((Char *)self, OPER_NEG);
 }
 
-/* Spk_OPER_BNEG */
-static SpkUnknown *Char_bneg(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_unaryOper((SpkChar *)self, Spk_OPER_BNEG);
+/* OPER_BNEG */
+static Unknown *Char_bneg(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_unaryOper((Char *)self, OPER_BNEG);
 }
 
-/* Spk_OPER_LNEG */
-static SpkUnknown *Char_lneg(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkUnknown *result;
-    result = BOOL(!((SpkChar *)self)->value);
-    Spk_INCREF(result);
+/* OPER_LNEG */
+static Unknown *Char_lneg(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    Unknown *result;
+    result = BOOL(!((Char *)self)->value);
+    INCREF(result);
     return result;
 }
 
-/* Spk_OPER_MUL */
-static SpkUnknown *Char_mul(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryOper((SpkChar *)self, arg0, Spk_OPER_MUL);
+/* OPER_MUL */
+static Unknown *Char_mul(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryOper((Char *)self, arg0, OPER_MUL);
 }
 
-/* Spk_OPER_DIV */
-static SpkUnknown *Char_div(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryOper((SpkChar *)self, arg0, Spk_OPER_DIV);
+/* OPER_DIV */
+static Unknown *Char_div(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryOper((Char *)self, arg0, OPER_DIV);
 }
 
-/* Spk_OPER_MOD */
-static SpkUnknown *Char_mod(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryOper((SpkChar *)self, arg0, Spk_OPER_MOD);
+/* OPER_MOD */
+static Unknown *Char_mod(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryOper((Char *)self, arg0, OPER_MOD);
 }
 
-/* Spk_OPER_ADD */
-static SpkUnknown *Char_add(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryOper((SpkChar *)self, arg0, Spk_OPER_ADD);
+/* OPER_ADD */
+static Unknown *Char_add(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryOper((Char *)self, arg0, OPER_ADD);
 }
 
-/* Spk_OPER_SUB */
-static SpkUnknown *Char_sub(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryOper((SpkChar *)self, arg0, Spk_OPER_SUB);
+/* OPER_SUB */
+static Unknown *Char_sub(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryOper((Char *)self, arg0, OPER_SUB);
 }
 
-/* Spk_OPER_LSHIFT */
-static SpkUnknown *Char_lshift(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryOper((SpkChar *)self, arg0, Spk_OPER_LSHIFT);
+/* OPER_LSHIFT */
+static Unknown *Char_lshift(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryOper((Char *)self, arg0, OPER_LSHIFT);
 }
 
-/* Spk_OPER_RSHIFT */
-static SpkUnknown *Char_rshift(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryOper((SpkChar *)self, arg0, Spk_OPER_RSHIFT);
+/* OPER_RSHIFT */
+static Unknown *Char_rshift(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryOper((Char *)self, arg0, OPER_RSHIFT);
 }
 
-/* Spk_OPER_LT */
-static SpkUnknown *Char_lt(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryLogicalOper((SpkChar *)self, arg0, Spk_OPER_LT);
+/* OPER_LT */
+static Unknown *Char_lt(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryLogicalOper((Char *)self, arg0, OPER_LT);
 }
 
-/* Spk_OPER_GT */
-static SpkUnknown *Char_gt(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryLogicalOper((SpkChar *)self, arg0, Spk_OPER_GT);
+/* OPER_GT */
+static Unknown *Char_gt(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryLogicalOper((Char *)self, arg0, OPER_GT);
 }
 
-/* Spk_OPER_LE */
-static SpkUnknown *Char_le(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryLogicalOper((SpkChar *)self, arg0, Spk_OPER_LE);
+/* OPER_LE */
+static Unknown *Char_le(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryLogicalOper((Char *)self, arg0, OPER_LE);
 }
 
-/* Spk_OPER_GE */
-static SpkUnknown *Char_ge(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryLogicalOper((SpkChar *)self, arg0, Spk_OPER_GE);
+/* OPER_GE */
+static Unknown *Char_ge(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryLogicalOper((Char *)self, arg0, OPER_GE);
 }
 
-/* Spk_OPER_EQ */
-static SpkUnknown *Char_eq(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryLogicalOper((SpkChar *)self, arg0, Spk_OPER_EQ);
+/* OPER_EQ */
+static Unknown *Char_eq(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryLogicalOper((Char *)self, arg0, OPER_EQ);
 }
 
-/* Spk_OPER_NE */
-static SpkUnknown *Char_ne(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryLogicalOper((SpkChar *)self, arg0, Spk_OPER_NE);
+/* OPER_NE */
+static Unknown *Char_ne(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryLogicalOper((Char *)self, arg0, OPER_NE);
 }
 
-/* Spk_OPER_BAND */
-static SpkUnknown *Char_band(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryOper((SpkChar *)self, arg0, Spk_OPER_BAND);
+/* OPER_BAND */
+static Unknown *Char_band(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryOper((Char *)self, arg0, OPER_BAND);
 }
 
-/* Spk_OPER_BXOR */
-static SpkUnknown *Char_bxor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryOper((SpkChar *)self, arg0, Spk_OPER_BXOR);
+/* OPER_BXOR */
+static Unknown *Char_bxor(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryOper((Char *)self, arg0, OPER_BXOR);
 }
 
-/* Spk_OPER_BOR */
-static SpkUnknown *Char_bor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Char_binaryOper((SpkChar *)self, arg0, Spk_OPER_BOR);
+/* OPER_BOR */
+static Unknown *Char_bor(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Char_binaryOper((Char *)self, arg0, OPER_BOR);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* class tmpl */
 
-typedef struct SpkCharSubclass {
-    SpkChar base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkCharSubclass;
+typedef struct CharSubclass {
+    Char base;
+    Unknown *variables[1]; /* stretchy */
+} CharSubclass;
 
-static SpkMethodTmpl methods[] = {
+static MethodTmpl methods[] = {
     /* operators */
-    { "__succ__",   SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Char_succ   },
-    { "__pred__",   SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Char_pred   },
-    { "__pos__",    SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Char_pos    },
-    { "__neg__",    SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Char_neg    },
-    { "__bneg__",   SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Char_bneg   },
-    { "__lneg__",   SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Char_lneg   },
-    { "__mul__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_mul    },
-    { "__div__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_div    },
-    { "__mod__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_mod    },
-    { "__add__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_add    },
-    { "__sub__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_sub    },
-    { "__lshift__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_lshift },
-    { "__rshift__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_rshift },
-    { "__lt__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_lt     },
-    { "__gt__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_gt     },
-    { "__le__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_le     },
-    { "__ge__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_ge     },
-    { "__eq__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_eq     },
-    { "__ne__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_ne     },
-    { "__band__",   SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_band   },
-    { "__bxor__",   SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_bxor   },
-    { "__bor__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Char_bor    },
+    { "__succ__",   NativeCode_UNARY_OPER  | NativeCode_LEAF, &Char_succ   },
+    { "__pred__",   NativeCode_UNARY_OPER  | NativeCode_LEAF, &Char_pred   },
+    { "__pos__",    NativeCode_UNARY_OPER  | NativeCode_LEAF, &Char_pos    },
+    { "__neg__",    NativeCode_UNARY_OPER  | NativeCode_LEAF, &Char_neg    },
+    { "__bneg__",   NativeCode_UNARY_OPER  | NativeCode_LEAF, &Char_bneg   },
+    { "__lneg__",   NativeCode_UNARY_OPER  | NativeCode_LEAF, &Char_lneg   },
+    { "__mul__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_mul    },
+    { "__div__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_div    },
+    { "__mod__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_mod    },
+    { "__add__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_add    },
+    { "__sub__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_sub    },
+    { "__lshift__", NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_lshift },
+    { "__rshift__", NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_rshift },
+    { "__lt__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_lt     },
+    { "__gt__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_gt     },
+    { "__le__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_le     },
+    { "__ge__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_ge     },
+    { "__eq__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_eq     },
+    { "__ne__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_ne     },
+    { "__band__",   NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_band   },
+    { "__bxor__",   NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_bxor   },
+    { "__bor__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Char_bor    },
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassCharTmpl = {
-    Spk_HEART_CLASS_TMPL(Char, Object), {
+ClassTmpl ClassCharTmpl = {
+    HEART_CLASS_TMPL(Char, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkCharSubclass, variables)
+        offsetof(CharSubclass, variables)
     }, /*meta*/ {
         0
     }
@@ -273,14 +273,14 @@ SpkClassTmpl Spk_ClassCharTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SpkChar *SpkChar_FromCChar(char c) {
-    SpkChar *result;
+Char *Char_FromCChar(char c) {
+    Char *result;
     
-    result = (SpkChar *)SpkObject_New(Spk_CLASS(Char));
+    result = (Char *)Object_New(CLASS(Char));
     result->value = c;
     return result;
 }
 
-char SpkChar_AsCChar(SpkChar *aChar) {
+char Char_AsCChar(Char *aChar) {
     return aChar->value;
 }

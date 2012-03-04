@@ -1,12 +1,12 @@
 
-#ifndef __spk_bool_h__
-#define __spk_bool_h__
+#ifndef __bool_h__
+#define __bool_h__
 
 
 #include "obj.h"
 
 
-extern struct SpkClassTmpl Spk_ClassBooleanTmpl, Spk_ClassFalseTmpl, Spk_ClassTrueTmpl;
+extern struct ClassTmpl ClassBooleanTmpl, ClassFalseTmpl, ClassTrueTmpl;
 
 
-#endif /* __spk_bool_h__ */
+#endif /* __bool_h__ */

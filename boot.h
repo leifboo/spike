@@ -1,38 +1,38 @@
 
-#ifndef __spk_boot_h__
-#define __spk_boot_h__
+#ifndef __boot_h__
+#define __boot_h__
 
 
 #include <stddef.h>
 
 
-struct SpkBehavior;
-struct SpkClassTmpl;
-struct SpkObject;
+struct Behavior;
+struct ClassTmpl;
+struct Object;
 
 
-typedef struct SpkClassTmpl *SpkClassBootRec;
+typedef struct ClassTmpl *ClassBootRec;
 
-typedef struct SpkObjectBootRec {
+typedef struct ObjectBootRec {
     size_t classVarOffset;
     size_t varOffset;
-} SpkObjectBootRec;
+} ObjectBootRec;
 
-typedef struct SpkVarBootRec {
+typedef struct VarBootRec {
     size_t classVarOffset;
     size_t varOffset;
     const char *name;
-} SpkVarBootRec;
+} VarBootRec;
 
 
-int Spk_Boot(void);
-void Spk_Shutdown(void);
+int Boot(void);
+void Shutdown(void);
 
 
-extern SpkClassBootRec Spk_essentialClassBootRec[];
-extern SpkClassBootRec Spk_classBootRec[];
-extern SpkObjectBootRec Spk_objectBootRec[];
-extern SpkVarBootRec Spk_globalVarBootRec[];
+extern ClassBootRec essentialClassBootRec[];
+extern ClassBootRec classBootRec[];
+extern ObjectBootRec objectBootRec[];
+extern VarBootRec globalVarBootRec[];
 
 
-#endif /* __spk_boot_h__ */
+#endif /* __boot_h__ */

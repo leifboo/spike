@@ -1,18 +1,18 @@
 
-#ifndef __spk_compiler_h__
-#define __spk_compiler_h__
+#ifndef __compiler_h__
+#define __compiler_h__
 
 
 #include <stdio.h>
 
 
-struct SpkModuleTmpl;
+struct ModuleTmpl;
 
 
-struct SpkModuleTmpl *SpkCompiler_CompileFileStream(FILE *);
-struct SpkModuleTmpl *SpkCompiler_CompileFile(const char *);
-struct SpkModuleTmpl *SpkCompiler_CompileString(const char *);
-struct SpkModuleTmpl *SpkCompiler_CompileModule(const char *);
+struct ModuleTmpl *Compiler_CompileFileStream(FILE *);
+struct ModuleTmpl *Compiler_CompileFile(const char *);
+struct ModuleTmpl *Compiler_CompileString(const char *);
+struct ModuleTmpl *Compiler_CompileModule(const char *);
 
 
-#endif /* __spk_compiler_h__ */
+#endif /* __compiler_h__ */

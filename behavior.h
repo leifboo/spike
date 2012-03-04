@@ -1,6 +1,6 @@
 
-#ifndef __spk_behavior_h__
-#define __spk_behavior_h__
+#ifndef __behavior_h__
+#define __behavior_h__
 
 
 #include "interp.h"
@@ -8,114 +8,114 @@
 #include <stddef.h>
 
 
-typedef struct SpkBehavior SpkBehavior;
+typedef struct Behavior Behavior;
 
 
-typedef SpkMethod *SpkOperTable[Spk_NUM_OPER];
-typedef SpkMethod *SpkOperCallTable[Spk_NUM_CALL_OPER];
+typedef Method *OperTable[NUM_OPER];
+typedef Method *OperCallTable[NUM_CALL_OPER];
 
-typedef unsigned int SpkMethodNamespace;
+typedef unsigned int MethodNamespace;
 
-enum /*SpkMethodNamespace*/ {
-    Spk_METHOD_NAMESPACE_RVALUE,
-    Spk_METHOD_NAMESPACE_LVALUE,
+enum /*MethodNamespace*/ {
+    METHOD_NAMESPACE_RVALUE,
+    METHOD_NAMESPACE_LVALUE,
     
-    Spk_NUM_METHOD_NAMESPACES
+    NUM_METHOD_NAMESPACES
 };
 
 
-typedef enum SpkInstVarType {
-    Spk_T_SHORT,
-    Spk_T_INT,
-    Spk_T_LONG,
-    Spk_T_FLOAT,
-    Spk_T_DOUBLE,
-    Spk_T_STRING,
-    Spk_T_OBJECT,
-    Spk_T_CHAR,
-    Spk_T_BYTE,
-    Spk_T_UBYTE,
-    Spk_T_USHORT,
-    Spk_T_UINT,
-    Spk_T_ULONG,
-    Spk_T_STRING_INPLACE,
-    Spk_T_LONGLONG,
-    Spk_T_ULONGLONG,
-    Spk_T_SIZE
-} SpkInstVarType;
+typedef enum InstVarType {
+    T_SHORT,
+    T_INT,
+    T_LONG,
+    T_FLOAT,
+    T_DOUBLE,
+    T_STRING,
+    T_OBJECT,
+    T_CHAR,
+    T_BYTE,
+    T_UBYTE,
+    T_USHORT,
+    T_UINT,
+    T_ULONG,
+    T_STRING_INPLACE,
+    T_LONGLONG,
+    T_ULONGLONG,
+    T_SIZE
+} InstVarType;
 
 enum /*flags*/ {
-    SpkAccessor_READ  = 0x1, /* create 'get' accessor */
-    SpkAccessor_WRITE = 0x2  /* create 'set' accessor */
+    Accessor_READ  = 0x1, /* create 'get' accessor */
+    Accessor_WRITE = 0x2  /* create 'set' accessor */
 };
 
-typedef struct SpkAccessorTmpl {
+typedef struct AccessorTmpl {
     const char *name;
-    SpkInstVarType type;
+    InstVarType type;
     size_t offset;
     unsigned int flags;
-} SpkAccessorTmpl;
+} AccessorTmpl;
 
-typedef struct SpkMethodTmplList {
-    struct SpkMethodTmpl *first;
-    struct SpkMethodTmpl *last;
-} SpkMethodTmplList;
+typedef struct MethodTmplList {
+    struct MethodTmpl *first;
+    struct MethodTmpl *last;
+} MethodTmplList;
 
-typedef struct SpkClassTmplList {
-    struct SpkClassTmpl *first;
-    struct SpkClassTmpl *last;
-} SpkClassTmplList;
+typedef struct ClassTmplList {
+    struct ClassTmpl *first;
+    struct ClassTmpl *last;
+} ClassTmplList;
 
-typedef struct SpkMethodTmpl {
+typedef struct MethodTmpl {
     /* C code */
     const char *name;
-    SpkNativeCodeFlags nativeFlags;
-    SpkNativeCode nativeCode;
+    NativeCodeFlags nativeFlags;
+    NativeCode nativeCode;
     /* bytecode */
     size_t bytecodeSize;
-    SpkOpcode *bytecode;
-    struct SpkMethodTmpl *nextInScope;
-    SpkMethodNamespace ns; /* XXX: suspect */
-    SpkUnknown *selector;
+    Opcode *bytecode;
+    struct MethodTmpl *nextInScope;
+    MethodNamespace ns; /* XXX: suspect */
+    Unknown *selector;
     struct {
-        SpkUnknown *source;
+        Unknown *source;
         size_t lineCodeTally;
-        SpkOpcode *lineCodes;
+        Opcode *lineCodes;
     } debug;
-    SpkClassTmplList nestedClassList;
-    SpkMethodTmplList nestedMethodList;
-} SpkMethodTmpl;
+    ClassTmplList nestedClassList;
+    MethodTmplList nestedMethodList;
+} MethodTmpl;
 
-typedef struct SpkBehaviorTmpl {
+typedef struct BehaviorTmpl {
     /* C code */
-    SpkAccessorTmpl *accessors;
-    SpkMethodTmpl *methods;
-    SpkMethodTmpl *lvalueMethods;
+    AccessorTmpl *accessors;
+    MethodTmpl *methods;
+    MethodTmpl *lvalueMethods;
     size_t instVarOffset;
     size_t itemSize;
-    void (*zero)(SpkObject *);
-    void (*dealloc)(SpkObject *, SpkUnknown **);
+    void (*zero)(Object *);
+    void (*dealloc)(Object *, Unknown **);
     /* bytecode */
     size_t instVarCount;
-    SpkMethodTmplList methodList;
-    SpkClassTmplList nestedClassList;
-} SpkBehaviorTmpl;
+    MethodTmplList methodList;
+    ClassTmplList nestedClassList;
+} BehaviorTmpl;
 
 
-struct SpkBehavior {
-    SpkObject base;
-    SpkBehavior *superclass;
-    struct SpkModule *module;
+struct Behavior {
+    Object base;
+    Behavior *superclass;
+    struct Module *module;
     
-    SpkUnknown *methodDict[Spk_NUM_METHOD_NAMESPACES];
-    SpkOperTable operTable;
-    SpkOperCallTable operCallTable;
-    SpkMethod *assignInd;   /*  "*p = v"    */
-    SpkMethod *assignIndex; /*  "a[i] = v"  */
+    Unknown *methodDict[NUM_METHOD_NAMESPACES];
+    OperTable operTable;
+    OperCallTable operCallTable;
+    Method *assignInd;   /*  "*p = v"    */
+    Method *assignIndex; /*  "a[i] = v"  */
     
     /* low-level hooks */
-    void (*zero)(SpkObject *);
-    void (*dealloc)(SpkObject *, SpkUnknown **);
+    void (*zero)(Object *);
+    void (*dealloc)(Object *, Unknown **);
     
     /* memory layout of instances */
     size_t instVarOffset;
@@ -126,16 +126,16 @@ struct SpkBehavior {
 };
 
 
-extern struct SpkClassTmpl Spk_ClassBehaviorTmpl;
+extern struct ClassTmpl ClassBehaviorTmpl;
 
 
-void SpkBehavior_Init(SpkBehavior *self, SpkBehavior *superclass, struct SpkModule *module, size_t instVarCount);
-void SpkBehavior_InitFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl, SpkBehavior *superclass, struct SpkModule *module);
-void SpkBehavior_AddMethodsFromTemplate(SpkBehavior *self, SpkBehaviorTmpl *tmpl);
-void SpkBehavior_InsertMethod(SpkBehavior *, SpkMethodNamespace, SpkUnknown *, SpkMethod *);
-SpkMethod *SpkBehavior_LookupMethod(SpkBehavior *, SpkMethodNamespace, SpkUnknown *);
-SpkUnknown *SpkBehavior_FindSelectorOfMethod(SpkBehavior *, SpkMethod *);
-const char *SpkBehavior_NameAsCString(SpkBehavior *);
+void Behavior_Init(Behavior *self, Behavior *superclass, struct Module *module, size_t instVarCount);
+void Behavior_InitFromTemplate(Behavior *self, BehaviorTmpl *tmpl, Behavior *superclass, struct Module *module);
+void Behavior_AddMethodsFromTemplate(Behavior *self, BehaviorTmpl *tmpl);
+void Behavior_InsertMethod(Behavior *, MethodNamespace, Unknown *, Method *);
+Method *Behavior_LookupMethod(Behavior *, MethodNamespace, Unknown *);
+Unknown *Behavior_FindSelectorOfMethod(Behavior *, Method *);
+const char *Behavior_NameAsCString(Behavior *);
 
 
-#endif /* __spk_behavior_h__ */
+#endif /* __behavior_h__ */

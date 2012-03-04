@@ -1,20 +1,20 @@
 
-#ifndef __spk_cgen_h__
-#define __spk_cgen_h__
+#ifndef __cgen_h__
+#define __cgen_h__
 
 
 #include <stddef.h>
 
 
-struct SpkMethod;
-struct SpkModuleTmpl;
-struct SpkStmt;
+struct Method;
+struct ModuleTmpl;
+struct Stmt;
 
 
-struct SpkModuleTmpl *SpkCodeGen_GenerateCode(struct SpkStmt *tree);
-struct SpkMethod *SpkCodeGen_NewNativeAccessor(unsigned int kind,
+struct ModuleTmpl *CodeGen_GenerateCode(struct Stmt *tree);
+struct Method *CodeGen_NewNativeAccessor(unsigned int kind,
                                                unsigned int type,
                                                size_t offset);
 
 
-#endif /* __spk_cgen_h__ */
+#endif /* __cgen_h__ */

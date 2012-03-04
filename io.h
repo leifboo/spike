@@ -1,21 +1,21 @@
 
-#ifndef __spk_io_h__
-#define __spk_io_h__
+#ifndef __io_h__
+#define __io_h__
 
 
 #include "obj.h"
 #include <stdio.h>
 
 
-typedef struct SpkFileStream SpkFileStream;
+typedef struct FileStream FileStream;
 
 
-extern struct SpkClassTmpl Spk_ClassFileStreamTmpl;
+extern struct ClassTmpl ClassFileStreamTmpl;
 
 
-int SpkIO_Boot(void);
+int IO_Boot(void);
 
-FILE *SpkFileStream_AsCFileStream(SpkFileStream *);
+FILE *FileStream_AsCFileStream(FileStream *);
 
 
-#endif /* __spk_io_h__ */
+#endif /* __io_h__ */

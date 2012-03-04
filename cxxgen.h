@@ -1,6 +1,6 @@
 
-#ifndef __spk_cxxgen_h__
-#define __spk_cxxgen_h__
+#ifndef __cxxgen_h__
+#define __cxxgen_h__
 
 
 #include "obj.h"
@@ -9,10 +9,10 @@
 #include <stdio.h>
 
 
-struct SpkStmt;
+struct Stmt;
 
 
-SpkUnknown *SpkCxxCodeGen_GenerateCode(struct SpkStmt *tree, FILE *out);
+Unknown *CxxCodeGen_GenerateCode(struct Stmt *tree, FILE *out);
 
 
-#endif /* __spk_cxxgen_h__ */
+#endif /* __cxxgen_h__ */

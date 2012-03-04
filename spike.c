@@ -23,32 +23,32 @@
 #include <string.h>
 
 
-#define CLASS_TMPL(c) Spk_Class ## c ## Tmpl
-#define CLASS(c, s) &CLASS_TMPL(c)
+#define CLASS_TMPL_DEF(c) Class ## c ## Tmpl
+#define CBR(c, s) &CLASS_TMPL_DEF(c)
 
-SpkClassBootRec Spk_classBootRec[] = {
-    /***CLASS(VariableObject, Object),*/
-    /******/CLASS(String,  VariableObject),
-    /**/CLASS(Boolean,    Object),
-    /******/CLASS(False,  Object),
-    /******/CLASS(True,   Object),
-    /**/CLASS(Integer,    Object),
-    /**/CLASS(Float,      Object),
-    /**/CLASS(FileStream, Object),
+ClassBootRec classBootRec[] = {
+    /***CBR(VariableObject, Object),*/
+    /******/CBR(String,  VariableObject),
+    /**/CBR(Boolean,    Object),
+    /******/CBR(False,  Object),
+    /******/CBR(True,   Object),
+    /**/CBR(Integer,    Object),
+    /**/CBR(Float,      Object),
+    /**/CBR(FileStream, Object),
     0
 };
 
 
-SpkModule *Spk_heart;
+Module *heart;
 
 
-static int Spk_Main(int argc, char **argv) {
+static int Main(int argc, char **argv) {
     int i, showHelp, error, disassemble;
     char *arg, *sourceFilename;
-    SpkModuleTmpl *moduleTmpl; SpkModuleClass *moduleClass; SpkObject *module;
-    SpkUnknown *result; SpkInteger *resultInt;
-    SpkUnknown *tmp;
-    SpkArray *argvObj, *args;
+    ModuleTmpl *moduleTmpl; ModuleClass *moduleClass; Object *module;
+    Unknown *result; Integer *resultInt;
+    Unknown *tmp;
+    Array *argvObj, *args;
     
     sourceFilename = 0;
     showHelp = error = disassemble = 0;
@@ -71,7 +71,7 @@ static int Spk_Main(int argc, char **argv) {
             }
             if (strcmp(arg, "gen-c-code") == 0) {
                 disassemble = 2;
-                Spk_declareBuiltIn = 0;
+                declareBuiltIn = 0;
                 continue;
             }
             fprintf(stderr, "%s: unrecognized option %s\n", argv[0], argv[i]);
@@ -105,71 +105,71 @@ static int Spk_Main(int argc, char **argv) {
         return 1;
     }
     
-    if (!Spk_Boot())
+    if (!Boot())
         return 1;
     
     arg = sourceFilename + strlen(sourceFilename) - 3;
     if (arg > sourceFilename && 0 == strcmp(arg, ".sm")) {
-        moduleTmpl = SpkCompiler_CompileModule(sourceFilename);
+        moduleTmpl = Compiler_CompileModule(sourceFilename);
     } else {
-        moduleTmpl = SpkCompiler_CompileFile(sourceFilename);
+        moduleTmpl = Compiler_CompileFile(sourceFilename);
     }
     if (!moduleTmpl)
         return 1;
     
     switch (disassemble) {
     case 1:
-        SpkDisassembler_DisassembleModule(moduleTmpl, stdout);
+        Disassembler_DisassembleModule(moduleTmpl, stdout);
         return 0;
     case 2:
-        SpkDisassembler_DisassembleModuleAsCCode(moduleTmpl, stdout);
+        Disassembler_DisassembleModuleAsCCode(moduleTmpl, stdout);
         return 0;
     }
     
     /* Create and initialize the module. */
-    moduleClass = SpkModuleClass_New(moduleTmpl);
-    module = SpkObject_New((SpkBehavior *)moduleClass);
+    moduleClass = ModuleClass_New(moduleTmpl);
+    module = Object_New((Behavior *)moduleClass);
     if (!module) {
         return 1;
     }
-    tmp = Spk_Send(Spk_GLOBAL(theInterpreter), (SpkUnknown *)module, Spk__init, 0);
+    tmp = Send(GLOBAL(theInterpreter), (Unknown *)module, _init, 0);
     if (!tmp)
         return 0;
-    Spk_DECREF(tmp);
+    DECREF(tmp);
     
     /* Build 'argv'. */
-    argvObj = SpkArray_New(argc - 1);
+    argvObj = Array_New(argc - 1);
     for (i = 1; i < argc; ++i) {
-        tmp = (SpkUnknown *)SpkString_FromCString(argv[i]);
-        SpkArray_SetItem(argvObj, i - 1, tmp);
-        Spk_DECREF(tmp);
+        tmp = (Unknown *)String_FromCString(argv[i]);
+        Array_SetItem(argvObj, i - 1, tmp);
+        DECREF(tmp);
     }
-    args = SpkArray_New(1);
-    SpkArray_SetItem(args, 0, (SpkUnknown *)argvObj);
-    Spk_DECREF(argvObj);
+    args = Array_New(1);
+    Array_SetItem(args, 0, (Unknown *)argvObj);
+    DECREF(argvObj);
     
     /* Call 'main'. */
-    result = Spk_SendMessage(
-        Spk_GLOBAL(theInterpreter),
-        (SpkUnknown *)module,
-        Spk_METHOD_NAMESPACE_RVALUE,
-        Spk_main,
-        (SpkUnknown *)args
+    result = SendMessage(
+        GLOBAL(theInterpreter),
+        (Unknown *)module,
+        METHOD_NAMESPACE_RVALUE,
+        _main,
+        (Unknown *)args
         );
     
-    Spk_DECREF(args);
+    DECREF(args);
     
     if (!result) {
         return 1;
     }
-    resultInt = Spk_CAST(Integer, result);
+    resultInt = CAST(Integer, result);
     if (resultInt) {
-        return SpkInteger_AsCLong(resultInt);
+        return Integer_AsCLong(resultInt);
     }
     return 0;
 }
 
 
 int main(int argc, char **argv) {
-    return Spk_Main(argc, argv);
+    return Main(argc, argv);
 }

@@ -1,19 +1,19 @@
 
-#ifndef __spk_char_h__
-#define __spk_char_h__
+#ifndef __char_h__
+#define __char_h__
 
 
 #include "obj.h"
 
 
-typedef struct SpkChar SpkChar;
+typedef struct Char Char;
 
 
-extern struct SpkClassTmpl Spk_ClassCharTmpl;
+extern struct ClassTmpl ClassCharTmpl;
 
 
-SpkChar *SpkChar_FromCChar(char);
-char SpkChar_AsCChar(SpkChar *);
+Char *Char_FromCChar(char);
+char Char_AsCChar(Char *);
 
 
-#endif /* __spk_char_h__ */
+#endif /* __char_h__ */

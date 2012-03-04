@@ -21,25 +21,25 @@
 #include <stdio.h>
 
 
-extern char *Spk_kwSep[2];
+extern char *kwSep[2];
 
 
-#define CLASS_TMPL(c) Spk_Class ## c ## Tmpl
-#define CLASS(c, s) &CLASS_TMPL(c)
+#define CLASS_TMPL_DEF(c) Class ## c ## Tmpl
+#define CBR(c, s) &CLASS_TMPL_DEF(c)
 
-SpkClassBootRec Spk_classBootRec[] = {
-    /***CLASS(VariableObject, Object),*/
-    /******/CLASS(String,  VariableObject),
-    /**/CLASS(Integer,    Object),
-    /**/CLASS(Float,      Object),
-    /**/CLASS(FileStream, Object),
+ClassBootRec classBootRec[] = {
+    /***CBR(VariableObject, Object),*/
+    /******/CBR(String,  VariableObject),
+    /**/CBR(Integer,    Object),
+    /**/CBR(Float,      Object),
+    /**/CBR(FileStream, Object),
     0
 };
 
 
-SpkModuleTmpl Spk_ModulemoduleTmpl = { { "heart" } };
+ModuleTmpl ModulemoduleTmpl = { { "heart" } };
 
-struct SpkModule *Spk_heart;
+struct Module *heart;
 
 
 int main(int argc, char **argv) {
@@ -48,9 +48,9 @@ int main(int argc, char **argv) {
     const char *outputFilename = "generatedcxx.cc";
     FILE *stream, *out;
     
-    SpkUnknown *notifier, *tmp;
-    SpkSymbolTable *st;
-    SpkStmt *tree, **treeTail, *s;
+    Unknown *notifier, *tmp;
+    SymbolTable *st;
+    Stmt *tree, **treeTail, *s;
     
     if (argc < 2) {
         fprintf(stderr, "Spike Compiler\n");
@@ -60,27 +60,27 @@ int main(int argc, char **argv) {
     
 #if 1 /* x86 */
     /* XXX: Hack! */
-    Spk_kwSep[0] = "$$";
-    Spk_kwSep[1] = "$";
-    Spk_declareBuiltIn = 0; /* as in xcspk */
-    Spk_declareObject = 0;
+    kwSep[0] = "$$";
+    kwSep[1] = "$";
+    declareBuiltIn = 0; /* as in xcspk */
+    declareObject = 0;
 #endif
     
-    if (!Spk_Boot())
+    if (!Boot())
         return 1;
     
-    notifier = Spk_Send(Spk_GLOBAL(theInterpreter),
-                        (SpkUnknown *)Spk_CLASS(XNotifier),
-                        Spk_new,
-                        Spk_GLOBAL(xstderr),
+    notifier = Send(GLOBAL(theInterpreter),
+                        (Unknown *)CLASS(XNotifier),
+                        new,
+                        GLOBAL(xstderr),
                         0);
     if (!notifier)
         return 1;
     
-    st = SpkSymbolTable_New();
+    st = SymbolTable_New();
     if (!st)
         return 1;
-    tmp = SpkStaticChecker_DeclareBuiltIn(st, notifier);
+    tmp = StaticChecker_DeclareBuiltIn(st, notifier);
     if (!tmp)
         return 1;
     
@@ -95,12 +95,12 @@ int main(int argc, char **argv) {
             return 1;
         }
     
-        *treeTail = SpkParser_ParseFileStream(stream, st);
+        *treeTail = Parser_ParseFileStream(stream, st);
         if (!treeTail)
             return 1;
         
-        tmp = SpkHost_StringFromCString(pathname);
-        SpkParser_Source(treeTail, tmp);
+        tmp = Host_StringFromCString(pathname);
+        Parser_Source(treeTail, tmp);
         
         for (s = *treeTail; s->next; s = s->next)
             ;
@@ -108,15 +108,15 @@ int main(int argc, char **argv) {
     }
     if (!tree)
         return 1;
-    tree = SpkParser_NewModuleDef(tree);
+    tree = Parser_NewModuleDef(tree);
     if (!tree)
         return 1;
     
-    tmp = SpkStaticChecker_Check(tree, st, notifier);
+    tmp = StaticChecker_Check(tree, st, notifier);
     if (!tmp)
         return 1;
     
-    tmp = Spk_Send(Spk_GLOBAL(theInterpreter), notifier, Spk_failOnError, 0);
+    tmp = Send(GLOBAL(theInterpreter), notifier, failOnError, 0);
     if (!tmp)
         return 1;
     
@@ -126,9 +126,9 @@ int main(int argc, char **argv) {
         return 1;
     }
 #if 0
-    SpkCxxCodeGen_GenerateCode(tree, stdout /*out*/ );
+    CxxCodeGen_GenerateCode(tree, stdout /*out*/ );
 #else
-    SpkX86CodeGen_GenerateCode(tree, stdout /*out*/ );
+    X86CodeGen_GenerateCode(tree, stdout /*out*/ );
 #endif
     fclose(out);
     

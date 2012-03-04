@@ -11,92 +11,92 @@
 #include <string.h>
 
 
-struct SpkInteger {
-    SpkObject base;
+struct Integer {
+    Object base;
     ptrdiff_t value;
 };
 
 
-#define BOOL(cond) ((cond) ? Spk_GLOBAL(xtrue) : Spk_GLOBAL(xfalse))
+#define BOOL(cond) ((cond) ? GLOBAL(xtrue) : GLOBAL(xfalse))
 
 
 /*------------------------------------------------------------------------*/
 /* method helpers */
 
-static SpkUnknown *Integer_unaryOper(SpkInteger *self, SpkOper oper) {
-    SpkInteger *result;
+static Unknown *Integer_unaryOper(Integer *self, Oper oper) {
+    Integer *result;
     
-    result = (SpkInteger *)SpkObject_New(Spk_CLASS(Integer));
+    result = (Integer *)Object_New(CLASS(Integer));
     switch (oper) {
-    case Spk_OPER_SUCC: result->value = self->value + 1; break;
-    case Spk_OPER_PRED: result->value = self->value - 1; break;
-    case Spk_OPER_POS:  result->value = +self->value;    break;
-    case Spk_OPER_NEG:  result->value = -self->value;    break;
-    case Spk_OPER_BNEG: result->value = ~self->value;    break;
+    case OPER_SUCC: result->value = self->value + 1; break;
+    case OPER_PRED: result->value = self->value - 1; break;
+    case OPER_POS:  result->value = +self->value;    break;
+    case OPER_NEG:  result->value = -self->value;    break;
+    case OPER_BNEG: result->value = ~self->value;    break;
     default:
-        Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+        Halt(HALT_ASSERTION_ERROR, "not reached");
         return 0;
     }
-    return (SpkUnknown *)result;
+    return (Unknown *)result;
 }
 
-static SpkUnknown *Integer_binaryOper(SpkInteger *self, SpkUnknown *arg0, SpkOper oper) {
-    SpkInteger *arg, *result;
+static Unknown *Integer_binaryOper(Integer *self, Unknown *arg0, Oper oper) {
+    Integer *arg, *result;
     
-    arg = Spk_CAST(Integer, arg0);
+    arg = CAST(Integer, arg0);
     if (!arg) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
+        Halt(HALT_TYPE_ERROR, "an integer is required");
         return 0;
     }
-    result = (SpkInteger *)SpkObject_New(Spk_CLASS(Integer));
+    result = (Integer *)Object_New(CLASS(Integer));
     switch (oper) {
-    case Spk_OPER_MUL:    result->value = self->value * arg->value;  break;
-    case Spk_OPER_DIV:    result->value = self->value / arg->value;  break;
-    case Spk_OPER_MOD:    result->value = self->value % arg->value;  break;
-    case Spk_OPER_ADD:    result->value = self->value + arg->value;  break;
-    case Spk_OPER_SUB:    result->value = self->value - arg->value;  break;
-    case Spk_OPER_LSHIFT: result->value = self->value << arg->value; break;
-    case Spk_OPER_RSHIFT: result->value = self->value >> arg->value; break;
-    case Spk_OPER_BAND:   result->value = self->value & arg->value;  break;
-    case Spk_OPER_BXOR:   result->value = self->value ^ arg->value;  break;
-    case Spk_OPER_BOR:    result->value = self->value | arg->value;  break;
+    case OPER_MUL:    result->value = self->value * arg->value;  break;
+    case OPER_DIV:    result->value = self->value / arg->value;  break;
+    case OPER_MOD:    result->value = self->value % arg->value;  break;
+    case OPER_ADD:    result->value = self->value + arg->value;  break;
+    case OPER_SUB:    result->value = self->value - arg->value;  break;
+    case OPER_LSHIFT: result->value = self->value << arg->value; break;
+    case OPER_RSHIFT: result->value = self->value >> arg->value; break;
+    case OPER_BAND:   result->value = self->value & arg->value;  break;
+    case OPER_BXOR:   result->value = self->value ^ arg->value;  break;
+    case OPER_BOR:    result->value = self->value | arg->value;  break;
     default:
-        Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+        Halt(HALT_ASSERTION_ERROR, "not reached");
         return 0;
     }
-    return (SpkUnknown *)result;
+    return (Unknown *)result;
 }
 
-static SpkUnknown *Integer_binaryLogicalOper(SpkInteger *self, SpkUnknown *arg0, SpkOper oper) {
-    SpkInteger *arg;
-    SpkUnknown *result;
+static Unknown *Integer_binaryLogicalOper(Integer *self, Unknown *arg0, Oper oper) {
+    Integer *arg;
+    Unknown *result;
     
-    arg = Spk_CAST(Integer, arg0);
+    arg = CAST(Integer, arg0);
     if (!arg) switch (oper) {
-    case Spk_OPER_EQ:
+    case OPER_EQ:
         /* XXX: 0 == 0.0 */
-        Spk_INCREF(Spk_GLOBAL(xfalse));
-        return Spk_GLOBAL(xfalse);
-    case Spk_OPER_NE:
-        Spk_INCREF(Spk_GLOBAL(xtrue));
-        return Spk_GLOBAL(xtrue);
+        INCREF(GLOBAL(xfalse));
+        return GLOBAL(xfalse);
+    case OPER_NE:
+        INCREF(GLOBAL(xtrue));
+        return GLOBAL(xtrue);
     default:
-        Spk_Halt(Spk_HALT_ASSERTION_ERROR, "XXX");
+        Halt(HALT_ASSERTION_ERROR, "XXX");
         return 0;
     }
     
     switch (oper) {
-    case Spk_OPER_LT: result = BOOL(self->value < arg->value);  break;
-    case Spk_OPER_GT: result = BOOL(self->value > arg->value);  break;
-    case Spk_OPER_LE: result = BOOL(self->value <= arg->value); break;
-    case Spk_OPER_GE: result = BOOL(self->value >= arg->value); break;
-    case Spk_OPER_EQ: result = BOOL(self->value == arg->value); break;
-    case Spk_OPER_NE: result = BOOL(self->value != arg->value); break;
+    case OPER_LT: result = BOOL(self->value < arg->value);  break;
+    case OPER_GT: result = BOOL(self->value > arg->value);  break;
+    case OPER_LE: result = BOOL(self->value <= arg->value); break;
+    case OPER_GE: result = BOOL(self->value >= arg->value); break;
+    case OPER_EQ: result = BOOL(self->value == arg->value); break;
+    case OPER_NE: result = BOOL(self->value != arg->value); break;
     default:
-        Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+        Halt(HALT_ASSERTION_ERROR, "not reached");
         return 0;
     }
-    Spk_INCREF(result);
+    INCREF(result);
     return result;
 }
 
@@ -104,181 +104,181 @@ static SpkUnknown *Integer_binaryLogicalOper(SpkInteger *self, SpkUnknown *arg0,
 /*------------------------------------------------------------------------*/
 /* methods -- operators */
 
-/* Spk_OPER_SUCC */
-static SpkUnknown *Integer_succ(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_unaryOper((SpkInteger *)self, Spk_OPER_SUCC);
+/* OPER_SUCC */
+static Unknown *Integer_succ(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_unaryOper((Integer *)self, OPER_SUCC);
 }
 
-/* Spk_OPER_PRED */
-static SpkUnknown *Integer_pred(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_unaryOper((SpkInteger *)self, Spk_OPER_PRED);
+/* OPER_PRED */
+static Unknown *Integer_pred(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_unaryOper((Integer *)self, OPER_PRED);
 }
 
-/* Spk_OPER_POS */
-static SpkUnknown *Integer_pos(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_unaryOper((SpkInteger *)self, Spk_OPER_POS);
+/* OPER_POS */
+static Unknown *Integer_pos(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_unaryOper((Integer *)self, OPER_POS);
 }
 
-/* Spk_OPER_NEG */
-static SpkUnknown *Integer_neg(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_unaryOper((SpkInteger *)self, Spk_OPER_NEG);
+/* OPER_NEG */
+static Unknown *Integer_neg(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_unaryOper((Integer *)self, OPER_NEG);
 }
 
-/* Spk_OPER_BNEG */
-static SpkUnknown *Integer_bneg(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_unaryOper((SpkInteger *)self, Spk_OPER_BNEG);
+/* OPER_BNEG */
+static Unknown *Integer_bneg(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_unaryOper((Integer *)self, OPER_BNEG);
 }
 
-/* Spk_OPER_LNEG */
-static SpkUnknown *Integer_lneg(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkUnknown *result = BOOL(!((SpkInteger *)self)->value);
-    Spk_INCREF(result);
+/* OPER_LNEG */
+static Unknown *Integer_lneg(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    Unknown *result = BOOL(!((Integer *)self)->value);
+    INCREF(result);
     return result;
 }
 
-/* Spk_OPER_MUL */
-static SpkUnknown *Integer_mul(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryOper((SpkInteger *)self, arg0, Spk_OPER_MUL);
+/* OPER_MUL */
+static Unknown *Integer_mul(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryOper((Integer *)self, arg0, OPER_MUL);
 }
 
-/* Spk_OPER_DIV */
-static SpkUnknown *Integer_div(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryOper((SpkInteger *)self, arg0, Spk_OPER_DIV);
+/* OPER_DIV */
+static Unknown *Integer_div(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryOper((Integer *)self, arg0, OPER_DIV);
 }
 
-/* Spk_OPER_MOD */
-static SpkUnknown *Integer_mod(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryOper((SpkInteger *)self, arg0, Spk_OPER_MOD);
+/* OPER_MOD */
+static Unknown *Integer_mod(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryOper((Integer *)self, arg0, OPER_MOD);
 }
 
-/* Spk_OPER_ADD */
-static SpkUnknown *Integer_add(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryOper((SpkInteger *)self, arg0, Spk_OPER_ADD);
+/* OPER_ADD */
+static Unknown *Integer_add(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryOper((Integer *)self, arg0, OPER_ADD);
 }
 
-/* Spk_OPER_SUB */
-static SpkUnknown *Integer_sub(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryOper((SpkInteger *)self, arg0, Spk_OPER_SUB);
+/* OPER_SUB */
+static Unknown *Integer_sub(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryOper((Integer *)self, arg0, OPER_SUB);
 }
 
-/* Spk_OPER_LSHIFT */
-static SpkUnknown *Integer_lshift(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryOper((SpkInteger *)self, arg0, Spk_OPER_LSHIFT);
+/* OPER_LSHIFT */
+static Unknown *Integer_lshift(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryOper((Integer *)self, arg0, OPER_LSHIFT);
 }
 
-/* Spk_OPER_RSHIFT */
-static SpkUnknown *Integer_rshift(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryOper((SpkInteger *)self, arg0, Spk_OPER_RSHIFT);
+/* OPER_RSHIFT */
+static Unknown *Integer_rshift(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryOper((Integer *)self, arg0, OPER_RSHIFT);
 }
 
-/* Spk_OPER_LT */
-static SpkUnknown *Integer_lt(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryLogicalOper((SpkInteger *)self, arg0, Spk_OPER_LT);
+/* OPER_LT */
+static Unknown *Integer_lt(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryLogicalOper((Integer *)self, arg0, OPER_LT);
 }
 
-/* Spk_OPER_GT */
-static SpkUnknown *Integer_gt(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryLogicalOper((SpkInteger *)self, arg0, Spk_OPER_GT);
+/* OPER_GT */
+static Unknown *Integer_gt(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryLogicalOper((Integer *)self, arg0, OPER_GT);
 }
 
-/* Spk_OPER_LE */
-static SpkUnknown *Integer_le(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryLogicalOper((SpkInteger *)self, arg0, Spk_OPER_LE);
+/* OPER_LE */
+static Unknown *Integer_le(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryLogicalOper((Integer *)self, arg0, OPER_LE);
 }
 
-/* Spk_OPER_GE */
-static SpkUnknown *Integer_ge(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryLogicalOper((SpkInteger *)self, arg0, Spk_OPER_GE);
+/* OPER_GE */
+static Unknown *Integer_ge(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryLogicalOper((Integer *)self, arg0, OPER_GE);
 }
 
-/* Spk_OPER_EQ */
-static SpkUnknown *Integer_eq(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryLogicalOper((SpkInteger *)self, arg0, Spk_OPER_EQ);
+/* OPER_EQ */
+static Unknown *Integer_eq(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryLogicalOper((Integer *)self, arg0, OPER_EQ);
 }
 
-/* Spk_OPER_NE */
-static SpkUnknown *Integer_ne(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryLogicalOper((SpkInteger *)self, arg0, Spk_OPER_NE);
+/* OPER_NE */
+static Unknown *Integer_ne(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryLogicalOper((Integer *)self, arg0, OPER_NE);
 }
 
-/* Spk_OPER_BAND */
-static SpkUnknown *Integer_band(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryOper((SpkInteger *)self, arg0, Spk_OPER_BAND);
+/* OPER_BAND */
+static Unknown *Integer_band(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryOper((Integer *)self, arg0, OPER_BAND);
 }
 
-/* Spk_OPER_BXOR */
-static SpkUnknown *Integer_bxor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryOper((SpkInteger *)self, arg0, Spk_OPER_BXOR);
+/* OPER_BXOR */
+static Unknown *Integer_bxor(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryOper((Integer *)self, arg0, OPER_BXOR);
 }
 
-/* Spk_OPER_BOR */
-static SpkUnknown *Integer_bor(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return Integer_binaryOper((SpkInteger *)self, arg0, Spk_OPER_BOR);
+/* OPER_BOR */
+static Unknown *Integer_bor(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    return Integer_binaryOper((Integer *)self, arg0, OPER_BOR);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* methods -- printing */
 
-static SpkUnknown *Integer_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkInteger *self;
-    SpkString *result;
+static Unknown *Integer_printString(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    Integer *self;
+    String *result;
     char *str;
     
-    self = (SpkInteger *)_self;
-    result = SpkString_FromCStringAndLength(0, 4*sizeof(self->value));
+    self = (Integer *)_self;
+    result = String_FromCStringAndLength(0, 4*sizeof(self->value));
     if (!result)
         return 0;
-    str = SpkString_AsCString(result);
+    str = String_AsCString(result);
     sprintf(str, "%ld", (long)self->value);
     result->size = strlen(str) + 1;
-    return (SpkUnknown *)result;
+    return (Unknown *)result;
 }
 
 
 /*------------------------------------------------------------------------*/
 /* class tmpl */
 
-typedef struct SpkIntegerSubclass {
-    SpkInteger base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkIntegerSubclass;
+typedef struct IntegerSubclass {
+    Integer base;
+    Unknown *variables[1]; /* stretchy */
+} IntegerSubclass;
 
-static SpkMethodTmpl methods[] = {
+static MethodTmpl methods[] = {
     /* operators */
-    { "__succ__",   SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Integer_succ   },
-    { "__pred__",   SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Integer_pred   },
-    { "__pos__",    SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Integer_pos    },
-    { "__neg__",    SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Integer_neg    },
-    { "__bneg__",   SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Integer_bneg   },
-    { "__lneg__",   SpkNativeCode_UNARY_OPER  | SpkNativeCode_LEAF, &Integer_lneg   },
-    { "__mul__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_mul    },
-    { "__div__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_div    },
-    { "__mod__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_mod    },
-    { "__add__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_add    },
-    { "__sub__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_sub    },
-    { "__lshift__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_lshift },
-    { "__rshift__", SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_rshift },
-    { "__lt__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_lt     },
-    { "__gt__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_gt     },
-    { "__le__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_le     },
-    { "__ge__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_ge     },
-    { "__eq__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_eq     },
-    { "__ne__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_ne     },
-    { "__band__",   SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_band   },
-    { "__bxor__",   SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_bxor   },
-    { "__bor__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Integer_bor    },
+    { "__succ__",   NativeCode_UNARY_OPER  | NativeCode_LEAF, &Integer_succ   },
+    { "__pred__",   NativeCode_UNARY_OPER  | NativeCode_LEAF, &Integer_pred   },
+    { "__pos__",    NativeCode_UNARY_OPER  | NativeCode_LEAF, &Integer_pos    },
+    { "__neg__",    NativeCode_UNARY_OPER  | NativeCode_LEAF, &Integer_neg    },
+    { "__bneg__",   NativeCode_UNARY_OPER  | NativeCode_LEAF, &Integer_bneg   },
+    { "__lneg__",   NativeCode_UNARY_OPER  | NativeCode_LEAF, &Integer_lneg   },
+    { "__mul__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_mul    },
+    { "__div__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_div    },
+    { "__mod__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_mod    },
+    { "__add__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_add    },
+    { "__sub__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_sub    },
+    { "__lshift__", NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_lshift },
+    { "__rshift__", NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_rshift },
+    { "__lt__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_lt     },
+    { "__gt__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_gt     },
+    { "__le__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_le     },
+    { "__ge__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_ge     },
+    { "__eq__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_eq     },
+    { "__ne__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_ne     },
+    { "__band__",   NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_band   },
+    { "__bxor__",   NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_bxor   },
+    { "__bor__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Integer_bor    },
     /* printing */
-    { "printString", SpkNativeCode_ARGS_0, &Integer_printString },
+    { "printString", NativeCode_ARGS_0, &Integer_printString },
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassIntegerTmpl = {
-    Spk_HEART_CLASS_TMPL(Integer, Object), {
+ClassTmpl ClassIntegerTmpl = {
+    HEART_CLASS_TMPL(Integer, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkIntegerSubclass, variables)
+        offsetof(IntegerSubclass, variables)
     }, /*meta*/ {
         0
     }
@@ -288,22 +288,22 @@ SpkClassTmpl Spk_ClassIntegerTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SpkInteger *SpkInteger_FromCLong(long value) {
-    return SpkInteger_FromCPtrdiff((ptrdiff_t)value);
+Integer *Integer_FromCLong(long value) {
+    return Integer_FromCPtrdiff((ptrdiff_t)value);
 }
 
-SpkInteger *SpkInteger_FromCPtrdiff(ptrdiff_t value) {
-    SpkInteger *result;
+Integer *Integer_FromCPtrdiff(ptrdiff_t value) {
+    Integer *result;
     
-    result = (SpkInteger *)SpkObject_New(Spk_CLASS(Integer));
+    result = (Integer *)Object_New(CLASS(Integer));
     result->value = value;
     return result;
 }
 
-long SpkInteger_AsCLong(SpkInteger *anInteger) {
+long Integer_AsCLong(Integer *anInteger) {
     return (long)anInteger->value;
 }
 
-ptrdiff_t SpkInteger_AsCPtrdiff(SpkInteger *anInteger) {
+ptrdiff_t Integer_AsCPtrdiff(Integer *anInteger) {
     return anInteger->value;
 }

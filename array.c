@@ -12,176 +12,176 @@
 #include <stdlib.h>
 
 
-#define ARRAY(op) ((SpkUnknown **)SpkVariableObject_ITEM_BASE(op))
+#define ARRAY(op) ((Unknown **)VariableObject_ITEM_BASE(op))
 
 
 /*------------------------------------------------------------------------*/
 /* methods -- operators */
 
-static SpkUnknown *Array_item(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkArray *self; SpkInteger *arg;
+static Unknown *Array_item(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    Array *self; Integer *arg;
     ptrdiff_t index;
-    SpkUnknown *item;
+    Unknown *item;
     
-    self = (SpkArray *)_self;
-    arg = Spk_CAST(Integer, arg0);
+    self = (Array *)_self;
+    arg = CAST(Integer, arg0);
     if (!arg) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
+        Halt(HALT_TYPE_ERROR, "an integer is required");
         return 0;
     }
-    index = SpkInteger_AsCPtrdiff(arg);
+    index = Integer_AsCPtrdiff(arg);
     if (index < 0 || self->size <= (size_t)index) {
-        Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
+        Halt(HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
     item = ARRAY(self)[index];
-    Spk_INCREF(item);
-    return (SpkUnknown *)item;
+    INCREF(item);
+    return (Unknown *)item;
 }
 
-static SpkUnknown *Array_setItem(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkArray *self; SpkInteger *arg;
+static Unknown *Array_setItem(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    Array *self; Integer *arg;
     ptrdiff_t index;
     
-    self = (SpkArray *)_self;
-    arg = Spk_CAST(Integer, arg0);
+    self = (Array *)_self;
+    arg = CAST(Integer, arg0);
     if (!arg) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "an integer is required");
+        Halt(HALT_TYPE_ERROR, "an integer is required");
         return 0;
     }
-    index = SpkInteger_AsCPtrdiff(arg);
+    index = Integer_AsCPtrdiff(arg);
     if (index < 0 || self->size <= (size_t)index) {
-        Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
+        Halt(HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
-    Spk_INCREF(arg1);
-    Spk_DECREF(ARRAY(self)[index]);
+    INCREF(arg1);
+    DECREF(ARRAY(self)[index]);
     ARRAY(self)[index] = arg1;
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* methods -- enumerating */
 
-static SpkUnknown *Array_do(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkArray *self;
+static Unknown *Array_do(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    Array *self;
     size_t i;
-    SpkUnknown *result;
+    Unknown *result;
     
-    self = (SpkArray *)_self;
+    self = (Array *)_self;
     for (i = 0; i < self->size; ++i) {
-        result = Spk_Call(Spk_GLOBAL(theInterpreter), arg0, Spk_OPER_APPLY, ARRAY(self)[i], 0);
+        result = Call(GLOBAL(theInterpreter), arg0, OPER_APPLY, ARRAY(self)[i], 0);
         if (!result)
             return 0; /* unwind */
     }
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* methods -- printing */
 
-static SpkUnknown *Array_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkArray *self;
+static Unknown *Array_printString(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    Array *self;
     size_t i;
-    SpkString *result, *s, *comma;
+    String *result, *s, *comma;
     
-    self = (SpkArray *)_self;
+    self = (Array *)_self;
     
     if (self->size == 0)
-        return (SpkUnknown *)SpkString_FromCString("{}");
+        return (Unknown *)String_FromCString("{}");
     
-    result = SpkString_FromCString("{ ");
-    comma = SpkString_FromCString(", ");
+    result = String_FromCString("{ ");
+    comma = String_FromCString(", ");
     
     for (i = 0; i < self->size; ++i) {
-        s = (SpkString *)Spk_Attr(Spk_GLOBAL(theInterpreter), ARRAY(self)[i], Spk_printString);
+        s = (String *)Attr(GLOBAL(theInterpreter), ARRAY(self)[i], printString);
         if (!s)
             return 0; /* unwind */
-        SpkString_Concat(&result, s);
+        String_Concat(&result, s);
         if (i + 1 < self->size)
-            SpkString_Concat(&result, comma);
+            String_Concat(&result, comma);
     }
     
-    SpkString_Concat(&result, SpkString_FromCString(" }"));
-    return (SpkUnknown *)result;
+    String_Concat(&result, String_FromCString(" }"));
+    return (Unknown *)result;
 }
 
 
 /*------------------------------------------------------------------------*/
 /* low-level hooks */
 
-static void Array_zero(SpkObject *_self) {
-    SpkArray *self;
+static void Array_zero(Object *_self) {
+    Array *self;
     size_t i;
     
-    self = (SpkArray *)_self;
-    (*Spk_CLASS(Array)->superclass->zero)(_self);
+    self = (Array *)_self;
+    (*CLASS(Array)->superclass->zero)(_self);
     for (i = 0; i < self->size; ++i) {
-        Spk_INCREF(Spk_GLOBAL(uninit));
-        ARRAY(self)[i] = Spk_GLOBAL(uninit);
+        INCREF(GLOBAL(uninit));
+        ARRAY(self)[i] = GLOBAL(uninit);
     }
 }
 
-static void Array_dealloc(SpkObject *_self, SpkUnknown **l) {
-    SpkArray *self;
+static void Array_dealloc(Object *_self, Unknown **l) {
+    Array *self;
     size_t i;
     
-    self = (SpkArray *)_self;
+    self = (Array *)_self;
     for (i = 0; i < self->size; ++i) {
-        Spk_LDECREF(ARRAY(self)[i], l);
+        LDECREF(ARRAY(self)[i], l);
     }
-    (*Spk_CLASS(Array)->superclass->dealloc)(_self, l);
+    (*CLASS(Array)->superclass->dealloc)(_self, l);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* class template */
 
-typedef SpkVariableObjectSubclass SpkArraySubclass;
+typedef VariableObjectSubclass ArraySubclass;
 
-static SpkAccessorTmpl accessors[] = {
-    { "size", Spk_T_SIZE, offsetof(SpkArray, size), SpkAccessor_READ },
+static AccessorTmpl accessors[] = {
+    { "size", T_SIZE, offsetof(Array, size), Accessor_READ },
     { 0 }
 };
 
-static SpkMethodTmpl methods[] = {
+static MethodTmpl methods[] = {
     /* operators */
 #if 0 /*XXX*/
-    { "__mul__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_mul },
-    { "__mod__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_mod },
-    { "__add__",    SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_add },
-    { "__lt__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_lt  },
-    { "__gt__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_gt  },
-    { "__le__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_le  },
-    { "__ge__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_ge  },
-    { "__eq__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_eq  },
-    { "__ne__",     SpkNativeCode_BINARY_OPER | SpkNativeCode_LEAF, &Array_ne  },
+    { "__mul__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Array_mul },
+    { "__mod__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Array_mod },
+    { "__add__",    NativeCode_BINARY_OPER | NativeCode_LEAF, &Array_add },
+    { "__lt__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Array_lt  },
+    { "__gt__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Array_gt  },
+    { "__le__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Array_le  },
+    { "__ge__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Array_ge  },
+    { "__eq__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Array_eq  },
+    { "__ne__",     NativeCode_BINARY_OPER | NativeCode_LEAF, &Array_ne  },
 #endif
     /* call operators */
-    { "__index__", SpkNativeCode_ARGS_1 | SpkNativeCode_LEAF, &Array_item },
+    { "__index__", NativeCode_ARGS_1 | NativeCode_LEAF, &Array_item },
     /* enumerating */
-    { "do:", SpkNativeCode_ARGS_1, &Array_do },
+    { "do:", NativeCode_ARGS_1, &Array_do },
     /* printing */
-    { "printString", SpkNativeCode_ARGS_0, &Array_printString },
+    { "printString", NativeCode_ARGS_0, &Array_printString },
     { 0 }
 };
 
-static SpkMethodTmpl lvalueMethods[] = {
-    { "__index__", SpkNativeCode_ARGS_2 | SpkNativeCode_LEAF, &Array_setItem },
+static MethodTmpl lvalueMethods[] = {
+    { "__index__", NativeCode_ARGS_2 | NativeCode_LEAF, &Array_setItem },
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassArrayTmpl = {
-    Spk_HEART_CLASS_TMPL(Array, VariableObject), {
+ClassTmpl ClassArrayTmpl = {
+    HEART_CLASS_TMPL(Array, VariableObject), {
         accessors,
         methods,
         lvalueMethods,
-        offsetof(SpkArraySubclass, variables),
-        sizeof(SpkUnknown *),
+        offsetof(ArraySubclass, variables),
+        sizeof(Unknown *),
         &Array_zero,
         &Array_dealloc
     }, /*meta*/ {
@@ -193,103 +193,103 @@ SpkClassTmpl Spk_ClassArrayTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SpkArray *SpkArray_New(size_t size) {
-    return (SpkArray *)SpkObject_NewVar(Spk_CLASS(Array), size);
+Array *Array_New(size_t size) {
+    return (Array *)Object_NewVar(CLASS(Array), size);
 }
 
-SpkArray *SpkArray_WithArguments(SpkUnknown **stackPointer, size_t argumentCount,
-                                 SpkArray *varArgArray, size_t skip) {
-    SpkArray *argumentArray;
-    SpkUnknown *item;
+Array *Array_WithArguments(Unknown **stackPointer, size_t argumentCount,
+                                 Array *varArgArray, size_t skip) {
+    Array *argumentArray;
+    Unknown *item;
     size_t i, n, varArgCount;
     
     varArgCount = varArgArray ? varArgArray->size - skip : 0;
     n = argumentCount + varArgCount;
     
-    argumentArray = (SpkArray *)SpkObject_NewVar(Spk_CLASS(Array), n);
+    argumentArray = (Array *)Object_NewVar(CLASS(Array), n);
     
     /* copy & reverse fixed arguments */
     for (i = 0; i < argumentCount; ++i) {
         item = stackPointer[argumentCount - i - 1];
-        Spk_INCREF(item);
-        Spk_DECREF(ARRAY(argumentArray)[i]);
+        INCREF(item);
+        DECREF(ARRAY(argumentArray)[i]);
         ARRAY(argumentArray)[i] = item;
     }
     /* copy variable arguments */
     for ( ; i < n; ++i) {
         item = ARRAY(varArgArray)[skip + i - argumentCount];
-        Spk_INCREF(item);
-        Spk_DECREF(ARRAY(argumentArray)[i]);
+        INCREF(item);
+        DECREF(ARRAY(argumentArray)[i]);
         ARRAY(argumentArray)[i] = item;
     }
     
     return argumentArray;
 }
 
-SpkArray *SpkArray_FromVAList(va_list ap) {
-    SpkArray *newArray;
-    SpkUnknown *obj;
+Array *Array_FromVAList(va_list ap) {
+    Array *newArray;
+    Unknown *obj;
     size_t size, i;
     
     size = 2;
-    newArray = (SpkArray *)SpkObject_NewVar(Spk_CLASS(Array), size);
-    for (i = 0,  obj = va_arg(ap, SpkUnknown *);
+    newArray = (Array *)Object_NewVar(CLASS(Array), size);
+    for (i = 0,  obj = va_arg(ap, Unknown *);
          /*****/ obj;
-         ++i,    obj = va_arg(ap, SpkUnknown *)) {
+         ++i,    obj = va_arg(ap, Unknown *)) {
         if (i >= size) {
-            SpkArray *tmpArray = newArray;
+            Array *tmpArray = newArray;
             size_t tmpSize = size, j;
             size *= 2;
-            newArray = (SpkArray *)SpkObject_NewVar(Spk_CLASS(Array), size);
+            newArray = (Array *)Object_NewVar(CLASS(Array), size);
             for (j = 0; j < tmpSize; ++j) {
-                SpkUnknown *tmp = ARRAY(newArray)[j];
+                Unknown *tmp = ARRAY(newArray)[j];
                 ARRAY(newArray)[j] = ARRAY(tmpArray)[j];
                 ARRAY(tmpArray)[j] = tmp;
             }
-            Spk_DECREF(tmpArray);
+            DECREF(tmpArray);
         }
-        Spk_INCREF(obj);
-        Spk_DECREF(ARRAY(newArray)[i]);
+        INCREF(obj);
+        DECREF(ARRAY(newArray)[i]);
         ARRAY(newArray)[i] = obj;
     }
     newArray->size = i;
     return newArray;
 }
 
-size_t SpkArray_Size(SpkArray *self) {
+size_t Array_Size(Array *self) {
     return self->size;
 }
 
-SpkUnknown *SpkArray_GetItem(SpkArray *self, size_t index) {
-    SpkUnknown *item;
+Unknown *Array_GetItem(Array *self, size_t index) {
+    Unknown *item;
     
     if (index < 0 || self->size <= index) {
-        Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
+        Halt(HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
     item = ARRAY(self)[index];
-    Spk_INCREF(item);
+    INCREF(item);
     return item;
 }
 
-SpkUnknown *SpkArray_SetItem(SpkArray *self, size_t index, SpkUnknown *value) {
+Unknown *Array_SetItem(Array *self, size_t index, Unknown *value) {
     if (index < 0 || self->size <= index) {
-        Spk_Halt(Spk_HALT_INDEX_ERROR, "index out of range");
+        Halt(HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
-    Spk_INCREF(value);
-    Spk_DECREF(ARRAY(self)[index]);
+    INCREF(value);
+    DECREF(ARRAY(self)[index]);
     ARRAY(self)[index] = value;
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
-void SpkArray_Sort(SpkArray *self,
-                   int (*compare)(SpkUnknown *const *, SpkUnknown *const *))
+void Array_Sort(Array *self,
+                   int (*compare)(Unknown *const *, Unknown *const *))
 {
     qsort(ARRAY(self),
           self->size,
-          sizeof(SpkUnknown *),
+          sizeof(Unknown *),
           (int(*)(const void *, const void *))compare
         );
 }

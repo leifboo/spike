@@ -1,75 +1,75 @@
 
-#ifndef __spk_st_h__
-#define __spk_st_h__
+#ifndef __st_h__
+#define __st_h__
 
 
 #include "obj.h"
 
 
-typedef struct SpkSymbolNode SpkSymbolNode, SpkXSymbolNode;
-typedef struct SpkSTEntry SpkSTEntry;
-typedef struct SpkContextClass SpkContextClass;
-typedef struct SpkScope SpkScope;
-typedef struct SpkSymbolTable SpkSymbolTable, SpkXSymbolTable;
+typedef struct SymbolNode SymbolNode, XSymbolNode;
+typedef struct STEntry STEntry;
+typedef struct ContextClass ContextClass;
+typedef struct Scope Scope;
+typedef struct SymbolTable SymbolTable, XSymbolTable;
 
 
-struct SpkSymbolNode {
-    SpkObject base;
-    struct SpkSTEntry *entry;
-    SpkUnknown *sym;
+struct SymbolNode {
+    Object base;
+    struct STEntry *entry;
+    Unknown *sym;
 };
 
 
-struct SpkSTEntry {
-    SpkObject base;
-    SpkScope *scope;
-    SpkSTEntry *nextInScope;
-    SpkSTEntry *shadow;
-    SpkSymbolNode *sym;
-    struct SpkExpr *def;
+struct STEntry {
+    Object base;
+    Scope *scope;
+    STEntry *nextInScope;
+    STEntry *shadow;
+    SymbolNode *sym;
+    struct Expr *def;
 };
 
 
-struct SpkContextClass {
-    SpkObject base;
-    SpkScope *scope;
+struct ContextClass {
+    Object base;
+    Scope *scope;
     unsigned int level;
-    /*SpkOpcode*/ unsigned int pushOpcode, storeOpcode;
+    /*Opcode*/ unsigned int pushOpcode, storeOpcode;
     unsigned int nDefs;
 };
 
 
-struct SpkScope {
-    SpkObject base;
-    SpkScope *outer;
-    SpkSTEntry *entryList;
-    SpkContextClass *context;
+struct Scope {
+    Object base;
+    Scope *outer;
+    STEntry *entryList;
+    ContextClass *context;
 };
 
 
-struct SpkSymbolTable {
-    SpkObject base;
-    SpkScope *currentScope;
-    SpkUnknown *symbolNodes;
+struct SymbolTable {
+    Object base;
+    Scope *currentScope;
+    Unknown *symbolNodes;
 };
 
 
-SpkSymbolNode *SpkSymbolNode_FromSymbol(SpkSymbolTable *st, SpkUnknown *sym);
-SpkSymbolNode *SpkSymbolNode_FromCString(SpkSymbolTable *st, const char *str);
-int SpkSymbolNode_IsSpec(SpkSymbolNode *node);
+SymbolNode *SymbolNode_FromSymbol(SymbolTable *st, Unknown *sym);
+SymbolNode *SymbolNode_FromCString(SymbolTable *st, const char *str);
+int SymbolNode_IsSpec(SymbolNode *node);
 
-SpkSymbolTable *SpkSymbolTable_New(void);
-void SpkSymbolTable_EnterScope(SpkSymbolTable *st, int enterNewContext);
-void SpkSymbolTable_ExitScope(SpkSymbolTable *st);
-SpkUnknown *SpkSymbolTable_Insert(SpkSymbolTable *st, struct SpkExpr *def,
-                                  SpkUnknown *requestor);
-struct SpkExpr *SpkSymbolTable_Lookup(SpkSymbolTable *st, SpkSymbolNode *sym);
-SpkUnknown *SpkSymbolTable_Bind(SpkSymbolTable *st, struct SpkExpr *expr,
-                                SpkUnknown *requestor);
-
-
-extern struct SpkClassTmpl Spk_ClassXSymbolNodeTmpl, Spk_ClassXSTEntryTmpl,
-    Spk_ClassXContextClassTmpl, Spk_ClassXScopeTmpl, Spk_ClassXSymbolTableTmpl;
+SymbolTable *SymbolTable_New(void);
+void SymbolTable_EnterScope(SymbolTable *st, int enterNewContext);
+void SymbolTable_ExitScope(SymbolTable *st);
+Unknown *SymbolTable_Insert(SymbolTable *st, struct Expr *def,
+                                  Unknown *requestor);
+struct Expr *SymbolTable_Lookup(SymbolTable *st, SymbolNode *sym);
+Unknown *SymbolTable_Bind(SymbolTable *st, struct Expr *expr,
+                                Unknown *requestor);
 
 
-#endif /* __spk_st_h__ */
+extern struct ClassTmpl ClassXSymbolNodeTmpl, ClassXSTEntryTmpl,
+    ClassXContextClassTmpl, ClassXScopeTmpl, ClassXSymbolTableTmpl;
+
+
+#endif /* __st_h__ */

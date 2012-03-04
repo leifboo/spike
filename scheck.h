@@ -1,25 +1,25 @@
 
-#ifndef __spk_scheck_h__
-#define __spk_scheck_h__
+#ifndef __scheck_h__
+#define __scheck_h__
 
 
 #include "obj.h"
 
 
-struct SpkStmt;
-struct SpkStmtList;
-struct SpkSymbolTable;
+struct Stmt;
+struct StmtList;
+struct SymbolTable;
 
 
-SpkUnknown *SpkStaticChecker_DeclareBuiltIn(struct SpkSymbolTable *st,
-                                            SpkUnknown *requestor);
-SpkUnknown *SpkStaticChecker_Check(struct SpkStmt *tree,
-                                   struct SpkSymbolTable *st,
-                                   SpkUnknown *requestor);
+Unknown *StaticChecker_DeclareBuiltIn(struct SymbolTable *st,
+                                            Unknown *requestor);
+Unknown *StaticChecker_Check(struct Stmt *tree,
+                                   struct SymbolTable *st,
+                                   Unknown *requestor);
 
 
-extern int Spk_declareBuiltIn; /* XXX */
-extern int Spk_declareObject;
+extern int declareBuiltIn; /* XXX */
+extern int declareObject;
 
 
-#endif /* __spk_scheck_h__ */
+#endif /* __scheck_h__ */

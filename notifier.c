@@ -13,81 +13,81 @@
 #include <stdlib.h>
 
 
-struct SpkNotifier {
-    SpkObject base;
-    SpkUnknown *stream;
+struct Notifier {
+    Object base;
+    Unknown *stream;
     FILE *cStream;
     unsigned int errorTally;
-    SpkUnknown *source;
+    Unknown *source;
 };
 
 
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static SpkUnknown *Notifier_init(SpkUnknown *_self, SpkUnknown *stream, SpkUnknown *arg1) {
-    SpkNotifier *self;
+static Unknown *Notifier_init(Unknown *_self, Unknown *stream, Unknown *arg1) {
+    Notifier *self;
     
-    self = (SpkNotifier *)_self;
-    if (!SpkHost_IsFileStream(stream)) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a stream is required");
+    self = (Notifier *)_self;
+    if (!Host_IsFileStream(stream)) {
+        Halt(HALT_TYPE_ERROR, "a stream is required");
         return 0;
     }
     
-    self->stream = stream; Spk_INCREF(stream);
-    self->cStream = SpkHost_FileStreamAsCFileStream(stream);
+    self->stream = stream; INCREF(stream);
+    self->cStream = Host_FileStreamAsCFileStream(stream);
     self->errorTally = 0;
     
-    Spk_INCREF(_self);
+    INCREF(_self);
     return _self;
 }
 
-static SpkUnknown *Notifier_badExpr(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkNotifier *self;
-    SpkExpr *expr;
+static Unknown *Notifier_badExpr(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    Notifier *self;
+    Expr *expr;
     const char *source, *desc;
     
-    self = (SpkNotifier *)_self;
-    expr = Spk_CAST(XExpr, arg0);
+    self = (Notifier *)_self;
+    expr = CAST(XExpr, arg0);
     if (!expr) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "an expression node is required");
+        Halt(HALT_TYPE_ERROR, "an expression node is required");
         return 0;
     }
-    if (!SpkHost_IsString(arg1)) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a string is required");
+    if (!Host_IsString(arg1)) {
+        Halt(HALT_TYPE_ERROR, "a string is required");
         return 0;
     }
-    desc = SpkHost_StringAsCString(arg1);
+    desc = Host_StringAsCString(arg1);
     
     source = self->source
-             ? SpkHost_StringAsCString(self->source)
+             ? Host_StringAsCString(self->source)
              : "<unknown>";
     fprintf(stderr, "%s:%u: %s\n",
             source, expr->lineNo, desc);
     ++self->errorTally;
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
-static SpkUnknown *Notifier_redefinedSymbol(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkNotifier *self;
-    SpkExpr *expr;
-    SpkSymbolNode *sym;
+static Unknown *Notifier_redefinedSymbol(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    Notifier *self;
+    Expr *expr;
+    SymbolNode *sym;
     const char *source, *name, *format;
     
-    self = (SpkNotifier *)_self;
-    expr = Spk_CAST(XExpr, arg0);
+    self = (Notifier *)_self;
+    expr = CAST(XExpr, arg0);
     if (!expr) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "an expression node is required");
+        Halt(HALT_TYPE_ERROR, "an expression node is required");
         return 0;
     }
     
     source = self->source
-             ? SpkHost_StringAsCString(self->source)
+             ? Host_StringAsCString(self->source)
              : "<unknown>";
     sym = expr->sym;
-    name = SpkHost_SymbolAsCString(sym->sym);
+    name = Host_SymbolAsCString(sym->sym);
     format = (sym->entry && sym->entry->scope->context->level == 0)
              ? "%s:%u: cannot redefine built-in name '%s'\n"
              : "%s:%u: symbol '%s' multiply defined\n";
@@ -96,59 +96,59 @@ static SpkUnknown *Notifier_redefinedSymbol(SpkUnknown *_self, SpkUnknown *arg0,
             name);
     ++self->errorTally;
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
-static SpkUnknown *Notifier_undefinedSymbol(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkNotifier *self;
-    SpkExpr *expr;
+static Unknown *Notifier_undefinedSymbol(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    Notifier *self;
+    Expr *expr;
     const char *source;
     
-    self = (SpkNotifier *)_self;
-    expr = Spk_CAST(XExpr, arg0);
+    self = (Notifier *)_self;
+    expr = CAST(XExpr, arg0);
     if (!expr) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "an expression node is required");
+        Halt(HALT_TYPE_ERROR, "an expression node is required");
         return 0;
     }
     
     source = self->source
-                     ? SpkHost_StringAsCString(self->source)
+                     ? Host_StringAsCString(self->source)
                      : "<unknown>";
     fprintf(self->cStream, "%s:%u: symbol '%s' undefined\n",
             source, expr->lineNo,
-            SpkHost_SymbolAsCString(expr->sym->sym));
+            Host_SymbolAsCString(expr->sym->sym));
     ++self->errorTally;
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
-static SpkUnknown *Notifier_failOnError(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkNotifier *self;
+static Unknown *Notifier_failOnError(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    Notifier *self;
     
-    self = (SpkNotifier *)_self;
+    self = (Notifier *)_self;
     if (self->errorTally > 0) {
         exit(1);
         return 0;
     }
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* meta-methods */
 
-static SpkUnknown *ClassNotifier_new(SpkUnknown *self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkUnknown *newNotifier, *tmp;
+static Unknown *ClassNotifier_new(Unknown *self, Unknown *arg0, Unknown *arg1) {
+    Unknown *newNotifier, *tmp;
     
-    newNotifier = Spk_Send(Spk_GLOBAL(theInterpreter), Spk_SUPER, Spk_new, 0);
+    newNotifier = Send(GLOBAL(theInterpreter), SUPER, new, 0);
     if (!newNotifier)
         return 0;
     tmp = newNotifier;
-    newNotifier = Spk_Send(Spk_GLOBAL(theInterpreter), newNotifier, Spk_init, arg0, 0);
-    Spk_DECREF(tmp);
+    newNotifier = Send(GLOBAL(theInterpreter), newNotifier, init, arg0, 0);
+    DECREF(tmp);
     return newNotifier;
 }
 
@@ -156,56 +156,56 @@ static SpkUnknown *ClassNotifier_new(SpkUnknown *self, SpkUnknown *arg0, SpkUnkn
 /*------------------------------------------------------------------------*/
 /* low-level hooks */
 
-static void Notifier_zero(SpkObject *_self) {
-    SpkNotifier *self = (SpkNotifier *)_self;
-    (*Spk_CLASS(XNotifier)->superclass->zero)(_self);
+static void Notifier_zero(Object *_self) {
+    Notifier *self = (Notifier *)_self;
+    (*CLASS(XNotifier)->superclass->zero)(_self);
     self->stream = 0;
     self->cStream = 0;
     self->source = 0;
 }
 
-static void Notifier_dealloc(SpkObject *_self, SpkUnknown **l) {
-    SpkNotifier *self = (SpkNotifier *)_self;
-    Spk_LDECREF(self->stream, l);
-    Spk_XLDECREF(self->source, l);
-    (*Spk_CLASS(XNotifier)->superclass->dealloc)(_self, l);
+static void Notifier_dealloc(Object *_self, Unknown **l) {
+    Notifier *self = (Notifier *)_self;
+    LDECREF(self->stream, l);
+    XLDECREF(self->source, l);
+    (*CLASS(XNotifier)->superclass->dealloc)(_self, l);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* class tmpl */
 
-typedef struct SpkNotifierSubclass {
-    SpkNotifier base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkNotifierSubclass;
+typedef struct NotifierSubclass {
+    Notifier base;
+    Unknown *variables[1]; /* stretchy */
+} NotifierSubclass;
 
-static SpkAccessorTmpl accessors[] = {
-    { "source", Spk_T_OBJECT, offsetof(SpkNotifier, source),
-      SpkAccessor_READ | SpkAccessor_WRITE },
+static AccessorTmpl accessors[] = {
+    { "source", T_OBJECT, offsetof(Notifier, source),
+      Accessor_READ | Accessor_WRITE },
     { 0 }
 };
 
-static SpkMethodTmpl methods[] = {
-    { "init", SpkNativeCode_ARGS_1, &Notifier_init },
-    { "badExpr:", SpkNativeCode_ARGS_2, &Notifier_badExpr },
-    { "redefinedSymbol:", SpkNativeCode_ARGS_1, &Notifier_redefinedSymbol },
-    { "undefinedSymbol:", SpkNativeCode_ARGS_1, &Notifier_undefinedSymbol },
-    { "failOnError", SpkNativeCode_ARGS_0, &Notifier_failOnError },
+static MethodTmpl methods[] = {
+    { "init", NativeCode_ARGS_1, &Notifier_init },
+    { "badExpr:", NativeCode_ARGS_2, &Notifier_badExpr },
+    { "redefinedSymbol:", NativeCode_ARGS_1, &Notifier_redefinedSymbol },
+    { "undefinedSymbol:", NativeCode_ARGS_1, &Notifier_undefinedSymbol },
+    { "failOnError", NativeCode_ARGS_0, &Notifier_failOnError },
     { 0 }
 };
 
-static SpkMethodTmpl metaMethods[] = {
-    { "new", SpkNativeCode_ARGS_1, &ClassNotifier_new },
+static MethodTmpl metaMethods[] = {
+    { "new", NativeCode_ARGS_1, &ClassNotifier_new },
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassXNotifierTmpl = {
-    Spk_HEART_CLASS_TMPL(XNotifier, Object), {
+ClassTmpl ClassXNotifierTmpl = {
+    HEART_CLASS_TMPL(XNotifier, Object), {
         accessors,
         methods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkNotifierSubclass, variables),
+        offsetof(NotifierSubclass, variables),
         /*itemSize*/ 0,
         &Notifier_zero,
         &Notifier_dealloc

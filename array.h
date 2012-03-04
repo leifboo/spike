@@ -1,6 +1,6 @@
 
-#ifndef __spk_array_h__
-#define __spk_array_h__
+#ifndef __array_h__
+#define __array_h__
 
 
 #include "obj.h"
@@ -8,19 +8,19 @@
 #include <stdarg.h>
 
 
-typedef SpkVariableObject SpkArray;
+typedef VariableObject Array;
 
 
-extern struct SpkClassTmpl Spk_ClassArrayTmpl;
+extern struct ClassTmpl ClassArrayTmpl;
 
 
-SpkArray *SpkArray_New(size_t);
-SpkArray *SpkArray_WithArguments(SpkUnknown **, size_t, SpkArray *, size_t);
-SpkArray *SpkArray_FromVAList(va_list);
-size_t SpkArray_Size(SpkArray *);
-SpkUnknown *SpkArray_GetItem(SpkArray *, size_t);
-SpkUnknown *SpkArray_SetItem(SpkArray *, size_t, SpkUnknown *);
-void SpkArray_Sort(SpkArray *, int (*)(SpkUnknown *const *, SpkUnknown *const *));
+Array *Array_New(size_t);
+Array *Array_WithArguments(Unknown **, size_t, Array *, size_t);
+Array *Array_FromVAList(va_list);
+size_t Array_Size(Array *);
+Unknown *Array_GetItem(Array *, size_t);
+Unknown *Array_SetItem(Array *, size_t, Unknown *);
+void Array_Sort(Array *, int (*)(Unknown *const *, Unknown *const *));
 
 
-#endif /* __spk_array_h__ */
+#endif /* __array_h__ */

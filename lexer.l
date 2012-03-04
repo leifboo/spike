@@ -1,6 +1,6 @@
 
 %option reentrant noyywrap
-%option prefix="SpkLexer_"
+%option prefix="Lexer_"
 
 D			[0-9]
 L			[a-zA-Z_]
@@ -31,78 +31,78 @@ static void lcomment(yyscan_t yyscanner);
 "/*"			{ comment(yyscanner); }
 "//"			{ lcomment(yyscanner); }
 
-"break"			{ count(yyscanner); return Spk_TOKEN_BREAK; }
-"class"			{ count(yyscanner); return Spk_TOKEN_CLASS; }
-"continue"		{ count(yyscanner); return Spk_TOKEN_CONTINUE; }
-"do"			{ count(yyscanner); return Spk_TOKEN_DO; }
-"else"			{ count(yyscanner); return Spk_TOKEN_ELSE; }
-"for"			{ count(yyscanner); return Spk_TOKEN_FOR; }
-"if"			{ count(yyscanner); return Spk_TOKEN_IF; }
-"meta"			{ count(yyscanner); return Spk_TOKEN_META; }
-"return"		{ count(yyscanner); return Spk_TOKEN_RETURN; }
-"while"			{ count(yyscanner); return Spk_TOKEN_WHILE; }
-"yield"			{ count(yyscanner); return Spk_TOKEN_YIELD; }
+"break"			{ count(yyscanner); return TOKEN_BREAK; }
+"class"			{ count(yyscanner); return TOKEN_CLASS; }
+"continue"		{ count(yyscanner); return TOKEN_CONTINUE; }
+"do"			{ count(yyscanner); return TOKEN_DO; }
+"else"			{ count(yyscanner); return TOKEN_ELSE; }
+"for"			{ count(yyscanner); return TOKEN_FOR; }
+"if"			{ count(yyscanner); return TOKEN_IF; }
+"meta"			{ count(yyscanner); return TOKEN_META; }
+"return"		{ count(yyscanner); return TOKEN_RETURN; }
+"while"			{ count(yyscanner); return TOKEN_WHILE; }
+"yield"			{ count(yyscanner); return TOKEN_YIELD; }
 
-{L}({L}|{D})*		{ count(yyscanner); return Spk_TOKEN_IDENTIFIER; }
-${L}({L}|{D})*		{ count(yyscanner); return Spk_TOKEN_LITERAL_SYMBOL; }
+{L}({L}|{D})*		{ count(yyscanner); return TOKEN_IDENTIFIER; }
+${L}({L}|{D})*		{ count(yyscanner); return TOKEN_LITERAL_SYMBOL; }
 
-0[xX]{H}+{IS}?		{ count(yyscanner); return Spk_TOKEN_LITERAL_INT; }
-0{D}+{IS}?		{ count(yyscanner); return Spk_TOKEN_LITERAL_INT; }
-{D}+{IS}?		{ count(yyscanner); return Spk_TOKEN_LITERAL_INT; }
-{D}+{E}{FS}?		{ count(yyscanner); return Spk_TOKEN_LITERAL_FLOAT; }
-{D}*"."{D}+({E})?{FS}?	{ count(yyscanner); return Spk_TOKEN_LITERAL_FLOAT; }
-{D}+"."{D}*({E})?{FS}?	{ count(yyscanner); return Spk_TOKEN_LITERAL_FLOAT; }
-'(\\.|[^\\'])+'		{ count(yyscanner); return Spk_TOKEN_LITERAL_CHAR; }
-\"(\\.|[^\\"])*\"	{ count(yyscanner); return Spk_TOKEN_LITERAL_STR; }
+0[xX]{H}+{IS}?		{ count(yyscanner); return TOKEN_LITERAL_INT; }
+0{D}+{IS}?		{ count(yyscanner); return TOKEN_LITERAL_INT; }
+{D}+{IS}?		{ count(yyscanner); return TOKEN_LITERAL_INT; }
+{D}+{E}{FS}?		{ count(yyscanner); return TOKEN_LITERAL_FLOAT; }
+{D}*"."{D}+({E})?{FS}?	{ count(yyscanner); return TOKEN_LITERAL_FLOAT; }
+{D}+"."{D}*({E})?{FS}?	{ count(yyscanner); return TOKEN_LITERAL_FLOAT; }
+'(\\.|[^\\'])+'		{ count(yyscanner); return TOKEN_LITERAL_CHAR; }
+\"(\\.|[^\\"])*\"	{ count(yyscanner); return TOKEN_LITERAL_STR; }
 
-"..."			{ count(yyscanner); return Spk_TOKEN_ELLIPSIS; }
-"==="			{ count(yyscanner); return Spk_TOKEN_ID; }
-"!=="			{ count(yyscanner); return Spk_TOKEN_NI; }
-">>="			{ count(yyscanner); return Spk_TOKEN_ASSIGN_RSHIFT; }
-"<<="			{ count(yyscanner); return Spk_TOKEN_ASSIGN_LSHIFT; }
-"+="			{ count(yyscanner); return Spk_TOKEN_ASSIGN_PLUS; }
-"-="			{ count(yyscanner); return Spk_TOKEN_ASSIGN_MINUS; }
-"*="			{ count(yyscanner); return Spk_TOKEN_ASSIGN_TIMES; }
-"/="			{ count(yyscanner); return Spk_TOKEN_ASSIGN_DIVIDE; }
-"%="			{ count(yyscanner); return Spk_TOKEN_ASSIGN_MOD; }
-"&="			{ count(yyscanner); return Spk_TOKEN_ASSIGN_BAND; }
-"^="			{ count(yyscanner); return Spk_TOKEN_ASSIGN_BXOR; }
-"|="			{ count(yyscanner); return Spk_TOKEN_ASSIGN_BOR; }
-">>"			{ count(yyscanner); return Spk_TOKEN_RSHIFT; }
-"<<"			{ count(yyscanner); return Spk_TOKEN_LSHIFT; }
-"++"			{ count(yyscanner); return Spk_TOKEN_INC; }
-"--"			{ count(yyscanner); return Spk_TOKEN_DEC; }
-"&&"			{ count(yyscanner); return Spk_TOKEN_AND; }
-"||"			{ count(yyscanner); return Spk_TOKEN_OR; }
-"<="			{ count(yyscanner); return Spk_TOKEN_LE; }
-">="			{ count(yyscanner); return Spk_TOKEN_GE; }
-"=="			{ count(yyscanner); return Spk_TOKEN_EQ; }
-"!="			{ count(yyscanner); return Spk_TOKEN_NE; }
-".*"			{ count(yyscanner); return Spk_TOKEN_DOT_STAR; }
-";"			{ count(yyscanner); return Spk_TOKEN_SEMI; }
-"{"			{ count(yyscanner); return Spk_TOKEN_LCURLY; }
-"}"			{ count(yyscanner); return Spk_TOKEN_RCURLY; }
-","			{ count(yyscanner); return Spk_TOKEN_COMMA; }
-":"			{ count(yyscanner); return Spk_TOKEN_COLON; }
-"="			{ count(yyscanner); return Spk_TOKEN_ASSIGN; }
-"["			{ count(yyscanner); return Spk_TOKEN_LBRACK; }
-"]"			{ count(yyscanner); return Spk_TOKEN_RBRACK; }
-"("			{ count(yyscanner); return Spk_TOKEN_LPAREN; }
-")"			{ count(yyscanner); return Spk_TOKEN_RPAREN; }
-"."			{ count(yyscanner); return Spk_TOKEN_DOT; }
-"&"			{ count(yyscanner); return Spk_TOKEN_AMP; }
-"!"			{ count(yyscanner); return Spk_TOKEN_LNEG; }
-"~"			{ count(yyscanner); return Spk_TOKEN_BNEG; }
-"-"			{ count(yyscanner); return Spk_TOKEN_MINUS; }
-"+"			{ count(yyscanner); return Spk_TOKEN_PLUS; }
-"*"			{ count(yyscanner); return Spk_TOKEN_TIMES; }
-"/"			{ count(yyscanner); return Spk_TOKEN_DIVIDE; }
-"%"			{ count(yyscanner); return Spk_TOKEN_MOD; }
-"<"			{ count(yyscanner); return Spk_TOKEN_LT; }
-">"			{ count(yyscanner); return Spk_TOKEN_GT; }
-"^"			{ count(yyscanner); return Spk_TOKEN_BXOR; }
-"|"			{ count(yyscanner); return Spk_TOKEN_BOR; }
-"?"			{ count(yyscanner); return Spk_TOKEN_QM; }
+"..."			{ count(yyscanner); return TOKEN_ELLIPSIS; }
+"==="			{ count(yyscanner); return TOKEN_ID; }
+"!=="			{ count(yyscanner); return TOKEN_NI; }
+">>="			{ count(yyscanner); return TOKEN_ASSIGN_RSHIFT; }
+"<<="			{ count(yyscanner); return TOKEN_ASSIGN_LSHIFT; }
+"+="			{ count(yyscanner); return TOKEN_ASSIGN_PLUS; }
+"-="			{ count(yyscanner); return TOKEN_ASSIGN_MINUS; }
+"*="			{ count(yyscanner); return TOKEN_ASSIGN_TIMES; }
+"/="			{ count(yyscanner); return TOKEN_ASSIGN_DIVIDE; }
+"%="			{ count(yyscanner); return TOKEN_ASSIGN_MOD; }
+"&="			{ count(yyscanner); return TOKEN_ASSIGN_BAND; }
+"^="			{ count(yyscanner); return TOKEN_ASSIGN_BXOR; }
+"|="			{ count(yyscanner); return TOKEN_ASSIGN_BOR; }
+">>"			{ count(yyscanner); return TOKEN_RSHIFT; }
+"<<"			{ count(yyscanner); return TOKEN_LSHIFT; }
+"++"			{ count(yyscanner); return TOKEN_INC; }
+"--"			{ count(yyscanner); return TOKEN_DEC; }
+"&&"			{ count(yyscanner); return TOKEN_AND; }
+"||"			{ count(yyscanner); return TOKEN_OR; }
+"<="			{ count(yyscanner); return TOKEN_LE; }
+">="			{ count(yyscanner); return TOKEN_GE; }
+"=="			{ count(yyscanner); return TOKEN_EQ; }
+"!="			{ count(yyscanner); return TOKEN_NE; }
+".*"			{ count(yyscanner); return TOKEN_DOT_STAR; }
+";"			{ count(yyscanner); return TOKEN_SEMI; }
+"{"			{ count(yyscanner); return TOKEN_LCURLY; }
+"}"			{ count(yyscanner); return TOKEN_RCURLY; }
+","			{ count(yyscanner); return TOKEN_COMMA; }
+":"			{ count(yyscanner); return TOKEN_COLON; }
+"="			{ count(yyscanner); return TOKEN_ASSIGN; }
+"["			{ count(yyscanner); return TOKEN_LBRACK; }
+"]"			{ count(yyscanner); return TOKEN_RBRACK; }
+"("			{ count(yyscanner); return TOKEN_LPAREN; }
+")"			{ count(yyscanner); return TOKEN_RPAREN; }
+"."			{ count(yyscanner); return TOKEN_DOT; }
+"&"			{ count(yyscanner); return TOKEN_AMP; }
+"!"			{ count(yyscanner); return TOKEN_LNEG; }
+"~"			{ count(yyscanner); return TOKEN_BNEG; }
+"-"			{ count(yyscanner); return TOKEN_MINUS; }
+"+"			{ count(yyscanner); return TOKEN_PLUS; }
+"*"			{ count(yyscanner); return TOKEN_TIMES; }
+"/"			{ count(yyscanner); return TOKEN_DIVIDE; }
+"%"			{ count(yyscanner); return TOKEN_MOD; }
+"<"			{ count(yyscanner); return TOKEN_LT; }
+">"			{ count(yyscanner); return TOKEN_GT; }
+"^"			{ count(yyscanner); return TOKEN_BXOR; }
+"|"			{ count(yyscanner); return TOKEN_BOR; }
+"?"			{ count(yyscanner); return TOKEN_QM; }
 
 [ \t\v\n\f]		{ count(yyscanner); }
 .			{ fprintf(stderr, "bad character in source: '%s'\n", yyget_text(yyscanner)); return -1; }
@@ -192,15 +192,15 @@ static void count(yyscan_t yyscanner)
     yyset_column(column, yyscanner);
 }
 
-static SpkUnknown *intFromLiteral(char *str, size_t len) {
-    return SpkHost_IntegerFromCLong(strtol(str, 0, 0));
+static Unknown *intFromLiteral(char *str, size_t len) {
+    return Host_IntegerFromCLong(strtol(str, 0, 0));
 }
 
-static SpkUnknown *floatFromLiteral(char *str, size_t len) {
-    return SpkHost_FloatFromCDouble(strtod(str, 0));
+static Unknown *floatFromLiteral(char *str, size_t len) {
+    return Host_FloatFromCDouble(strtod(str, 0));
 }
 
-static SpkUnknown *charFromLiteral(char *str, size_t len) {
+static Unknown *charFromLiteral(char *str, size_t len) {
     char *s;
     char c, result;
     
@@ -239,11 +239,11 @@ static SpkUnknown *charFromLiteral(char *str, size_t len) {
         }
     }
     
-    return (SpkUnknown *)SpkChar_FromCChar(result);
+    return (Unknown *)Char_FromCChar(result);
 }
 
-static SpkUnknown *stringFromLiteral(char *str, size_t len) {
-    SpkUnknown *result;
+static Unknown *stringFromLiteral(char *str, size_t len) {
+    Unknown *result;
     char *d, *s;
     char c;
     size_t resultLen, left;
@@ -297,28 +297,28 @@ static SpkUnknown *stringFromLiteral(char *str, size_t len) {
     }
     
     if (!result) {
-        result = SpkHost_StringFromCStringAndLength(0, resultLen);
-        d = SpkHost_StringAsCString(result);
+        result = Host_StringFromCStringAndLength(0, resultLen);
+        d = Host_StringAsCString(result);
         goto again;
     }
 
     return result;
 }
 
-static SpkUnknown *symbolNodeFromCString(SpkUnknown *st, const char *str) {
-    SpkSymbol *sym = SpkSymbol_FromCString(str);
-    return Spk_Send(Spk_GLOBAL(theInterpreter), st, Spk_symbolNodeForSymbol, sym, 0);
+static Unknown *symbolNodeFromCString(Unknown *st, const char *str) {
+    Symbol *sym = Symbol_FromCString(str);
+    return Send(GLOBAL(theInterpreter), st, symbolNodeForSymbol, sym, 0);
 }
 
-static int isSpec(SpkUnknown *symbolNode) {
-    SpkUnknown *bool; int result;
-    bool = Spk_Send(Spk_GLOBAL(theInterpreter), symbolNode, Spk_isSpec, 0);
-    result = (bool == Spk_1 || bool == Spk_GLOBAL(xtrue));
-    Spk_DECREF(bool);
+static int _isSpec(Unknown *symbolNode) {
+    Unknown *bool; int result;
+    bool = Send(GLOBAL(theInterpreter), symbolNode, isSpec, 0);
+    result = (bool == one || bool == GLOBAL(xtrue));
+    DECREF(bool);
     return result;
 }
 
-int SpkLexer_GetNextToken(SpkToken *token, yyscan_t scanner, SpkUnknown *st) {
+int Lexer_GetNextToken(Token *token, yyscan_t scanner, Unknown *st) {
     int id;
     struct yyguts_t * yyg = (struct yyguts_t*)scanner;
     
@@ -330,25 +330,25 @@ int SpkLexer_GetNextToken(SpkToken *token, yyscan_t scanner, SpkUnknown *st) {
         return 0;
     }
     switch (id) {
-    case Spk_TOKEN_LITERAL_INT:
+    case TOKEN_LITERAL_INT:
         token->value = intFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
-    case Spk_TOKEN_LITERAL_FLOAT:
+    case TOKEN_LITERAL_FLOAT:
         token->value = floatFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
-    case Spk_TOKEN_LITERAL_CHAR:
+    case TOKEN_LITERAL_CHAR:
         token->value = charFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
-    case Spk_TOKEN_LITERAL_STR:
+    case TOKEN_LITERAL_STR:
         token->value = stringFromLiteral(yyget_text(scanner), yyget_leng(scanner));
         break;
-    case Spk_TOKEN_LITERAL_SYMBOL:
-        token->value = (SpkUnknown *)SpkSymbol_FromCString(yyget_text(scanner) + 1);
+    case TOKEN_LITERAL_SYMBOL:
+        token->value = (Unknown *)Symbol_FromCString(yyget_text(scanner) + 1);
         break;
-    case Spk_TOKEN_IDENTIFIER:
+    case TOKEN_IDENTIFIER:
         token->value = symbolNodeFromCString(st, yyget_text(scanner));
-        if (isSpec(token->value)) {
-            token->id = Spk_TOKEN_SPECIFIER;
+        if (_isSpec(token->value)) {
+            token->id = TOKEN_SPECIFIER;
         }
         break;
     }

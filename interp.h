@@ -1,6 +1,6 @@
 
-#ifndef __spk_interp_h__
-#define __spk_interp_h__
+#ifndef __interp_h__
+#define __interp_h__
 
 
 #include "native.h"
@@ -10,150 +10,150 @@
 #include <stddef.h>
 
 
-struct SpkBehavior;
+struct Behavior;
 
 
-typedef struct SpkContext SpkContext;
-typedef struct SpkFiber SpkFiber;
-typedef struct SpkInterpreter SpkInterpreter;
-typedef struct SpkMessage SpkMessage;
-typedef struct SpkMethod SpkMethod;
-typedef struct SpkProcessorScheduler SpkProcessorScheduler;
-typedef struct SpkSemaphore SpkSemaphore;
+typedef struct Context Context;
+typedef struct Fiber Fiber;
+typedef struct Interpreter Interpreter;
+typedef struct Message Message;
+typedef struct Method Method;
+typedef struct ProcessorScheduler ProcessorScheduler;
+typedef struct Semaphore Semaphore;
 
 
-typedef unsigned char SpkOpcode;
+typedef unsigned char Opcode;
 
-enum /*SpkOpcode*/ {
-    Spk_OPCODE_NOP,
-    Spk_OPCODE_PUSH_LOCAL,
-    Spk_OPCODE_PUSH_INST_VAR,
-    Spk_OPCODE_PUSH_GLOBAL,
-    Spk_OPCODE_PUSH_LITERAL,
-    Spk_OPCODE_PUSH_SELF,
-    Spk_OPCODE_PUSH_SUPER,
-    Spk_OPCODE_PUSH_FALSE,
-    Spk_OPCODE_PUSH_TRUE,
-    Spk_OPCODE_PUSH_NULL,
-    Spk_OPCODE_PUSH_VOID,
-    Spk_OPCODE_PUSH_CONTEXT,
-    Spk_OPCODE_DUP,
-    Spk_OPCODE_DUP_N,
-    Spk_OPCODE_STORE_LOCAL,
-    Spk_OPCODE_STORE_INST_VAR,
-    Spk_OPCODE_STORE_GLOBAL,
-    Spk_OPCODE_POP,
-    Spk_OPCODE_ROT,
-    Spk_OPCODE_BRANCH_IF_FALSE,
-    Spk_OPCODE_BRANCH_IF_TRUE,
-    Spk_OPCODE_BRANCH_ALWAYS,
-    Spk_OPCODE_ID,
-    Spk_OPCODE_OPER,
-    Spk_OPCODE_OPER_SUPER,
-    Spk_OPCODE_CALL,
-    Spk_OPCODE_CALL_VA,
-    Spk_OPCODE_CALL_SUPER,
-    Spk_OPCODE_CALL_SUPER_VA,
-    Spk_OPCODE_SET_IND,
-    Spk_OPCODE_SET_IND_SUPER,
-    Spk_OPCODE_SET_INDEX,
-    Spk_OPCODE_SET_INDEX_VA,
-    Spk_OPCODE_SET_INDEX_SUPER,
-    Spk_OPCODE_SET_INDEX_SUPER_VA,
-    Spk_OPCODE_GET_ATTR,
-    Spk_OPCODE_GET_ATTR_SUPER,
-    Spk_OPCODE_GET_ATTR_VAR,
-    Spk_OPCODE_GET_ATTR_VAR_SUPER,
-    Spk_OPCODE_SET_ATTR,
-    Spk_OPCODE_SET_ATTR_SUPER,
-    Spk_OPCODE_SET_ATTR_VAR,
-    Spk_OPCODE_SET_ATTR_VAR_SUPER,
-    Spk_OPCODE_SEND_MESSAGE,
-    Spk_OPCODE_SEND_MESSAGE_VA,
-    Spk_OPCODE_SEND_MESSAGE_SUPER,
-    Spk_OPCODE_SEND_MESSAGE_SUPER_VA,
-    Spk_OPCODE_SEND_MESSAGE_VAR,
-    Spk_OPCODE_SEND_MESSAGE_VAR_VA,
-    Spk_OPCODE_SEND_MESSAGE_SUPER_VAR,
-    Spk_OPCODE_SEND_MESSAGE_SUPER_VAR_VA,
-    Spk_OPCODE_SEND_MESSAGE_NS_VAR_VA,
-    Spk_OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA,
-    Spk_OPCODE_RAISE,
-    Spk_OPCODE_RET,
-    Spk_OPCODE_RET_TRAMP,
-    Spk_OPCODE_LEAF,
-    Spk_OPCODE_SAVE,
-    Spk_OPCODE_ARG,
-    Spk_OPCODE_ARG_VA,
-    Spk_OPCODE_NATIVE,
-    Spk_OPCODE_NATIVE_PUSH_INST_VAR,
-    Spk_OPCODE_NATIVE_STORE_INST_VAR,
-    Spk_OPCODE_RESTORE_SENDER,
-    Spk_OPCODE_RESTORE_CALLER,
-    Spk_OPCODE_CALL_BLOCK,
-    Spk_OPCODE_CHECK_STACKP,
+enum /*Opcode*/ {
+    OPCODE_NOP,
+    OPCODE_PUSH_LOCAL,
+    OPCODE_PUSH_INST_VAR,
+    OPCODE_PUSH_GLOBAL,
+    OPCODE_PUSH_LITERAL,
+    OPCODE_PUSH_SELF,
+    OPCODE_PUSH_SUPER,
+    OPCODE_PUSH_FALSE,
+    OPCODE_PUSH_TRUE,
+    OPCODE_PUSH_NULL,
+    OPCODE_PUSH_VOID,
+    OPCODE_PUSH_CONTEXT,
+    OPCODE_DUP,
+    OPCODE_DUP_N,
+    OPCODE_STORE_LOCAL,
+    OPCODE_STORE_INST_VAR,
+    OPCODE_STORE_GLOBAL,
+    OPCODE_POP,
+    OPCODE_ROT,
+    OPCODE_BRANCH_IF_FALSE,
+    OPCODE_BRANCH_IF_TRUE,
+    OPCODE_BRANCH_ALWAYS,
+    OPCODE_ID,
+    OPCODE_OPER,
+    OPCODE_OPER_SUPER,
+    OPCODE_CALL,
+    OPCODE_CALL_VA,
+    OPCODE_CALL_SUPER,
+    OPCODE_CALL_SUPER_VA,
+    OPCODE_SET_IND,
+    OPCODE_SET_IND_SUPER,
+    OPCODE_SET_INDEX,
+    OPCODE_SET_INDEX_VA,
+    OPCODE_SET_INDEX_SUPER,
+    OPCODE_SET_INDEX_SUPER_VA,
+    OPCODE_GET_ATTR,
+    OPCODE_GET_ATTR_SUPER,
+    OPCODE_GET_ATTR_VAR,
+    OPCODE_GET_ATTR_VAR_SUPER,
+    OPCODE_SET_ATTR,
+    OPCODE_SET_ATTR_SUPER,
+    OPCODE_SET_ATTR_VAR,
+    OPCODE_SET_ATTR_VAR_SUPER,
+    OPCODE_SEND_MESSAGE,
+    OPCODE_SEND_MESSAGE_VA,
+    OPCODE_SEND_MESSAGE_SUPER,
+    OPCODE_SEND_MESSAGE_SUPER_VA,
+    OPCODE_SEND_MESSAGE_VAR,
+    OPCODE_SEND_MESSAGE_VAR_VA,
+    OPCODE_SEND_MESSAGE_SUPER_VAR,
+    OPCODE_SEND_MESSAGE_SUPER_VAR_VA,
+    OPCODE_SEND_MESSAGE_NS_VAR_VA,
+    OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA,
+    OPCODE_RAISE,
+    OPCODE_RET,
+    OPCODE_RET_TRAMP,
+    OPCODE_LEAF,
+    OPCODE_SAVE,
+    OPCODE_ARG,
+    OPCODE_ARG_VA,
+    OPCODE_NATIVE,
+    OPCODE_NATIVE_PUSH_INST_VAR,
+    OPCODE_NATIVE_STORE_INST_VAR,
+    OPCODE_RESTORE_SENDER,
+    OPCODE_RESTORE_CALLER,
+    OPCODE_CALL_BLOCK,
+    OPCODE_CHECK_STACKP,
     
-    Spk_NUM_OPCODES
+    NUM_OPCODES
 };
 
 
 enum {
     /* These values are arbitrary. */
-    Spk_LEAF_MAX_ARGUMENT_COUNT = 3,
-    Spk_LEAF_MAX_STACK_SIZE = 5
+    LEAF_MAX_ARGUMENT_COUNT = 3,
+    LEAF_MAX_STACK_SIZE = 5
 };
 
 
-#define SpkContext_VARIABLES(op) ((SpkUnknown **)SpkVariableObject_ITEM_BASE(op))
-#define SpkMethod_OPCODES(op) ((SpkOpcode *)SpkVariableObject_ITEM_BASE(op))
+#define Context_VARIABLES(op) ((Unknown **)VariableObject_ITEM_BASE(op))
+#define Method_OPCODES(op) ((Opcode *)VariableObject_ITEM_BASE(op))
 
 
-struct SpkMethod {
-    SpkVariableObject base;
+struct Method {
+    VariableObject base;
     struct {
-        SpkUnknown *source;
+        Unknown *source;
         size_t lineCodeTally;
-        SpkOpcode *lineCodes;
+        Opcode *lineCodes;
     } debug;
-    SpkNativeCode nativeCode;
+    NativeCode nativeCode;
 };
 
 
-struct SpkMessage {
-    SpkObject base;
+struct Message {
+    Object base;
     unsigned int ns;
-    SpkUnknown *selector;
-    SpkUnknown *arguments;
+    Unknown *selector;
+    Unknown *arguments;
 };
 
 
-extern struct SpkClassTmpl Spk_ClassMessageTmpl, Spk_ClassMethodTmpl, Spk_ClassContextTmpl, Spk_ClassMethodContextTmpl, Spk_ClassBlockContextTmpl;
-extern struct SpkClassTmpl Spk_ClassInterpreterTmpl, Spk_ClassProcessorSchedulerTmpl, Spk_ClassFiberTmpl;
-extern struct SpkClassTmpl Spk_ClassNullTmpl, Spk_ClassUninitTmpl, Spk_ClassVoidTmpl;
+extern struct ClassTmpl ClassMessageTmpl, ClassMethodTmpl, ClassContextTmpl, ClassMethodContextTmpl, ClassBlockContextTmpl;
+extern struct ClassTmpl ClassInterpreterTmpl, ClassProcessorSchedulerTmpl, ClassFiberTmpl;
+extern struct ClassTmpl ClassNullTmpl, ClassUninitTmpl, ClassVoidTmpl;
 
 
-SpkMessage *SpkMessage_New(void);
-SpkMethod *SpkMethod_New(size_t);
+Message *Message_New(void);
+Method *Method_New(size_t);
 
-SpkContext *SpkContext_New(size_t);
+Context *Context_New(size_t);
 
-SpkSemaphore *SpkSemaphore_New(void);
-int SpkSemaphore_IsEmpty(SpkSemaphore *);
-void SpkSemaphore_AddLast(SpkSemaphore *, SpkFiber *);
-SpkFiber *SpkSemaphore_RemoveFirst(SpkSemaphore *);
+Semaphore *Semaphore_New(void);
+int Semaphore_IsEmpty(Semaphore *);
+void Semaphore_AddLast(Semaphore *, Fiber *);
+Fiber *Semaphore_RemoveFirst(Semaphore *);
 
-void SpkInterpreter_Boot(void);
-SpkInterpreter *SpkInterpreter_New(void);
-void SpkInterpreter_Init(SpkInterpreter *, SpkProcessorScheduler *);
-SpkUnknown *SpkInterpreter_Interpret(SpkInterpreter *);
-SpkUnknown *SpkInterpreter_SendMessage(SpkInterpreter *, SpkUnknown *,
-                                       unsigned int, SpkUnknown *, SpkUnknown *);
-void SpkInterpreter_SynchronousSignal(SpkInterpreter *, SpkSemaphore *);
-void SpkInterpreter_TransferTo(SpkInterpreter *, SpkFiber *);
-SpkFiber *SpkInterpreter_WakeHighestPriority(SpkInterpreter *);
-void SpkInterpreter_PutToSleep(SpkInterpreter *, SpkFiber *);
-void SpkInterpreter_Resume(SpkInterpreter *, SpkFiber *);
-void SpkInterpreter_PrintCallStack(SpkInterpreter *);
+void Interpreter_Boot(void);
+Interpreter *Interpreter_New(void);
+void Interpreter_Init(Interpreter *, ProcessorScheduler *);
+Unknown *Interpreter_Interpret(Interpreter *);
+Unknown *Interpreter_SendMessage(Interpreter *, Unknown *,
+                                       unsigned int, Unknown *, Unknown *);
+void Interpreter_SynchronousSignal(Interpreter *, Semaphore *);
+void Interpreter_TransferTo(Interpreter *, Fiber *);
+Fiber *Interpreter_WakeHighestPriority(Interpreter *);
+void Interpreter_PutToSleep(Interpreter *, Fiber *);
+void Interpreter_Resume(Interpreter *, Fiber *);
+void Interpreter_PrintCallStack(Interpreter *);
 
 
-#endif /* __spk_interp_h__ */
+#endif /* __interp_h__ */

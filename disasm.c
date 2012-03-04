@@ -12,7 +12,7 @@
 
 
 #define DECODE_UINT(result) do { \
-    SpkOpcode byte; \
+    Opcode byte; \
     unsigned int shift = 0; \
     (result) = 0; \
     while (1) { \
@@ -26,7 +26,7 @@
 } while (0)
 
 #define DECODE_SINT(result) do { \
-    SpkOpcode byte; \
+    Opcode byte; \
     unsigned int shift = 0; \
     (result) = 0; \
     do { \
@@ -47,18 +47,18 @@ typedef struct Level {
 } Level;
 
 typedef struct Visitor {
-    void (*preMethod)(SpkMethodTmpl *, SpkUnknown **, Level *,
+    void (*preMethod)(MethodTmpl *, Unknown **, Level *,
                       void *);
-    void (*postMethod)(SpkMethodTmpl *, SpkUnknown **, Level *,
+    void (*postMethod)(MethodTmpl *, Unknown **, Level *,
                        void *);
-    void (*preMethodNamespace)(SpkMethodNamespace, Level *, void *);
-    void (*postMethodNamespace)(SpkMethodNamespace, Level *, void *);
-    void (*preClassBody)(SpkBehaviorTmpl *, Level *, void *);
-    void (*postClassBody)(SpkBehaviorTmpl *, Level *, void *);
-    void (*preClass)(SpkClassTmpl *, Level *, void *);
-    void (*postClass)(SpkClassTmpl *, Level *, void *);
-    void (*preModule)(SpkModuleTmpl *, Level *, void *);
-    void (*postModule)(SpkModuleTmpl *, Level *, void *);
+    void (*preMethodNamespace)(MethodNamespace, Level *, void *);
+    void (*postMethodNamespace)(MethodNamespace, Level *, void *);
+    void (*preClassBody)(BehaviorTmpl *, Level *, void *);
+    void (*postClassBody)(BehaviorTmpl *, Level *, void *);
+    void (*preClass)(ClassTmpl *, Level *, void *);
+    void (*postClass)(ClassTmpl *, Level *, void *);
+    void (*preModule)(ModuleTmpl *, Level *, void *);
+    void (*postModule)(ModuleTmpl *, Level *, void *);
 } Visitor;
 
 
@@ -85,12 +85,12 @@ static void nest(Level *level, FILE *out) {
 /*------------------------------------------------------------------------*/
 /* disassembly */
 
-static void disassembleMethod(SpkMethodTmpl *method,
-                              SpkUnknown **literals,
+static void disassembleMethod(MethodTmpl *method,
+                              Unknown **literals,
                               Level *level,
                               void *closure)
 {
-    SpkOpcode *begin, *ip, *instructionPointer, *end;
+    Opcode *begin, *ip, *instructionPointer, *end;
     FILE *out;
     
     out = (FILE *)closure;
@@ -103,9 +103,9 @@ static void disassembleMethod(SpkMethodTmpl *method,
     instructionPointer = begin;
     
     while (instructionPointer < end) {
-        SpkOpcode opcode;
+        Opcode opcode;
         const char *keyword = 0;
-        SpkUnknown *selector = 0;
+        Unknown *selector = 0;
         const char *mnemonic = "unk", *base = 0;
         size_t index = 0;
         ptrdiff_t displacement = 0;
@@ -117,118 +117,118 @@ static void disassembleMethod(SpkMethodTmpl *method,
         unsigned int oper = 0;
         size_t label = 0, *pLabel = 0;
         size_t i;
-        SpkUnknown *literal = 0;
+        Unknown *literal = 0;
         
         ip = instructionPointer;
         opcode = *instructionPointer++;
         
         switch (opcode) {
             
-        case Spk_OPCODE_NOP: mnemonic = "nop"; break;
+        case OPCODE_NOP: mnemonic = "nop"; break;
             
-        case Spk_OPCODE_PUSH_LOCAL:    mnemonic = "push"; base = "local";    goto push;
-        case Spk_OPCODE_PUSH_INST_VAR: mnemonic = "push"; base = "receiver"; goto push;
-        case Spk_OPCODE_PUSH_GLOBAL:   mnemonic = "push"; base = "global";   goto push;
+        case OPCODE_PUSH_LOCAL:    mnemonic = "push"; base = "local";    goto push;
+        case OPCODE_PUSH_INST_VAR: mnemonic = "push"; base = "receiver"; goto push;
+        case OPCODE_PUSH_GLOBAL:   mnemonic = "push"; base = "global";   goto push;
  push:
             DECODE_UINT(index);
             break;
-        case Spk_OPCODE_PUSH_LITERAL:
+        case OPCODE_PUSH_LITERAL:
             mnemonic = "push";
             base = "literal";
             DECODE_UINT(index);
             literal = literals[index];
             break;
             
-        case Spk_OPCODE_PUSH_SELF:     mnemonic = "push"; keyword = "self";        break;
-        case Spk_OPCODE_PUSH_SUPER:    mnemonic = "push"; keyword = "super";       break;
-        case Spk_OPCODE_PUSH_FALSE:    mnemonic = "push"; keyword = "false";       break;
-        case Spk_OPCODE_PUSH_TRUE:     mnemonic = "push"; keyword = "true";        break;
-        case Spk_OPCODE_PUSH_NULL:     mnemonic = "push"; keyword = "null";        break;
-        case Spk_OPCODE_PUSH_VOID:     mnemonic = "push"; keyword = "void";        break;
-        case Spk_OPCODE_PUSH_CONTEXT:  mnemonic = "push"; keyword = "thisContext"; break;
+        case OPCODE_PUSH_SELF:     mnemonic = "push"; keyword = "self";        break;
+        case OPCODE_PUSH_SUPER:    mnemonic = "push"; keyword = "super";       break;
+        case OPCODE_PUSH_FALSE:    mnemonic = "push"; keyword = "false";       break;
+        case OPCODE_PUSH_TRUE:     mnemonic = "push"; keyword = "true";        break;
+        case OPCODE_PUSH_NULL:     mnemonic = "push"; keyword = "null";        break;
+        case OPCODE_PUSH_VOID:     mnemonic = "push"; keyword = "void";        break;
+        case OPCODE_PUSH_CONTEXT:  mnemonic = "push"; keyword = "thisContext"; break;
             
-        case Spk_OPCODE_DUP_N:
+        case OPCODE_DUP_N:
             DECODE_UINT(count);
             pCount = &count;
-        case Spk_OPCODE_DUP:
+        case OPCODE_DUP:
             mnemonic = "dup";
             break;
 
-        case Spk_OPCODE_STORE_LOCAL:    mnemonic = "store"; base = "local";    goto store;
-        case Spk_OPCODE_STORE_INST_VAR: mnemonic = "store"; base = "receiver"; goto store;
-        case Spk_OPCODE_STORE_GLOBAL:   mnemonic = "store"; base = "global";   goto store;
+        case OPCODE_STORE_LOCAL:    mnemonic = "store"; base = "local";    goto store;
+        case OPCODE_STORE_INST_VAR: mnemonic = "store"; base = "receiver"; goto store;
+        case OPCODE_STORE_GLOBAL:   mnemonic = "store"; base = "global";   goto store;
  store:
             DECODE_UINT(index);
             break;
             
-        case Spk_OPCODE_POP: mnemonic = "pop"; break;
+        case OPCODE_POP: mnemonic = "pop"; break;
             
-        case Spk_OPCODE_ROT:
+        case OPCODE_ROT:
             mnemonic = "rot";
             DECODE_UINT(count);
             pCount = &count;
             break;
 
-        case Spk_OPCODE_BRANCH_IF_FALSE: mnemonic = "brf"; goto branch;
-        case Spk_OPCODE_BRANCH_IF_TRUE:  mnemonic = "brt"; goto branch;
-        case Spk_OPCODE_BRANCH_ALWAYS:   mnemonic = "bra"; goto branch;
+        case OPCODE_BRANCH_IF_FALSE: mnemonic = "brf"; goto branch;
+        case OPCODE_BRANCH_IF_TRUE:  mnemonic = "brt"; goto branch;
+        case OPCODE_BRANCH_ALWAYS:   mnemonic = "bra"; goto branch;
  branch:
             DECODE_SINT(displacement);
             label = (ip + displacement) - begin;
             pLabel = &label;
             break;
             
-        case Spk_OPCODE_ID:         mnemonic = "id";    break;
+        case OPCODE_ID:         mnemonic = "id";    break;
             
-        case Spk_OPCODE_OPER:       mnemonic = "oper";  goto oper;
-        case Spk_OPCODE_OPER_SUPER: mnemonic = "soper"; goto oper;
+        case OPCODE_OPER:       mnemonic = "oper";  goto oper;
+        case OPCODE_OPER_SUPER: mnemonic = "soper"; goto oper;
  oper:
             oper = (unsigned int)(*instructionPointer++);
-            selector = *Spk_operSelectors[oper].selector;
+            selector = *operSelectors[oper].selector;
             break;
             
-        case Spk_OPCODE_CALL:           mnemonic = "call";   goto call;
-        case Spk_OPCODE_CALL_VA:        mnemonic = "vcall";  goto call;
-        case Spk_OPCODE_CALL_SUPER:     mnemonic = "scall";  goto call;
-        case Spk_OPCODE_CALL_SUPER_VA:  mnemonic = "vscall"; goto call;
+        case OPCODE_CALL:           mnemonic = "call";   goto call;
+        case OPCODE_CALL_VA:        mnemonic = "vcall";  goto call;
+        case OPCODE_CALL_SUPER:     mnemonic = "scall";  goto call;
+        case OPCODE_CALL_SUPER_VA:  mnemonic = "vscall"; goto call;
  call:
             oper = (unsigned int)(*instructionPointer++);
-            selector = *Spk_operCallSelectors[oper].selector;
+            selector = *operCallSelectors[oper].selector;
             DECODE_UINT(argumentCount);
             pArgumentCount = &argumentCount;
             break;
 
-        case Spk_OPCODE_SET_IND:        mnemonic = "ind";  break;
-        case Spk_OPCODE_SET_IND_SUPER:  mnemonic = "sind"; break;
+        case OPCODE_SET_IND:        mnemonic = "ind";  break;
+        case OPCODE_SET_IND_SUPER:  mnemonic = "sind"; break;
         
-        case Spk_OPCODE_SET_INDEX:           mnemonic = "index";   goto index;
-        case Spk_OPCODE_SET_INDEX_VA:        mnemonic = "vindex";  goto index;
-        case Spk_OPCODE_SET_INDEX_SUPER:     mnemonic = "sindex";  goto index;
-        case Spk_OPCODE_SET_INDEX_SUPER_VA:  mnemonic = "vsindex"; goto index;
+        case OPCODE_SET_INDEX:           mnemonic = "index";   goto index;
+        case OPCODE_SET_INDEX_VA:        mnemonic = "vindex";  goto index;
+        case OPCODE_SET_INDEX_SUPER:     mnemonic = "sindex";  goto index;
+        case OPCODE_SET_INDEX_SUPER_VA:  mnemonic = "vsindex"; goto index;
  index:
             DECODE_UINT(argumentCount);
             pArgumentCount = &argumentCount;
             break;
 
-        case Spk_OPCODE_GET_ATTR:       mnemonic = "gattr";  goto attr;
-        case Spk_OPCODE_GET_ATTR_SUPER: mnemonic = "gsattr"; goto attr;
-        case Spk_OPCODE_SET_ATTR:       mnemonic = "sattr";  goto attr;
-        case Spk_OPCODE_SET_ATTR_SUPER: mnemonic = "ssattr"; goto attr;
+        case OPCODE_GET_ATTR:       mnemonic = "gattr";  goto attr;
+        case OPCODE_GET_ATTR_SUPER: mnemonic = "gsattr"; goto attr;
+        case OPCODE_SET_ATTR:       mnemonic = "sattr";  goto attr;
+        case OPCODE_SET_ATTR_SUPER: mnemonic = "ssattr"; goto attr;
  attr:
             base = "literal";
             DECODE_UINT(index);
             literal = literals[index];
             break;
             
-        case Spk_OPCODE_GET_ATTR_VAR:        mnemonic = "gattrv";   break;
-        case Spk_OPCODE_GET_ATTR_VAR_SUPER:  mnemonic = "gsattrv";  break;
-        case Spk_OPCODE_SET_ATTR_VAR:        mnemonic = "sattrv";   break;
-        case Spk_OPCODE_SET_ATTR_VAR_SUPER:  mnemonic = "ssattrv";  break;
+        case OPCODE_GET_ATTR_VAR:        mnemonic = "gattrv";   break;
+        case OPCODE_GET_ATTR_VAR_SUPER:  mnemonic = "gsattrv";  break;
+        case OPCODE_SET_ATTR_VAR:        mnemonic = "sattrv";   break;
+        case OPCODE_SET_ATTR_VAR_SUPER:  mnemonic = "ssattrv";  break;
             
-        case Spk_OPCODE_SEND_MESSAGE:           mnemonic = "send";   goto send;
-        case Spk_OPCODE_SEND_MESSAGE_VA:        mnemonic = "vsend";  goto send;
-        case Spk_OPCODE_SEND_MESSAGE_SUPER:     mnemonic = "ssend";  goto send;
-        case Spk_OPCODE_SEND_MESSAGE_SUPER_VA:  mnemonic = "vssend"; goto send;
+        case OPCODE_SEND_MESSAGE:           mnemonic = "send";   goto send;
+        case OPCODE_SEND_MESSAGE_VA:        mnemonic = "vsend";  goto send;
+        case OPCODE_SEND_MESSAGE_SUPER:     mnemonic = "ssend";  goto send;
+        case OPCODE_SEND_MESSAGE_SUPER_VA:  mnemonic = "vssend"; goto send;
  send:
             base = "literal";
             DECODE_UINT(index);
@@ -237,32 +237,32 @@ static void disassembleMethod(SpkMethodTmpl *method,
             literal = literals[index];
             break;
             
-        case Spk_OPCODE_SEND_MESSAGE_VAR:           mnemonic = "sendv";   goto sendVar;
-        case Spk_OPCODE_SEND_MESSAGE_VAR_VA:        mnemonic = "vsendv";  goto sendVar;
-        case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR:     mnemonic = "ssendv";  goto sendVar;
-        case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR_VA:  mnemonic = "vssendv"; goto sendVar;
+        case OPCODE_SEND_MESSAGE_VAR:           mnemonic = "sendv";   goto sendVar;
+        case OPCODE_SEND_MESSAGE_VAR_VA:        mnemonic = "vsendv";  goto sendVar;
+        case OPCODE_SEND_MESSAGE_SUPER_VAR:     mnemonic = "ssendv";  goto sendVar;
+        case OPCODE_SEND_MESSAGE_SUPER_VAR_VA:  mnemonic = "vssendv"; goto sendVar;
  sendVar:
             DECODE_UINT(argumentCount);
             pArgumentCount = &argumentCount;
             break;
 
-        case Spk_OPCODE_RAISE: mnemonic = "raise"; break;
+        case OPCODE_RAISE: mnemonic = "raise"; break;
 
-        case Spk_OPCODE_RET:       mnemonic = "ret";   break;
-        case Spk_OPCODE_RET_TRAMP: mnemonic = "rett";  break;
+        case OPCODE_RET:       mnemonic = "ret";   break;
+        case OPCODE_RET_TRAMP: mnemonic = "rett";  break;
             
-        case Spk_OPCODE_LEAF:
+        case OPCODE_LEAF:
             mnemonic = "leaf";
             break;
             
-        case Spk_OPCODE_SAVE:
+        case OPCODE_SAVE:
             mnemonic = "save";
             DECODE_UINT(contextSize);
             DECODE_UINT(stackSize);
             break;
             
-        case Spk_OPCODE_ARG:     mnemonic = "arg";  goto arg;
-        case Spk_OPCODE_ARG_VA:  mnemonic = "varg"; goto arg;
+        case OPCODE_ARG:     mnemonic = "arg";  goto arg;
+        case OPCODE_ARG_VA:  mnemonic = "varg"; goto arg;
  arg:
             DECODE_UINT(minArgumentCount);
             DECODE_UINT(maxArgumentCount);
@@ -273,13 +273,13 @@ static void disassembleMethod(SpkMethodTmpl *method,
             }
             break;
             
-        case Spk_OPCODE_NATIVE: mnemonic = "ntv"; break;
+        case OPCODE_NATIVE: mnemonic = "ntv"; break;
             
-        case Spk_OPCODE_RESTORE_SENDER: mnemonic = "restore"; keyword = "sender"; break;
-        case Spk_OPCODE_RESTORE_CALLER: mnemonic = "restore"; keyword = "caller"; break;
-        case Spk_OPCODE_CALL_BLOCK:     mnemonic = "cb";    break;
+        case OPCODE_RESTORE_SENDER: mnemonic = "restore"; keyword = "sender"; break;
+        case OPCODE_RESTORE_CALLER: mnemonic = "restore"; keyword = "caller"; break;
+        case OPCODE_CALL_BLOCK:     mnemonic = "cb";    break;
             
-        case Spk_OPCODE_CHECK_STACKP:
+        case OPCODE_CHECK_STACKP:
             mnemonic = "check";
             base = "stackp";
             DECODE_UINT(index);
@@ -305,29 +305,29 @@ static void disassembleMethod(SpkMethodTmpl *method,
         } else if (keyword) {
             fprintf(out, "\t%s", keyword);
         } else if (pArgumentCount && selector) {
-            SpkUnknown *s = SpkHost_ObjectAsString(selector);
-            fprintf(out, "\t%s %lu", SpkHost_StringAsCString(s),
+            Unknown *s = Host_ObjectAsString(selector);
+            fprintf(out, "\t%s %lu", Host_StringAsCString(s),
                     (unsigned long)*pArgumentCount);
-            Spk_DECREF(s);
+            DECREF(s);
         } else if (pArgumentCount) {
             fprintf(out, "\t%lu", (unsigned long)*pArgumentCount);
         } else if (selector) {
-            SpkUnknown *s = SpkHost_ObjectAsString(selector);
-            fprintf(out, "\t%s", SpkHost_StringAsCString(s));
-            Spk_DECREF(s);
+            Unknown *s = Host_ObjectAsString(selector);
+            fprintf(out, "\t%s", Host_StringAsCString(s));
+            DECREF(s);
         } else if (pLabel) {
             fprintf(out, "\t%04lx", (unsigned long)*pLabel);
         } else if (base) {
             fprintf(out, "\t%s[%lu]", base, (unsigned long)index);
         } else {
             switch (opcode) {
-            case Spk_OPCODE_SAVE:
+            case OPCODE_SAVE:
                 fprintf(out, "\t%lu,%lu",
                         (unsigned long)contextSize,
                         (unsigned long)stackSize);
                 break;
-            case Spk_OPCODE_ARG:
-            case Spk_OPCODE_ARG_VA:
+            case OPCODE_ARG:
+            case OPCODE_ARG_VA:
                 fprintf(out, "\t%lu,%lu",
                         (unsigned long)minArgumentCount,
                         (unsigned long)maxArgumentCount);
@@ -336,7 +336,7 @@ static void disassembleMethod(SpkMethodTmpl *method,
         }
         if (literal) {
             fprintf(out, "\t\t; ");
-            SpkHost_PrintObject(literal, out);
+            Host_PrintObject(literal, out);
         }
         fprintf(out, "\n");
     }
@@ -344,7 +344,7 @@ static void disassembleMethod(SpkMethodTmpl *method,
     fprintf(out, "\n");
 }
 
-static void disassemblePreClass(SpkClassTmpl *aClass,
+static void disassemblePreClass(ClassTmpl *aClass,
                                 Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
@@ -352,7 +352,7 @@ static void disassemblePreClass(SpkClassTmpl *aClass,
     fprintf(out, "class %s\n", level->name);
 }
 
-static void disassemblePreMethodNamespace(SpkMethodNamespace ns,
+static void disassemblePreMethodNamespace(MethodNamespace ns,
                                           Level *level,
                                           void *closure)
 {
@@ -361,20 +361,20 @@ static void disassemblePreMethodNamespace(SpkMethodNamespace ns,
     
     out = (FILE *)closure;
     switch (ns) {
-    case Spk_METHOD_NAMESPACE_RVALUE:
+    case METHOD_NAMESPACE_RVALUE:
         name = "rvalue";
         break;
-    case Spk_METHOD_NAMESPACE_LVALUE:
+    case METHOD_NAMESPACE_LVALUE:
         name = "lvalue";
         break;
-    case Spk_NUM_METHOD_NAMESPACES: break;
+    case NUM_METHOD_NAMESPACES: break;
     }
     
     tab(level->outer, out);
     fprintf(out, "%s\n", name);
 }
 
-static void disassemblePreClassBody(SpkBehaviorTmpl *aClass,
+static void disassemblePreClassBody(BehaviorTmpl *aClass,
                                     Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
@@ -382,14 +382,14 @@ static void disassemblePreClassBody(SpkBehaviorTmpl *aClass,
     fprintf(out, "%s\n", level->name);
 }
 
-static void disassemblePostClass(SpkClassTmpl *aClass,
+static void disassemblePostClass(ClassTmpl *aClass,
                                  Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
     fprintf(out, "\n");
 }
 
-static void disassemblePreModule(SpkModuleTmpl *module,
+static void disassemblePreModule(ModuleTmpl *module,
                                  Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
@@ -398,7 +398,7 @@ static void disassemblePreModule(SpkModuleTmpl *module,
     fprintf(out, "literal table\n");
     for (i = 0; i < module->literalCount; ++i) {
         fprintf(out, "    %04lu: ", (unsigned long)i);
-        SpkHost_PrintObject(module->literals[i], out);
+        Host_PrintObject(module->literals[i], out);
         fprintf(out, "\n");
     }
     fprintf(out, "\n");
@@ -421,17 +421,17 @@ static Visitor disassembler = {
 /*------------------------------------------------------------------------*/
 /* traversal */
 
-static void traverseClass(SpkClassTmpl *, Level *,
-                          SpkModuleTmpl *, Visitor *, void *);
+static void traverseClass(ClassTmpl *, Level *,
+                          ModuleTmpl *, Visitor *, void *);
 
-static void traverseMethod(SpkMethodTmpl *method,
+static void traverseMethod(MethodTmpl *method,
                            Level *level,
-                           SpkModuleTmpl *module,
+                           ModuleTmpl *module,
                            Visitor *visitor,
                            void *closure)
 {
-    SpkClassTmpl *nestedClass;
-    SpkMethodTmpl *nestedMethod;
+    ClassTmpl *nestedClass;
+    MethodTmpl *nestedMethod;
     Level nestedMethodLevel;
     
     if (visitor->preMethod)
@@ -459,27 +459,27 @@ static void traverseMethod(SpkMethodTmpl *method,
         (*visitor->postMethod)(method, module->literals, level, closure);
 }
 
-static void traverseMethodList(SpkMethodTmplList *methodList,
-                               SpkMethodNamespace ns,
+static void traverseMethodList(MethodTmplList *methodList,
+                               MethodNamespace ns,
                                Level *outer,
-                               SpkModuleTmpl *module,
+                               ModuleTmpl *module,
                                Visitor *visitor,
                                void *closure)
 {
-    SpkUnknown *methodName;
+    Unknown *methodName;
     Level namespaceLevel, methodLevel;
-    SpkMethodTmpl *method;
+    MethodTmpl *method;
     
     namespaceLevel.outer = outer;
     namespaceLevel.name = 0;
     switch (ns) {
-    case Spk_METHOD_NAMESPACE_RVALUE:
+    case METHOD_NAMESPACE_RVALUE:
         namespaceLevel.name = "rv";
         break;
-    case Spk_METHOD_NAMESPACE_LVALUE:
+    case METHOD_NAMESPACE_LVALUE:
         namespaceLevel.name = "lv";
         break;
-    case Spk_NUM_METHOD_NAMESPACES: break;
+    case NUM_METHOD_NAMESPACES: break;
     }
     
     if (visitor->preMethodNamespace)
@@ -491,28 +491,28 @@ static void traverseMethodList(SpkMethodTmplList *methodList,
         if (method->ns != ns)
             continue;
         
-        methodName = SpkHost_ObjectAsString(method->selector);
-        /* XXX: SpkHost_SelectorAsMangledName ? */
-        methodLevel.name = SpkHost_StringAsCString(methodName);
+        methodName = Host_ObjectAsString(method->selector);
+        /* XXX: Host_SelectorAsMangledName ? */
+        methodLevel.name = Host_StringAsCString(methodName);
         if (*methodLevel.name == '$')
             ++methodLevel.name;
         
         traverseMethod(method, &methodLevel,
                        module, visitor, closure);
         
-        Spk_DECREF(methodName);
+        DECREF(methodName);
     }
     
     if (visitor->postMethodNamespace)
         (*visitor->postMethodNamespace)(ns, &namespaceLevel, closure);
 }
 
-static void traverseClassBody(SpkBehaviorTmpl *aClass, const char *name,
+static void traverseClassBody(BehaviorTmpl *aClass, const char *name,
                               Level *outer,
-                              SpkModuleTmpl *module, Visitor *visitor, void *closure)
+                              ModuleTmpl *module, Visitor *visitor, void *closure)
 {
-    SpkClassTmpl *nestedClass;
-    SpkMethodNamespace ns;
+    ClassTmpl *nestedClass;
+    MethodNamespace ns;
     Level level;
     
     level.outer = outer;
@@ -528,7 +528,7 @@ static void traverseClassBody(SpkBehaviorTmpl *aClass, const char *name,
         traverseClass(nestedClass, &level, module, visitor, closure);
     }
     
-    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+    for (ns = 0; ns < NUM_METHOD_NAMESPACES; ++ns) {
         traverseMethodList(&aClass->methodList, ns, &level,
                            module, visitor, closure);
     }
@@ -537,8 +537,8 @@ static void traverseClassBody(SpkBehaviorTmpl *aClass, const char *name,
         (*visitor->postClassBody)(aClass, &level, closure);
 }
 
-static void traverseClass(SpkClassTmpl *aClass, Level *outer,
-                          SpkModuleTmpl *module, Visitor *visitor, void *closure)
+static void traverseClass(ClassTmpl *aClass, Level *outer,
+                          ModuleTmpl *module, Visitor *visitor, void *closure)
 {
     Level level;
     
@@ -555,11 +555,11 @@ static void traverseClass(SpkClassTmpl *aClass, Level *outer,
         (*visitor->postClass)(aClass, &level, closure);
 }
 
-static void traverseModule(SpkModuleTmpl *module,
+static void traverseModule(ModuleTmpl *module,
                            Visitor *visitor, void *closure)
 {
-    SpkClassTmpl *nestedClass;
-    SpkMethodNamespace ns;
+    ClassTmpl *nestedClass;
+    MethodNamespace ns;
     Level level;
     
     level.outer = 0;
@@ -575,7 +575,7 @@ static void traverseModule(SpkModuleTmpl *module,
         traverseClass(nestedClass, &level, module, visitor, closure);
     }
     
-    for (ns = 0; ns < Spk_NUM_METHOD_NAMESPACES; ++ns) {
+    for (ns = 0; ns < NUM_METHOD_NAMESPACES; ++ns) {
         traverseMethodList(&module->moduleClass.thisClass.methodList,
                            ns,
                            &level,
@@ -592,135 +592,135 @@ static void traverseModule(SpkModuleTmpl *module,
 /*------------------------------------------------------------------------*/
 /* C code generation */
 
-static const char *opcodeName(SpkOpcode opcode) {
+static const char *opcodeName(Opcode opcode) {
     switch (opcode) {
-    case Spk_OPCODE_NOP: return "Spk_OPCODE_NOP";
-    case Spk_OPCODE_PUSH_LOCAL: return "Spk_OPCODE_PUSH_LOCAL";
-    case Spk_OPCODE_PUSH_INST_VAR: return "Spk_OPCODE_PUSH_INST_VAR";
-    case Spk_OPCODE_PUSH_GLOBAL: return "Spk_OPCODE_PUSH_GLOBAL";
-    case Spk_OPCODE_PUSH_LITERAL: return "Spk_OPCODE_PUSH_LITERAL";
-    case Spk_OPCODE_PUSH_SELF: return "Spk_OPCODE_PUSH_SELF";
-    case Spk_OPCODE_PUSH_SUPER: return "Spk_OPCODE_PUSH_SUPER";
-    case Spk_OPCODE_PUSH_FALSE: return "Spk_OPCODE_PUSH_FALSE";
-    case Spk_OPCODE_PUSH_TRUE: return "Spk_OPCODE_PUSH_TRUE";
-    case Spk_OPCODE_PUSH_NULL: return "Spk_OPCODE_PUSH_NULL";
-    case Spk_OPCODE_PUSH_VOID: return "Spk_OPCODE_PUSH_VOID";
-    case Spk_OPCODE_PUSH_CONTEXT: return "Spk_OPCODE_PUSH_CONTEXT";
-    case Spk_OPCODE_DUP: return "Spk_OPCODE_DUP";
-    case Spk_OPCODE_DUP_N: return "Spk_OPCODE_DUP_N";
-    case Spk_OPCODE_STORE_LOCAL: return "Spk_OPCODE_STORE_LOCAL";
-    case Spk_OPCODE_STORE_INST_VAR: return "Spk_OPCODE_STORE_INST_VAR";
-    case Spk_OPCODE_STORE_GLOBAL: return "Spk_OPCODE_STORE_GLOBAL";
-    case Spk_OPCODE_POP: return "Spk_OPCODE_POP";
-    case Spk_OPCODE_ROT: return "Spk_OPCODE_ROT";
-    case Spk_OPCODE_BRANCH_IF_FALSE: return "Spk_OPCODE_BRANCH_IF_FALSE";
-    case Spk_OPCODE_BRANCH_IF_TRUE: return "Spk_OPCODE_BRANCH_IF_TRUE";
-    case Spk_OPCODE_BRANCH_ALWAYS: return "Spk_OPCODE_BRANCH_ALWAYS";
-    case Spk_OPCODE_ID: return "Spk_OPCODE_ID";
-    case Spk_OPCODE_OPER: return "Spk_OPCODE_OPER";
-    case Spk_OPCODE_OPER_SUPER: return "Spk_OPCODE_OPER_SUPER";
-    case Spk_OPCODE_CALL: return "Spk_OPCODE_CALL";
-    case Spk_OPCODE_CALL_VA: return "Spk_OPCODE_CALL_VA";
-    case Spk_OPCODE_CALL_SUPER: return "Spk_OPCODE_CALL_SUPER";
-    case Spk_OPCODE_CALL_SUPER_VA: return "Spk_OPCODE_CALL_SUPER_VA";
-    case Spk_OPCODE_SET_IND: return "Spk_OPCODE_SET_IND";
-    case Spk_OPCODE_SET_IND_SUPER: return "Spk_OPCODE_SET_IND_SUPER";
-    case Spk_OPCODE_SET_INDEX: return "Spk_OPCODE_SET_INDEX";
-    case Spk_OPCODE_SET_INDEX_VA: return "Spk_OPCODE_SET_INDEX_VA";
-    case Spk_OPCODE_SET_INDEX_SUPER: return "Spk_OPCODE_SET_INDEX_SUPER";
-    case Spk_OPCODE_SET_INDEX_SUPER_VA: return "Spk_OPCODE_SET_INDEX_SUPER_VA";
-    case Spk_OPCODE_GET_ATTR: return "Spk_OPCODE_GET_ATTR";
-    case Spk_OPCODE_GET_ATTR_SUPER: return "Spk_OPCODE_GET_ATTR_SUPER";
-    case Spk_OPCODE_GET_ATTR_VAR: return "Spk_OPCODE_GET_ATTR_VAR";
-    case Spk_OPCODE_GET_ATTR_VAR_SUPER: return "Spk_OPCODE_GET_ATTR_VAR_SUPER";
-    case Spk_OPCODE_SET_ATTR: return "Spk_OPCODE_SET_ATTR";
-    case Spk_OPCODE_SET_ATTR_SUPER: return "Spk_OPCODE_SET_ATTR_SUPER";
-    case Spk_OPCODE_SET_ATTR_VAR: return "Spk_OPCODE_SET_ATTR_VAR";
-    case Spk_OPCODE_SET_ATTR_VAR_SUPER: return "Spk_OPCODE_SET_ATTR_VAR_SUPER";
-    case Spk_OPCODE_SEND_MESSAGE: return "Spk_OPCODE_SEND_MESSAGE";
-    case Spk_OPCODE_SEND_MESSAGE_SUPER: return "Spk_OPCODE_SEND_MESSAGE_SUPER";
-    case Spk_OPCODE_SEND_MESSAGE_VAR: return "Spk_OPCODE_SEND_MESSAGE_VAR";
-    case Spk_OPCODE_SEND_MESSAGE_VAR_VA: return "Spk_OPCODE_SEND_MESSAGE_VAR_VA";
-    case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR: return "Spk_OPCODE_SEND_MESSAGE_SUPER_VAR";
-    case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR_VA: return "Spk_OPCODE_SEND_MESSAGE_SUPER_VAR_VA";
-    case Spk_OPCODE_SEND_MESSAGE_NS_VAR_VA: return "Spk_OPCODE_SEND_MESSAGE_NS_VAR_VA";
-    case Spk_OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA: return "Spk_OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA";
-    case Spk_OPCODE_RAISE: return "Spk_OPCODE_RAISE";
-    case Spk_OPCODE_RET: return "Spk_OPCODE_RET";
-    case Spk_OPCODE_RET_TRAMP: return "Spk_OPCODE_RET_TRAMP";
-    case Spk_OPCODE_LEAF: return "Spk_OPCODE_LEAF";
-    case Spk_OPCODE_SAVE: return "Spk_OPCODE_SAVE";
-    case Spk_OPCODE_ARG: return "Spk_OPCODE_ARG";
-    case Spk_OPCODE_ARG_VA: return "Spk_OPCODE_ARG_VA";
-    case Spk_OPCODE_NATIVE: return "Spk_OPCODE_NATIVE";
-    case Spk_OPCODE_NATIVE_PUSH_INST_VAR: return "Spk_OPCODE_NATIVE_PUSH_INST_VAR";
-    case Spk_OPCODE_NATIVE_STORE_INST_VAR: return "Spk_OPCODE_NATIVE_STORE_INST_VAR";
-    case Spk_OPCODE_RESTORE_SENDER: return "Spk_OPCODE_RESTORE_SENDER";
-    case Spk_OPCODE_RESTORE_CALLER: return "Spk_OPCODE_RESTORE_CALLER";
-    case Spk_OPCODE_CALL_BLOCK: return "Spk_OPCODE_CALL_BLOCK";
-    case Spk_OPCODE_CHECK_STACKP: return "Spk_OPCODE_CHECK_STACKP";
+    case OPCODE_NOP: return "OPCODE_NOP";
+    case OPCODE_PUSH_LOCAL: return "OPCODE_PUSH_LOCAL";
+    case OPCODE_PUSH_INST_VAR: return "OPCODE_PUSH_INST_VAR";
+    case OPCODE_PUSH_GLOBAL: return "OPCODE_PUSH_GLOBAL";
+    case OPCODE_PUSH_LITERAL: return "OPCODE_PUSH_LITERAL";
+    case OPCODE_PUSH_SELF: return "OPCODE_PUSH_SELF";
+    case OPCODE_PUSH_SUPER: return "OPCODE_PUSH_SUPER";
+    case OPCODE_PUSH_FALSE: return "OPCODE_PUSH_FALSE";
+    case OPCODE_PUSH_TRUE: return "OPCODE_PUSH_TRUE";
+    case OPCODE_PUSH_NULL: return "OPCODE_PUSH_NULL";
+    case OPCODE_PUSH_VOID: return "OPCODE_PUSH_VOID";
+    case OPCODE_PUSH_CONTEXT: return "OPCODE_PUSH_CONTEXT";
+    case OPCODE_DUP: return "OPCODE_DUP";
+    case OPCODE_DUP_N: return "OPCODE_DUP_N";
+    case OPCODE_STORE_LOCAL: return "OPCODE_STORE_LOCAL";
+    case OPCODE_STORE_INST_VAR: return "OPCODE_STORE_INST_VAR";
+    case OPCODE_STORE_GLOBAL: return "OPCODE_STORE_GLOBAL";
+    case OPCODE_POP: return "OPCODE_POP";
+    case OPCODE_ROT: return "OPCODE_ROT";
+    case OPCODE_BRANCH_IF_FALSE: return "OPCODE_BRANCH_IF_FALSE";
+    case OPCODE_BRANCH_IF_TRUE: return "OPCODE_BRANCH_IF_TRUE";
+    case OPCODE_BRANCH_ALWAYS: return "OPCODE_BRANCH_ALWAYS";
+    case OPCODE_ID: return "OPCODE_ID";
+    case OPCODE_OPER: return "OPCODE_OPER";
+    case OPCODE_OPER_SUPER: return "OPCODE_OPER_SUPER";
+    case OPCODE_CALL: return "OPCODE_CALL";
+    case OPCODE_CALL_VA: return "OPCODE_CALL_VA";
+    case OPCODE_CALL_SUPER: return "OPCODE_CALL_SUPER";
+    case OPCODE_CALL_SUPER_VA: return "OPCODE_CALL_SUPER_VA";
+    case OPCODE_SET_IND: return "OPCODE_SET_IND";
+    case OPCODE_SET_IND_SUPER: return "OPCODE_SET_IND_SUPER";
+    case OPCODE_SET_INDEX: return "OPCODE_SET_INDEX";
+    case OPCODE_SET_INDEX_VA: return "OPCODE_SET_INDEX_VA";
+    case OPCODE_SET_INDEX_SUPER: return "OPCODE_SET_INDEX_SUPER";
+    case OPCODE_SET_INDEX_SUPER_VA: return "OPCODE_SET_INDEX_SUPER_VA";
+    case OPCODE_GET_ATTR: return "OPCODE_GET_ATTR";
+    case OPCODE_GET_ATTR_SUPER: return "OPCODE_GET_ATTR_SUPER";
+    case OPCODE_GET_ATTR_VAR: return "OPCODE_GET_ATTR_VAR";
+    case OPCODE_GET_ATTR_VAR_SUPER: return "OPCODE_GET_ATTR_VAR_SUPER";
+    case OPCODE_SET_ATTR: return "OPCODE_SET_ATTR";
+    case OPCODE_SET_ATTR_SUPER: return "OPCODE_SET_ATTR_SUPER";
+    case OPCODE_SET_ATTR_VAR: return "OPCODE_SET_ATTR_VAR";
+    case OPCODE_SET_ATTR_VAR_SUPER: return "OPCODE_SET_ATTR_VAR_SUPER";
+    case OPCODE_SEND_MESSAGE: return "OPCODE_SEND_MESSAGE";
+    case OPCODE_SEND_MESSAGE_SUPER: return "OPCODE_SEND_MESSAGE_SUPER";
+    case OPCODE_SEND_MESSAGE_VAR: return "OPCODE_SEND_MESSAGE_VAR";
+    case OPCODE_SEND_MESSAGE_VAR_VA: return "OPCODE_SEND_MESSAGE_VAR_VA";
+    case OPCODE_SEND_MESSAGE_SUPER_VAR: return "OPCODE_SEND_MESSAGE_SUPER_VAR";
+    case OPCODE_SEND_MESSAGE_SUPER_VAR_VA: return "OPCODE_SEND_MESSAGE_SUPER_VAR_VA";
+    case OPCODE_SEND_MESSAGE_NS_VAR_VA: return "OPCODE_SEND_MESSAGE_NS_VAR_VA";
+    case OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA: return "OPCODE_SEND_MESSAGE_SUPER_NS_VAR_VA";
+    case OPCODE_RAISE: return "OPCODE_RAISE";
+    case OPCODE_RET: return "OPCODE_RET";
+    case OPCODE_RET_TRAMP: return "OPCODE_RET_TRAMP";
+    case OPCODE_LEAF: return "OPCODE_LEAF";
+    case OPCODE_SAVE: return "OPCODE_SAVE";
+    case OPCODE_ARG: return "OPCODE_ARG";
+    case OPCODE_ARG_VA: return "OPCODE_ARG_VA";
+    case OPCODE_NATIVE: return "OPCODE_NATIVE";
+    case OPCODE_NATIVE_PUSH_INST_VAR: return "OPCODE_NATIVE_PUSH_INST_VAR";
+    case OPCODE_NATIVE_STORE_INST_VAR: return "OPCODE_NATIVE_STORE_INST_VAR";
+    case OPCODE_RESTORE_SENDER: return "OPCODE_RESTORE_SENDER";
+    case OPCODE_RESTORE_CALLER: return "OPCODE_RESTORE_CALLER";
+    case OPCODE_CALL_BLOCK: return "OPCODE_CALL_BLOCK";
+    case OPCODE_CHECK_STACKP: return "OPCODE_CHECK_STACKP";
     
-    case Spk_NUM_OPCODES: break;
+    case NUM_OPCODES: break;
     }
     return 0;
 }
 
-static const char *operName(SpkOper oper) {
+static const char *operName(Oper oper) {
     switch (oper) {
-    case Spk_OPER_SUCC: return "Spk_OPER_SUCC";
-    case Spk_OPER_PRED: return "Spk_OPER_PRED";
-    case Spk_OPER_ADDR: return "Spk_OPER_ADDR";
-    case Spk_OPER_IND: return "Spk_OPER_IND";
-    case Spk_OPER_POS: return "Spk_OPER_POS";
-    case Spk_OPER_NEG: return "Spk_OPER_NEG";
-    case Spk_OPER_BNEG: return "Spk_OPER_BNEG";
-    case Spk_OPER_LNEG: return "Spk_OPER_LNEG";
-    case Spk_OPER_MUL: return "Spk_OPER_MUL";
-    case Spk_OPER_DIV: return "Spk_OPER_DIV";
-    case Spk_OPER_MOD: return "Spk_OPER_MOD";
-    case Spk_OPER_ADD: return "Spk_OPER_ADD";
-    case Spk_OPER_SUB: return "Spk_OPER_SUB";
-    case Spk_OPER_LSHIFT: return "Spk_OPER_LSHIFT";
-    case Spk_OPER_RSHIFT: return "Spk_OPER_RSHIFT";
-    case Spk_OPER_LT: return "Spk_OPER_LT";
-    case Spk_OPER_GT: return "Spk_OPER_GT";
-    case Spk_OPER_LE: return "Spk_OPER_LE";
-    case Spk_OPER_GE: return "Spk_OPER_GE";
-    case Spk_OPER_EQ: return "Spk_OPER_EQ";
-    case Spk_OPER_NE: return "Spk_OPER_NE";
-    case Spk_OPER_BAND: return "Spk_OPER_BAND";
-    case Spk_OPER_BXOR: return "Spk_OPER_BXOR";
-    case Spk_OPER_BOR: return "Spk_OPER_BOR";
+    case OPER_SUCC: return "OPER_SUCC";
+    case OPER_PRED: return "OPER_PRED";
+    case OPER_ADDR: return "OPER_ADDR";
+    case OPER_IND: return "OPER_IND";
+    case OPER_POS: return "OPER_POS";
+    case OPER_NEG: return "OPER_NEG";
+    case OPER_BNEG: return "OPER_BNEG";
+    case OPER_LNEG: return "OPER_LNEG";
+    case OPER_MUL: return "OPER_MUL";
+    case OPER_DIV: return "OPER_DIV";
+    case OPER_MOD: return "OPER_MOD";
+    case OPER_ADD: return "OPER_ADD";
+    case OPER_SUB: return "OPER_SUB";
+    case OPER_LSHIFT: return "OPER_LSHIFT";
+    case OPER_RSHIFT: return "OPER_RSHIFT";
+    case OPER_LT: return "OPER_LT";
+    case OPER_GT: return "OPER_GT";
+    case OPER_LE: return "OPER_LE";
+    case OPER_GE: return "OPER_GE";
+    case OPER_EQ: return "OPER_EQ";
+    case OPER_NE: return "OPER_NE";
+    case OPER_BAND: return "OPER_BAND";
+    case OPER_BXOR: return "OPER_BXOR";
+    case OPER_BOR: return "OPER_BOR";
     
-    case Spk_NUM_OPER: break;
+    case NUM_OPER: break;
     }
     return 0;
 }
 
-static const char *callOperName(SpkCallOper oper) {
+static const char *callOperName(CallOper oper) {
     switch (oper) {
-    case Spk_OPER_APPLY: return "Spk_OPER_APPLY";
-    case Spk_OPER_INDEX: return "Spk_OPER_INDEX";
+    case OPER_APPLY: return "OPER_APPLY";
+    case OPER_INDEX: return "OPER_INDEX";
     
-    case Spk_NUM_CALL_OPER: break;
+    case NUM_CALL_OPER: break;
     }
     return 0;
 }
 
-static void genCCodeForMethodOpcodes(SpkMethodTmpl *method,
-                                     SpkUnknown **literals,
+static void genCCodeForMethodOpcodes(MethodTmpl *method,
+                                     Unknown **literals,
                                      Level *level,
                                      void *closure)
 {
     Level *outer;
-    SpkOpcode *begin, *ip, *instructionPointer, *end;
+    Opcode *begin, *ip, *instructionPointer, *end;
     FILE *out;
     
     out = (FILE *)closure;
     
     outer = level->outer;
     if (0) spaces(outer, out);
-    fprintf(out, "static SpkOpcode ");
+    fprintf(out, "static Opcode ");
     nest(level, out);
     fprintf(out, "code[] = {\n");
     
@@ -729,16 +729,16 @@ static void genCCodeForMethodOpcodes(SpkMethodTmpl *method,
     instructionPointer = begin;
     
     while (instructionPointer < end) {
-        SpkOpcode opcode;
+        Opcode opcode;
         size_t index = 0;
         ptrdiff_t displacement = 0;
         size_t contextSize = 0;
         size_t argumentCount = 0, minArgumentCount = 0, maxArgumentCount = 0;
         size_t stackSize = 0;
         size_t count = 0;
-        SpkOper oper = 0;
-        SpkCallOper callOperator = 0;
-        SpkUnknown *literal = 0;
+        Oper oper = 0;
+        CallOper callOperator = 0;
+        Unknown *literal = 0;
         size_t i;
         
         if (0) spaces(level, out); else fprintf(out, "    ");
@@ -749,133 +749,133 @@ static void genCCodeForMethodOpcodes(SpkMethodTmpl *method,
         
         switch (opcode) {
         
-        case Spk_OPCODE_NOP:
+        case OPCODE_NOP:
             break;
         
-        case Spk_OPCODE_PUSH_LOCAL:
-        case Spk_OPCODE_PUSH_INST_VAR:
-        case Spk_OPCODE_PUSH_GLOBAL:
+        case OPCODE_PUSH_LOCAL:
+        case OPCODE_PUSH_INST_VAR:
+        case OPCODE_PUSH_GLOBAL:
             DECODE_UINT(index);
             break;
         
-        case Spk_OPCODE_PUSH_LITERAL:
+        case OPCODE_PUSH_LITERAL:
             DECODE_UINT(index);
             literal = literals[index];
             break;
             
-        case Spk_OPCODE_PUSH_SELF:
-        case Spk_OPCODE_PUSH_SUPER:
-        case Spk_OPCODE_PUSH_FALSE:
-        case Spk_OPCODE_PUSH_TRUE:
-        case Spk_OPCODE_PUSH_NULL:
-        case Spk_OPCODE_PUSH_VOID:
-        case Spk_OPCODE_PUSH_CONTEXT:
+        case OPCODE_PUSH_SELF:
+        case OPCODE_PUSH_SUPER:
+        case OPCODE_PUSH_FALSE:
+        case OPCODE_PUSH_TRUE:
+        case OPCODE_PUSH_NULL:
+        case OPCODE_PUSH_VOID:
+        case OPCODE_PUSH_CONTEXT:
             break;
             
-        case Spk_OPCODE_DUP_N:
+        case OPCODE_DUP_N:
             DECODE_UINT(count);
             break;
-        case Spk_OPCODE_DUP:
+        case OPCODE_DUP:
             break;
 
-        case Spk_OPCODE_STORE_LOCAL:
-        case Spk_OPCODE_STORE_INST_VAR:
-        case Spk_OPCODE_STORE_GLOBAL:
+        case OPCODE_STORE_LOCAL:
+        case OPCODE_STORE_INST_VAR:
+        case OPCODE_STORE_GLOBAL:
             DECODE_UINT(index);
             break;
             
-        case Spk_OPCODE_POP:
+        case OPCODE_POP:
             break;
             
-        case Spk_OPCODE_ROT:
+        case OPCODE_ROT:
             DECODE_UINT(count);
             break;
 
-        case Spk_OPCODE_BRANCH_IF_FALSE:
-        case Spk_OPCODE_BRANCH_IF_TRUE:
-        case Spk_OPCODE_BRANCH_ALWAYS:
+        case OPCODE_BRANCH_IF_FALSE:
+        case OPCODE_BRANCH_IF_TRUE:
+        case OPCODE_BRANCH_ALWAYS:
             DECODE_SINT(displacement);
             break;
             
-        case Spk_OPCODE_ID:
+        case OPCODE_ID:
             break;
             
-        case Spk_OPCODE_OPER:
-        case Spk_OPCODE_OPER_SUPER:
-            oper = (SpkOper)(*instructionPointer++);
+        case OPCODE_OPER:
+        case OPCODE_OPER_SUPER:
+            oper = (Oper)(*instructionPointer++);
             fprintf(out, "%s, ", operName(oper));
             ip = instructionPointer;
             break;
             
-        case Spk_OPCODE_CALL:
-        case Spk_OPCODE_CALL_VA:
-        case Spk_OPCODE_CALL_SUPER:
-        case Spk_OPCODE_CALL_SUPER_VA:
-            callOperator = (SpkCallOper)(*instructionPointer++);
+        case OPCODE_CALL:
+        case OPCODE_CALL_VA:
+        case OPCODE_CALL_SUPER:
+        case OPCODE_CALL_SUPER_VA:
+            callOperator = (CallOper)(*instructionPointer++);
             fprintf(out, "%s, ", callOperName(callOperator));
             ip = instructionPointer;
             DECODE_UINT(argumentCount);
             break;
 
-        case Spk_OPCODE_SET_IND:
-        case Spk_OPCODE_SET_IND_SUPER:
+        case OPCODE_SET_IND:
+        case OPCODE_SET_IND_SUPER:
             break;
         
-        case Spk_OPCODE_SET_INDEX:
-        case Spk_OPCODE_SET_INDEX_VA:
-        case Spk_OPCODE_SET_INDEX_SUPER:
-        case Spk_OPCODE_SET_INDEX_SUPER_VA:
+        case OPCODE_SET_INDEX:
+        case OPCODE_SET_INDEX_VA:
+        case OPCODE_SET_INDEX_SUPER:
+        case OPCODE_SET_INDEX_SUPER_VA:
             ip = instructionPointer;
             DECODE_UINT(argumentCount);
             break;
 
-        case Spk_OPCODE_GET_ATTR:
-        case Spk_OPCODE_GET_ATTR_SUPER:
-        case Spk_OPCODE_SET_ATTR:
-        case Spk_OPCODE_SET_ATTR_SUPER:
+        case OPCODE_GET_ATTR:
+        case OPCODE_GET_ATTR_SUPER:
+        case OPCODE_SET_ATTR:
+        case OPCODE_SET_ATTR_SUPER:
             DECODE_UINT(index);
             literal = literals[index];
             break;
             
-        case Spk_OPCODE_GET_ATTR_VAR:
-        case Spk_OPCODE_GET_ATTR_VAR_SUPER:
-        case Spk_OPCODE_SET_ATTR_VAR:
-        case Spk_OPCODE_SET_ATTR_VAR_SUPER:
+        case OPCODE_GET_ATTR_VAR:
+        case OPCODE_GET_ATTR_VAR_SUPER:
+        case OPCODE_SET_ATTR_VAR:
+        case OPCODE_SET_ATTR_VAR_SUPER:
             break;
             
-        case Spk_OPCODE_SEND_MESSAGE:
-        case Spk_OPCODE_SEND_MESSAGE_VA:
-        case Spk_OPCODE_SEND_MESSAGE_SUPER:
-        case Spk_OPCODE_SEND_MESSAGE_SUPER_VA:
+        case OPCODE_SEND_MESSAGE:
+        case OPCODE_SEND_MESSAGE_VA:
+        case OPCODE_SEND_MESSAGE_SUPER:
+        case OPCODE_SEND_MESSAGE_SUPER_VA:
             DECODE_UINT(index);
             DECODE_UINT(argumentCount);
             literal = literals[index];
             break;
             
-        case Spk_OPCODE_SEND_MESSAGE_VAR:
-        case Spk_OPCODE_SEND_MESSAGE_VAR_VA:
-        case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR:
-        case Spk_OPCODE_SEND_MESSAGE_SUPER_VAR_VA:
+        case OPCODE_SEND_MESSAGE_VAR:
+        case OPCODE_SEND_MESSAGE_VAR_VA:
+        case OPCODE_SEND_MESSAGE_SUPER_VAR:
+        case OPCODE_SEND_MESSAGE_SUPER_VAR_VA:
             DECODE_UINT(argumentCount);
             break;
             
-        case Spk_OPCODE_RAISE:
+        case OPCODE_RAISE:
             break;
 
-        case Spk_OPCODE_RET:
-        case Spk_OPCODE_RET_TRAMP:
+        case OPCODE_RET:
+        case OPCODE_RET_TRAMP:
             break;
             
-        case Spk_OPCODE_LEAF:
+        case OPCODE_LEAF:
             break;
             
-        case Spk_OPCODE_SAVE:
+        case OPCODE_SAVE:
             DECODE_UINT(contextSize);
             DECODE_UINT(stackSize);
             break;
             
-        case Spk_OPCODE_ARG:
-        case Spk_OPCODE_ARG_VA:
+        case OPCODE_ARG:
+        case OPCODE_ARG_VA:
             DECODE_UINT(minArgumentCount);
             DECODE_UINT(maxArgumentCount);
             if (minArgumentCount < maxArgumentCount) {
@@ -885,15 +885,15 @@ static void genCCodeForMethodOpcodes(SpkMethodTmpl *method,
             }
             break;
             
-        case Spk_OPCODE_NATIVE:
+        case OPCODE_NATIVE:
             break;
             
-        case Spk_OPCODE_RESTORE_SENDER:
-        case Spk_OPCODE_RESTORE_CALLER:
-        case Spk_OPCODE_CALL_BLOCK:
+        case OPCODE_RESTORE_SENDER:
+        case OPCODE_RESTORE_CALLER:
+        case OPCODE_CALL_BLOCK:
             break;
             
-        case Spk_OPCODE_CHECK_STACKP:
+        case OPCODE_CHECK_STACKP:
             DECODE_UINT(index);
             break;
         }
@@ -905,24 +905,24 @@ static void genCCodeForMethodOpcodes(SpkMethodTmpl *method,
     }
     
     if (0) spaces(level, out); else fprintf(out, "    ");
-    fprintf(out, "%s\n", opcodeName(Spk_OPCODE_NOP));
+    fprintf(out, "%s\n", opcodeName(OPCODE_NOP));
     
     if (0) spaces(outer, out);
     fprintf(out, "};\n\n");
 }
 
-static void genCCodePreMethodNamespace(SpkMethodNamespace ns,
+static void genCCodePreMethodNamespace(MethodNamespace ns,
                                        Level *level,
                                        void *closure)
 {
     FILE *out = (FILE *)closure;
-    fprintf(out, "static SpkMethodTmpl ");
+    fprintf(out, "static MethodTmpl ");
     nest(level, out);
     fprintf(out, "methods[] = {\n");
 }
 
-static void genCCodeForMethodTableEntry(SpkMethodTmpl *method,
-                                        SpkUnknown **literals,
+static void genCCodeForMethodTableEntry(MethodTmpl *method,
+                                        Unknown **literals,
                                         Level *level,
                                         void *closure)
 {
@@ -935,7 +935,7 @@ static void genCCodeForMethodTableEntry(SpkMethodTmpl *method,
     fprintf(out, "code },\n");
 }
 
-static void genCCodePostMethodNamespace(SpkMethodNamespace ns,
+static void genCCodePostMethodNamespace(MethodNamespace ns,
                                         Level *level,
                                         void *closure)
 {
@@ -944,20 +944,20 @@ static void genCCodePostMethodNamespace(SpkMethodNamespace ns,
     fprintf(out, "    { 0 }\n};\n\n");
 }
 
-static void genCCodeClassTemplate(SpkClassTmpl *aClass,
+static void genCCodeClassTemplate(ClassTmpl *aClass,
                                   Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
     const char *superclassName;
     
     fprintf(out,
-            "SpkClassTmpl ");
+            "ClassTmpl ");
     if (1) {
         /* XXX: For now, we are only interested in generating code for
            Spike itself. */
-        superclassName = SpkHost_SymbolAsCString(aClass->superclassName);
-        fprintf(out, "Spk_Class%sTmpl = {\n"
-                "    Spk_HEART_CLASS_TMPL(%s, %s), {\n",
+        superclassName = Host_SymbolAsCString(aClass->superclassName);
+        fprintf(out, "Class%sTmpl = {\n"
+                "    HEART_CLASS_TMPL(%s, %s), {\n",
                 level->name, level->name, superclassName);
     } else {
         nest(level, out);
@@ -986,15 +986,15 @@ static void genCCodeClassTemplate(SpkClassTmpl *aClass,
             );
 }
 
-static void genCCodeLiteralTable(SpkModuleTmpl *module,
+static void genCCodeLiteralTable(ModuleTmpl *module,
                                  Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
     size_t i;
-    SpkUnknown *literal;
-    SpkBehavior *klass;
+    Unknown *literal;
+    Behavior *klass;
     
-    fprintf(out, "static SpkLiteralTmpl ");
+    fprintf(out, "static LiteralTmpl ");
     nest(level, out);
     fprintf(out, "literals[] = {\n");
     for (i = 0; i < module->literalCount; ++i) {
@@ -1002,20 +1002,20 @@ static void genCCodeLiteralTable(SpkModuleTmpl *module,
         fprintf(out, "    { ");
         /* XXX: It would be nice if there separate tables -- separate
            "data segments" -- for each type of literal. */
-        klass = ((SpkObject *)literal)->klass;
-        if (klass == Spk_CLASS(Symbol)) {
-            fprintf(out, "Spk_LITERAL_SYMBOL, 0, 0.0, \"%s\"", SpkHost_SymbolAsCString(literal));
-        } else if (klass == Spk_CLASS(Integer)) {
-            fprintf(out, "Spk_LITERAL_INTEGER, %ld, 0.0, 0", SpkHost_IntegerAsCLong(literal));
-        } else if (klass == Spk_CLASS(Float)) {
-            fprintf(out, "Spk_LITERAL_FLOAT, 0, %g, 0", SpkHost_FloatAsCDouble(literal));
-        } else if (klass == Spk_CLASS(Char)) {
-            fprintf(out, "Spk_LITERAL_CHAR, '%c', 0.0, 0", SpkHost_CharAsCChar(literal));
-        } else if (klass == Spk_CLASS(String)) {
-            fprintf(out, "Spk_LITERAL_STRING, 0, 0.0, \"%s\"", SpkHost_StringAsCString(literal));
+        klass = ((Object *)literal)->klass;
+        if (klass == CLASS(Symbol)) {
+            fprintf(out, "LITERAL_SYMBOL, 0, 0.0, \"%s\"", Host_SymbolAsCString(literal));
+        } else if (klass == CLASS(Integer)) {
+            fprintf(out, "LITERAL_INTEGER, %ld, 0.0, 0", Host_IntegerAsCLong(literal));
+        } else if (klass == CLASS(Float)) {
+            fprintf(out, "LITERAL_FLOAT, 0, %g, 0", Host_FloatAsCDouble(literal));
+        } else if (klass == CLASS(Char)) {
+            fprintf(out, "LITERAL_CHAR, '%c', 0.0, 0", Host_CharAsCChar(literal));
+        } else if (klass == CLASS(String)) {
+            fprintf(out, "LITERAL_STRING, 0, 0.0, \"%s\"", Host_StringAsCString(literal));
         } else if (1) {
             /* XXX: predefined names are (mis)placed in this table */
-            fprintf(out, "Spk_LITERAL_INTEGER, 0");
+            fprintf(out, "LITERAL_INTEGER, 0");
         } else {
             /* cause a compilation error */
             fprintf(out, "unknownClassOfLiteral");
@@ -1025,17 +1025,17 @@ static void genCCodeLiteralTable(SpkModuleTmpl *module,
     fprintf(out, "    { 0 }\n};\n\n");
 }
 
-static void genCCodeModuleTemplate(SpkModuleTmpl *module,
+static void genCCodeModuleTemplate(ModuleTmpl *module,
                                    Level *level, void *closure)
 {
     FILE *out = (FILE *)closure;
     
     fprintf(out,
-            "SpkModuleTmpl Spk_Module%sTmpl = {\n"
+            "ModuleTmpl Module%sTmpl = {\n"
             "    {\n"
             /* there is no class variable */
-            /*"        Spk_HEART_CLASS_TMPL(%s, Module), {\n",*/
-            "        \"%s\", 0, offsetof(SpkHeart, Module), {\n",
+            /*"        HEART_CLASS_TMPL(%s, Module), {\n",*/
+            "        \"%s\", 0, offsetof(Heart, Module), {\n",
             level->name, level->name);
     fprintf(out,
             "            /*accessors*/ 0,\n"
@@ -1097,11 +1097,11 @@ static Visitor cCodeGenTemplates = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-void SpkDisassembler_DisassembleModule(SpkModuleTmpl *module, FILE *out) {
+void Disassembler_DisassembleModule(ModuleTmpl *module, FILE *out) {
     traverseModule(module, &disassembler, (void *)out);
 }
 
-void SpkDisassembler_DisassembleModuleAsCCode(SpkModuleTmpl *module, FILE *out) {
+void Disassembler_DisassembleModuleAsCCode(ModuleTmpl *module, FILE *out) {
     time_t t;
     const char *timestamp;
     

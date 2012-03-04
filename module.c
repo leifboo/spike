@@ -15,78 +15,78 @@
 #include <string.h>
 
 
-typedef struct SpkThunk SpkThunk;
+typedef struct Thunk Thunk;
 
 
-static SpkThunk *SpkThunk_New(SpkUnknown *, SpkUnknown *);
+static Thunk *Thunk_New(Unknown *, Unknown *);
 
 
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static SpkUnknown *Module__init(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkModule *self;
-    SpkModuleClass *moduleClass;
-    SpkModuleTmpl *tmpl;
-    SpkUnknown **globals;
-    SpkClassTmpl *classTmpl;
-    SpkUnknown *tmp;
+static Unknown *Module__init(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    Module *self;
+    ModuleClass *moduleClass;
+    ModuleTmpl *tmpl;
+    Unknown **globals;
+    ClassTmpl *classTmpl;
+    Unknown *tmp;
     
-    self = (SpkModule *)_self;
-    moduleClass = (SpkModuleClass *)self->base.klass;
+    self = (Module *)_self;
+    moduleClass = (ModuleClass *)self->base.klass;
     tmpl = moduleClass->tmpl;
     
     /* XXX: Module inheritance will introduce multiple sets of globals. */
-    globals = SpkModule_VARIABLES(self);
+    globals = Module_VARIABLES(self);
     
     /* Initialize predefined variables. */
-    tmp = Spk_Send(Spk_GLOBAL(theInterpreter), (SpkUnknown *)self, Spk__predef, 0);
+    tmp = Send(GLOBAL(theInterpreter), (Unknown *)self, _predef, 0);
     if (!tmp)
         return 0;
-    Spk_DECREF(tmp);
+    DECREF(tmp);
     
     /* Create all classes. */
     for (classTmpl = tmpl->classList.first;
          classTmpl;
          classTmpl = classTmpl->next) {
         
-        SpkUnknown **classVar;
-        SpkBehavior *superclass;
+        Unknown **classVar;
+        Behavior *superclass;
         
         /* The class list is a preorder traversal of the inheritance graph;
            this guarantees that the superclass is created before its subclasses. */
-        superclass = Spk_CAST(Behavior, globals[classTmpl->superclassVarIndex]);
+        superclass = CAST(Behavior, globals[classTmpl->superclassVarIndex]);
         classVar = &globals[classTmpl->classVarIndex];
-        *classVar = (SpkUnknown *)SpkClass_FromTemplate(classTmpl, superclass, self);
+        *classVar = (Unknown *)Class_FromTemplate(classTmpl, superclass, self);
     }
     
-    Spk_INCREF(Spk_GLOBAL(xvoid));
-    return Spk_GLOBAL(xvoid);
+    INCREF(GLOBAL(xvoid));
+    return GLOBAL(xvoid);
 }
 
 
-static SpkUnknown *Module__thunk(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    return (SpkUnknown *)SpkThunk_New(_self, arg0);
+static Unknown *Module__thunk(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    return (Unknown *)Thunk_New(_self, arg0);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* low-level hooks */
 
-static void Module_zero(SpkObject *_self) {
-    SpkModule *self;
+static void Module_zero(Object *_self) {
+    Module *self;
     
-    self = (SpkModule *)_self;
-    (*Spk_CLASS(Module)->superclass->zero)(_self);
+    self = (Module *)_self;
+    (*CLASS(Module)->superclass->zero)(_self);
     /* XXX: This is the wrong, but necessary. */
     self->base.klass->module = self;
 }
 
-static void ModuleClass_zero(SpkObject *_self) {
-    SpkModuleClass *self;
+static void ModuleClass_zero(Object *_self) {
+    ModuleClass *self;
     
-    self = (SpkModuleClass *)_self;
-    (*Spk_CLASS(Class)->zero)(_self);
+    self = (ModuleClass *)_self;
+    (*CLASS(Class)->zero)(_self);
     self->literalCount = 0;
     self->literals = 0;
     self->tmpl = 0;
@@ -96,35 +96,35 @@ static void ModuleClass_zero(SpkObject *_self) {
 /*------------------------------------------------------------------------*/
 /* class tmpl */
 
-typedef struct SpkModuleSubclass {
-    SpkModule base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkModuleSubclass;
+typedef struct ModuleSubclass {
+    Module base;
+    Unknown *variables[1]; /* stretchy */
+} ModuleSubclass;
 
-typedef struct SpkModuleClassSubclass {
-    SpkModuleClass base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkModuleClassSubclass;
+typedef struct ModuleClassSubclass {
+    ModuleClass base;
+    Unknown *variables[1]; /* stretchy */
+} ModuleClassSubclass;
 
-static SpkMethodTmpl methods[] = {
-    { "_init", SpkNativeCode_ARGS_0, &Module__init },
-    { "_thunk", SpkNativeCode_ARGS_1, &Module__thunk },
+static MethodTmpl methods[] = {
+    { "_init", NativeCode_ARGS_0, &Module__init },
+    { "_thunk", NativeCode_ARGS_1, &Module__thunk },
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassModuleTmpl = {
-    Spk_HEART_CLASS_TMPL(Module, Object), {
+ClassTmpl ClassModuleTmpl = {
+    HEART_CLASS_TMPL(Module, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkModuleSubclass, variables),
+        offsetof(ModuleSubclass, variables),
         /*itemSize*/ 0,
         &Module_zero
     }, /*meta*/ {
         /*accessors*/ 0,
         /*methods*/ 0,
         /*lvalueMethods*/ 0,
-        offsetof(SpkModuleClassSubclass, variables),
+        offsetof(ModuleClassSubclass, variables),
         /*itemSize*/ 0,
         &ModuleClass_zero
     }
@@ -134,47 +134,47 @@ SpkClassTmpl Spk_ClassModuleTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SpkModuleClass *SpkModuleClass_New(SpkModuleTmpl *tmpl) {
-    SpkModuleClass *moduleClass;
+ModuleClass *ModuleClass_New(ModuleTmpl *tmpl) {
+    ModuleClass *moduleClass;
     
     moduleClass
-        = (SpkModuleClass *)SpkClass_FromTemplate(&tmpl->moduleClass,
-                                                  Spk_CLASS(Module),
+        = (ModuleClass *)Class_FromTemplate(&tmpl->moduleClass,
+                                                  CLASS(Module),
                                                   0);
     
     moduleClass->literalCount = tmpl->literalCount;
     moduleClass->literals = tmpl->literals;
-    moduleClass->tmpl = tmpl;  Spk_INCREF(tmpl);
+    moduleClass->tmpl = tmpl;  INCREF(tmpl);
     return moduleClass;
 }
 
-void SpkModule_InitLiteralsFromTemplate(SpkBehavior *moduleClass, SpkModuleTmpl *tmpl) {
-    SpkModuleClass *self;
+void Module_InitLiteralsFromTemplate(Behavior *moduleClass, ModuleTmpl *tmpl) {
+    ModuleClass *self;
     size_t i;
-    SpkUnknown *literal;
+    Unknown *literal;
     
-    self = (SpkModuleClass *)Spk_Cast(Spk_CLASS(Module)->base.klass,
-                                      (SpkUnknown *)moduleClass);
+    self = (ModuleClass *)Cast(CLASS(Module)->base.klass,
+                                      (Unknown *)moduleClass);
     if (!tmpl->literalCount)
         return;
-    self->literals = (SpkUnknown **)malloc(tmpl->literalCount * sizeof(SpkUnknown *));
+    self->literals = (Unknown **)malloc(tmpl->literalCount * sizeof(Unknown *));
     self->literalCount = tmpl->literalCount;
     for (i = 0; i < self->literalCount; ++i) {
         switch (tmpl->literalTable[i].kind) {
-        case Spk_LITERAL_SYMBOL:
-            literal = (SpkUnknown *)SpkSymbol_FromCString(tmpl->literalTable[i].stringValue);
+        case LITERAL_SYMBOL:
+            literal = (Unknown *)Symbol_FromCString(tmpl->literalTable[i].stringValue);
             break;
-        case Spk_LITERAL_INTEGER:
-            literal = (SpkUnknown *)SpkInteger_FromCLong(tmpl->literalTable[i].intValue);
+        case LITERAL_INTEGER:
+            literal = (Unknown *)Integer_FromCLong(tmpl->literalTable[i].intValue);
             break;
-        case Spk_LITERAL_FLOAT:
-            literal = (SpkUnknown *)SpkFloat_FromCDouble(tmpl->literalTable[i].floatValue);
+        case LITERAL_FLOAT:
+            literal = (Unknown *)Float_FromCDouble(tmpl->literalTable[i].floatValue);
             break;
-        case Spk_LITERAL_CHAR:
-            literal = (SpkUnknown *)SpkChar_FromCChar(tmpl->literalTable[i].intValue);
+        case LITERAL_CHAR:
+            literal = (Unknown *)Char_FromCChar(tmpl->literalTable[i].intValue);
             break;
-        case Spk_LITERAL_STRING:
-            literal = (SpkUnknown *)SpkString_FromCString(tmpl->literalTable[i].stringValue);
+        case LITERAL_STRING:
+            literal = (Unknown *)String_FromCString(tmpl->literalTable[i].stringValue);
             break;
         }
         self->literals[i] = literal;
@@ -185,43 +185,43 @@ void SpkModule_InitLiteralsFromTemplate(SpkBehavior *moduleClass, SpkModuleTmpl 
 /*------------------------------------------------------------------------*/
 /* thunks */
 
-struct SpkThunk {
-    SpkObject base;
-    SpkUnknown *receiver;
-    SpkUnknown *selector;
+struct Thunk {
+    Object base;
+    Unknown *receiver;
+    Unknown *selector;
 };
 
-typedef struct SpkThunkSubclass {
-    SpkThunk base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkThunkSubclass;
+typedef struct ThunkSubclass {
+    Thunk base;
+    Unknown *variables[1]; /* stretchy */
+} ThunkSubclass;
 
-static SpkUnknown *Thunk_apply(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkThunk *self = (SpkThunk *)_self;
-    return Spk_SendWithArguments(Spk_GLOBAL(theInterpreter),
+static Unknown *Thunk_apply(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    Thunk *self = (Thunk *)_self;
+    return SendWithArguments(GLOBAL(theInterpreter),
                                  self->receiver,
                                  self->selector,
                                  arg0);
 }
 
-static SpkMethodTmpl ThunkMethods[] = {
-    { "__apply__", SpkNativeCode_ARGS_ARRAY, &Thunk_apply },
+static MethodTmpl ThunkMethods[] = {
+    { "__apply__", NativeCode_ARGS_ARRAY, &Thunk_apply },
     { 0 }
 };
 
-static void Thunk_dealloc(SpkObject *_self, SpkUnknown **l) {
-    SpkThunk *self = (SpkThunk *)_self;
-    Spk_LDECREF(self->receiver, l);
-    Spk_LDECREF(self->selector, l);
-    (*Spk_CLASS(Thunk)->superclass->dealloc)(_self, l);
+static void Thunk_dealloc(Object *_self, Unknown **l) {
+    Thunk *self = (Thunk *)_self;
+    LDECREF(self->receiver, l);
+    LDECREF(self->selector, l);
+    (*CLASS(Thunk)->superclass->dealloc)(_self, l);
 }
 
-SpkClassTmpl Spk_ClassThunkTmpl = {
-    Spk_HEART_CLASS_TMPL(Thunk, Object), {
+ClassTmpl ClassThunkTmpl = {
+    HEART_CLASS_TMPL(Thunk, Object), {
         /*accessors*/ 0,
         ThunkMethods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkThunkSubclass, variables),
+        offsetof(ThunkSubclass, variables),
         /*itemSize*/ 0,
         /*zero*/ 0,
         &Thunk_dealloc
@@ -230,16 +230,16 @@ SpkClassTmpl Spk_ClassThunkTmpl = {
     }
 };
 
-static SpkThunk *SpkThunk_New(
-    SpkUnknown *receiver,
-    SpkUnknown *selector)
+static Thunk *Thunk_New(
+    Unknown *receiver,
+    Unknown *selector)
 {
-    SpkThunk *newThunk;
+    Thunk *newThunk;
     
-    newThunk = (SpkThunk *)SpkObject_New(Spk_CLASS(Thunk));
+    newThunk = (Thunk *)Object_New(CLASS(Thunk));
     if (!newThunk)
         return 0;
-    newThunk->receiver = receiver;  Spk_INCREF(receiver);
-    newThunk->selector = selector;  Spk_INCREF(selector);
+    newThunk->receiver = receiver;  INCREF(receiver);
+    newThunk->selector = selector;  INCREF(selector);
     return newThunk;
 }

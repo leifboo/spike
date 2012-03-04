@@ -1,6 +1,6 @@
 
-#ifndef __spk_host_h__
-#define __spk_host_h__
+#ifndef __host_h__
+#define __host_h__
 
 
 #include "om.h"
@@ -8,70 +8,70 @@
 #include <stdio.h>
 
 
-/****/ void SpkHost_Init(void);
+/****/ void Host_Init(void);
 
 
 /* halting */
-/****/ void SpkHost_Halt(int, const char *);
-/****/ void SpkHost_HaltWithString(int, SpkUnknown *);
-/****/ void SpkHost_VHaltWithFormat(int, const char *, va_list);
+/****/ void Host_Halt(int, const char *);
+/****/ void Host_HaltWithString(int, Unknown *);
+/****/ void Host_VHaltWithFormat(int, const char *, va_list);
 
 
 /* base types */
-/*****/ int SpkHost_IsInteger(SpkUnknown *);
-/*****/ int SpkHost_IsString(SpkUnknown *);
-/****/ long SpkHost_IntegerAsCLong(SpkUnknown *);
-SpkUnknown *SpkHost_IntegerFromCLong(long);
-/**/ double SpkHost_FloatAsCDouble(SpkUnknown *);
-SpkUnknown *SpkHost_FloatFromCDouble(double);
-/****/ char SpkHost_CharAsCChar(SpkUnknown *);
-SpkUnknown *SpkHost_CharFromCChar(char);
-/***/ char *SpkHost_StringAsCString(SpkUnknown *);
-SpkUnknown *SpkHost_StringFromCString(const char *);
-SpkUnknown *SpkHost_StringFromCStringAndLength(const char *, size_t);
-SpkUnknown *SpkHost_StringConcat(SpkUnknown **, SpkUnknown *);
+/*****/ int Host_IsInteger(Unknown *);
+/*****/ int Host_IsString(Unknown *);
+/****/ long Host_IntegerAsCLong(Unknown *);
+Unknown *Host_IntegerFromCLong(long);
+/**/ double Host_FloatAsCDouble(Unknown *);
+Unknown *Host_FloatFromCDouble(double);
+/****/ char Host_CharAsCChar(Unknown *);
+Unknown *Host_CharFromCChar(char);
+/***/ char *Host_StringAsCString(Unknown *);
+Unknown *Host_StringFromCString(const char *);
+Unknown *Host_StringFromCStringAndLength(const char *, size_t);
+Unknown *Host_StringConcat(Unknown **, Unknown *);
 
 
 /* symbols */
-/*****/ int SpkHost_IsSymbol(SpkUnknown *);
-const char *SpkHost_SymbolAsCString(SpkUnknown *);
-SpkUnknown *SpkHost_SymbolFromCString(const char *);
-SpkUnknown *SpkHost_SymbolFromCStringAndLength(const char *, size_t);
+/*****/ int Host_IsSymbol(Unknown *);
+const char *Host_SymbolAsCString(Unknown *);
+Unknown *Host_SymbolFromCString(const char *);
+Unknown *Host_SymbolFromCStringAndLength(const char *, size_t);
 
 
 /* selectors */
-const char *SpkHost_SelectorAsCString(SpkUnknown *);
-SpkUnknown *SpkHost_NewKeywordSelectorBuilder(void);
-/****/ void SpkHost_AppendKeyword(SpkUnknown **, SpkUnknown *);
-SpkUnknown *SpkHost_GetKeywordSelector(SpkUnknown *, SpkUnknown *);
+const char *Host_SelectorAsCString(Unknown *);
+Unknown *Host_NewKeywordSelectorBuilder(void);
+/****/ void Host_AppendKeyword(Unknown **, Unknown *);
+Unknown *Host_GetKeywordSelector(Unknown *, Unknown *);
 
 
 /* symbol dictionaries */
-SpkUnknown *SpkHost_NewSymbolDict(void);
-/****/ void SpkHost_DefineSymbol(SpkUnknown *, SpkUnknown *, SpkUnknown *);
-SpkUnknown *SpkHost_SymbolValue(SpkUnknown *, SpkUnknown *);
-SpkUnknown *SpkHost_FindSymbol(SpkUnknown *, SpkUnknown *);
-/*****/ int SpkHost_NextSymbol(SpkUnknown *, size_t *,
-                               SpkUnknown **, SpkUnknown **);
+Unknown *Host_NewSymbolDict(void);
+/****/ void Host_DefineSymbol(Unknown *, Unknown *, Unknown *);
+Unknown *Host_SymbolValue(Unknown *, Unknown *);
+Unknown *Host_FindSymbol(Unknown *, Unknown *);
+/*****/ int Host_NextSymbol(Unknown *, size_t *,
+                               Unknown **, Unknown **);
 
 
 /* arguments */
-/*****/ int SpkHost_IsArgs(SpkUnknown *);
-/**/ size_t SpkHost_ArgsSize(SpkUnknown *);
-SpkUnknown *SpkHost_GetArg(SpkUnknown *, size_t);
-SpkUnknown *SpkHost_EmptyArgs(void);
-SpkUnknown *SpkHost_ArgsFromVAList(va_list);
-SpkUnknown *SpkHost_GetArgs(SpkUnknown **, size_t,
-                            SpkUnknown *, size_t);
+/*****/ int Host_IsArgs(Unknown *);
+/**/ size_t Host_ArgsSize(Unknown *);
+Unknown *Host_GetArg(Unknown *, size_t);
+Unknown *Host_EmptyArgs(void);
+Unknown *Host_ArgsFromVAList(va_list);
+Unknown *Host_GetArgs(Unknown **, size_t,
+                            Unknown *, size_t);
 
 /* i/o */
-/*****/ int SpkHost_IsFileStream(SpkUnknown *);
-/***/ FILE *SpkHost_FileStreamAsCFileStream(SpkUnknown *);
+/*****/ int Host_IsFileStream(Unknown *);
+/***/ FILE *Host_FileStreamAsCFileStream(Unknown *);
 
 
 /* as yet unclassified */
-SpkUnknown *SpkHost_ObjectAsString(SpkUnknown *);
-/****/ void SpkHost_PrintObject(SpkUnknown *, FILE *);
+Unknown *Host_ObjectAsString(Unknown *);
+/****/ void Host_PrintObject(Unknown *, FILE *);
 
 
-#endif /* __spk_host_h__ */
+#endif /* __host_h__ */

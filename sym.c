@@ -10,8 +10,8 @@
 #include <string.h>
 
 
-struct SpkSymbol {
-    SpkObject base;
+struct Symbol {
+    Object base;
     size_t hash;
     char str[1];
 };
@@ -19,45 +19,45 @@ struct SpkSymbol {
 
 static struct {
     size_t size, mask, tally;
-    SpkSymbol **array;
+    Symbol **array;
 } hashTable;
 
 
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static SpkUnknown *Symbol_printString(SpkUnknown *_self, SpkUnknown *arg0, SpkUnknown *arg1) {
-    SpkSymbol *self;
-    SpkString *result;
+static Unknown *Symbol_printString(Unknown *_self, Unknown *arg0, Unknown *arg1) {
+    Symbol *self;
+    String *result;
     size_t len;
     char *str;
     
-    self = (SpkSymbol *)_self;
+    self = (Symbol *)_self;
     len = strlen(self->str);
-    result = SpkString_FromCStringAndLength(0, len + 1);
+    result = String_FromCStringAndLength(0, len + 1);
     if (!result)
         return 0;
-    str = SpkString_AsCString(result);
+    str = String_AsCString(result);
     str[0] = '$';
     memcpy(&str[1], self->str, len);
-    return (SpkUnknown *)result;
+    return (Unknown *)result;
 }
 
 
 /*------------------------------------------------------------------------*/
 /* class tmpl */
 
-static SpkMethodTmpl methods[] = {
-    { "printString", SpkNativeCode_ARGS_0, &Symbol_printString },
+static MethodTmpl methods[] = {
+    { "printString", NativeCode_ARGS_0, &Symbol_printString },
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassSymbolTmpl = {
-    Spk_HEART_CLASS_TMPL(Symbol, Object), {
+ClassTmpl ClassSymbolTmpl = {
+    HEART_CLASS_TMPL(Symbol, Object), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
-        /*offsetof(SpkSymbolSubclass, variables)*/ 0,
+        /*offsetof(SymbolSubclass, variables)*/ 0,
         sizeof(char)
     }, /*meta*/ {
         0
@@ -95,14 +95,14 @@ static size_t getHash(unsigned char *str, size_t len) {
     return hash;
 }
 
-static SpkSymbol *newSymbol(const char *str, size_t len, size_t hash) {
-    SpkSymbol *sym;
+static Symbol *newSymbol(const char *str, size_t len, size_t hash) {
+    Symbol *sym;
     size_t start, i, o;
     
     if (!hashTable.array) {
         hashTable.size = 2; /* must be a power of 2 */
         hashTable.mask = hashTable.size - 1;
-        hashTable.array = (SpkSymbol **)calloc(hashTable.size, sizeof(SpkSymbol *));
+        hashTable.array = (Symbol **)calloc(hashTable.size, sizeof(Symbol *));
     }
     
     start = hash & hashTable.mask;
@@ -112,7 +112,7 @@ static SpkSymbol *newSymbol(const char *str, size_t len, size_t hash) {
         if (!sym) {
             goto insert;
         } else if (strcmp(sym->str, str) == 0) {
-            Spk_INCREF(sym);
+            INCREF(sym);
             return sym;
         }
     }
@@ -122,18 +122,18 @@ static SpkSymbol *newSymbol(const char *str, size_t len, size_t hash) {
         if (!sym) {
             goto insert;
         } else if (strcmp(sym->str, str) == 0) {
-            Spk_INCREF(sym);
+            INCREF(sym);
             return sym;
         }
     }
     
-    Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+    Halt(HALT_ASSERTION_ERROR, "not reached");
     return 0;
     
  insert:
-    sym = (SpkSymbol *)malloc(sizeof(SpkSymbol) + len);
+    sym = (Symbol *)malloc(sizeof(Symbol) + len);
     sym->base.base.refCount = 1;
-    sym->base.klass = Spk_CLASS(Symbol);
+    sym->base.klass = CLASS(Symbol);
     sym->hash = hash;
     memcpy(sym->str, str, len);
     sym->str[len] = '\0';
@@ -144,15 +144,15 @@ static SpkSymbol *newSymbol(const char *str, size_t len, size_t hash) {
     if (hashTable.size - hashTable.tally < hashTable.size / 4 + 1) {
         /* grow */
         size_t oldSize;
-        SpkSymbol **oldArray;
-        SpkSymbol *oldSym;
+        Symbol **oldArray;
+        Symbol *oldSym;
         
         oldSize = hashTable.size;
         oldArray = hashTable.array;
         
         hashTable.size <<= 1;
         hashTable.mask = hashTable.size - 1;
-        hashTable.array = (SpkSymbol **)calloc(hashTable.size, sizeof(SpkSymbol *));
+        hashTable.array = (Symbol **)calloc(hashTable.size, sizeof(Symbol *));
         
         for (o = 0; o < oldSize; ++o) {
             oldSym = oldArray[o];
@@ -168,7 +168,7 @@ static SpkSymbol *newSymbol(const char *str, size_t len, size_t hash) {
                         goto reinsert;
                     }
                 }
-                Spk_Halt(Spk_HALT_ASSERTION_ERROR, "not reached");
+                Halt(HALT_ASSERTION_ERROR, "not reached");
                 return 0;
  reinsert:
                 hashTable.array[i] = oldSym;
@@ -178,26 +178,26 @@ static SpkSymbol *newSymbol(const char *str, size_t len, size_t hash) {
         free(oldArray);
     }
     
-    Spk_INCREF(sym);
+    INCREF(sym);
     return sym;
 }
 
-SpkSymbol *SpkSymbol_FromCString(const char *str) {
+Symbol *Symbol_FromCString(const char *str) {
     size_t hash, len;
     
     hash = getHashAndLength((unsigned char *)str, &len);
     return newSymbol(str, len, hash);
 }
 
-SpkSymbol *SpkSymbol_FromCStringAndLength(const char *str, size_t len) {
+Symbol *Symbol_FromCStringAndLength(const char *str, size_t len) {
     size_t hash = getHash((unsigned char *)str, len);
     return newSymbol(str, len, hash);
 }
 
-const char *SpkSymbol_AsCString(SpkSymbol *self) {
+const char *Symbol_AsCString(Symbol *self) {
     return self->str;
 }
 
-size_t SpkSymbol_Hash(SpkSymbol *self) {
+size_t Symbol_Hash(Symbol *self) {
     return self->hash;
 }

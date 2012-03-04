@@ -13,44 +13,44 @@
 /*------------------------------------------------------------------------*/
 /* methods */
 
-static SpkUnknown *Metaclass_new(SpkUnknown *_self, SpkUnknown *name, SpkUnknown *arg1) {
+static Unknown *Metaclass_new(Unknown *_self, Unknown *name, Unknown *arg1) {
     /* Answer a new class. */
-    SpkMetaclass *self;
-    SpkClass *newClass;
+    Metaclass *self;
+    Class *newClass;
     
-    self = (SpkMetaclass *)_self;
-    if (!SpkHost_IsSymbol(name)) {
-        Spk_Halt(Spk_HALT_TYPE_ERROR, "a symbol is required");
+    self = (Metaclass *)_self;
+    if (!Host_IsSymbol(name)) {
+        Halt(HALT_TYPE_ERROR, "a symbol is required");
         return 0;
     }
-    newClass = (SpkClass *)SpkObject_New(Spk_CLASS(Class));
+    newClass = (Class *)Object_New(CLASS(Class));
     if (!newClass)
         return 0;
-    Spk_INCREF(name);
+    INCREF(name);
     newClass->name = name;
-    return (SpkUnknown *)newClass;
+    return (Unknown *)newClass;
 }
 
 
 /*------------------------------------------------------------------------*/
 /* class template */
 
-typedef struct SpkMetaclassSubclass {
-    SpkMetaclass base;
-    SpkUnknown *variables[1]; /* stretchy */
-} SpkMetaclassSubclass;
+typedef struct MetaclassSubclass {
+    Metaclass base;
+    Unknown *variables[1]; /* stretchy */
+} MetaclassSubclass;
 
-static SpkMethodTmpl methods[] = {
-    { "new",   SpkNativeCode_ARGS_0, &Metaclass_new   },
+static MethodTmpl methods[] = {
+    { "new",   NativeCode_ARGS_0, &Metaclass_new   },
     { 0 }
 };
 
-SpkClassTmpl Spk_ClassMetaclassTmpl = {
-    Spk_HEART_CLASS_TMPL(Metaclass, Behavior), {
+ClassTmpl ClassMetaclassTmpl = {
+    HEART_CLASS_TMPL(Metaclass, Behavior), {
         /*accessors*/ 0,
         methods,
         /*lvalueMethods*/ 0,
-        offsetof(SpkMetaclassSubclass, variables)
+        offsetof(MetaclassSubclass, variables)
     }, /*meta*/ {
         0
     }
@@ -60,26 +60,26 @@ SpkClassTmpl Spk_ClassMetaclassTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SpkMetaclass *SpkMetaclass_New(SpkMetaclass *superMeta, size_t instVarCount)
+Metaclass *Metaclass_New(Metaclass *superMeta, size_t instVarCount)
 {
-    SpkMetaclass *newMetaclass;
+    Metaclass *newMetaclass;
     
-    newMetaclass = (SpkMetaclass *)SpkObject_New(Spk_CLASS(Metaclass));
-    SpkBehavior_Init((SpkBehavior *)newMetaclass, (SpkBehavior *)superMeta,
+    newMetaclass = (Metaclass *)Object_New(CLASS(Metaclass));
+    Behavior_Init((Behavior *)newMetaclass, (Behavior *)superMeta,
                      0, instVarCount);
     newMetaclass->thisClass = 0;
     return newMetaclass;
 }
 
-SpkMetaclass *SpkMetaclass_FromTemplate(SpkBehaviorTmpl *tmpl,
-                                        SpkMetaclass *superMeta,
-                                        struct SpkModule *module)
+Metaclass *Metaclass_FromTemplate(BehaviorTmpl *tmpl,
+                                        Metaclass *superMeta,
+                                        struct Module *module)
 {
-    SpkMetaclass *newMetaclass;
+    Metaclass *newMetaclass;
     
-    newMetaclass = (SpkMetaclass *)SpkObject_New(Spk_CLASS(Metaclass));
-    SpkBehavior_InitFromTemplate((SpkBehavior *)newMetaclass, tmpl, (SpkBehavior *)superMeta, module);
-    SpkBehavior_AddMethodsFromTemplate((SpkBehavior *)newMetaclass, tmpl);
+    newMetaclass = (Metaclass *)Object_New(CLASS(Metaclass));
+    Behavior_InitFromTemplate((Behavior *)newMetaclass, tmpl, (Behavior *)superMeta, module);
+    Behavior_AddMethodsFromTemplate((Behavior *)newMetaclass, tmpl);
     newMetaclass->thisClass = 0;
     return newMetaclass;
 }

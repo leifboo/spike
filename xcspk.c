@@ -13,10 +13,10 @@
 #include <stdio.h>
 
 
-#define CLASS_TMPL(c) Spk_Class ## c ## Tmpl
-#define CLASS(c, s) &CLASS_TMPL(c)
+#define CLASS_TMPL_DEF(c) Class ## c ## Tmpl
+#define CLASS(c, s) &CLASS_TMPL_DEF(c)
 
-SpkClassBootRec Spk_classBootRec[] = {
+ClassBootRec classBootRec[] = {
     /***CLASS(VariableObject, Object),*/
     /******/CLASS(String,  VariableObject),
     /**/CLASS(Integer,    Object),
@@ -26,14 +26,14 @@ SpkClassBootRec Spk_classBootRec[] = {
 };
 
 
-SpkModuleTmpl Spk_ModulemoduleTmpl = { { "heart" } };
+ModuleTmpl ModulemoduleTmpl = { { "heart" } };
 
-struct SpkModule *Spk_heart;
+struct Module *heart;
 
 
 int main(int argc, char **argv) {
     int i;
-    struct SpkModuleTmpl *module;
+    struct ModuleTmpl *module;
     const char *outputFilename = "xgenerated.c";
     FILE *out;
     
@@ -43,13 +43,13 @@ int main(int argc, char **argv) {
         return 1;
     }
     
-    if (!Spk_Boot())
+    if (!Boot())
         return 1;
     
     module = 0;
-    Spk_declareBuiltIn = 0;
+    declareBuiltIn = 0;
     for (i = 1; i < argc; ++i) {
-        module = SpkCompiler_CompileFile(argv[i]);
+        module = Compiler_CompileFile(argv[i]);
         break;
     }
     
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "%s: cannot open '%s'\n", argv[0], outputFilename);
         return 1;
     }
-    SpkDisassembler_DisassembleModuleAsCCode(module, out);
+    Disassembler_DisassembleModuleAsCCode(module, out);
     fclose(out);
     
     return 0;

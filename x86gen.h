@@ -1,6 +1,6 @@
 
-#ifndef __spk_x86gen_h__
-#define __spk_x86gen_h__
+#ifndef __x86gen_h__
+#define __x86gen_h__
 
 
 #include "obj.h"
@@ -9,10 +9,10 @@
 #include <stdio.h>
 
 
-struct SpkStmt;
+struct Stmt;
 
 
-SpkUnknown *SpkX86CodeGen_GenerateCode(struct SpkStmt *tree, FILE *out);
+Unknown *X86CodeGen_GenerateCode(struct Stmt *tree, FILE *out);
 
 
-#endif /* __spk_x86gen_h__ */
+#endif /* __x86gen_h__ */
