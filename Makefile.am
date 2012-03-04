@@ -112,7 +112,7 @@ lexer.c: $(srcdir)/lexer.l gram.c
 lemon: $(srcdir)/lemon.c
 	$(CC) -o $@ $(srcdir)/lemon.c
 
-xgenerated.c: xcspk
+xgenerated.c: xcspk$(EXEEXT)
 	./xcspk $(spk)
 
 
