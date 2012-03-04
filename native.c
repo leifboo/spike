@@ -95,12 +95,10 @@ Unknown *SendMessage(Interpreter *interpreter,
 static Unknown *vSendMessage(Interpreter *interpreter,
                                 Unknown *obj, unsigned int ns, Unknown *selector, va_list ap)
 {
-    Unknown *argumentList, *result;
+    Unknown *argumentList;
 
     argumentList = Host_ArgsFromVAList(ap);
-    result = SendMessage(interpreter, obj, ns, selector, argumentList);
-    DECREF(argumentList);
-    return result;
+    return SendMessage(interpreter, obj, ns, selector, argumentList);
 }
 
 static Unknown *sendMessage(Interpreter *interpreter,

@@ -39,7 +39,6 @@ static Unknown *Char_unaryOper(Char *self, Oper oper) {
     case OPER_BNEG: result->value = ~self->value;    break;
     default:
         Halt(HALT_VALUE_ERROR, "bad operator");
-        DECREF(result);
         return 0;
     }
     return (Unknown *)result;
@@ -67,7 +66,6 @@ static Unknown *Char_binaryOper(Char *self, Unknown *arg0, Oper oper) {
     case OPER_BOR:    result->value = self->value | arg->value;  break;
     default:
         Halt(HALT_VALUE_ERROR, "bad operator");
-        DECREF(result);
         return 0;
     }
     return (Unknown *)result;
@@ -80,10 +78,8 @@ static Unknown *Char_binaryLogicalOper(Char *self, Unknown *arg0, Oper oper) {
     arg = CAST(Char, arg0);
     if (!arg) switch (oper) {
     case OPER_EQ:
-        INCREF(GLOBAL(xfalse));
         return GLOBAL(xfalse);
     case OPER_NE:
-        INCREF(GLOBAL(xtrue));
         return GLOBAL(xtrue);
     default:
         Halt(HALT_TYPE_ERROR, "a Char object is required");
@@ -101,7 +97,6 @@ static Unknown *Char_binaryLogicalOper(Char *self, Unknown *arg0, Oper oper) {
         Halt(HALT_VALUE_ERROR, "bad operator");
         return 0;
     }
-    INCREF(result);
     return result;
 }
 
@@ -138,7 +133,6 @@ static Unknown *Char_bneg(Unknown *self, Unknown *arg0, Unknown *arg1) {
 static Unknown *Char_lneg(Unknown *self, Unknown *arg0, Unknown *arg1) {
     Unknown *result;
     result = BOOL(!((Char *)self)->value);
-    INCREF(result);
     return result;
 }
 

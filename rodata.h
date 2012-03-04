@@ -170,8 +170,6 @@ extern Unknown *emptyArgs;
 int InitSymbols(void);
 int InitReadOnlyData(void);
 Unknown *ParseSelector(const char *);
-void ReleaseSymbols(void);
-void ReleaseReadOnlyData(void);
 
 
 #endif /* __rodata_h__ */

@@ -23,8 +23,7 @@ while (0)
 
 #define _(c) do { \
 Unknown *_tmp = (c); \
-if (!_tmp) goto unwind; \
-DECREF(_tmp); } while (0)
+if (!_tmp) goto unwind; } while (0)
 
 #if DEBUG_STACKP
 /* Emit debug opcodes which check to see whether the stack depth at
@@ -270,7 +269,6 @@ static Unknown *fixUpBranch(ptrdiff_t base, size_t target, OpcodeGen *cgen) {
         }
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -288,7 +286,6 @@ static Unknown *emitBranchDisplacement(ptrdiff_t base, size_t target, OpcodeGen 
         }
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -356,7 +353,6 @@ static Unknown *emitCodeForName(Expr *expr, int *super, OpcodeGen *cgen) {
     tallyPush(cgen);
     
  leave:
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -394,7 +390,6 @@ static Unknown *emitLiteralIndex(Unknown *literal, OpcodeGen *cgen) {
         }
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -406,7 +401,6 @@ static Unknown *emitCodeForLiteral(Unknown *literal, OpcodeGen *cgen) {
     _(emitLiteralIndex(literal, cgen));
     tallyPush(cgen);
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -563,7 +557,7 @@ static unsigned int getStrLiteralIndex(String *value, ModuleCodeGen *cgen) {
                 );
     }
     
-    cgen->strData[i].u.strValue = value; INCREF(value);
+    cgen->strData[i].u.strValue = value;
     cgen->strData[i].index = cgen->rodataSize;
     
     return cgen->strData[i].index;
@@ -592,7 +586,7 @@ static unsigned int getSymLiteralIndex(Symbol *value, ModuleCodeGen *cgen) {
                 );
     }
     
-    cgen->symData[i].u.symValue = value; INCREF(value);
+    cgen->symData[i].u.symValue = value;
     cgen->symData[i].index = cgen->rodataSize;
     
     return cgen->symData[i].index;
@@ -643,7 +637,7 @@ static unsigned int getLiteralIndex(Unknown *literal, OpcodeGen *cgen) {
                 );
     }
     
-    mcg->rodata[index] = literal; INCREF(literal);
+    mcg->rodata[index] = literal;
     
     return index;
 }
@@ -660,12 +654,9 @@ static Unknown *emitCodeForInt(int intValue, OpcodeGen *cgen) {
         goto unwind;
     }
     _(emitCodeForLiteral(intObj, cgen));
-    DECREF(intObj);
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
-    XDECREF(intObj);
     return 0;
 }
 
@@ -691,7 +682,6 @@ static Unknown *emitCodeForExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     }
     _(emitCodeForOneExpr(expr, super, cgen));
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -955,7 +945,6 @@ static Unknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     
     SET_EXPR_END(expr);
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -990,7 +979,6 @@ static Unknown *inPlaceOp(Expr *expr, size_t resultDepth, OpcodeGen *cgen) {
         squirrel(resultDepth, cgen);
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1059,7 +1047,6 @@ static Unknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
     EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
     CHECK_STACKP();
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1108,7 +1095,6 @@ static Unknown *inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
     EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
     CHECK_STACKP();
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1126,7 +1112,6 @@ static Unknown *emitBranchForExpr(Expr *expr, int cond,
     }
     _(emitBranchForOneExpr(expr, cond, label, fallThroughLabel, dup, cgen));
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1221,7 +1206,6 @@ static Unknown *emitBranchForOneExpr(Expr *expr, int cond,
         break;
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1245,7 +1229,6 @@ static Unknown *emitCodeForBlockBody(Stmt *body, Expr *valueExpr,
     EMIT_OPCODE(OPCODE_RET);
     _(emitBranch(OPCODE_BRANCH_ALWAYS, start, cgen));
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1349,7 +1332,6 @@ static Unknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
         home->u.o.stackSize = cgen->stackPointer;
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1373,7 +1355,6 @@ static Unknown *emitCodeForInitializer(Expr *expr, OpcodeGen *cgen) {
     
     SET_EXPR_END(expr);
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1388,7 +1369,6 @@ static Unknown *emitCodeForVarDefList(Expr *defList, OpcodeGen *cgen) {
             _(emitCodeForInitializer(expr, cgen));
         }
     }
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1532,7 +1512,6 @@ static Unknown *emitCodeForStmt(Stmt *stmt,
     ASSERT(cgen->stackPointer == 0, "garbage on stack at end of statement");
     CHECK_STACKP();
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1575,7 +1554,6 @@ static Unknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
         }
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1692,7 +1670,6 @@ static Unknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         
         for (cg = outer; cg; cg = cg->outer) {
             if (cg->kind == CODE_GEN_CLASS && cg->u.klass.source) {
-                INCREF(cg->u.klass.source);
                 mcg->methodTmpl->debug.source = cg->u.klass.source;
                 break;
             }
@@ -1721,7 +1698,7 @@ static Unknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     }
     
     mcg->methodTmpl->ns = stmt->u.method.ns;
-    mcg->methodTmpl->selector = selector;  INCREF(selector);
+    mcg->methodTmpl->selector = selector;
     
     switch (outer->kind) {
     case CODE_GEN_METHOD:
@@ -1736,7 +1713,6 @@ static Unknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
         ASSERT(0, "method not allowed here");
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1764,8 +1740,6 @@ static Unknown *emitCodeForClassBody(Stmt *body, CodeGen *cgen) {
             _(emitCodeForClass(s, cgen));
             break;
         case STMT_PRAGMA_SOURCE:
-            INCREF(s->u.source);
-            XDECREF(cgen->u.klass.source);
             cgen->u.klass.source = s->u.source;
             break;
         default:
@@ -1773,7 +1747,6 @@ static Unknown *emitCodeForClassBody(Stmt *body, CodeGen *cgen) {
         }
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1830,7 +1803,6 @@ static Unknown *emitCodeForClass(Stmt *stmt, CodeGen *outer) {
         ASSERT(0, "class definition not allowed here");
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1871,7 +1843,6 @@ static Unknown *generatePredef(Stmt *stmtList, OpcodeGen *cgen) {
         }
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1917,7 +1888,6 @@ static Unknown *generateInit(Stmt *stmtList, OpcodeGen *cgen) {
         }
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -2005,11 +1975,10 @@ static Unknown *generateMethod(Unknown *selector,
            "generated code not allowed here");
 
     mcg->methodTmpl->ns = METHOD_NAMESPACE_RVALUE;
-    mcg->methodTmpl->selector = selector;  INCREF(selector);
+    mcg->methodTmpl->selector = selector;
     insertMethodTmpl(mcg->methodTmpl,
                      &outer->u.klass.behaviorTmpl->methodList);
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -2042,7 +2011,6 @@ static Unknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
     _(generateMethod(_predef, 0, &generatePredef,  predefList, cgen->generic));
     _(generateMethod(_init,   0, &generateInit,    stmt->top->top, cgen->generic));
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -2059,14 +2027,12 @@ static Unknown *createClass(Stmt *classDef, ModuleCodeGen *cgen) {
     memset(classTmpl, 0, sizeof(ClassTmpl));
     
     classTmpl->symbol = classDef->expr->sym->sym;
-    INCREF(classTmpl->symbol);
     classTmpl->name = Host_SymbolAsCString(classTmpl->symbol);
     
     classTmpl->classVarIndex = classDef->expr->u.def.index;
     classTmpl->superclassVarIndex = classDef->u.klass.superclassName->u.ref.def->u.def.index;
     
     classTmpl->superclassName = classDef->u.klass.superclassName->sym->sym;
-    INCREF(classTmpl->superclassName);
     
     classList = &cgen->moduleTmpl->classList;
     if (!classList->first) {
@@ -2078,7 +2044,6 @@ static Unknown *createClass(Stmt *classDef, ModuleCodeGen *cgen) {
     
     classDef->expr->u.def.code = (void *)classTmpl;
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -2093,7 +2058,6 @@ static Unknown *createClassTree(Stmt *classDef, ModuleCodeGen *cgen) {
         _(createClassTree(subclassDef, cgen));
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:

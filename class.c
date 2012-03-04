@@ -123,13 +123,10 @@ Class *Class_New(Unknown *name, Behavior *superclass,
     
     newClass = (Class *)Object_New((Behavior *)newMetaclass);
     Behavior_Init((Behavior *)newClass, superclass, 0, instVarCount);
-    INCREF(name);
     newClass->name = name;
     
     assert(!newMetaclass->thisClass);
-    newMetaclass->thisClass = newClass;  INCWREF(newClass);
-    
-    DECREF(newMetaclass);
+    newMetaclass->thisClass = newClass;
     
     return newClass;
 }
@@ -150,9 +147,7 @@ Class *Class_EmptyFromTemplate(ClassTmpl *tmpl,
     newClass = (Class *)Object_New((Behavior *)newMetaclass);
     Class_InitFromTemplate(newClass, tmpl, superclass, module);
     
-    newMetaclass->thisClass = newClass;  INCWREF(newClass);
-    
-    DECREF(newMetaclass);
+    newMetaclass->thisClass = newClass;
     
     return newClass;
 }
@@ -172,11 +167,9 @@ Class *Class_FromTemplate(ClassTmpl *tmpl,
     Class_InitFromTemplate(newClass, tmpl, superclass, module);
     
     assert(!newMetaclass->thisClass);
-    newMetaclass->thisClass = newClass;  INCWREF(newClass);
+    newMetaclass->thisClass = newClass;
     
     Behavior_AddMethodsFromTemplate((Behavior *)newClass, &tmpl->thisClass);
-    
-    DECREF(newMetaclass);
     
     return newClass;
 }
@@ -194,6 +187,5 @@ void Class_InitFromTemplate(Class *self,
 }
 
 Unknown *Class_Name(Class *self) {
-    INCREF(self->name);
     return self->name;
 }

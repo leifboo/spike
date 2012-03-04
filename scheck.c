@@ -28,8 +28,7 @@ while (0)
 
 #define _(c) do { \
 Unknown *_tmp = (c); \
-if (!_tmp) goto unwind; \
-DECREF(_tmp); } while (0)
+if (!_tmp) goto unwind; } while (0)
 
 
 typedef struct StaticChecker {
@@ -52,11 +51,8 @@ static Unknown *notifyBadExpr(Expr *expr, const char *desc, StaticChecker *check
                    expr,
                    descStr,
                    0);
-    DECREF(descStr);
     if (!tmp)
         return 0;
-    DECREF(tmp);
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -88,7 +84,6 @@ static Unknown *checkDeclSpecs(unsigned int *specifiers,
         }
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -127,7 +122,6 @@ static Unknown *checkVarDefList(Expr *defList,
             expr->specifiers = specifiers;
         }
     }
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -140,7 +134,6 @@ static Unknown *checkExpr(Expr *expr, Stmt *stmt, StaticChecker *checker,
     for ( ; expr; expr = expr->next) {
         _(checkOneExpr(expr, stmt, checker, pass));
     }
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -200,7 +193,6 @@ static Unknown *checkBlock(Expr *expr, Stmt *stmt, StaticChecker *checker,
     SymbolTable_ExitScope(checker->st);
     
  leave:
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -264,7 +256,6 @@ static Unknown *checkOneExpr(Expr *expr, Stmt *stmt, StaticChecker *checker,
         break;
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -303,7 +294,7 @@ static Unknown *checkMethodDef(Stmt *stmt,
         }
         switch (expr->kind) {
         case EXPR_NAME:
-            name = expr->sym;  INCREF(name);
+            name = expr->sym;
             break;
         case EXPR_ASSIGN:
             if (expr->right->kind != EXPR_NAME) {
@@ -313,7 +304,7 @@ static Unknown *checkMethodDef(Stmt *stmt,
             ns = METHOD_NAMESPACE_LVALUE;
             switch (expr->left->kind) {
             case EXPR_NAME:
-                name = expr->left->sym;  INCREF(name);
+                name = expr->left->sym;
                 stmt->u.method.argList.fixed = expr->right;
                 break;
             case EXPR_CALL:
@@ -328,7 +319,7 @@ static Unknown *checkMethodDef(Stmt *stmt,
                     );
                 stmt->u.method.argList.fixed = expr->left->right;
                 /* chain-on the new value arg */
-                expr->left->right->nextArg = expr->right;  INCREF(expr->right);
+                expr->left->right->nextArg = expr->right;
                 break;
             default:
                 _(notifyBadExpr(expr, "invalid method declarator", checker));
@@ -356,7 +347,7 @@ static Unknown *checkMethodDef(Stmt *stmt,
                     _(notifyBadExpr(expr, "invalid method declarator", checker));
                     break;
                 }
-                name = expr->left->sym;  INCREF(name);
+                name = expr->left->sym;
             }
             if (!outer || outer->kind != STMT_DEF_CLASS) {
                 /* declare naked functions */
@@ -498,7 +489,6 @@ static Unknown *checkMethodDef(Stmt *stmt,
     
     checker->currentMethod = 0;
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -529,7 +519,6 @@ static Unknown *registerSubclass(Stmt *subclassDef, StaticChecker *checker) {
         checker->rootClassList->last = subclassDef;
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -560,7 +549,6 @@ static Unknown *checkForSuperclassCycle(Stmt *aClassDef,
     }
     
  leave:
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -585,7 +573,6 @@ static Unknown *checkClassBody(Stmt *body, Stmt *stmt, Stmt *outer,
     *varCount = checker->st->currentScope->context->nDefs;
     SymbolTable_ExitScope(checker->st);
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -644,7 +631,6 @@ static Unknown *checkClassDef(Stmt *stmt, Stmt *outer, StaticChecker *checker,
         break;
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -730,7 +716,6 @@ static Unknown *checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker,
         break;
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -830,7 +815,6 @@ static Unknown *addPredef(StmtList *predefList, Stmt *def) {
     }
     predefList->last = def;
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -843,7 +827,6 @@ static Unknown *declareClass(Behavior *aClass,
     classDef->expr->u.def.initValue = (Unknown *)aClass;
     _(addPredef(predefList, classDef));
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -862,14 +845,12 @@ Unknown *StaticChecker_DeclareBuiltIn(SymbolTable *st,
     for (pv = pseudoVariables; pv->name; ++pv) {
         Expr *pvDef = newPseudoVariable(pv, st);
         _(SymbolTable_Insert(st, pvDef, requestor));
-        DECREF(pvDef);
     }
     
     for (bis = builtInSpecifiers; bis->name; ++bis) {
         declareBuiltInSpecifier(bis, st);
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -937,7 +918,6 @@ Unknown *StaticChecker_Check(Stmt *tree,
     
     SymbolTable_ExitScope(checker.st); /* global */
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:

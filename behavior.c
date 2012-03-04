@@ -49,29 +49,6 @@ static void Behavior_zero(Object *_self) {
     self->itemSize = 0;
 }
 
-static void Behavior_dealloc(Object *_self, Unknown **l) {
-    Behavior *self = (Behavior *)_self;
-    MethodNamespace ns;
-    size_t i;
-    
-    LDECREF(self->superclass, l);
-    LDECREF(self->module, l);
-    
-    for (ns = 0; ns < NUM_METHOD_NAMESPACES; ++ns) {
-        XLDECREF(self->methodDict[ns], l);
-    }
-    for (i = 0; i < NUM_OPER; ++i) {
-        XLDECREF(self->operTable[i], l);
-    }
-    for (i = 0; i < NUM_CALL_OPER; ++i) {
-        XLDECREF(self->operCallTable[i], l);
-    }
-    XLDECREF(self->assignInd, l);
-    XLDECREF(self->assignIndex, l);
-    
-    (*CLASS(Behavior)->superclass->dealloc)(_self, l);
-}
-
 
 /*------------------------------------------------------------------------*/
 /* class template */
@@ -97,8 +74,7 @@ ClassTmpl ClassBehaviorTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(BehaviorSubclass, variables),
         /*itemSize*/ 0,
-        &Behavior_zero,
-        &Behavior_dealloc
+        &Behavior_zero
     }, /*meta*/ {
         0
     }
@@ -112,8 +88,6 @@ void Behavior_Init(Behavior *self, Behavior *superclass, Module *module, size_t 
     size_t i;
     MethodNamespace ns;
     
-    INCREF(superclass);
-    XINCREF(module);
     self->superclass = superclass;
     self->module = module;
     
@@ -176,7 +150,6 @@ static Method *methodFromTemplate(MethodTmpl *methodTmpl) {
         method->nativeCode = methodTmpl->nativeCode;
         
         method->debug.source = methodTmpl->debug.source;
-        XINCREF(method->debug.source);
         method->debug.lineCodeTally = methodTmpl->debug.lineCodeTally;
         if (methodTmpl->debug.lineCodes) {
             method->debug.lineCodes
@@ -206,7 +179,6 @@ void Behavior_AddMethodsFromTemplate(Behavior *self, BehaviorTmpl *tmpl) {
                                                       accessorTmpl->type,
                                                       accessorTmpl->offset);
                 Behavior_InsertMethod(self, METHOD_NAMESPACE_RVALUE, selector, method);
-                DECREF(method);
             }
             
             if (accessorTmpl->flags & Accessor_WRITE) {
@@ -214,10 +186,7 @@ void Behavior_AddMethodsFromTemplate(Behavior *self, BehaviorTmpl *tmpl) {
                                                       accessorTmpl->type,
                                                       accessorTmpl->offset);
                 Behavior_InsertMethod(self, METHOD_NAMESPACE_LVALUE, selector, method);
-                DECREF(method);
             }
-            
-            DECREF(selector);
         }
     }
     
@@ -231,8 +200,6 @@ void Behavior_AddMethodsFromTemplate(Behavior *self, BehaviorTmpl *tmpl) {
             selector = ParseSelector(methodTmpl->name);
             method = methodFromTemplate(methodTmpl);
             Behavior_InsertMethod(self, METHOD_NAMESPACE_RVALUE, selector, method);
-            DECREF(method);
-            DECREF(selector);
         }
     }
     if (tmpl->lvalueMethods) {
@@ -245,8 +212,6 @@ void Behavior_AddMethodsFromTemplate(Behavior *self, BehaviorTmpl *tmpl) {
             selector = ParseSelector(methodTmpl->name);
             method = methodFromTemplate(methodTmpl);
             Behavior_InsertMethod(self, METHOD_NAMESPACE_LVALUE, selector, method);
-            DECREF(method);
-            DECREF(selector);
         }
     }
     
@@ -281,8 +246,6 @@ static void maybeAccelerateMethod(Behavior *self, MethodNamespace ns, Unknown *s
         case METHOD_NAMESPACE_RVALUE:
             for (oper = 0; oper < NUM_CALL_OPER; ++oper) {
                 if (selector == *operCallSelectors[oper].selector) {
-                    INCREF(method);
-                    XDECREF(self->operCallTable[oper]);
                     self->operCallTable[oper] = method;
                     break;
                 }
@@ -290,8 +253,6 @@ static void maybeAccelerateMethod(Behavior *self, MethodNamespace ns, Unknown *s
             if (oper >= NUM_CALL_OPER) {
                 for (oper = 0; oper < NUM_OPER; ++oper) {
                     if (selector == *operSelectors[oper].selector) {
-                        INCREF(method);
-                        XDECREF(self->operTable[oper]);
                         self->operTable[oper] = method;
                         break;
                     }
@@ -300,12 +261,8 @@ static void maybeAccelerateMethod(Behavior *self, MethodNamespace ns, Unknown *s
             break;
         case METHOD_NAMESPACE_LVALUE:
             if (selector == *operSelectors[OPER_IND].selector) {
-                INCREF(method);
-                XDECREF(self->assignInd);
                 self->assignInd = method;
             } else if (selector == *operCallSelectors[OPER_INDEX].selector) {
-                INCREF(method);
-                XDECREF(self->assignIndex);
                 self->assignIndex = method;
             }
             break;
@@ -352,6 +309,5 @@ const char *Behavior_NameAsCString(Behavior *self) {
     
     name = Class_Name(c);
     result = Host_SymbolAsCString(name);
-    DECREF(name);
     return result;
 }

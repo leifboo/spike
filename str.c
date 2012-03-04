@@ -26,10 +26,8 @@ static Unknown *String_binaryLogicalOper(String *self, Unknown *arg0, Oper oper)
     if (!arg) switch (oper) {
     case OPER_EQ:
         /* XXX: 0 == 0.0 */
-        INCREF(GLOBAL(xfalse));
         return GLOBAL(xfalse);
     case OPER_NE:
-        INCREF(GLOBAL(xtrue));
         return GLOBAL(xtrue);
     default:
         Halt(HALT_ASSERTION_ERROR, "XXX");
@@ -47,7 +45,6 @@ static Unknown *String_binaryLogicalOper(String *self, Unknown *arg0, Oper oper)
         Halt(HALT_ASSERTION_ERROR, "not reached");
         return 0;
     }
-    INCREF(result);
     return result;
 }
 
@@ -146,12 +143,9 @@ static Unknown *String_do(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     for (i = 0; i < LEN(self); ++i) {
         c = Char_FromCChar(STR(self)[i]);
         result = Call(GLOBAL(theInterpreter), arg0, OPER_APPLY, c, 0);
-        DECREF(c);
         if (!result)
             return 0; /* unwind */
-        DECREF(result);
     }
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -273,7 +267,6 @@ String *String_FromCStream(FILE *stream, size_t size) {
         return 0;
     buffer = STR(result);
     if (!fgets(buffer, size, stream)) {
-        DECREF(result);
         return 0;
     }
     result->size = strlen(buffer) + 1;
@@ -289,12 +282,10 @@ String *String_Concat(String **var, String *newPart) {
     result = (String *)Object_NewVar(CLASS(String), resultLen + 1);
     if (!result) {
         *var = 0;
-        DECREF(self);
         return 0;
     }
     memcpy(STR(result), STR(self), LEN(self));
     memcpy(STR(result) + LEN(self), STR(newPart), newPart->size);
-    DECREF(self);
     *var = result;
     return result;
 }

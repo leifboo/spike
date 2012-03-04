@@ -165,17 +165,14 @@ Unknown *Host_NewKeywordSelectorBuilder(void) {
 /****/ void Host_AppendKeyword(Unknown **builder, Unknown *kw) {
     Array *kwArray;
     size_t size, i;
-    Unknown *vd;
     
     kwArray = CAST(Array, *builder);
     size = Array_Size(kwArray);
     for (i = 0; i < size; ++i) {
         Unknown *item = Array_GetItem(kwArray, i);
         if (item == GLOBAL(uninit)) {
-            DECREF(item);
             break;
         }
-        DECREF(item);
     }
     if (i == size) {
         Array *newArray;
@@ -185,16 +182,12 @@ Unknown *Host_NewKeywordSelectorBuilder(void) {
         newArray = Array_New(newSize);
         for (i = 0; i < size; ++i) {
             Unknown *item = Array_GetItem(kwArray, i);
-            vd = Array_SetItem(newArray, i, item);
-            DECREF(vd);
-            DECREF(item);
+            Array_SetItem(newArray, i, item);
         }
-        DECREF(kwArray);
         kwArray = newArray;
         *builder = (Unknown *)kwArray;
     }
-    vd = Array_SetItem(kwArray, i, kw);
-    DECREF(vd);
+    Array_SetItem(kwArray, i, kw);
 }
 
 static int compareSymbols(Unknown *const *p1, Unknown *const *p2) {
@@ -236,12 +229,10 @@ Unknown *Host_GetKeywordSelector(Unknown *builder, Unknown *kw) {
     for (i = 0; i < size; ++i) {
         Unknown *item = Array_GetItem(kwArray, i);
         if (item == GLOBAL(uninit)) {
-            DECREF(item);
             break;
         }
         sym = CAST(Symbol, item);
         len += strlen(Symbol_AsCString(sym)) + strlen(kwSep[1]);
-        DECREF(item);
     }
     
     tally = i;
@@ -260,13 +251,11 @@ Unknown *Host_GetKeywordSelector(Unknown *builder, Unknown *kw) {
     for (i = 0; i < size; ++i) {
         Unknown *item = Array_GetItem(kwArray, i);
         if (item == GLOBAL(uninit)) {
-            DECREF(item);
             break;
         }
         sym = CAST(Symbol, item);
         strcat(str, Symbol_AsCString(sym));
         strcat(str, kwSep[1]);
-        DECREF(item);
     }
     str[len] = '\0';
     
@@ -387,5 +376,4 @@ Unknown *Host_ObjectAsString(Unknown *obj) {
         str = String_AsCString(printString);
         fputs(str, stream);
     }
-    DECREF(printObj);
 }

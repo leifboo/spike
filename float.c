@@ -64,10 +64,8 @@ static Unknown *Float_binaryLogicalOper(Float *self, Unknown *arg0, Oper oper) {
     if (!arg) switch (oper) {
     case OPER_EQ:
         /* XXX: 0.0 == 0 */
-        INCREF(GLOBAL(xfalse));
         return GLOBAL(xfalse);
     case OPER_NE:
-        INCREF(GLOBAL(xtrue));
         return GLOBAL(xtrue);
     default:
         Halt(HALT_ASSERTION_ERROR, "XXX");
@@ -85,7 +83,6 @@ static Unknown *Float_binaryLogicalOper(Float *self, Unknown *arg0, Oper oper) {
         Halt(HALT_ASSERTION_ERROR, "not reached");
         return 0;
     }
-    INCREF(result);
     return result;
 }
 
@@ -115,9 +112,7 @@ static Unknown *Float_neg(Unknown *self, Unknown *arg0, Unknown *arg1) {
 
 /* OPER_LNEG */
 static Unknown *Float_lneg(Unknown *self, Unknown *arg0, Unknown *arg1) {
-    Unknown *result = BOOL(!((Float *)self)->value);
-    INCREF(result);
-    return result;
+    return BOOL(!((Float *)self)->value);
 }
 
 /* OPER_MUL */

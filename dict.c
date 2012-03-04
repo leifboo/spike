@@ -30,14 +30,12 @@ Unknown *IdentityDictionary_GetItem(IdentityDictionary *self, Unknown *key) {
     
     for (i = start; i < self->size; ++i) {
         if (self->keyArray[i] == key) {
-            INCREF(self->valueArray[i]);
             return self->valueArray[i];
         }
     }
     
     for (i = 0; i < start; ++i) {
         if (self->keyArray[i] == key) {
-            INCREF(self->valueArray[i]);
             return self->valueArray[i];
         }
     }
@@ -50,7 +48,6 @@ Unknown *IdentityDictionary_KeyWithValue(IdentityDictionary *self, Unknown *valu
     
     for (i = 0; i < self->size; ++i) {
         if (value == self->valueArray[i]) {
-            INCREF(self->keyArray[i]);
             return self->keyArray[i];
         }
     }
@@ -67,8 +64,6 @@ void IdentityDictionary_SetItem(IdentityDictionary *self, Unknown *key, Unknown 
         if (!self->keyArray[i]) {
             goto insert;
         } else if (self->keyArray[i] == key) {
-            INCREF(value);
-            DECREF(self->valueArray[i]);
             self->valueArray[i] = value;
             return;
         }
@@ -78,8 +73,6 @@ void IdentityDictionary_SetItem(IdentityDictionary *self, Unknown *key, Unknown 
         if (!self->keyArray[i]) {
             goto insert;
         } else if (self->keyArray[i] == key) {
-            INCREF(value);
-            DECREF(self->valueArray[i]);
             self->valueArray[i] = value;
             return;
         }
@@ -89,8 +82,6 @@ void IdentityDictionary_SetItem(IdentityDictionary *self, Unknown *key, Unknown 
     return;
     
  insert:
-    INCREF(key);
-    INCREF(value);
     self->keyArray[i] = key;
     self->valueArray[i] = value;
     ++self->tally;
@@ -193,7 +184,6 @@ static Unknown *IdentityDictionary_get(Unknown *_self, Unknown *key, Unknown *ar
     value = IdentityDictionary_GetItem(self, key);
     if (!value) {
         value = GLOBAL(null);
-        INCREF(value);
     }
     return value;
 }
@@ -203,7 +193,6 @@ static Unknown *IdentityDictionary_setItem(Unknown *_self, Unknown *key, Unknown
     
     self = (IdentityDictionary *)_self;
     IdentityDictionary_SetItem(self, key, value);
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -222,15 +211,6 @@ static void IdentityDictionary_zero(Object *_self) {
 
 static void IdentityDictionary_dealloc(Object *_self, Unknown **l) {
     IdentityDictionary *self = (IdentityDictionary *)_self;
-    size_t pos;
-    
-    for (pos = 0; pos < self->size; ++pos) {
-        Unknown *key = self->keyArray[pos];
-        if (key) {
-            LDECREF(key, l);
-            LDECREF(self->valueArray[pos], l);
-        }
-    }
     
     free(self->keyArray);
     free(self->valueArray);

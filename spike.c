@@ -135,18 +135,15 @@ static int Main(int argc, char **argv) {
     tmp = Send(GLOBAL(theInterpreter), (Unknown *)module, _init, 0);
     if (!tmp)
         return 0;
-    DECREF(tmp);
     
     /* Build 'argv'. */
     argvObj = Array_New(argc - 1);
     for (i = 1; i < argc; ++i) {
         tmp = (Unknown *)String_FromCString(argv[i]);
         Array_SetItem(argvObj, i - 1, tmp);
-        DECREF(tmp);
     }
     args = Array_New(1);
     Array_SetItem(args, 0, (Unknown *)argvObj);
-    DECREF(argvObj);
     
     /* Call 'main'. */
     result = SendMessage(
@@ -156,8 +153,6 @@ static int Main(int argc, char **argv) {
         _main,
         (Unknown *)args
         );
-    
-    DECREF(args);
     
     if (!result) {
         return 1;

@@ -112,7 +112,6 @@ static Symbol *newSymbol(const char *str, size_t len, size_t hash) {
         if (!sym) {
             goto insert;
         } else if (strcmp(sym->str, str) == 0) {
-            INCREF(sym);
             return sym;
         }
     }
@@ -122,7 +121,6 @@ static Symbol *newSymbol(const char *str, size_t len, size_t hash) {
         if (!sym) {
             goto insert;
         } else if (strcmp(sym->str, str) == 0) {
-            INCREF(sym);
             return sym;
         }
     }
@@ -132,7 +130,6 @@ static Symbol *newSymbol(const char *str, size_t len, size_t hash) {
     
  insert:
     sym = (Symbol *)malloc(sizeof(Symbol) + len);
-    sym->base.base.refCount = 1;
     sym->base.klass = CLASS(Symbol);
     sym->hash = hash;
     memcpy(sym->str, str, len);
@@ -178,7 +175,6 @@ static Symbol *newSymbol(const char *str, size_t len, size_t hash) {
         free(oldArray);
     }
     
-    INCREF(sym);
     return sym;
 }
 

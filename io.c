@@ -33,7 +33,6 @@ static Unknown *FileStream_eof(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     result = self->stream
              ? (feof(self->stream) ? GLOBAL(xtrue) : GLOBAL(xfalse))
              : GLOBAL(xtrue);
-    INCREF(result);
     return result;
 }
 
@@ -49,7 +48,6 @@ static Unknown *FileStream_close(Unknown *_self, Unknown *arg0, Unknown *arg1) {
         fclose(self->stream);
         self->stream = 0;
     }
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -59,7 +57,6 @@ static Unknown *FileStream_flush(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     self = (FileStream *)_self;
     if (self->stream)
         fflush(self->stream);
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -69,12 +66,10 @@ static Unknown *FileStream_getc(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     
     self = (FileStream *)_self;
     if (!self->stream) {
-        INCREF(GLOBAL(null));
         return GLOBAL(null);
     }
     c = fgetc(self->stream);
     if (c == EOF) {
-        INCREF(GLOBAL(null));
         return GLOBAL(null);
     }
     return (Unknown *)Char_FromCChar((char)c);
@@ -92,12 +87,10 @@ static Unknown *FileStream_gets(Unknown *_self, Unknown *arg0, Unknown *arg1) {
         return 0;
     }
     if (!self->stream) {
-        INCREF(GLOBAL(null));
         return GLOBAL(null);
     }
     result = (Unknown *)String_FromCStream(self->stream, (size_t)Integer_AsCPtrdiff(size));
     if (!result) {
-        INCREF(GLOBAL(null));
         return GLOBAL(null);
     }
     return result;
@@ -174,7 +167,6 @@ static Unknown *FileStream_printf(Unknown *_self, Unknown *arg0, Unknown *arg1) 
             Halt(HALT_TYPE_ERROR, "too few arguments");
             goto unwind;
         }
-        XDECREF(arg);
         arg = Array_GetItem(args, argIndex++);
         
         switch (convOp) {
@@ -225,15 +217,10 @@ static Unknown *FileStream_printf(Unknown *_self, Unknown *arg0, Unknown *arg1) 
     }
     
     free(format);
-    DECREF(formatObj);
-    XDECREF(arg);
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
     free(format);
-    XDECREF(formatObj);
-    XDECREF(arg);
     return 0;
 }
 
@@ -249,7 +236,6 @@ static Unknown *FileStream_putc(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     }
     if (self->stream)
         fputc(Char_AsCChar(c), self->stream);
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -265,7 +251,6 @@ static Unknown *FileStream_puts(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     }
     if (self->stream)
         fputs(String_AsCString(s), self->stream);
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -293,7 +278,6 @@ static Unknown *FileStream_reopen(Unknown *_self, Unknown *arg0, Unknown *arg1) 
     else
         self->stream = fopen(pathname, mode);
     result = self->stream ? (Unknown *)self : GLOBAL(null);
-    INCREF(result);
     return result;
 }
 
@@ -303,7 +287,6 @@ static Unknown *FileStream_rewind(Unknown *_self, Unknown *arg0, Unknown *arg1) 
     self = (FileStream *)_self;
     if (self->stream)
         rewind(self->stream);
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -333,7 +316,6 @@ static Unknown *ClassFileStream_open(Unknown *self, Unknown *arg0, Unknown *arg1
     
     stream = fopen(pathname, mode);
     if (!stream) {
-        INCREF(GLOBAL(null));
         return GLOBAL(null);
     }
     
@@ -343,7 +325,6 @@ static Unknown *ClassFileStream_open(Unknown *self, Unknown *arg0, Unknown *arg1
     newStream = CAST(FileStream, tmp);
     if (!newStream) {
         Halt(HALT_TYPE_ERROR, "FileStream expected");
-        DECREF(tmp);
         return 0;
     }
     

@@ -15,7 +15,6 @@
 /* methods */
 
 static Unknown *Stmt_asModuleDef(Unknown *self, Unknown *arg0, Unknown *arg1) {
-    INCREF(self); /* XXX: account for stolen reference */
     return (Unknown *)Parser_NewModuleDef((Stmt *)self);
 }
 
@@ -46,7 +45,6 @@ static Unknown *Stmt_source(Unknown *self, Unknown *sourcePathname, Unknown *arg
     Stmt *tree;
     
     tree = (Stmt *)self;
-    INCREF(tree); /* XXX: account for stolen reference */
     Parser_Source(&tree, sourcePathname);
     return (Unknown *)tree;
 }
@@ -66,48 +64,6 @@ static void Expr_zero(Object *_self) {
            sizeof(Expr) - baseSize);
 }
 
-static void Expr_dealloc(Object *_self, Unknown **l) {
-    Expr *self;
-    
-    self = (Expr *)_self;
-    
-    XLDECREF(self->declSpecs, l);
-    XLDECREF(self->next, l);
-    XLDECREF(self->nextArg, l);
-    XLDECREF(self->cond, l);
-    XLDECREF(self->left, l);
-    XLDECREF(self->right, l);
-    XLDECREF(self->var, l);
-    XLDECREF(self->sym, l);
-    
-    switch (self->kind) {
-    case EXPR_BLOCK:
-        XLDECREF(self->aux.block.stmtList, l);
-        break;
-    case EXPR_KEYWORD:
-        XLDECREF(self->aux.keywords, l);
-        break;
-    case EXPR_LITERAL:
-        XLDECREF(self->aux.literalValue, l);
-        break;
-    case EXPR_NAME:
-        switch (self->aux.nameKind) {
-        case EXPR_NAME_UNK:
-            break;
-        case EXPR_NAME_DEF:
-            break;
-        case EXPR_NAME_REF:
-            XLDECREF(self->u.ref.def, l);
-            break;
-        }
-        break;
-    default:
-        break;
-    }
-        
-    return (*CLASS(XExpr)->superclass->dealloc)(_self, l);
-}
-
 
 /* Stmt */
 
@@ -118,37 +74,6 @@ static void Stmt_zero(Object *_self) {
     memset((char *)self + baseSize,
            0,
            sizeof(Stmt) - baseSize);
-}
-
-static void Stmt_dealloc(Object *_self, Unknown **l) {
-    Stmt *self;
-    
-    self = (Stmt *)_self;
-    
-    XLDECREF(self->next, l);
-    XLDECREF(self->top, l);
-    XLDECREF(self->bottom, l);
-    XLDECREF(self->init, l);
-    XLDECREF(self->expr, l);
-    XLDECREF(self->incr, l);
-    
-    switch (self->kind) {
-    case STMT_DEF_CLASS:
-        XLDECREF(self->u.klass.superclassName, l);
-        break;
-    case STMT_DEF_METHOD:
-        XLDECREF(self->u.method.name, l);
-        break;
-    case STMT_DEF_MODULE:
-        XLDECREF(self->u.module.predefList.first, l);
-        break;
-    case STMT_PRAGMA_SOURCE:
-        XLDECREF(self->u.source, l);
-    default:
-        break;
-    }
-    
-    return (*CLASS(XStmt)->superclass->dealloc)(_self, l);
 }
 
 
@@ -171,8 +96,7 @@ ClassTmpl ClassXExprTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(ExprSubclass, variables),
         /*itemSize*/ 0,
-        &Expr_zero,
-        &Expr_dealloc
+        &Expr_zero
     }, /*meta*/ {
         0
     }
@@ -199,8 +123,7 @@ ClassTmpl ClassXStmtTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(StmtSubclass, variables),
         /*itemSize*/ 0,
-        &Stmt_zero,
-        &Stmt_dealloc
+        &Stmt_zero
     }, /*meta*/ {
         0
     }

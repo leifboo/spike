@@ -426,49 +426,13 @@ Unknown *ParseSelector(const char *methodName) {
                 ++end;
             kw = Host_SymbolFromCStringAndLength(begin, end - begin);
             Host_AppendKeyword(&builder, kw);
-            DECREF(kw);
             ++end; /* skip ':' */
         }
         selector = Host_GetKeywordSelector(builder, 0);
-        DECREF(builder);
         
     } else {
         selector = Host_SymbolFromCString(methodName);
     }
     
     return selector;
-}
-
-
-static void releaseSymbols(SymbolTableEntry *t) {
-    for ( ; t->p; ++t)
-        CLEAR(*t->p);
-}
-
-static void releaseSelectors(SelectorTableEntry *t) {
-    for ( ; t->p; ++t)
-        CLEAR(*t->p);
-}
-
-static void releaseIntegers(IntegerTableEntry *t) {
-    for ( ; t->p; ++t)
-        CLEAR(*t->p);
-}
-
-static void releaseStrings(StringTableEntry *t) {
-    for ( ; t->p; ++t)
-        CLEAR(*t->p);
-}
-
-
-void ReleaseSymbols(void) {
-    releaseSelectors(selectorTable);
-    releaseSymbols(symbolTable);
-    return;
-}
-
-void ReleaseReadOnlyData(void) {
-    DECREF(emptyArgs);
-    releaseStrings(stringTable);
-    releaseIntegers(integerTable);
 }

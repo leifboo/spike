@@ -27,8 +27,7 @@ while (0)
 
 #define _(c) do { \
 Unknown *_tmp = (c); \
-if (!_tmp) goto unwind; \
-DECREF(_tmp); } while (0)
+if (!_tmp) goto unwind; } while (0)
 
 
 typedef enum CodeGenKind {
@@ -161,7 +160,6 @@ static Unknown *emitBranch(Opcode opcode, Label *target, OpcodeGen *cgen) {
         emitOpcode(cgen, "jmp", ".L%u", getLabel(target, cgen));
         break;
     }
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -285,7 +283,6 @@ static Unknown *emitCodeForName(Expr *expr, int *super, OpcodeGen *cgen) {
     }
     
  leave:
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -326,7 +323,6 @@ static Unknown *emitCodeForLiteral(Unknown *literal, OpcodeGen *cgen) {
         ASSERT(0, "unknown class of literal");
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -349,7 +345,6 @@ static Unknown *store(Expr *var, OpcodeGen *cgen) {
         emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)", localVarOffset(def, cgen));
         break;
     }
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -791,12 +786,9 @@ static Unknown *emitCodeForInt(int intValue, OpcodeGen *cgen) {
         goto unwind;
     }
     _(emitCodeForLiteral(intObj, cgen));
-    DECREF(intObj);
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
-    XDECREF(intObj);
     return 0;
 }
 
@@ -822,7 +814,6 @@ static Unknown *emitCodeForExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     }
     _(emitCodeForOneExpr(expr, super, cgen));
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1032,7 +1023,6 @@ static Unknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
     
     maybeEmitLabel(&expr->endLabel, cgen);
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1062,7 +1052,6 @@ static Unknown *inPlaceOp(Expr *expr, size_t resultDepth, OpcodeGen *cgen) {
         squirrel(resultDepth, cgen);
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1123,7 +1112,6 @@ static Unknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
        squirrelled away */
     pop(cgen);
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1173,7 +1161,6 @@ static Unknown *inPlaceIndexOp(Expr *expr, OpcodeGen *cgen) {
        squirrelled away */
     pop(cgen);
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1191,7 +1178,6 @@ static Unknown *emitBranchForExpr(Expr *expr, int cond,
     }
     _(emitBranchForOneExpr(expr, cond, label, fallThroughLabel, dup, cgen));
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1284,7 +1270,6 @@ static Unknown *emitBranchForOneExpr(Expr *expr, int cond,
         break;
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1394,7 +1379,6 @@ static Unknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     /* upon resume, loop */
     _(emitBranch(OPCODE_BRANCH_ALWAYS, &start, cgen));
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1417,7 +1401,6 @@ static Unknown *emitCodeForInitializer(Expr *expr, OpcodeGen *cgen) {
     
     maybeEmitLabel(&expr->endLabel, cgen);
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1432,7 +1415,6 @@ static Unknown *emitCodeForVarDefList(Expr *defList, OpcodeGen *cgen) {
             _(emitCodeForInitializer(expr, cgen));
         }
     }
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1570,7 +1552,6 @@ static Unknown *emitCodeForStmt(Stmt *stmt,
         break;
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1638,7 +1619,6 @@ static Unknown *emitCodeForArgList(Stmt *stmt, OpcodeGen *cgen) {
         maybeEmitLabel(&skip, cgen);
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1762,7 +1742,6 @@ static Unknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
         }
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1810,7 +1789,6 @@ static Unknown *emitCFunction(Stmt *stmt, CodeGen *cgen) {
             sym, suffix, sym, suffix);
     fprintf(out, "\n");
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -1875,8 +1853,6 @@ static Unknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
             _(emitCodeForClass(s, cgen));
             break;
         case STMT_PRAGMA_SOURCE:
-            INCREF(s->u.source);
-            XDECREF(cgen->u.klass.source);
             cgen->u.klass.source = s->u.source;
             break;
         default:
@@ -1884,7 +1860,6 @@ static Unknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
         }
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
 unwind:
@@ -2041,7 +2016,6 @@ static Unknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *cge
     
     fprintf(out, "\n");
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
 unwind:
@@ -2070,7 +2044,6 @@ static Unknown *emitCodeForClass(Stmt *stmt, CodeGen *outer) {
     }
     _(emitCodeForClassBody(stmt->top, 0, cgen->generic));
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -2096,7 +2069,6 @@ static Unknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
     
     _(emitCodeForClassBody(stmt->top, 0, cgen->generic));
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -2128,7 +2100,6 @@ Unknown *X86CodeGen_GenerateCode(Stmt *tree, FILE *out) {
     
     emitROData(cgen);
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:

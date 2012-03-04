@@ -34,11 +34,10 @@ static Unknown *Notifier_init(Unknown *_self, Unknown *stream, Unknown *arg1) {
         return 0;
     }
     
-    self->stream = stream; INCREF(stream);
+    self->stream = stream;
     self->cStream = Host_FileStreamAsCFileStream(stream);
     self->errorTally = 0;
     
-    INCREF(_self);
     return _self;
 }
 
@@ -66,7 +65,6 @@ static Unknown *Notifier_badExpr(Unknown *_self, Unknown *arg0, Unknown *arg1) {
             source, expr->lineNo, desc);
     ++self->errorTally;
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -96,7 +94,6 @@ static Unknown *Notifier_redefinedSymbol(Unknown *_self, Unknown *arg0, Unknown 
             name);
     ++self->errorTally;
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -120,7 +117,6 @@ static Unknown *Notifier_undefinedSymbol(Unknown *_self, Unknown *arg0, Unknown 
             Host_SymbolAsCString(expr->sym->sym));
     ++self->errorTally;
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -132,7 +128,6 @@ static Unknown *Notifier_failOnError(Unknown *_self, Unknown *arg0, Unknown *arg
         exit(1);
         return 0;
     }
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -141,15 +136,12 @@ static Unknown *Notifier_failOnError(Unknown *_self, Unknown *arg0, Unknown *arg
 /* meta-methods */
 
 static Unknown *ClassNotifier_new(Unknown *self, Unknown *arg0, Unknown *arg1) {
-    Unknown *newNotifier, *tmp;
+    Unknown *newNotifier;
     
     newNotifier = Send(GLOBAL(theInterpreter), SUPER, new, 0);
     if (!newNotifier)
         return 0;
-    tmp = newNotifier;
-    newNotifier = Send(GLOBAL(theInterpreter), newNotifier, init, arg0, 0);
-    DECREF(tmp);
-    return newNotifier;
+    return Send(GLOBAL(theInterpreter), newNotifier, init, arg0, 0);
 }
 
 
@@ -162,13 +154,6 @@ static void Notifier_zero(Object *_self) {
     self->stream = 0;
     self->cStream = 0;
     self->source = 0;
-}
-
-static void Notifier_dealloc(Object *_self, Unknown **l) {
-    Notifier *self = (Notifier *)_self;
-    LDECREF(self->stream, l);
-    XLDECREF(self->source, l);
-    (*CLASS(XNotifier)->superclass->dealloc)(_self, l);
 }
 
 
@@ -207,8 +192,7 @@ ClassTmpl ClassXNotifierTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(NotifierSubclass, variables),
         /*itemSize*/ 0,
-        &Notifier_zero,
-        &Notifier_dealloc
+        &Notifier_zero
     }, /*meta*/ {
         /*accessors*/ 0,
         metaMethods,

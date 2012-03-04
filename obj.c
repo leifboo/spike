@@ -20,24 +20,15 @@
 /* methods */
 
 static Unknown *Object_eq(Unknown *self, Unknown *arg0, Unknown *arg1) {
-    Unknown *result;
-
-    result = (self == arg0 ? GLOBAL(xtrue) : GLOBAL(xfalse));
-    INCREF(result);
-    return result;
+    return (self == arg0 ? GLOBAL(xtrue) : GLOBAL(xfalse));
 }
 
 static Unknown *Object_ne(Unknown *self, Unknown *arg0, Unknown *arg1) {
-    Unknown *temp, *result;
-    
-    temp = SendOper(GLOBAL(theInterpreter), self, OPER_EQ, arg0, 0);
-    result = SendOper(GLOBAL(theInterpreter), temp, OPER_LNEG, 0);
-    DECREF(temp);
-    return result;
+    Unknown *temp = SendOper(GLOBAL(theInterpreter), self, OPER_EQ, arg0, 0);
+    return SendOper(GLOBAL(theInterpreter), temp, OPER_LNEG, 0);
 }
 
 static Unknown *Object_compoundExpression(Unknown *self, Unknown *arg0, Unknown *arg1) {
-    INCREF(arg0);
     return arg0;
 }
 
@@ -110,27 +101,8 @@ static void Object_zero(Object *self) {
     instVarTotal = klass->instVarBaseIndex + klass->instVarCount;
     
     for (i = 0; i < instVarTotal; ++i) {
-        INCREF(GLOBAL(uninit));
         variables[i] = GLOBAL(uninit);
     }
-}
-
-static void Object_dealloc(Object *self, Unknown **l) {
-    Unknown **variables;
-    Behavior *klass;
-    size_t instVarTotal, i;
-    
-    klass = self->klass;
-    
-    variables = (Unknown **)((char *)self + klass->instVarOffset);
-    instVarTotal = klass->instVarBaseIndex + klass->instVarCount;
-    
-    for (i = 0; i < instVarTotal; ++i) {
-        LDECREF(variables[i], l);
-    }
-    
-    LDECREF(klass, l);
-    self->klass = 0;
 }
 
 static void VariableObject_zero(Object *_self) {
@@ -170,8 +142,7 @@ ClassTmpl ClassObjectTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(ObjectSubclass, variables),
         /*itemSize*/ 0,
-        &Object_zero,
-        &Object_dealloc
+        &Object_zero
     }, /*meta*/ {
         /*accessors*/ 0,
         ClassObjectMethods,
@@ -232,7 +203,7 @@ Object *Object_New(Behavior *klass) {
     if (!newObject) {
         return 0;
     }
-    newObject->klass = klass;  INCREF(klass);
+    newObject->klass = klass;
     /* XXX: 'zero' should be called 'uninit'; and, for symmetry,
        should be called from ObjMem_Alloc() */
     (*klass->zero)(newObject);
@@ -246,7 +217,7 @@ Object *Object_NewVar(Behavior *klass, size_t size) {
     if (!newObject) {
         return 0;
     }
-    newObject->klass = klass;  INCREF(klass);
+    newObject->klass = klass;
     ((VariableObject *)newObject)->size = size;
     (*klass->zero)(newObject);
     return newObject;

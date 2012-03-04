@@ -311,11 +311,9 @@ static Unknown *symbolNodeFromCString(Unknown *st, const char *str) {
 }
 
 static int _isSpec(Unknown *symbolNode) {
-    Unknown *bool; int result;
+    Unknown *bool;
     bool = Send(GLOBAL(theInterpreter), symbolNode, isSpec, 0);
-    result = (bool == one || bool == GLOBAL(xtrue));
-    DECREF(bool);
-    return result;
+    return (bool == one || bool == GLOBAL(xtrue));
 }
 
 int Lexer_GetNextToken(Token *token, yyscan_t scanner, Unknown *st) {

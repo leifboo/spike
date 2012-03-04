@@ -43,7 +43,6 @@ static Unknown *Module__init(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     tmp = Send(GLOBAL(theInterpreter), (Unknown *)self, _predef, 0);
     if (!tmp)
         return 0;
-    DECREF(tmp);
     
     /* Create all classes. */
     for (classTmpl = tmpl->classList.first;
@@ -60,7 +59,6 @@ static Unknown *Module__init(Unknown *_self, Unknown *arg0, Unknown *arg1) {
         *classVar = (Unknown *)Class_FromTemplate(classTmpl, superclass, self);
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -144,7 +142,7 @@ ModuleClass *ModuleClass_New(ModuleTmpl *tmpl) {
     
     moduleClass->literalCount = tmpl->literalCount;
     moduleClass->literals = tmpl->literals;
-    moduleClass->tmpl = tmpl;  INCREF(tmpl);
+    moduleClass->tmpl = tmpl;
     return moduleClass;
 }
 
@@ -209,22 +207,12 @@ static MethodTmpl ThunkMethods[] = {
     { 0 }
 };
 
-static void Thunk_dealloc(Object *_self, Unknown **l) {
-    Thunk *self = (Thunk *)_self;
-    LDECREF(self->receiver, l);
-    LDECREF(self->selector, l);
-    (*CLASS(Thunk)->superclass->dealloc)(_self, l);
-}
-
 ClassTmpl ClassThunkTmpl = {
     HEART_CLASS_TMPL(Thunk, Object), {
         /*accessors*/ 0,
         ThunkMethods,
         /*lvalueMethods*/ 0,
-        offsetof(ThunkSubclass, variables),
-        /*itemSize*/ 0,
-        /*zero*/ 0,
-        &Thunk_dealloc
+        offsetof(ThunkSubclass, variables)
     }, /*meta*/ {
         0
     }
@@ -239,7 +227,7 @@ static Thunk *Thunk_New(
     newThunk = (Thunk *)Object_New(CLASS(Thunk));
     if (!newThunk)
         return 0;
-    newThunk->receiver = receiver;  INCREF(receiver);
-    newThunk->selector = selector;  INCREF(selector);
+    newThunk->receiver = receiver;
+    newThunk->selector = selector;
     return newThunk;
 }

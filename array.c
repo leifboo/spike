@@ -35,7 +35,6 @@ static Unknown *Array_item(Unknown *_self, Unknown *arg0, Unknown *arg1) {
         return 0;
     }
     item = ARRAY(self)[index];
-    INCREF(item);
     return (Unknown *)item;
 }
 
@@ -54,10 +53,7 @@ static Unknown *Array_setItem(Unknown *_self, Unknown *arg0, Unknown *arg1) {
         Halt(HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
-    INCREF(arg1);
-    DECREF(ARRAY(self)[index]);
     ARRAY(self)[index] = arg1;
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -76,7 +72,6 @@ static Unknown *Array_do(Unknown *_self, Unknown *arg0, Unknown *arg1) {
         if (!result)
             return 0; /* unwind */
     }
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -121,20 +116,8 @@ static void Array_zero(Object *_self) {
     self = (Array *)_self;
     (*CLASS(Array)->superclass->zero)(_self);
     for (i = 0; i < self->size; ++i) {
-        INCREF(GLOBAL(uninit));
         ARRAY(self)[i] = GLOBAL(uninit);
     }
-}
-
-static void Array_dealloc(Object *_self, Unknown **l) {
-    Array *self;
-    size_t i;
-    
-    self = (Array *)_self;
-    for (i = 0; i < self->size; ++i) {
-        LDECREF(ARRAY(self)[i], l);
-    }
-    (*CLASS(Array)->superclass->dealloc)(_self, l);
 }
 
 
@@ -182,8 +165,7 @@ ClassTmpl ClassArrayTmpl = {
         lvalueMethods,
         offsetof(ArraySubclass, variables),
         sizeof(Unknown *),
-        &Array_zero,
-        &Array_dealloc
+        &Array_zero
     }, /*meta*/ {
         0
     }
@@ -211,15 +193,11 @@ Array *Array_WithArguments(Unknown **stackPointer, size_t argumentCount,
     /* copy & reverse fixed arguments */
     for (i = 0; i < argumentCount; ++i) {
         item = stackPointer[argumentCount - i - 1];
-        INCREF(item);
-        DECREF(ARRAY(argumentArray)[i]);
         ARRAY(argumentArray)[i] = item;
     }
     /* copy variable arguments */
     for ( ; i < n; ++i) {
         item = ARRAY(varArgArray)[skip + i - argumentCount];
-        INCREF(item);
-        DECREF(ARRAY(argumentArray)[i]);
         ARRAY(argumentArray)[i] = item;
     }
     
@@ -246,10 +224,7 @@ Array *Array_FromVAList(va_list ap) {
                 ARRAY(newArray)[j] = ARRAY(tmpArray)[j];
                 ARRAY(tmpArray)[j] = tmp;
             }
-            DECREF(tmpArray);
         }
-        INCREF(obj);
-        DECREF(ARRAY(newArray)[i]);
         ARRAY(newArray)[i] = obj;
     }
     newArray->size = i;
@@ -268,7 +243,6 @@ Unknown *Array_GetItem(Array *self, size_t index) {
         return 0;
     }
     item = ARRAY(self)[index];
-    INCREF(item);
     return item;
 }
 
@@ -277,10 +251,7 @@ Unknown *Array_SetItem(Array *self, size_t index, Unknown *value) {
         Halt(HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
-    INCREF(value);
-    DECREF(ARRAY(self)[index]);
     ARRAY(self)[index] = value;
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 

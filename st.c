@@ -27,8 +27,6 @@ SymbolNode *SymbolNode_FromSymbol(SymbolTable *st, Unknown *sym) {
     }
     
     s = (SymbolNode *)Object_New(CLASS(XSymbolNode));
-    INCREF(sym);
-    XDECREF(s->sym);
     s->sym = sym;
     
     Host_DefineSymbol(st->symbolNodes, sym, (Unknown *)s);
@@ -42,7 +40,6 @@ SymbolNode *SymbolNode_FromCString(SymbolTable *st, const char *str) {
     
     sym = Host_SymbolFromCString(str);
     node = SymbolNode_FromSymbol(st, sym);
-    DECREF(sym);
     return node;
 }
 
@@ -69,7 +66,6 @@ SymbolTable *SymbolTable_New() {
     SymbolTable *newSymbolTable;
     
     newSymbolTable = (SymbolTable *)Object_New(CLASS(XSymbolTable));
-    XDECREF(newSymbolTable->symbolNodes);
     newSymbolTable->symbolNodes = Host_NewSymbolDict();
     return newSymbolTable;
 }
@@ -81,13 +77,9 @@ void SymbolTable_EnterScope(SymbolTable *st, int enterNewContext) {
     outerScope = st->currentScope;
     
     newScope = (Scope *)Object_New(CLASS(XScope));
-    XINCREF(outerScope);
-    XDECREF(newScope->outer);
     newScope->outer = outerScope;
     if (enterNewContext) {
         newContext = (ContextClass *)Object_New(CLASS(XContextClass));
-        INCREF(newScope);
-        XDECREF(newContext->scope);
         newContext->scope = newScope;
         if (outerScope) {
             newContext->level = outerScope->context->level + 1;
@@ -112,56 +104,31 @@ void SymbolTable_EnterScope(SymbolTable *st, int enterNewContext) {
             newContext->storeOpcode = OPCODE_NOP;
         }
         newContext->nDefs = 0;
-        XDECREF(newScope->context);
-        newScope->context = newContext; /* note cycle */
+        newScope->context = newContext;
     } else {
-        INCREF(outerScope->context);
-        XDECREF(newScope->context);
         newScope->context = outerScope->context;
     }
     
-    XDECREF(st->currentScope);
     st->currentScope = newScope;
     
     return;
 }
 
 void SymbolTable_ExitScope(SymbolTable *st) {
-    /* XXX: Clients must match every call to SymbolTable_EnterScope
-       with a call to this function in order to break cycles. */
     Scope *oldScope;
     STEntry *entry;
-    ContextClass *tmp;
     
     oldScope = st->currentScope;
     
     for (entry = oldScope->entryList; entry; entry = entry->nextInScope) {
-        SymbolNode *sym; STEntry *tmp;
+        SymbolNode *sym;
         
         sym = entry->sym;
         assert(sym->entry == entry);
-        /* this also breaks a cycle */
-        tmp = sym->entry;
-        XINCREF(entry->shadow);
         sym->entry = entry->shadow;
-        DECREF(tmp);
     }
     
-    if (oldScope->entryList) {
-        /* break cycle */
-        STEntry *tmp = oldScope->entryList;
-        oldScope->entryList = 0;
-        DECREF(tmp);
-    }
-    
-    /* break cycle */
-    tmp = oldScope->context;
-    oldScope->context = 0;
-    DECREF(tmp);
-    
-    XINCREF(oldScope->outer);
     st->currentScope = oldScope->outer;
-    DECREF(oldScope);
 }
 
 Unknown *SymbolTable_Insert(SymbolTable *st, Expr *def,
@@ -190,35 +157,23 @@ Unknown *SymbolTable_Insert(SymbolTable *st, Expr *def,
             def->u.def.pushOpcode  = oldEntry->def->u.def.pushOpcode;
             def->u.def.storeOpcode = oldEntry->def->u.def.storeOpcode;
             def->u.def.index       = oldEntry->def->u.def.index;
-            INCREF(GLOBAL(xvoid));
             return GLOBAL(xvoid);
         }
         tmp = Send(GLOBAL(theInterpreter), requestor, redefinedSymbol, def, 0);
         if (!tmp)
             return 0;
-        DECREF(tmp);
-        INCREF(GLOBAL(xvoid));
         return GLOBAL(xvoid);
     }
     
     newEntry = (STEntry *)Object_New(CLASS(XSTEntry));
-    XDECREF(newEntry->scope);
-    XDECREF(newEntry->nextInScope);
-    XDECREF(newEntry->shadow);
-    XDECREF(newEntry->sym);
-    XDECREF(newEntry->def);
-    INCREF(cs);
-    INCREF(sym);
-    INCREF(def);
-    newEntry->scope = cs; /* note cycle */
-    newEntry->nextInScope = cs->entryList; /* steal reference */
-    newEntry->shadow = oldEntry; /* steal reference (if any) */
+    newEntry->scope = cs;
+    newEntry->nextInScope = cs->entryList;
+    newEntry->shadow = oldEntry;
     newEntry->sym = sym;
     newEntry->def = def;
     
-    cs->entryList = newEntry; /* steal new reference */
-    INCREF(newEntry);
-    sym->entry = newEntry; /* note cycle */
+    cs->entryList = newEntry;
+    sym->entry = newEntry;
     
     def->u.def.level = cs->context->level;
     if (cs->context->pushOpcode != OPCODE_NOP) { /* not built-in scope */
@@ -229,7 +184,6 @@ Unknown *SymbolTable_Insert(SymbolTable *st, Expr *def,
        opcode. */
     def->u.def.index = cs->context->nDefs++;
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -253,9 +207,8 @@ Unknown *SymbolTable_Bind(SymbolTable *st, Expr *expr,
     sym = expr->sym;
     entry = sym->entry;
     if (entry) {
-        expr->u.ref.def = entry->def;  INCREF(entry->def);
+        expr->u.ref.def = entry->def;
         expr->u.ref.level = st->currentScope->context->level;
-        INCREF(GLOBAL(xvoid));
         return GLOBAL(xvoid);
     }
     
@@ -263,8 +216,6 @@ Unknown *SymbolTable_Bind(SymbolTable *st, Expr *expr,
     tmp = Send(GLOBAL(theInterpreter), requestor, undefinedSymbol, expr, 0);
     if (!tmp)
         return 0;
-    DECREF(tmp);
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
 }
 
@@ -281,7 +232,6 @@ static Unknown *SymbolNode_isSpec(Unknown *self, Unknown *arg0, Unknown *arg1) {
     } else /* compiling "bool.spk"; true & false don't exist yet */ {
         result = isSpec ? one : zero;
     }
-    INCREF(result);
     return result;
 }
 
@@ -290,10 +240,8 @@ static Unknown *SymbolTable_init(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     SymbolTable *self;
     
     self = (SymbolTable *)_self;
-    XDECREF(self->symbolNodes);
     self->symbolNodes = Host_NewSymbolDict();
     
-    INCREF(_self);
     return _self;
 }
 
@@ -312,14 +260,12 @@ static Unknown *SymbolTable_symbolNodeForSymbol(Unknown *_self, Unknown *arg0, U
 /* meta-methods */
 
 static Unknown *ClassSymbolTable_new(Unknown *self, Unknown *arg0, Unknown *arg1) {
-    Unknown *newSymbolTable, *tmp;
+    Unknown *newSymbolTable;
     
     newSymbolTable = Send(GLOBAL(theInterpreter), SUPER, new, 0);
     if (!newSymbolTable)
         return 0;
-    tmp = newSymbolTable;
     newSymbolTable = Send(GLOBAL(theInterpreter), newSymbolTable, init, 0);
-    DECREF(tmp);
     return newSymbolTable;
 }
 
@@ -336,13 +282,6 @@ static void SymbolNode_zero(Object *_self) {
     self->sym = 0;
 }
 
-static void SymbolNode_dealloc(Object *_self, Unknown **l) {
-    SymbolNode *self = (SymbolNode *)_self;
-    XLDECREF(self->entry, l);
-    XLDECREF(self->sym, l);
-    (*CLASS(XSymbolNode)->superclass->dealloc)(_self, l);
-}
-
 
 /* STEntry */
 
@@ -356,16 +295,6 @@ static void STEntry_zero(Object *_self) {
     self->def = 0;
 }
 
-static void STEntry_dealloc(Object *_self, Unknown **l) {
-    STEntry *self = (STEntry *)_self;
-    XLDECREF(self->scope, l);
-    XLDECREF(self->nextInScope, l);
-    XLDECREF(self->shadow, l);
-    XLDECREF(self->sym, l);
-    XLDECREF(self->def, l);
-    (*CLASS(XSTEntry)->superclass->dealloc)(_self, l);
-}
-
 
 /* ContextClass */
 
@@ -373,12 +302,6 @@ static void ContextClass_zero(Object *_self) {
     ContextClass *self = (ContextClass *)_self;
     (*CLASS(XContextClass)->superclass->zero)(_self);
     self->scope = 0;
-}
-
-static void ContextClass_dealloc(Object *_self, Unknown **l) {
-    ContextClass *self = (ContextClass *)_self;
-    XLDECREF(self->scope, l);
-    (*CLASS(XContextClass)->superclass->dealloc)(_self, l);
 }
 
 
@@ -392,14 +315,6 @@ static void Scope_zero(Object *_self) {
     self->context = 0;
 }
 
-static void Scope_dealloc(Object *_self, Unknown **l) {
-    Scope *self = (Scope *)_self;
-    XLDECREF(self->outer, l);
-    XLDECREF(self->entryList, l);
-    XLDECREF(self->context, l);
-    (*CLASS(XScope)->superclass->dealloc)(_self, l);
-}
-
 
 /* SymbolTable */
 
@@ -408,15 +323,6 @@ static void SymbolTable_zero(Object *_self) {
     (*CLASS(XSymbolTable)->superclass->zero)(_self);
     self->currentScope = 0;
     self->symbolNodes = 0;
-}
-
-static void SymbolTable_dealloc(Object *_self, Unknown **l) {
-    SymbolTable *self = (SymbolTable *)_self;
-    while (self->currentScope) {
-        SymbolTable_ExitScope(self);
-    }
-    XLDECREF(self->symbolNodes, l);
-    (*CLASS(XSymbolTable)->superclass->dealloc)(_self, l);
 }
 
 
@@ -461,8 +367,7 @@ ClassTmpl ClassXSymbolNodeTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SymbolNodeSubclass, variables),
         /*itemSize*/ 0,
-        &SymbolNode_zero,
-        &SymbolNode_dealloc
+        &SymbolNode_zero
     }, /*meta*/ {
         0
     }
@@ -476,8 +381,7 @@ ClassTmpl ClassXSTEntryTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(STEntrySubclass, variables),
         /*itemSize*/ 0,
-        &STEntry_zero,
-        &STEntry_dealloc
+        &STEntry_zero
     }, /*meta*/ {
         0
     }
@@ -491,8 +395,7 @@ ClassTmpl ClassXContextClassTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(ContextClassSubclass, variables),
         /*itemSize*/ 0,
-        &ContextClass_zero,
-        &ContextClass_dealloc
+        &ContextClass_zero
     }, /*meta*/ {
         0
     }
@@ -506,8 +409,7 @@ ClassTmpl ClassXScopeTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(ScopeSubclass, variables),
         /*itemSize*/ 0,
-        &Scope_zero,
-        &Scope_dealloc
+        &Scope_zero
     }, /*meta*/ {
         0
     }
@@ -533,8 +435,7 @@ ClassTmpl ClassXSymbolTableTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(SymbolTableSubclass, variables),
         /*itemSize*/ 0,
-        &SymbolTable_zero,
-        &SymbolTable_dealloc
+        &SymbolTable_zero
     }, /*meta*/ {
         /*accessors*/ 0,
         ClassSymbolTableMethods,

@@ -138,7 +138,6 @@ static void Method_zero(Object *_self) {
 
 static void Method_dealloc(Object *_self, Unknown **l) {
     Method *self = (Method *)_self;
-    XLDECREF(self->debug.source, l);
     free(self->debug.lineCodes);
     (*CLASS(Method)->superclass->dealloc)(_self, l);
 }
@@ -168,7 +167,6 @@ ClassTmpl ClassMethodTmpl = {
 
 
 static void Context_zero(Object *);
-static void Context_dealloc(Object *, Unknown **);
 static Unknown *Context_blockCopy(Unknown *, Unknown *, Unknown *);
 static Unknown *Context_compoundExpression(Unknown *, Unknown *, Unknown *);
 
@@ -190,8 +188,7 @@ ClassTmpl ClassContextTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(ContextSubclass, variables),
         sizeof(Unknown *),
-        &Context_zero,
-        &Context_dealloc
+        &Context_zero
     }, /*meta*/ {
         0
     }
@@ -294,15 +291,6 @@ static void Interpreter_zero(Object *_self) {
     return;
 }
 
-static void Interpreter_dealloc(Object *_self, Unknown **l) {
-    Interpreter *self = (Interpreter *)_self;
-    LDECREF(self->scheduler, l);
-    XLDECREF(self->theInterruptSemaphore, l); /* XXX: no semaphore yet */
-    XLDECREF(self->activeContext, l);
-    XLDECREF(self->newContext, l);
-    (*CLASS(Interpreter)->superclass->dealloc)(_self, l);
-}
-
 typedef struct InterpreterSubclass {
     Interpreter base;
     Unknown *variables[1]; /* stretchy */
@@ -319,8 +307,7 @@ ClassTmpl ClassInterpreterTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(InterpreterSubclass, variables),
         /*itemSize*/ 0,
-        &Interpreter_zero,
-        &Interpreter_dealloc
+        &Interpreter_zero
     }, /*meta*/ {
         0
     }
@@ -333,12 +320,6 @@ static void ProcessorScheduler_zero(Object *_self) {
     self->quiescentFiberLists = 0;
     self->activeFiber = 0;
     return;
-}
-
-static void ProcessorScheduler_dealloc(Object *_self, Unknown **l) {
-    ProcessorScheduler *self = (ProcessorScheduler *)_self;
-    LDECREF(self->activeFiber, l);
-    (*CLASS(ProcessorScheduler)->superclass->dealloc)(_self, l);
 }
 
 typedef struct ProcessorSchedulerSubclass {
@@ -357,8 +338,7 @@ ClassTmpl ClassProcessorSchedulerTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(ProcessorSchedulerSubclass, variables),
         /*itemSize*/ 0,
-        &ProcessorScheduler_zero,
-        &ProcessorScheduler_dealloc
+        &ProcessorScheduler_zero
     }, /*meta*/ {
         0
     }
@@ -374,15 +354,6 @@ static void Fiber_zero(Object *_self) {
     self->priority = 0;
     self->myList = 0;
     return;
-}
-
-static void Fiber_dealloc(Object *_self, Unknown **l) {
-    Fiber *self = (Fiber *)_self;
-    XLDECREF(self->nextLink, l);
-    XLDECREF(self->suspendedContext, l);
-    LDECREF(self->leafContext, l);
-    XLDECREF(self->myList, l);
-    (*CLASS(Fiber)->superclass->dealloc)(_self, l);
 }
 
 typedef struct FiberSubclass {
@@ -401,8 +372,7 @@ ClassTmpl ClassFiberTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(FiberSubclass, variables),
         /*itemSize*/ 0,
-        &Fiber_zero,
-        &Fiber_dealloc
+        &Fiber_zero
     }, /*meta*/ {
         0
     }
@@ -418,7 +388,6 @@ void Interpreter_Boot(void) {
     callBlock = Method_New(1);
     Method_OPCODES(callBlock)[0] = OPCODE_CALL_BLOCK;
     Behavior_InsertMethod(CLASS(BlockContext), METHOD_NAMESPACE_RVALUE, __apply__, callBlock);
-    DECREF(callBlock);
 }
 
 Interpreter *Interpreter_New(void) {
@@ -443,30 +412,28 @@ Interpreter *Interpreter_New(void) {
     fiber =(Fiber *)Object_New(CLASS(Fiber));
     fiber->nextLink = 0;
     fiber->suspendedContext = 0;
-    fiber->leafContext = leafContext; /* steal reference */
+    fiber->leafContext = leafContext;
     fiber->priority = 0;
     fiber->myList = 0;
     
     scheduler =(ProcessorScheduler *)Object_New(CLASS(ProcessorScheduler));
     scheduler->quiescentFiberLists = 0;
-    scheduler->activeFiber = fiber; /* steal reference */
+    scheduler->activeFiber = fiber;
     
     newInterpreter = (Interpreter *)Object_New(CLASS(Interpreter));
     Interpreter_Init(newInterpreter, scheduler);
-    DECREF(scheduler);
     
     return newInterpreter;
 }
 
 void Interpreter_Init(Interpreter *self, ProcessorScheduler *aScheduler) {
     /* fibers */
-    self->scheduler = aScheduler;  INCREF(aScheduler);
+    self->scheduler = aScheduler;
     self->theInterruptSemaphore = Semaphore_New();
     self->interruptPending = 0;
 
     /* contexts */
     self->activeContext = self->scheduler->activeFiber->suspendedContext;
-    XINCREF(self->activeContext);
     self->newContext = 0;
 
     /* error handling */
@@ -504,42 +471,12 @@ static void Context_zero(Object *_self) {
     memset(&self->u, 0, sizeof(self->u));
     
     for (count = 0, p = Context_VARIABLES(self); count < self->base.size; ++count, ++p) {
-        INCREF(GLOBAL(uninit));
         *p = GLOBAL(uninit);
     }
     
     self->mark = 0;
     
     return;
-}
-
-static void Context_dealloc(Object *_self, Unknown **l) {
-    Context *self;
-    Unknown **p;
-    size_t count;
-    
-    self = (Context *)_self;
-    
-    for (count = 0, p = Context_VARIABLES(self);
-         count < self->base.size;
-         ++count, ++p)
-    {
-        LDECREF(*p, l);
-    }
-    
-    XLDECREF(self->caller, l);
-    if (self->homeContext) { /* XXX: shady */
-        /* block context */
-        LDECREF(self->homeContext, l);
-    } else {
-        /* method context */
-        /* These might be null in a leaf context. */
-        XLDECREF(self->u.m.method, l);
-        XLDECREF(self->u.m.methodClass, l);
-        XLDECREF(self->u.m.receiver, l);
-    }
-    
-    (*CLASS(Context)->superclass->dealloc)(_self, l);
 }
 
 static Unknown *Context_blockCopy(Unknown *_self, Unknown *arg0, Unknown *arg1) {
@@ -561,12 +498,10 @@ static Unknown *Context_blockCopy(Unknown *_self, Unknown *arg0, Unknown *arg1) 
     size = self->homeContext->base.size;
     
     newContext = Context_New(size);
-    INCREF(CLASS(BlockContext));
-    DECREF(newContext->base.base.klass);
     newContext->base.base.klass = CLASS(BlockContext);
     newContext->caller = 0;
     newContext->stackp = &Context_VARIABLES(newContext)[newContext->base.size];
-    newContext->homeContext = self->homeContext;  INCREF(self->homeContext);
+    newContext->homeContext = self->homeContext;
     newContext->u.b.index = index;
     newContext->u.b.nargs = numArgs;
     newContext->u.b.startpc = newContext->pc = self->pc + 3; /* skip branch */
@@ -589,7 +524,6 @@ static Unknown *Context_compoundExpression(Unknown *_self, Unknown *arg0, Unknow
 /* stackPointer */
 static Unknown *popObject(Unknown **stackPointer) {
     Unknown *tmp = stackPointer[-1];
-    INCREF(GLOBAL(uninit));
     stackPointer[-1] = GLOBAL(uninit);
     return tmp;
 }
@@ -599,20 +533,15 @@ static Unknown *popObject(Unknown **stackPointer) {
 #define POP(nItems) \
 do { Unknown **end = stackPointer + (nItems); \
      while (stackPointer < end) { \
-         INCREF(GLOBAL(uninit)); \
          *stackPointer++ = GLOBAL(uninit); } } while (0)
 
 #define CLEAN(sp, nItems) \
 do { Unknown **end = sp + (nItems); \
-     while (sp < end) { \
-         Unknown *op = *sp; \
-         INCREF(GLOBAL(uninit)); \
-         *sp++ = GLOBAL(uninit); \
-         DECREF(op); } } while (0)
+     while (sp < end) \
+         *sp++ = GLOBAL(uninit); } while (0)
 
 #define PUSH(object) \
 do { --stackPointer; \
-     DECREF(stackPointer[0]); \
      stackPointer[0] = (Unknown *)(object); } while (0)
 
 #define STACK_TOP() (*stackPointer)
@@ -720,7 +649,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
         self->interruptPending = 0;
         Interpreter_SynchronousSignal(self, self->theInterruptSemaphore);
         if (self->newContext) {
-            DECREF(self->activeContext);
             self->activeContext = self->newContext;
             self->newContext = 0;
             goto fetchContextRegisters;
@@ -743,27 +671,19 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             /*** push opcodes ***/
         case OPCODE_PUSH_LOCAL:
             DECODE_UINT(index);
-            tmp = framePointer[index];
-            INCREF(tmp);
-            PUSH(tmp);
+            PUSH(framePointer[index]);
             break;
         case OPCODE_PUSH_INST_VAR:
             DECODE_UINT(index);
-            tmp = instVarPointer[index];
-            INCREF(tmp);
-            PUSH(tmp);
+            PUSH(instVarPointer[index]);
             break;
         case OPCODE_PUSH_GLOBAL:
             DECODE_UINT(index);
-            tmp = globalPointer[index];
-            INCREF(tmp);
-            PUSH(tmp);
+            PUSH(globalPointer[index]);
             break;
         case OPCODE_PUSH_LITERAL:
             DECODE_UINT(index);
-            tmp = literalPointer[index];
-            INCREF(tmp);
-            PUSH(tmp);
+            PUSH(literalPointer[index]);
             break;
         case OPCODE_PUSH_SUPER:
             /* OPCODE_PUSH_SUPER is a pseudo-op equivalent to
@@ -771,40 +691,30 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
              * the stack so that the stack clean-up machinery doesn't
              * have to distinguish between sends and super-sends.
              */
-        case OPCODE_PUSH_SELF:     PUSH(receiver);             INCREF(receiver);             break;
-        case OPCODE_PUSH_FALSE:    PUSH(GLOBAL(xfalse));   INCREF(GLOBAL(xfalse));   break;
-        case OPCODE_PUSH_TRUE:     PUSH(GLOBAL(xtrue));    INCREF(GLOBAL(xtrue));    break;
-        case OPCODE_PUSH_NULL:     PUSH(GLOBAL(null));     INCREF(GLOBAL(null));     break;
-        case OPCODE_PUSH_VOID:     PUSH(GLOBAL(xvoid));    INCREF(GLOBAL(xvoid));    break;
-        case OPCODE_PUSH_CONTEXT:  PUSH(self->activeContext);  INCREF(self->activeContext);  break;
+        case OPCODE_PUSH_SELF:     PUSH(receiver);             break;
+        case OPCODE_PUSH_FALSE:    PUSH(GLOBAL(xfalse));       break;
+        case OPCODE_PUSH_TRUE:     PUSH(GLOBAL(xtrue));        break;
+        case OPCODE_PUSH_NULL:     PUSH(GLOBAL(null));         break;
+        case OPCODE_PUSH_VOID:     PUSH(GLOBAL(xvoid));        break;
+        case OPCODE_PUSH_CONTEXT:  PUSH(self->activeContext);  break;
                 
             /*** store opcodes ***/
         case OPCODE_STORE_LOCAL:
             DECODE_UINT(index);
-            tmp = STACK_TOP();
-            INCREF(tmp);
-            DECREF(framePointer[index]);
-            framePointer[index] = tmp;
+            framePointer[index] = STACK_TOP();
             break;
         case OPCODE_STORE_INST_VAR:
             DECODE_UINT(index);
-            tmp = STACK_TOP();
-            INCREF(tmp);
-            DECREF(instVarPointer[index]);
-            instVarPointer[index] = tmp;
+            instVarPointer[index] = STACK_TOP();
             break;
         case OPCODE_STORE_GLOBAL:
             DECODE_UINT(index);
-            tmp = STACK_TOP();
-            INCREF(tmp);
-            DECREF(globalPointer[index]);
-            globalPointer[index] = tmp;
+            globalPointer[index] = STACK_TOP();
             break;
             
             /*** additional stack opcodes ***/
         case OPCODE_DUP:
             tmp = STACK_TOP();
-            INCREF(tmp);
             PUSH(tmp);
             break;
         case OPCODE_DUP_N: {
@@ -812,14 +722,10 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             size_t n;
             DECODE_UINT(n);
             s = stackPointer + n;
-            while (n--) {
-                tmp = *--s;
-                INCREF(tmp);
-                *--stackPointer = tmp;
-            }
+            while (n--)
+                *--stackPointer = *--s;
             break; }
         case OPCODE_POP:
-            DECREF(STACK_TOP());
             POP(1);
             break;
         case OPCODE_ROT: {
@@ -852,7 +758,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             boolean = POP_OBJECT();
             if (boolean == x) {
                 Opcode *base;
-                DECREF(boolean);
             case OPCODE_BRANCH_ALWAYS:
                 base = instructionPointer - 1;
                 DECODE_SINT(displacement);
@@ -864,7 +769,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
                 --instructionPointer;
                 TRAP(mustBeBoolean, 0);
             } else {
-                DECREF(boolean);
                 DECODE_SINT(displacement);
             }
             break; }
@@ -876,9 +780,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             y = POP_OBJECT();
             boolean = x == y ? GLOBAL(xtrue) : GLOBAL(xfalse);
             PUSH(boolean);
-            INCREF(boolean);
-            DECREF(x);
-            DECREF(y);
             break; }
 
             /*** send opcodes -- operators ***/
@@ -905,7 +806,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             oldIP = instructionPointer - 2;
             ns = METHOD_NAMESPACE_RVALUE;
             selector = *operSelectors[oper].selector;
-            INCREF(selector);
             goto createActualMessage;
         case OPCODE_CALL:
             oldIP = instructionPointer - 1;
@@ -946,7 +846,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             }
             ns = METHOD_NAMESPACE_RVALUE;
             selector = *operCallSelectors[oper].selector;
-            INCREF(selector);
             goto createActualMessage;
             
             /*** send opcodes -- "*p = v" ***/
@@ -969,7 +868,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             oldIP = instructionPointer - 1;
             ns = METHOD_NAMESPACE_LVALUE;
             selector = *operSelectors[OPER_IND].selector;
-            INCREF(selector);
             goto createActualMessage;
             
             /*** send opcodes -- "a[i] = v" ***/
@@ -1008,7 +906,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             }
             ns = METHOD_NAMESPACE_LVALUE;
             selector = *operCallSelectors[OPER_INDEX].selector;
-            INCREF(selector);
             goto createActualMessage;
 
             /*** send opcodes -- "obj.attr" ***/
@@ -1026,7 +923,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             methodClass = GET_CLASS(receiver);
             DECODE_UINT(index);
             selector = literalPointer[index];
-            INCREF(selector);
             goto lookupMethodInClass;
         case OPCODE_SET_ATTR_SUPER:
             ns = METHOD_NAMESPACE_LVALUE;
@@ -1041,7 +937,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             methodClass = methodClass->superclass;
             DECODE_UINT(index);
             selector = literalPointer[index];
-            INCREF(selector);
             goto lookupMethodInClass;
             
             /*** send opcodes -- "obj.*attr" ***/
@@ -1057,7 +952,7 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             receiver = stackPointer[argumentCount + 1];
             methodClass = GET_CLASS(receiver);
  perform:
-            selector = stackPointer[argumentCount]; /* steal reference */
+            selector = stackPointer[argumentCount];
             if (0 /*!Host_IsSelector(selector)*/ ) {
                 --instructionPointer;
                 TRAP(mustBeSymbol, 0);
@@ -1113,7 +1008,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
  send:
             ns = METHOD_NAMESPACE_RVALUE;
             selector = literalPointer[index];
-            INCREF(selector);
             goto lookupMethodInClass;
 
             /*** send opcodes -- "(obj.*attr)(a1, a2, ...)" ***/
@@ -1144,7 +1038,7 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             methodClass = methodClass->superclass;
  sendVar:
             ns = METHOD_NAMESPACE_RVALUE;
-            selector = POP_OBJECT(); /* steal reference */
+            selector = POP_OBJECT();
             goto lookupMethodInClass;
             
             /*** send opcodes -- generic ***/
@@ -1159,14 +1053,13 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             }
             ns = (MethodNamespace)Host_IntegerAsCLong(namespaceObj);
             assert(0 <= ns && ns < NUM_METHOD_NAMESPACES);
-            selector = stackPointer[1]; /* steal reference */
+            selector = stackPointer[1];
             if (0 /*!Host_IsSelector(selector)*/ ) {
                 --instructionPointer;
                 TRAP(mustBeSymbol, 0);
             }
             stackPointer[2] = stackPointer[0];
             POP(2);
-            DECREF(namespaceObj);
             oldIP = instructionPointer - 1;
             argumentCount = 0;
             varArg = 1;
@@ -1179,9 +1072,7 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             for (mc = methodClass; mc; mc = mc->superclass) {
                 method = Behavior_LookupMethod(mc, ns, selector);
                 if (method) {
-                    DECREF(method);
                     methodClass = mc;
-                    DECREF(selector);
                     selector = 0;
  callNewMethod:
                     /* call */
@@ -1220,7 +1111,7 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
                 }
                 message = Message_New();
                 message->ns = ns;
-                message->selector = selector; /* steal reference */
+                message->selector = selector;
                 message->arguments
                     = Host_GetArgs(
                         stackPointer + varArg, argumentCount,
@@ -1235,7 +1126,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             } while (0);
             
             selector = doesNotUnderstand;
-            INCREF(selector);
             goto lookupMethodInClass;
             
             /*** save/restore/return opcodes ***/
@@ -1267,27 +1157,14 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             return result; }
             
         case OPCODE_LEAF:
-            leafContext->sender = self->activeContext;  INCREF(self->activeContext);
-            leafContext->homeContext = leafContext;     INCREF(leafContext); /* note cycle */
-            
-            XDECREF(leafContext->u.m.method);
-            INCREF(method);
+            leafContext->sender = self->activeContext;
+            leafContext->homeContext = leafContext;
             leafContext->u.m.method = method;
-            
-            XDECREF(leafContext->u.m.methodClass);
-            INCREF(methodClass);
             leafContext->u.m.methodClass = methodClass;
-            
-            /* Sometimes this is the only reference to the receiver. */
-            XDECREF(leafContext->u.m.receiver);
-            INCREF(receiver);
             leafContext->u.m.receiver = receiver;
-            
             leafContext->mark = &mark;
             
             self->activeContext->stackp = stackPointer;
-            INCREF(leafContext);
-            DECREF(self->activeContext);
             self->activeContext = homeContext = leafContext;
             
             stackPointer = framePointer = Context_VARIABLES(leafContext) + LEAF_MAX_STACK_SIZE;
@@ -1309,18 +1186,17 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             
             newContext = Context_New(contextSize);
             
-            newContext->sender = self->activeContext;   INCREF(self->activeContext);
+            newContext->sender = self->activeContext;
             newContext->pc = instructionPointer;
-            newContext->homeContext = newContext;       INCREF(newContext); /* note cycle */
-            newContext->u.m.method = method;            INCREF(method);
-            newContext->u.m.methodClass = methodClass;  INCREF(methodClass);
-            newContext->u.m.receiver = receiver;        INCREF(receiver);
+            newContext->homeContext = newContext;
+            newContext->u.m.method = method;
+            newContext->u.m.methodClass = methodClass;
+            newContext->u.m.receiver = receiver;
             newContext->mark = &mark;
             
             newContext->stackp = newContext->u.m.framep = Context_VARIABLES(newContext) + stackSize;
             
             self->activeContext->stackp = stackPointer;
-            DECREF(self->activeContext);
             self->activeContext = homeContext = newContext;
             
             stackPointer = newContext->stackp;
@@ -1372,42 +1248,29 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             }
             if (argumentCount < maxFixedArgumentCount) {
                 /* copy & reverse fixed arguments from stack */
-                for (i = 0; i < argumentCount; ++p, ++i) {
-                    tmp = *p;
+                for (i = 0; i < argumentCount; ++p, ++i)
                     *p = csp[varArg + argumentCount - i - 1];
-                    INCREF(*p);
-                    DECREF(tmp);
-                }
                 excessStackArgCount = 0;
                 /* copy fixed arguments from array */
                 consumedArrayArgCount = maxFixedArgumentCount - argumentCount;
                 if (varArgTupleSize < consumedArrayArgCount)
                     consumedArrayArgCount = varArgTupleSize; /* the rest default */
-                for (i = 0; i < consumedArrayArgCount; ++p, ++i) {
-                    tmp = *p;
+                for (i = 0; i < consumedArrayArgCount; ++p, ++i)
                     *p = GetArg(varArgTuple, i);
-                    DECREF(tmp);
-                }
             } else {
                 /* copy & reverse fixed arguments from stack */
-                for (i = 0; i < maxFixedArgumentCount; ++p, ++i) {
-                    tmp = *p;
+                for (i = 0; i < maxFixedArgumentCount; ++p, ++i)
                     *p = csp[varArg + argumentCount - i - 1];
-                    INCREF(*p);
-                    DECREF(tmp);
-                }
                 excessStackArgCount = argumentCount - maxFixedArgumentCount;
                 consumedArrayArgCount = 0;
             }
             if (variadic) {
                 /* initialize the argument array variable */
                 p = framePointer + maxFixedArgumentCount;
-                tmp = *p;
                 *p = Host_GetArgs(
                     csp + varArg, excessStackArgCount,
                     varArgTuple, consumedArrayArgCount
                     );
-                DECREF(tmp);
             }
             
             /* clean up the caller's stack */
@@ -1467,7 +1330,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
                 tmp = *(Unknown **)addr;
                 if (!tmp)
                     tmp = GLOBAL(null);
-                INCREF(tmp);
                 break;
             case T_SIZE:
                 tmp = Host_IntegerFromCLong(*(size_t *)addr);
@@ -1475,7 +1337,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             default:
                 trapUnknownOpcode(self);
                 tmp = GLOBAL(uninit);
-                INCREF(tmp);
             }
             PUSH(tmp);
             break; }
@@ -1491,8 +1352,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             tmp = STACK_TOP();
             switch (type) {
             case T_OBJECT:
-                INCREF(tmp);
-                XDECREF(*(Unknown **)addr);
                 *(Unknown **)addr = tmp;
                 break;
             default:
@@ -1510,7 +1369,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
                 TRAP(cannotReturn, 0);
                 break;
             }
-            INCREF(self->newContext);
             if (!self->newContext->pc) {
                 --instructionPointer;
                 TRAP(cannotReturn, 0);
@@ -1519,39 +1377,24 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             thisCntx = self->activeContext;
             caller = 0;
             while (thisCntx != self->newContext) {
-                XDECREF(caller);
                 caller = thisCntx->caller;
                 thisCntx->caller = 0;
                 thisCntx->pc = 0;
-                if (thisCntx->homeContext == thisCntx) {
-                    /* break cycles */
-                    tmp = (Unknown *)thisCntx->homeContext;
-                    thisCntx->homeContext = 0;
-                    DECREF(tmp);
-                }
                 thisCntx = caller;
             }
-            XDECREF(caller);
             goto restore; }
         case OPCODE_RESTORE_CALLER: {
             Unknown *result;
             /* restore caller */
             assert(!self->newContext);
-            self->newContext = self->activeContext->caller; /* steal reference */
+            self->newContext = self->activeContext->caller;
             self->activeContext->caller = 0;
             /* suspend */
             self->activeContext->pc = instructionPointer + 1; /* skip 'ret' */
             self->activeContext->stackp = stackPointer + 1; /* skip result */
-            if (self->activeContext->homeContext == self->activeContext) {
-                /* break cycles */
-                tmp = (Unknown *)self->activeContext->homeContext;
-                self->activeContext->homeContext = 0;
-                DECREF(tmp);
-            }
  restore:
             result = POP_OBJECT();
             
-            DECREF(self->activeContext);
             self->activeContext = self->newContext; self->newContext = 0;
             homeContext = self->activeContext->homeContext;
             
@@ -1571,7 +1414,6 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             if (blockContext->caller || !blockContext->pc) {
                 TRAP(cannotReenterBlock, 0);
             }
-            INCREF(blockContext);
             
             /* process arguments */
             if (varArg) {
@@ -1587,19 +1429,12 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
                 
                 /* copy & reverse arguments from stack */
                 p = &blockContext->homeContext->u.m.framep[blockContext->u.b.index];
-                for (i = 0; i < argumentCount; ++p, ++i) {
-                    tmp = *p;
+                for (i = 0; i < argumentCount; ++p, ++i)
                     *p = stackPointer[1 + argumentCount - i - 1];
-                    INCREF(*p);
-                    DECREF(tmp);
-                }
                 
                 /* copy arguments from array */
-                for (i = 0; i < ArgsSize(varArgTuple); ++p, ++i) {
-                    tmp = *p;
+                for (i = 0; i < ArgsSize(varArgTuple); ++p, ++i)
                     *p = GetArg(varArgTuple, i);
-                    DECREF(tmp);
-                }
                 
             } else {
                 if (argumentCount != blockContext->u.b.nargs) {
@@ -1608,12 +1443,8 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
                 
                 /* copy & reverse arguments from stack */
                 p = &blockContext->homeContext->u.m.framep[blockContext->u.b.index];
-                for (i = 0; i < argumentCount; ++p, ++i) {
-                    tmp = *p;
+                for (i = 0; i < argumentCount; ++p, ++i)
                     *p = stackPointer[argumentCount - i - 1];
-                    INCREF(*p);
-                    DECREF(tmp);
-                }
                 
             }
             
@@ -1621,9 +1452,8 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             CLEAN(stackPointer, varArg + argumentCount + 1);
             self->activeContext->stackp = stackPointer;
             
-            blockContext->caller = self->activeContext;  INCREF(self->activeContext);
+            blockContext->caller = self->activeContext;
             blockContext->mark = &mark;
-            DECREF(self->activeContext);
             self->activeContext = blockContext;
             goto fetchContextRegisters; }
             
@@ -1674,13 +1504,13 @@ Unknown *Interpreter_SendMessage(
         thisContext->caller = 0;
         thisContext->pc = Method_OPCODES(start) + 7;
         thisContext->stackp = &Context_VARIABLES(thisContext)[10]; /* XXX */
-        thisContext->homeContext = thisContext;            INCREF(thisContext);
-        thisContext->u.m.method = start;                   INCREF(start);
-        thisContext->u.m.methodClass = receiver->klass;    INCREF(receiver->klass);
-        thisContext->u.m.receiver = (Unknown *)obj;     INCREF(obj);
+        thisContext->homeContext = thisContext;
+        thisContext->u.m.method = start;
+        thisContext->u.m.methodClass = receiver->klass;
+        thisContext->u.m.receiver = (Unknown *)obj;
         thisContext->u.m.framep = thisContext->stackp;
         
-        interpreter->activeContext = thisContext; /* steal reference */
+        interpreter->activeContext = thisContext;
     }
     
     assert(thisContext == thisContext->homeContext);
@@ -1700,13 +1530,6 @@ Unknown *Interpreter_SendMessage(
     }
     
     /* push arguments on the stack */
-    INCREF(obj);
-    INCREF(selector);
-    INCREF(argumentArray);
-    DECREF(thisContext->stackp[-1]);
-    DECREF(thisContext->stackp[-2]);
-    DECREF(thisContext->stackp[-3]);
-    DECREF(thisContext->stackp[-4]);
     *--thisContext->stackp = obj;
     *--thisContext->stackp = Host_IntegerFromCLong(ns);
     *--thisContext->stackp = selector;
@@ -1724,7 +1547,6 @@ Unknown *Interpreter_SendMessage(
     if (thisContext->u.m.method == start) {
         assert(interpreter->activeContext == thisContext);
         interpreter->activeContext = 0;
-        DECREF(thisContext);
     }
     
     return result;
@@ -1743,13 +1565,9 @@ int Semaphore_IsEmpty(Semaphore *self) {
 }
 
 void Semaphore_AddLast(Semaphore *self, Fiber *link) {
-    INCREF(link);
-    INCREF(link);
-    XDECREF(self->lastLink);
     if (Semaphore_IsEmpty(self)) {
         self->firstLink = link;
     } else {
-        XDECREF(self->lastLink->nextLink);
         self->lastLink->nextLink = link;
     }
     self->lastLink = link;
@@ -1762,13 +1580,10 @@ Fiber *Semaphore_RemoveFirst(Semaphore *self) {
         return 0;
     }
     if (first == self->lastLink) {
-        DECREF(first);
         self->firstLink = self->lastLink = 0;
     } else {
-        XINCREF(first->nextLink);
         self->firstLink = first->nextLink;
     }
-    XDECREF(first->nextLink);
     first->nextLink = 0;
     return first;
 }
@@ -1787,7 +1602,6 @@ void Interpreter_TransferTo(Interpreter *self, Fiber *newFiber) {
     self->scheduler->activeFiber = newFiber;
     assert(!self->newContext);
     self->newContext = newFiber->suspendedContext;
-    INCREF(self->newContext);
 }
 
 Fiber *Interpreter_WakeHighestPriority(Interpreter *self) {
@@ -1873,7 +1687,6 @@ void Interpreter_PrintCallStack(Interpreter *self) {
                methodSel ? Host_SelectorAsCString(methodSel) : "<unknown>",
                source ? Host_StringAsCString(source) : "<unknown>",
                lineNo);
-        XDECREF(methodSel);
     }
 }
 

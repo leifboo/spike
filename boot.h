@@ -26,7 +26,6 @@ typedef struct VarBootRec {
 
 
 int Boot(void);
-void Shutdown(void);
 
 
 extern ClassBootRec essentialClassBootRec[];

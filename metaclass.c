@@ -26,7 +26,6 @@ static Unknown *Metaclass_new(Unknown *_self, Unknown *name, Unknown *arg1) {
     newClass = (Class *)Object_New(CLASS(Class));
     if (!newClass)
         return 0;
-    INCREF(name);
     newClass->name = name;
     return (Unknown *)newClass;
 }

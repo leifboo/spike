@@ -152,8 +152,6 @@ Stmt *Parser_NewClassDef(Token *name, Token *super,
                                       super ? super->value : GLOBAL(null),
                                       X(body), X(metaBody),
                                       0);
-        XDECREF(body);
-        XDECREF(metaBody);
         return newStmt;
     }
     
@@ -208,9 +206,6 @@ Stmt *Parser_NewStmt(StmtKind kind, Expr *expr, Stmt *top, Stmt *bottom,
                                       parser->tb, stmtSelector(kind),
                                       X(expr), X(top), X(bottom),
                                       0);
-        XDECREF(expr);
-        XDECREF(top);
-        XDECREF(bottom);
         return newStmt;
     }
     
@@ -239,10 +234,6 @@ Stmt *Parser_NewForStmt(Expr *expr1, Expr *expr2, Expr *expr3, Stmt *body,
                                       parser->tb, stmtSelector(STMT_FOR),
                                       X(expr1), X(expr2), X(expr3), X(body),
                                       0);
-        XDECREF(expr1);
-        XDECREF(expr2);
-        XDECREF(expr3);
-        XDECREF(body);
         return newStmt;
     }
     
@@ -280,9 +271,6 @@ Expr *Parser_NewExpr(ExprKind kind, Oper oper, Expr *cond,
                                           0);
             break;
         }
-        XDECREF(cond);
-        XDECREF(left);
-        XDECREF(right);
         return newExpr;
     }
     
@@ -322,9 +310,6 @@ Expr *Parser_NewCallExpr(Oper oper,
                                       args && args->var ? (Unknown *)args->var   : GLOBAL(null),
                                       /*X(token),*/
                                       0);
-        XDECREF(func);
-        XDECREF(args->fixed);
-        XDECREF(args->var);
         return newExpr;
     }
     
@@ -350,9 +335,6 @@ Expr *Parser_NewBlock(Expr *argList, Stmt *stmtList, Expr *expr, Token *token,
                                       parser->tb, exprSelector(EXPR_BLOCK),
                                       X(argList), X(stmtList), X(expr), /*X(token),*/
                                       0);
-        XDECREF(argList);
-        XDECREF(stmtList);
-        XDECREF(expr);
         return newExpr;
     }
     
@@ -377,7 +359,6 @@ Expr *Parser_NewKeywordExpr(Token *kw, Expr *arg,
                                       parser->tb, exprSelector(EXPR_KEYWORD),
                                       0);
         /* XXX */
-        XDECREF(arg);
         return newExpr;
     }
     
@@ -388,7 +369,6 @@ Expr *Parser_NewKeywordExpr(Token *kw, Expr *arg,
     newExpr->aux.keywords = Host_NewKeywordSelectorBuilder();
     kwNode = symbolNodeForToken(kw, parser->st);
     Host_AppendKeyword(&newExpr->aux.keywords, kwNode->sym);
-    DECREF(kwNode);
     return newExpr;
 }
 
@@ -400,7 +380,6 @@ Expr *Parser_AppendKeyword(Expr *expr, Token *kw, Expr *arg,
     
     if (parser->tb) {
         /* XXX */
-        XDECREF(arg);
         return expr;
     }
     
@@ -409,7 +388,6 @@ Expr *Parser_AppendKeyword(Expr *expr, Token *kw, Expr *arg,
     for (e = expr->right; e->nextArg; e = e->nextArg)
         ;
     e->nextArg = arg;
-    DECREF(kwNode);
     return expr;
 }
 
@@ -434,9 +412,7 @@ Expr *Parser_FreezeKeywords(Expr *expr, Token *kw,
         expr->lineNo = kw->lineNo;
     }
     tmp = Host_GetKeywordSelector(expr->aux.keywords, kwNode ? kwNode->sym : 0);
-    DECREF(expr->aux.keywords);
     expr->aux.keywords = tmp;
-    XDECREF(kwNode);
     return expr;
 }
 
@@ -457,8 +433,6 @@ void Parser_SetNextExpr(Expr *expr, Expr *nextExpr, Parser *parser) {
     if (parser->tb) {
         Unknown *tmp = SetAttr(GLOBAL(theInterpreter),
                                       (Unknown *)expr, next, (Unknown *)nextExpr);
-        DECREF(tmp);
-        DECREF(nextExpr);
     } else {
         expr->next = nextExpr;
     }
@@ -468,8 +442,6 @@ void Parser_SetLeftExpr(Expr *expr, Expr *leftExpr, Parser *parser) {
     if (parser->tb) {
         Unknown *tmp = SetAttr(GLOBAL(theInterpreter),
                                       (Unknown *)expr, left, (Unknown *)leftExpr);
-        DECREF(tmp);
-        DECREF(leftExpr);
     } else {
         expr->left = leftExpr;
     }
@@ -479,8 +451,6 @@ void Parser_SetNextArg(Expr *expr, Expr *_nextArg, Parser *parser) {
     if (parser->tb) {
         Unknown *tmp = SetAttr(GLOBAL(theInterpreter),
                                       (Unknown *)expr, nextArg, (Unknown *)_nextArg);
-        DECREF(tmp);
-        DECREF(nextArg);
     } else {
         expr->nextArg = _nextArg;
     }
@@ -490,8 +460,6 @@ void Parser_SetDeclSpecs(Expr *expr, Expr *_declSpecs, Parser *parser) {
     if (parser->tb) {
         Unknown *tmp = SetAttr(GLOBAL(theInterpreter),
                                       (Unknown *)expr, declSpecs, (Unknown *)_declSpecs);
-        DECREF(tmp);
-        DECREF(declSpecs);
     } else {
         expr->declSpecs = _declSpecs;
     }
@@ -501,8 +469,6 @@ void Parser_SetNextStmt(Stmt *stmt, Stmt *nextStmt, Parser *parser) {
     if (parser->tb) {
         Unknown *tmp = SetAttr(GLOBAL(theInterpreter),
                                       (Unknown *)stmt, next, (Unknown *)nextStmt);
-        DECREF(tmp);
-        DECREF(nextStmt);
     } else {
         stmt->next = nextStmt;
     }
@@ -544,7 +510,7 @@ static Stmt *parse(yyscan_t lexer, SymbolTable *st) {
     
     parserState.root = 0;
     parserState.error = 0;
-    parserState.st = (Unknown *)st; INCREF(st);
+    parserState.st = (Unknown *)st;
     parserState.tb = 0;
     
     parser = Parser_ParseAlloc(&malloc);
@@ -553,16 +519,12 @@ static Stmt *parse(yyscan_t lexer, SymbolTable *st) {
     }
     if (token.id == -1) {
         Parser_ParseFree(parser, &free);
-        DECREF(parserState.st);
-        /*XDECREF(parserState.root);*/
         return 0;
     }
     Parser_Parse(parser, 0, token, &parserState);
     Parser_ParseFree(parser, &free);
     
-    DECREF(parserState.st);
     if (parserState.error) {
-        /*XDECREF(parserState.root);*/
         return 0;
     }
     
@@ -605,7 +567,7 @@ void Parser_Source(Stmt **pStmtList, Unknown *source) {
     
     pragma = (Stmt *)Object_New(CLASS(XStmt));
     pragma->kind = STMT_PRAGMA_SOURCE;
-    pragma->u.source = source;  INCREF(source);
+    pragma->u.source = source;
     pragma->next = *pStmtList;
     *pStmtList = pragma;
 }
@@ -619,19 +581,14 @@ static Unknown *Parser_init(Unknown *_self, Unknown *symbolTable, Unknown *treeB
     
     self = (Parser *)_self;
     
-    XDECREF(self->st);
-    INCREF(symbolTable);
     self->st = symbolTable;
     
     if (treeBuilder == GLOBAL(null)) {
-        CLEAR(self->tb);
+        self->tb = 0;
     } else {
-        INCREF(treeBuilder);
-        XDECREF(self->tb);
         self->tb = treeBuilder;
     }
     
-    INCREF(_self);
     return _self;
     
  unwind:
@@ -678,7 +635,6 @@ static Unknown *Parser_parse(Unknown *_self,
     if (token.id == -1) {
         Parser_ParseFree(parser, &free);
         Lexer_lex_destroy(lexer);
-        INCREF(GLOBAL(null));
         return GLOBAL(null);
     }
     Parser_Parse(parser, 0, token, self);
@@ -687,7 +643,6 @@ static Unknown *Parser_parse(Unknown *_self,
     Lexer_lex_destroy(lexer);
     
     if (self->error) {
-        INCREF(GLOBAL(null));
         return GLOBAL(null);
     }
     return (Unknown *)self->root;
@@ -708,7 +663,6 @@ static Unknown *ClassParser_new(Unknown *self, Unknown *arg0, Unknown *arg1) {
         return 0;
     tmp = newParser;
     newParser = Send(GLOBAL(theInterpreter), newParser, init, arg0, arg1, 0);
-    DECREF(tmp);
     return newParser;
 }
 
@@ -723,16 +677,6 @@ static void Parser_zero(Object *_self) {
     self->error = 0;
     self->st = 0;
     self->tb = 0;
-}
-
-static void Parser_dealloc(Object *_self, Unknown **l) {
-    Parser *self = (Parser *)_self;
-    if (0) { /* XXX: why? */
-        XLDECREF(self->root, l);
-    }
-    XLDECREF(self->st, l);
-    XLDECREF(self->tb, l);
-    (*CLASS(Parser)->superclass->dealloc)(_self, l);
 }
 
 
@@ -762,8 +706,7 @@ ClassTmpl ClassParserTmpl = {
         /*lvalueMethods*/ 0,
         offsetof(ParserSubclass, variables),
         /*itemSize*/ 0,
-        &Parser_zero,
-        &Parser_dealloc
+        &Parser_zero
     }, /*meta*/ {
         /*accessors*/ 0,
         metaMethods,

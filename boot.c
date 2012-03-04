@@ -122,16 +122,16 @@ static void initCoreClasses(void) {
     _MetaclassClass = (Metaclass *)ObjMem_Alloc(ClassMetaclassTmpl.thisClass.instVarOffset);
     
     /* Each class is an instance of the corresponding metaclass. */
-    _Object->base.klass    = (Behavior *)_ObjectClass;     INCREF(_ObjectClass);
-    _Behavior->base.klass  = (Behavior *)_BehaviorClass;   INCREF(_BehaviorClass);
-    _Class->base.klass     = (Behavior *)_ClassClass;      INCREF(_ClassClass);
-    _Metaclass->base.klass = (Behavior *)_MetaclassClass;  INCREF(_MetaclassClass);
+    _Object->base.klass    = (Behavior *)_ObjectClass;
+    _Behavior->base.klass  = (Behavior *)_BehaviorClass;
+    _Class->base.klass     = (Behavior *)_ClassClass;
+    _Metaclass->base.klass = (Behavior *)_MetaclassClass;
     
     /* Each metaclass is an instance of 'Metaclass'. */
-    _ObjectClass->base.base.klass    = _Metaclass;  INCREF(_Metaclass);
-    _BehaviorClass->base.base.klass  = _Metaclass;  INCREF(_Metaclass);
-    _ClassClass->base.base.klass     = _Metaclass;  INCREF(_Metaclass);
-    _MetaclassClass->base.base.klass = _Metaclass;  INCREF(_Metaclass);
+    _ObjectClass->base.base.klass    = _Metaclass;
+    _BehaviorClass->base.base.klass  = _Metaclass;
+    _ClassClass->base.base.klass     = _Metaclass;
+    _MetaclassClass->base.base.klass = _Metaclass;
     
     /* Create IdentityDictionary and Symbol. */
     _IdentityDictionary = (Behavior *)ObjMem_Alloc(ClassClassTmpl.thisClass.instVarOffset);
@@ -140,11 +140,11 @@ static void initCoreClasses(void) {
     _IdentityDictionaryClass = (Metaclass *)ObjMem_Alloc(ClassMetaclassTmpl.thisClass.instVarOffset);
     _SymbolClass             = (Metaclass *)ObjMem_Alloc(ClassMetaclassTmpl.thisClass.instVarOffset);
     
-    _IdentityDictionary->base.klass = (Behavior *)_IdentityDictionaryClass;  INCREF(_IdentityDictionaryClass);
-    _Symbol->base.klass             = (Behavior *)_SymbolClass;              INCREF(_SymbolClass);
+    _IdentityDictionary->base.klass = (Behavior *)_IdentityDictionaryClass;
+    _Symbol->base.klass             = (Behavior *)_SymbolClass;
     
-    _IdentityDictionaryClass->base.base.klass = _Metaclass;  INCREF(_Metaclass);
-    _SymbolClass->base.base.klass             = _Metaclass;  INCREF(_Metaclass);
+    _IdentityDictionaryClass->base.base.klass = _Metaclass;
+    _SymbolClass->base.base.klass             = _Metaclass;
     
     /*
      * Establish the core class hierarchy:
@@ -227,12 +227,12 @@ static void initCoreClasses(void) {
     /**/Behavior_Init((Behavior *)_SymbolClass, (Behavior *)_ObjectClass, 0, 0);
     
     /* Each metaclass has a reference to is sole instance. */
-    _ObjectClass->thisClass = (Class *)_Object;        INCWREF(_Object);
-    _BehaviorClass->thisClass = (Class *)_Behavior;    INCWREF(_Behavior);
-    _ClassClass->thisClass = (Class *)_Class;          INCWREF(_Class);
-    _MetaclassClass->thisClass = (Class *)_Metaclass;  INCWREF(_Metaclass);
-    _IdentityDictionaryClass->thisClass = (Class *)_IdentityDictionary; INCWREF(_IdentityDictionary);
-    _SymbolClass->thisClass = (Class *)_Symbol;                         INCWREF(_Symbol);
+    _ObjectClass->thisClass = (Class *)_Object;
+    _BehaviorClass->thisClass = (Class *)_Behavior;
+    _ClassClass->thisClass = (Class *)_Class;
+    _MetaclassClass->thisClass = (Class *)_Metaclass;
+    _IdentityDictionaryClass->thisClass = (Class *)_IdentityDictionary;
+    _SymbolClass->thisClass = (Class *)_Symbol;
     
     /*
      * Create class 'Module' and its first subclass and instance:
@@ -259,24 +259,24 @@ static void initCoreClasses(void) {
     /*
      * Patch the 'module' field of existing classes.
      */
-    CLASS(Object)->module    = heart;  INCREF(heart);
-    CLASS(Behavior)->module  = heart;  INCREF(heart);
-    CLASS(Class)->module     = heart;  INCREF(heart);
-    CLASS(Metaclass)->module = heart;  INCREF(heart);
+    CLASS(Object)->module    = heart;
+    CLASS(Behavior)->module  = heart;
+    CLASS(Class)->module     = heart;
+    CLASS(Metaclass)->module = heart;
     
-    _ObjectClass->base.module    = heart;  INCREF(heart);
-    _BehaviorClass->base.module  = heart;  INCREF(heart);
-    _ClassClass->base.module     = heart;  INCREF(heart);
-    _MetaclassClass->base.module = heart;  INCREF(heart);
+    _ObjectClass->base.module    = heart;
+    _BehaviorClass->base.module  = heart;
+    _ClassClass->base.module     = heart;
+    _MetaclassClass->base.module = heart;
     
-    CLASS(IdentityDictionary)->module = heart;  INCREF(heart);
-    CLASS(Symbol)->module             = heart;  INCREF(heart);
+    CLASS(IdentityDictionary)->module = heart;
+    CLASS(Symbol)->module             = heart;
     
-    _IdentityDictionaryClass->base.module = heart;  INCREF(heart);
-    _SymbolClass->base.module             = heart;  INCREF(heart);
+    _IdentityDictionaryClass->base.module = heart;
+    _SymbolClass->base.module             = heart;
     
-    CLASS(Module)->module    = heart;  INCREF(heart);
-    _Heart->module                = heart;  INCREF(heart);
+    CLASS(Module)->module    = heart;
+    _Heart->module                = heart;
     
     /*
      * Create the remaining classes needed to fully describe a class.
@@ -323,17 +323,6 @@ static void initCoreClasses(void) {
     Behavior_AddMethodsFromTemplate((Behavior *)_IdentityDictionaryClass, &ClassIdentityDictionaryTmpl.metaclass);
     Behavior_AddMethodsFromTemplate((Behavior *)_SymbolClass,             &ClassSymbolTmpl.metaclass);
     Behavior_AddMethodsFromTemplate(CLASS(Array)->base.klass,           &ClassArrayTmpl.metaclass);
-    
-    /*
-     * The End
-     */
-    
-    DECREF(_ObjectClass);
-    DECREF(_BehaviorClass);
-    DECREF(_ClassClass);
-    DECREF(_MetaclassClass);
-    DECREF(_IdentityDictionaryClass);
-    DECREF(_SymbolClass);
 }
 
 
@@ -425,83 +414,4 @@ int Boot(void) {
         return 0;
     
     return 1;
-}
-
-
-static void releaseBuiltInClasses(void) {
-    ClassBootRec *r;
-    Behavior **classVar;
-    ClassTmpl *t;
-    
-    for (r = classBootRec; *r; ++r) {
-        t = *r;
-        classVar = (Behavior **)((char *)heart + t->classVarOffset);
-        CLEAR(*classVar);
-    }
-    for (r = essentialClassBootRec; *r; ++r) {
-        t = *r;
-        classVar = (Behavior **)((char *)heart + t->classVarOffset);
-        CLEAR(*classVar);
-    }
-}
-
-
-static void releaseGlobalObjects(void) {
-    ObjectBootRec *r;
-    Object **var;
-    
-    for (r = objectBootRec; r->varOffset; ++r) {
-        var = (Object **)((char *)heart + r->varOffset);
-        CLEAR(*var);
-    }
-}
-
-
-static void releaseGlobalVars(void) {
-    VarBootRec *r;
-    Object **var;
-    
-    for (r = globalVarBootRec; r->varOffset; ++r) {
-        var = (Object **)((char *)heart + r->varOffset);
-        CLEAR(*var);
-    }
-}
-
-
-static void releaseCoreClasses(void) {
-    CLEAR(CLASS(Array));
-    CLEAR(CLASS(VariableObject));
-    
-    CLEAR(CLASS(Symbol));
-    CLEAR(CLASS(IdentityDictionary));
-    CLEAR(CLASS(Module));
-    CLEAR(CLASS(Metaclass));
-    CLEAR(CLASS(Class));
-    CLEAR(CLASS(Behavior));
-    CLEAR(CLASS(Object));
-    
-    CLEAR(CLASS(Method));
-}
-
-
-void Shutdown(void) {
-    CLEAR(GLOBAL(xstdin));
-    CLEAR(GLOBAL(xstdout));
-    CLEAR(GLOBAL(xstderr));
-    
-    CLEAR(GLOBAL(xtrue));
-    CLEAR(GLOBAL(xfalse));
-    
-    CLEAR(GLOBAL(theInterpreter));
-    
-    releaseGlobalVars();
-    releaseGlobalObjects();
-    
-    ReleaseReadOnlyData();
-    
-    releaseBuiltInClasses();
-    
-    ReleaseSymbols();
-    
-    releaseCoreClasses();
 }

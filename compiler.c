@@ -24,7 +24,7 @@ static Unknown *defaultNotifier(void) {
 }
 
 
-static ModuleTmpl *compileTree(Stmt **pTree, /* destroys reference */
+static ModuleTmpl *compileTree(Stmt **pTree,
                                   SymbolTable *st,
                                   Unknown *notifier)
 {
@@ -50,14 +50,9 @@ static ModuleTmpl *compileTree(Stmt **pTree, /* destroys reference */
     
     moduleTmpl = CodeGen_GenerateCode(tree);
     
-    DECREF(tmp);
-    DECREF(tree);
-    
     return moduleTmpl;
     
  unwind:
-    XDECREF(tmp);
-    DECREF(tree);
     return 0;
 }
 
@@ -79,7 +74,6 @@ struct ModuleTmpl *Compiler_CompileFileStream(FILE *stream) {
     tmp = StaticChecker_DeclareBuiltIn(st, notifier);
     if (!tmp)
         goto unwind;
-    DECREF(tmp);
     
     tree = Parser_ParseFileStream(stream, st);
     if (!tree)
@@ -87,14 +81,9 @@ struct ModuleTmpl *Compiler_CompileFileStream(FILE *stream) {
     
     moduleTmpl = compileTree(&tree, st, notifier);
     
-    DECREF(notifier);
-    DECREF(st);
-    
     return moduleTmpl;
     
  unwind:
-    XDECREF(notifier);
-    XDECREF(st);
     return 0;
 }
 
@@ -124,7 +113,6 @@ ModuleTmpl *Compiler_CompileFile(const char *pathname) {
     tmp = StaticChecker_DeclareBuiltIn(st, notifier);
     if (!tmp)
         goto unwind;
-    DECREF(tmp);
     
     tree = Parser_ParseFileStream(stream, st);
     if (!tree)
@@ -136,18 +124,12 @@ ModuleTmpl *Compiler_CompileFile(const char *pathname) {
     moduleTmpl = compileTree(&tree, st, notifier);
     
     fclose(stream);
-    DECREF(notifier);
-    DECREF(st);
-    DECREF(tmp);
     
     return moduleTmpl;
     
  unwind:
     if (stream)
         fclose(stream);
-    XDECREF(notifier);
-    XDECREF(st);
-    XDECREF(tmp);
     return 0;
 }
 
@@ -169,7 +151,6 @@ ModuleTmpl *Compiler_CompileString(const char *string) {
     tmp = StaticChecker_DeclareBuiltIn(st, notifier);
     if (!tmp)
         goto unwind;
-    DECREF(tmp);
     
     tree = Parser_ParseString(string, st);
     if (!tree)
@@ -177,14 +158,9 @@ ModuleTmpl *Compiler_CompileString(const char *string) {
     
     moduleTmpl = compileTree(&tree, st, notifier);
     
-    DECREF(notifier);
-    DECREF(st);
-    
     return moduleTmpl;
     
  unwind:
-    XDECREF(notifier);
-    XDECREF(st);
     return 0;
 }
 
@@ -242,7 +218,6 @@ ModuleTmpl *Compiler_CompileModule(const char *pathname) {
             fclose(stream);
             stream = 0;
             
-            DECREF(tmp);
             tmp = Host_StringFromCString(pathname);
             Parser_Source(treeTail, tmp);
             
@@ -258,9 +233,6 @@ ModuleTmpl *Compiler_CompileModule(const char *pathname) {
     moduleTmpl = compileTree(&tree, st, notifier);
     
     fclose(moduleStream);
-    DECREF(notifier);
-    DECREF(st);
-    DECREF(tmp);
     
     return moduleTmpl;
     
@@ -269,8 +241,5 @@ unwind:
         fclose(stream);
     if (moduleStream)
         fclose(moduleStream);
-    XDECREF(notifier);
-    XDECREF(st);
-    XDECREF(tmp);
     return 0;
 }

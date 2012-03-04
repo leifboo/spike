@@ -18,8 +18,7 @@ while (0)
 
 #define _(c) do { \
 Unknown *_tmp = (c); \
-if (!_tmp) goto unwind; \
-DECREF(_tmp); } while (0)
+if (!_tmp) goto unwind; } while (0)
 
 
 typedef struct CxxCodeGen {
@@ -125,7 +124,6 @@ static Unknown *emitCxxCodeForVarDefList(Expr *defList,
                 Host_SymbolAsCString(def->sym->sym),
                 expr->next ? ", " : "");
     }
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -138,7 +136,6 @@ static Unknown *emitCxxCodeForExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cgen,
     for ( ; expr; expr = expr->next) {
         _(emitCxxCodeForOneExpr(expr, stmt, cgen, pass));
     }
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -179,7 +176,6 @@ static Unknown *emitCxxCodeForBlock(Expr *expr, Stmt *stmt, CxxCodeGen *cgen,
     }
     
  leave:
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -336,7 +332,6 @@ static Unknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cgen,
     
     fputs(")", cgen->out);
         
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -461,8 +456,6 @@ static Unknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
         }
         break;
     case STMT_PRAGMA_SOURCE:
-        INCREF(stmt->u.source);
-        XDECREF(cgen->source);
         cgen->source = stmt->u.source;
         cgen->currentLineNo = 0;
         break;
@@ -490,7 +483,6 @@ static Unknown *emitCxxCodeForStmt(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen,
         break;
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -593,7 +585,6 @@ static Unknown *emitCxxCodeForMethodDef(Stmt *stmt,
         break;
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -612,7 +603,6 @@ static Unknown *emitCxxCodeForClassBody(Stmt *body, Stmt *stmt, Stmt *outer,
         _(emitCxxCodeForStmt(s, stmt, cgen, innerPass));
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -661,7 +651,6 @@ static Unknown *emitCxxCodeForClassDef(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen
         
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -680,7 +669,6 @@ static Unknown *emitCxxCodeForClassTree(Stmt *classDef, Stmt *outer, CxxCodeGen 
         _(emitCxxCodeForClassTree(subclassDef, outer, cgen, outerPass));
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:
@@ -713,7 +701,6 @@ Unknown *CxxCodeGen_GenerateCode(Stmt *tree, FILE *out)
         }
     }
     
-    INCREF(GLOBAL(xvoid));
     return GLOBAL(xvoid);
     
  unwind:

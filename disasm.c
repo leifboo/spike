@@ -308,13 +308,11 @@ static void disassembleMethod(MethodTmpl *method,
             Unknown *s = Host_ObjectAsString(selector);
             fprintf(out, "\t%s %lu", Host_StringAsCString(s),
                     (unsigned long)*pArgumentCount);
-            DECREF(s);
         } else if (pArgumentCount) {
             fprintf(out, "\t%lu", (unsigned long)*pArgumentCount);
         } else if (selector) {
             Unknown *s = Host_ObjectAsString(selector);
             fprintf(out, "\t%s", Host_StringAsCString(s));
-            DECREF(s);
         } else if (pLabel) {
             fprintf(out, "\t%04lx", (unsigned long)*pLabel);
         } else if (base) {
@@ -499,8 +497,6 @@ static void traverseMethodList(MethodTmplList *methodList,
         
         traverseMethod(method, &methodLevel,
                        module, visitor, closure);
-        
-        DECREF(methodName);
     }
     
     if (visitor->postMethodNamespace)
