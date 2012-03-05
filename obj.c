@@ -5,10 +5,10 @@
 #include "bool.h"
 #include "class.h"
 #include "heart.h"
-#include "host.h"
 #include "int.h"
 #include "interp.h"
 #include "native.h"
+#include "rodata.h"
 #include "str.h"
 
 #include <stdio.h>
@@ -50,7 +50,7 @@ static Unknown *Object_printString(Unknown *self, Unknown *arg0, Unknown *arg1) 
         return 0;
     str = String_AsCString(result);
     sprintf(str, format, className, self);
-    result->size = strlen(str) + 1;
+    ((VariableObject *)result)->size = strlen(str) + 1;
     return (Unknown *)result;
 }
 
@@ -73,11 +73,11 @@ static Unknown *ClassVariableObject_new(Unknown *_self, Unknown *nItemsObj, Unkn
         Halt(HALT_VALUE_ERROR, "bad item size in class object");
         return 0;
     }
-    if (!Host_IsInteger(nItemsObj)) {
+    if (!IsInteger(nItemsObj)) {
         Halt(HALT_TYPE_ERROR, "an integer object is required");
         return 0;
     }
-    nItems = Host_IntegerAsCLong(nItemsObj);
+    nItems = Integer_AsCLong((Integer *)nItemsObj);
     if (nItems < 0) {
         Halt(HALT_VALUE_ERROR, "number of items cannot be negative");
         return 0;
@@ -221,4 +221,33 @@ Object *Object_NewVar(Behavior *klass, size_t size) {
     ((VariableObject *)newObject)->size = size;
     (*klass->zero)(newObject);
     return newObject;
+}
+
+
+/*------------------------------------------------------------------------*/
+/* as yet unclassified */
+
+Unknown *ObjectAsString(Unknown *obj) {
+    return SendMessage(
+        GLOBAL(theInterpreter),
+        obj,
+        METHOD_NAMESPACE_RVALUE,
+        printString,
+        emptyArgs
+        );
+}
+
+void PrintObject(Unknown *obj, void *stream) {
+    Unknown *printObj;
+    String *printString;
+    char *str;
+    
+    printObj = ObjectAsString(obj);
+    if (!printObj)
+        return;
+    printString = CAST(String, printObj);
+    if (printString) {
+        str = String_AsCString(printString);
+        fputs(str, (FILE *)stream);
+    }
 }

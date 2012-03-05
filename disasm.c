@@ -1,11 +1,15 @@
 
 #include "disasm.h"
 
+#include "char.h"
 #include "cgen.h"
+#include "float.h"
 #include "heart.h"
-#include "host.h"
+#include "int.h"
 #include "module.h"
 #include "rodata.h"
+#include "str.h"
+#include "sym.h"
 
 #include <string.h>
 #include <time.h>
@@ -105,7 +109,7 @@ static void disassembleMethod(MethodTmpl *method,
     while (instructionPointer < end) {
         Opcode opcode;
         const char *keyword = 0;
-        Unknown *selector = 0;
+        Symbol *selector = 0;
         const char *mnemonic = "unk", *base = 0;
         size_t index = 0;
         ptrdiff_t displacement = 0;
@@ -305,14 +309,12 @@ static void disassembleMethod(MethodTmpl *method,
         } else if (keyword) {
             fprintf(out, "\t%s", keyword);
         } else if (pArgumentCount && selector) {
-            Unknown *s = Host_ObjectAsString(selector);
-            fprintf(out, "\t%s %lu", Host_StringAsCString(s),
+            fprintf(out, "\t%s %lu", Symbol_AsCString(selector),
                     (unsigned long)*pArgumentCount);
         } else if (pArgumentCount) {
             fprintf(out, "\t%lu", (unsigned long)*pArgumentCount);
         } else if (selector) {
-            Unknown *s = Host_ObjectAsString(selector);
-            fprintf(out, "\t%s", Host_StringAsCString(s));
+            fprintf(out, "\t%s", Symbol_AsCString(selector));
         } else if (pLabel) {
             fprintf(out, "\t%04lx", (unsigned long)*pLabel);
         } else if (base) {
@@ -334,7 +336,7 @@ static void disassembleMethod(MethodTmpl *method,
         }
         if (literal) {
             fprintf(out, "\t\t; ");
-            Host_PrintObject(literal, out);
+            PrintObject(literal, out);
         }
         fprintf(out, "\n");
     }
@@ -396,7 +398,7 @@ static void disassemblePreModule(ModuleTmpl *module,
     fprintf(out, "literal table\n");
     for (i = 0; i < module->literalCount; ++i) {
         fprintf(out, "    %04lu: ", (unsigned long)i);
-        Host_PrintObject(module->literals[i], out);
+        PrintObject(module->literals[i], out);
         fprintf(out, "\n");
     }
     fprintf(out, "\n");
@@ -464,7 +466,6 @@ static void traverseMethodList(MethodTmplList *methodList,
                                Visitor *visitor,
                                void *closure)
 {
-    Unknown *methodName;
     Level namespaceLevel, methodLevel;
     MethodTmpl *method;
     
@@ -489,9 +490,8 @@ static void traverseMethodList(MethodTmplList *methodList,
         if (method->ns != ns)
             continue;
         
-        methodName = Host_ObjectAsString(method->selector);
         /* XXX: Host_SelectorAsMangledName ? */
-        methodLevel.name = Host_StringAsCString(methodName);
+        methodLevel.name = Symbol_AsCString(method->selector);
         if (*methodLevel.name == '$')
             ++methodLevel.name;
         
@@ -951,7 +951,7 @@ static void genCCodeClassTemplate(ClassTmpl *aClass,
     if (1) {
         /* XXX: For now, we are only interested in generating code for
            Spike itself. */
-        superclassName = Host_SymbolAsCString(aClass->superclassName);
+        superclassName = Symbol_AsCString(aClass->superclassName);
         fprintf(out, "Class%sTmpl = {\n"
                 "    HEART_CLASS_TMPL(%s, %s), {\n",
                 level->name, level->name, superclassName);
@@ -1000,15 +1000,15 @@ static void genCCodeLiteralTable(ModuleTmpl *module,
            "data segments" -- for each type of literal. */
         klass = ((Object *)literal)->klass;
         if (klass == CLASS(Symbol)) {
-            fprintf(out, "LITERAL_SYMBOL, 0, 0.0, \"%s\"", Host_SymbolAsCString(literal));
+            fprintf(out, "LITERAL_SYMBOL, 0, 0.0, \"%s\"", Symbol_AsCString((Symbol *)literal));
         } else if (klass == CLASS(Integer)) {
-            fprintf(out, "LITERAL_INTEGER, %ld, 0.0, 0", Host_IntegerAsCLong(literal));
+            fprintf(out, "LITERAL_INTEGER, %ld, 0.0, 0", Integer_AsCLong((Integer *)literal));
         } else if (klass == CLASS(Float)) {
-            fprintf(out, "LITERAL_FLOAT, 0, %g, 0", Host_FloatAsCDouble(literal));
+            fprintf(out, "LITERAL_FLOAT, 0, %g, 0", Float_AsCDouble((Float *)literal));
         } else if (klass == CLASS(Char)) {
-            fprintf(out, "LITERAL_CHAR, '%c', 0.0, 0", Host_CharAsCChar(literal));
+            fprintf(out, "LITERAL_CHAR, '%c', 0.0, 0", Char_AsCChar((Char *)literal));
         } else if (klass == CLASS(String)) {
-            fprintf(out, "LITERAL_STRING, 0, 0.0, \"%s\"", Host_StringAsCString(literal));
+            fprintf(out, "LITERAL_STRING, 0, 0.0, \"%s\"", String_AsCString((String *)literal));
         } else if (1) {
             /* XXX: predefined names are (mis)placed in this table */
             fprintf(out, "LITERAL_INTEGER, 0");

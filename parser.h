@@ -48,7 +48,7 @@ void Parser_Concat(Expr *, Token *, Parser *);
 Stmt *Parser_NewModuleDef(Stmt *);
 Stmt *Parser_ParseFileStream(FILE *, struct SymbolTable *);
 Stmt *Parser_ParseString(const char *, struct SymbolTable *);
-void Parser_Source(Stmt **, Unknown *);
+void Parser_Source(Stmt **, struct String *);
 
 void Parser_Parse(void *yyp, int yymajor, struct Token yyminor, Parser *);
 void *Parser_ParseAlloc(void *(*mallocProc)(size_t));

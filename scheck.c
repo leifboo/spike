@@ -6,11 +6,12 @@
 #include "boot.h"
 #include "class.h"
 #include "heart.h"
-#include "host.h"
+#include "int.h"
 #include "interp.h"
 #include "native.h"
 #include "rodata.h"
 #include "st.h"
+#include "str.h"
 #include "tree.h"
 
 #include <stdio.h>
@@ -42,7 +43,7 @@ typedef struct StaticChecker {
 static Unknown *notifyBadExpr(Expr *expr, const char *desc, StaticChecker *checker) {
     Unknown *descStr, *tmp;
     
-    descStr = Host_StringFromCString(desc);
+    descStr = (Unknown *)String_FromCString(desc);
     if (!descStr)
         return 0;
     tmp = Send(GLOBAL(theInterpreter),
@@ -371,8 +372,8 @@ static Unknown *checkMethodDef(Stmt *stmt,
                     stmt->u.method.argList.fixed = expr->right;
                     break;
                 case EXPR_LITERAL:
-                    if (Host_IsInteger(expr->right->aux.literalValue) &&
-                        Host_IntegerAsCLong(expr->right->aux.literalValue) == 1) {
+                    if (IsInteger(expr->right->aux.literalValue) &&
+                        Integer_AsCLong((Integer *)expr->right->aux.literalValue) == 1) {
                         if (oper == OPER_ADD) {
                             oper = OPER_SUCC;
                             break;
@@ -399,7 +400,7 @@ static Unknown *checkMethodDef(Stmt *stmt,
                 _(notifyBadExpr(expr, "invalid method declarator", checker));
                 break;
             }
-            name = SymbolNode_FromSymbol(checker->st, expr->aux.keywords);
+            name = SymbolNode_FromSymbol(checker->st, (struct Symbol *)expr->aux.keywords);
             stmt->u.method.argList.fixed = expr->right;
             break;
         default:
@@ -702,7 +703,7 @@ static Unknown *checkStmt(Stmt *stmt, Stmt *outer, StaticChecker *checker,
         }
         break;
     case STMT_PRAGMA_SOURCE:
-        _(SetAttr(GLOBAL(theInterpreter), checker->requestor, source, stmt->u.source));
+        _(SetAttr(GLOBAL(theInterpreter), checker->requestor, source, (Unknown *)stmt->u.source));
         break;
     case STMT_RETURN:
     case STMT_YIELD:

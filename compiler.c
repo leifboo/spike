@@ -4,7 +4,6 @@
 #include "cgen.h"
 #include "disasm.h"
 #include "heart.h"
-#include "host.h"
 #include "interp.h"
 #include "io.h"
 #include "module.h"
@@ -14,6 +13,7 @@
 #include "rodata.h"
 #include "scheck.h"
 #include "st.h"
+#include "str.h"
 #include "tree.h"
 
 #include <string.h>
@@ -118,8 +118,7 @@ ModuleTmpl *Compiler_CompileFile(const char *pathname) {
     if (!tree)
         goto unwind;
     
-    tmp = Host_StringFromCString(pathname);
-    Parser_Source(&tree, tmp);
+    Parser_Source(&tree, String_FromCString(pathname));
     
     moduleTmpl = compileTree(&tree, st, notifier);
     
@@ -218,8 +217,7 @@ ModuleTmpl *Compiler_CompileModule(const char *pathname) {
             fclose(stream);
             stream = 0;
             
-            tmp = Host_StringFromCString(pathname);
-            Parser_Source(treeTail, tmp);
+            Parser_Source(treeTail, String_FromCString(pathname));
             
             for (s = *treeTail; s->next; s = s->next)
                 ;

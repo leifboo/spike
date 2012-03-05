@@ -15,27 +15,27 @@ typedef struct ClassTmpl {
     BehaviorTmpl metaclass;
     /* bytecode */
     struct ClassTmpl *next, *nextInScope;
-    Unknown *symbol;
+    struct Symbol *symbol;
     size_t classVarIndex;
     size_t superclassVarIndex;
-    Unknown *superclassName; /* XXX: kludge for C bytecode gen */
+    struct Symbol *superclassName; /* XXX: kludge for C bytecode gen */
 } ClassTmpl;
 
 
 typedef struct Class {
     Behavior base;
-    Unknown *name;
+    struct Symbol *name;
 } Class;
 
 
 extern struct ClassTmpl ClassClassTmpl;
 
 
-Class *Class_New(Unknown *name, Behavior *superclass, size_t instVarCount, size_t classVarCount);
+Class *Class_New(struct Symbol *name, Behavior *superclass, size_t instVarCount, size_t classVarCount);
 Class *Class_EmptyFromTemplate(ClassTmpl *tmpl, Behavior *superclass, Behavior *Metaclass, struct Module *module);
 Class *Class_FromTemplate(ClassTmpl *tmpl, Behavior *superclass, struct Module *module);
 void Class_InitFromTemplate(Class *self, ClassTmpl *tmpl, Behavior *superclass, struct Module *module);
-Unknown *Class_Name(Class *);
+struct Symbol *Class_Name(Class *);
 
 
 #define CLASS_TMPL(n, s, m) #n, offsetof(m, n), offsetof(m, s)

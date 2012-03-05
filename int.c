@@ -226,7 +226,7 @@ static Unknown *Integer_printString(Unknown *_self, Unknown *arg0, Unknown *arg1
         return 0;
     str = String_AsCString(result);
     sprintf(str, "%ld", (long)self->value);
-    result->size = strlen(str) + 1;
+    ((VariableObject *)result)->size = strlen(str) + 1;
     return (Unknown *)result;
 }
 
@@ -282,6 +282,10 @@ ClassTmpl ClassIntegerTmpl = {
 
 /*------------------------------------------------------------------------*/
 /* C API */
+
+int IsInteger(Unknown *op) {
+    return CAST(Integer, op) != (Integer *)0;
+}
 
 Integer *Integer_FromCLong(long value) {
     return Integer_FromCPtrdiff((ptrdiff_t)value);

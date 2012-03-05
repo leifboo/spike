@@ -4,10 +4,12 @@
 #include "class.h"
 #include "gram.h"
 #include "heart.h"
-#include "host.h"
+#include "io.h"
+#include "kwsel.h"
 #include "lexer.h"
 #include "rodata.h"
 #include "st.h"
+#include "str.h"
 #include "sym.h"
 
 #include <stdio.h>
@@ -50,7 +52,7 @@ static SymbolNode *symbolNodeForToken(Token *token, Unknown *st) {
     return 0;
 }
 
-static Unknown *operSelector(Oper oper) {
+static Symbol *operSelector(Oper oper) {
     switch (oper) {
     case OPER_SUCC:     return operSucc;
     case OPER_PRED:     return operPred;
@@ -80,7 +82,7 @@ static Unknown *operSelector(Oper oper) {
     return 0;
 }
 
-static Unknown *callOperSelector(CallOper oper) {
+static Symbol *callOperSelector(CallOper oper) {
     switch (oper) {
     case OPER_APPLY:    return operApply;
     case OPER_INDEX:    return operIndex;
@@ -88,7 +90,7 @@ static Unknown *callOperSelector(CallOper oper) {
     return 0;
 }
 
-static Unknown *exprSelector(StmtKind kind) {
+static Symbol *exprSelector(StmtKind kind) {
     switch (kind) {
     case EXPR_AND:          return exprAnd;
     case EXPR_ASSIGN:       return exprAssign;
@@ -112,7 +114,7 @@ static Unknown *exprSelector(StmtKind kind) {
     return 0;
 }
 
-static Unknown *stmtSelector(StmtKind kind) {
+static Symbol *stmtSelector(StmtKind kind) {
     switch (kind) {
     case STMT_BREAK:            return stmtBreak;
     case STMT_COMPOUND:         return stmtCompound;
@@ -366,9 +368,9 @@ Expr *Parser_NewKeywordExpr(Token *kw, Expr *arg,
     newExpr->kind = EXPR_KEYWORD;
     newExpr->right = arg;
     newExpr->lineNo = kw->lineNo;
-    newExpr->aux.keywords = Host_NewKeywordSelectorBuilder();
+    newExpr->aux.keywords = NewKeywordSelectorBuilder();
     kwNode = symbolNodeForToken(kw, parser->st);
-    Host_AppendKeyword(&newExpr->aux.keywords, kwNode->sym);
+    AppendKeyword(&newExpr->aux.keywords, kwNode->sym);
     return newExpr;
 }
 
@@ -384,7 +386,7 @@ Expr *Parser_AppendKeyword(Expr *expr, Token *kw, Expr *arg,
     }
     
     kwNode = symbolNodeForToken(kw, parser->st);
-    Host_AppendKeyword(&expr->aux.keywords, kwNode->sym);
+    AppendKeyword(&expr->aux.keywords, kwNode->sym);
     for (e = expr->right; e->nextArg; e = e->nextArg)
         ;
     e->nextArg = arg;
@@ -394,7 +396,6 @@ Expr *Parser_AppendKeyword(Expr *expr, Token *kw, Expr *arg,
 Expr *Parser_FreezeKeywords(Expr *expr, Token *kw,
                                Parser *parser)
 {
-    Unknown *tmp;
     SymbolNode *kwNode;
     
     if (parser->tb) {
@@ -407,12 +408,11 @@ Expr *Parser_FreezeKeywords(Expr *expr, Token *kw,
         expr = (Expr *)Object_New(CLASS(XExpr));
         expr->kind = EXPR_KEYWORD;
         expr->lineNo = kw->lineNo;
-        expr->aux.keywords = Host_NewKeywordSelectorBuilder();
+        expr->aux.keywords = NewKeywordSelectorBuilder();
     } else if (kw) {
         expr->lineNo = kw->lineNo;
     }
-    tmp = Host_GetKeywordSelector(expr->aux.keywords, kwNode ? kwNode->sym : 0);
-    expr->aux.keywords = tmp;
+    expr->aux.keywords = (Unknown *)GetKeywordSelector(expr->aux.keywords, kwNode ? kwNode->sym : 0);
     return expr;
 }
 
@@ -481,7 +481,7 @@ void Parser_Concat(Expr *expr, Token *token, Parser *parser) {
                  token->value,
                  0);
     } else {
-        Host_StringConcat(&expr->aux.literalValue, token->value);
+        String_Concat((String **)&expr->aux.literalValue, (String *)token->value);
     }
 }
 
@@ -562,7 +562,7 @@ Stmt *Parser_ParseString(const char *input, SymbolTable *st) {
     return tree;
 }
 
-void Parser_Source(Stmt **pStmtList, Unknown *source) {
+void Parser_Source(Stmt **pStmtList, String *source) {
     Stmt *pragma;
     
     pragma = (Stmt *)Object_New(CLASS(XStmt));
@@ -608,10 +608,10 @@ static Unknown *Parser_parse(Unknown *_self,
     
     self = (Parser *)_self;
     
-    if (Host_IsFileStream(input)) {
-        stream = Host_FileStreamAsCFileStream(input);
-    } else if (Host_IsString(input)) {
-        string = Host_StringAsCString(input);
+    if (IsFileStream(input)) {
+        stream = FileStream_AsCFileStream((FileStream *)input);
+    } else if (IsString(input)) {
+        string = String_AsCString((String *)input);
     } else {
         Halt(HALT_TYPE_ERROR, "a file stream or string is required");
         goto unwind;

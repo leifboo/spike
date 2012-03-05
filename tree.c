@@ -45,7 +45,7 @@ static Unknown *Stmt_source(Unknown *self, Unknown *sourcePathname, Unknown *arg
     Stmt *tree;
     
     tree = (Stmt *)self;
-    Parser_Source(&tree, sourcePathname);
+    Parser_Source(&tree, (struct String *)sourcePathname);
     return (Unknown *)tree;
 }
 

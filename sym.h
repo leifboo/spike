@@ -12,6 +12,7 @@ typedef struct Symbol Symbol;
 extern struct ClassTmpl ClassSymbolTmpl;
 
 
+int IsSymbol(Unknown *);
 Symbol *Symbol_FromCString(const char *str);
 Symbol *Symbol_FromCStringAndLength(const char *str, size_t len);
 const char *Symbol_AsCString(Symbol *);

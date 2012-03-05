@@ -186,7 +186,7 @@ void Module_InitLiteralsFromTemplate(Behavior *moduleClass, ModuleTmpl *tmpl) {
 struct Thunk {
     Object base;
     Unknown *receiver;
-    Unknown *selector;
+    Symbol *selector;
 };
 
 typedef struct ThunkSubclass {
@@ -197,9 +197,9 @@ typedef struct ThunkSubclass {
 static Unknown *Thunk_apply(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     Thunk *self = (Thunk *)_self;
     return SendWithArguments(GLOBAL(theInterpreter),
-                                 self->receiver,
-                                 self->selector,
-                                 arg0);
+                             self->receiver,
+                             self->selector,
+                             (struct Array *)arg0);
 }
 
 static MethodTmpl ThunkMethods[] = {
@@ -228,6 +228,6 @@ static Thunk *Thunk_New(
     if (!newThunk)
         return 0;
     newThunk->receiver = receiver;
-    newThunk->selector = selector;
+    newThunk->selector = (Symbol *)selector;
     return newThunk;
 }

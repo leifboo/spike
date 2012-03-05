@@ -16,7 +16,7 @@ typedef struct SymbolTable SymbolTable, XSymbolTable;
 struct SymbolNode {
     Object base;
     struct STEntry *entry;
-    Unknown *sym;
+    struct Symbol *sym;
 };
 
 
@@ -50,11 +50,11 @@ struct Scope {
 struct SymbolTable {
     Object base;
     Scope *currentScope;
-    Unknown *symbolNodes;
+    struct IdentityDictionary *symbolNodes;
 };
 
 
-SymbolNode *SymbolNode_FromSymbol(SymbolTable *st, Unknown *sym);
+SymbolNode *SymbolNode_FromSymbol(SymbolTable *st, struct Symbol *sym);
 SymbolNode *SymbolNode_FromCString(SymbolTable *st, const char *str);
 int SymbolNode_IsSpec(SymbolNode *node);
 

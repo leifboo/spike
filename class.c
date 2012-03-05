@@ -2,10 +2,11 @@
 #include "class.h"
 
 #include "heart.h"
-#include "host.h"
+#include "int.h"
 #include "interp.h"
 #include "metaclass.h"
 #include "str.h"
+#include "sym.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -30,7 +31,7 @@ static Unknown *Class_printString(Unknown *self, Unknown *arg0, Unknown *arg1) {
         return 0;
     str = String_AsCString(result);
     sprintf(str, format, name);
-    result->size = strlen(str) + 1;
+    ((VariableObject *)result)->size = strlen(str) + 1;
     return (Unknown *)result;
 }
 
@@ -54,21 +55,20 @@ static Unknown *Class_subclass(Unknown *_self, Unknown *args, Unknown *arg1) {
     instVarCount = GetArg(args, 1);
     classVarCount = GetArg(args, 2);
     
-    if (!Host_IsSymbol(name)) {
+    if (!IsSymbol(name)) {
         Halt(HALT_TYPE_ERROR, "a symbol is required");
         goto unwind;
     }
-    if (!Host_IsInteger(instVarCount) ||
-        !Host_IsInteger(classVarCount)) {
+    if (!IsInteger(instVarCount) || !IsInteger(classVarCount)) {
         Halt(HALT_TYPE_ERROR, "an integer is required");
         goto unwind;
     }
     
     /* XXX: module? */
     return (Unknown *)Class_New(
-        name, self,
-        (size_t)Host_IntegerAsCLong(instVarCount),
-        (size_t)Host_IntegerAsCLong(classVarCount)
+        (Symbol *)name, self,
+        (size_t)Integer_AsCLong((Integer *)instVarCount),
+        (size_t)Integer_AsCLong((Integer *)classVarCount)
         );
 
  unwind:
@@ -111,7 +111,7 @@ ClassTmpl ClassClassTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
-Class *Class_New(Unknown *name, Behavior *superclass,
+Class *Class_New(Symbol *name, Behavior *superclass,
                        size_t instVarCount, size_t classVarCount)
 {
     Metaclass *newMetaclass, *superMeta;
@@ -183,9 +183,9 @@ void Class_InitFromTemplate(Class *self,
                                  &tmpl->thisClass,
                                  superclass,
                                  module);
-    self->name = Host_SymbolFromCString(tmpl->name);
+    self->name = Symbol_FromCString(tmpl->name);
 }
 
-Unknown *Class_Name(Class *self) {
+Symbol *Class_Name(Class *self) {
     return self->name;
 }

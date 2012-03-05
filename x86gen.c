@@ -1,8 +1,10 @@
 
 #include "x86gen.h"
 
+#include "char.h"
+#include "float.h"
 #include "heart.h"
-#include "host.h"
+#include "int.h"
 #include "module.h"
 #include "native.h"
 #include "obj.h"
@@ -65,7 +67,7 @@ typedef struct OpcodeGen {
 typedef struct ClassCodeGen {
     struct CodeGen *generic;
     Stmt *classDef;
-    Unknown *source;
+    String *source;
 } ClassCodeGen;
 
 typedef struct ModuleCodeGen {
@@ -268,7 +270,7 @@ static Unknown *emitCodeForName(Expr *expr, int *super, OpcodeGen *cgen) {
     case OPCODE_PUSH_GLOBAL:
         emitOpcode(cgen, "pushl",
                    isVarDef(def) ? "%s%s" : "$%s%s",
-                   Host_SymbolAsCString(def->sym->sym),
+                   Symbol_AsCString(def->sym->sym),
                    (IS_EXTERN(def) && IS_CDECL(def)) ? ".thunk" : "");
         break;
     case OPCODE_PUSH_INST_VAR:
@@ -294,11 +296,11 @@ static Unknown *emitCodeForLiteral(Unknown *literal, OpcodeGen *cgen) {
     
     klass = ((Object *)literal)->klass;
     if (klass == CLASS(Symbol)) {
-        const char *value = Host_SymbolAsCString(literal);
+        const char *value = Symbol_AsCString((Symbol *)literal);
         willEmitSym((Symbol *)literal, cgen->generic);
         emitOpcode(cgen, "pushl", "$__sym_%s", value);
     } else if (klass == CLASS(Integer)) {
-        long value = Host_IntegerAsCLong(literal);
+        long value = Integer_AsCLong((Integer *)literal);
         /* a negative literal int is currently not possible */
         ASSERT(value >= 0, "negative literal int");
         if (value <= 0x1fffffff) {
@@ -309,11 +311,11 @@ static Unknown *emitCodeForLiteral(Unknown *literal, OpcodeGen *cgen) {
             emitOpcode(cgen, "pushl", "$__int_%ld", value);
         }
     } else if (klass == CLASS(Float)) {
-        double value = Host_FloatAsCDouble(literal);
+        double value = Float_AsCDouble((Float *)literal);
         unsigned int index = willEmitFloat(value, cgen->generic);
         emitOpcode(cgen, "pushl", "$__float_%u", index);
     } else if (klass == CLASS(Char)) {
-        unsigned int value = (unsigned char)Host_CharAsCChar(literal);
+        unsigned int value = (unsigned char)Char_AsCChar((Char *)literal);
         willEmitChar(value, cgen->generic);
         emitOpcode(cgen, "pushl", "$__char_%02x", value);
     } else if (klass == CLASS(String)) {
@@ -336,7 +338,7 @@ static Unknown *store(Expr *var, OpcodeGen *cgen) {
     case OPCODE_STORE_GLOBAL:
         /* currently, the x86 backend is unique in this regard */
         ASSERT(isVarDef(def), "invalid lvalue");
-        emitOpcode(cgen, "movl", "%%eax, %s", Host_SymbolAsCString(def->sym->sym));
+        emitOpcode(cgen, "movl", "%%eax, %s", Symbol_AsCString(def->sym->sym));
         break;
     case OPCODE_STORE_INST_VAR:
         emitOpcode(cgen, "movl", "%%eax, %d(%%edi)", instVarOffset(def, cgen));
@@ -781,7 +783,7 @@ static void emitROData(ModuleCodeGen *cgen) {
 static Unknown *emitCodeForInt(int intValue, OpcodeGen *cgen) {
     Unknown *intObj = 0;
     
-    intObj = Host_IntegerFromCLong(intValue);
+    intObj = (Unknown *)Integer_FromCLong(intValue);
     if (!intObj) {
         goto unwind;
     }
@@ -880,7 +882,7 @@ static Unknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         /* evaluate selector */
         switch (expr->left->kind) {
         case EXPR_ATTR:
-            _(emitCodeForLiteral(expr->left->sym->sym, cgen));
+            _(emitCodeForLiteral((Unknown *)expr->left->sym->sym, cgen));
             emitOpcode(cgen, "popl", "%%edx");
             routine = "SpikeSendMessage";
             break;
@@ -912,7 +914,7 @@ static Unknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         break;
     case EXPR_ATTR:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
-        _(emitCodeForLiteral(expr->sym->sym, cgen));
+        _(emitCodeForLiteral((Unknown *)expr->sym->sym, cgen));
         emitOpcode(cgen, "popl", "%%edx");
         emitOpcode(cgen, "call", "SpikeGetAttr%s", (isSuper ? "Super" : ""));
         break;
@@ -1068,7 +1070,7 @@ static Unknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
     /* get/set common attr */
     switch (expr->left->kind) {
     case EXPR_ATTR:
-        _(emitCodeForLiteral(expr->left->sym->sym, cgen));
+        _(emitCodeForLiteral((Unknown *)expr->left->sym->sym, cgen));
         ++argumentCount;
         break;
     case EXPR_ATTR_VAR:
@@ -1630,7 +1632,7 @@ static Unknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
     OpcodeGen *cgen; MethodCodeGen *mcg;
     Stmt *body, *s;
     Stmt sentinel;
-    Unknown *selector;
+    Symbol *selector;
     FILE *out;
     const char *codeObjectClass;
     const char *className, *suffix, *ns, *functionName, *obj, *code;
@@ -1668,7 +1670,7 @@ static Unknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
     
     if (outer->kind == CODE_GEN_CLASS && outer->level != 1) {
         codeObjectClass = "Method";
-        className = Host_SymbolAsCString(outer->u.klass.classDef->expr->sym->sym);
+        className = Symbol_AsCString(outer->u.klass.classDef->expr->sym->sym);
         suffix = meta ? ".class" : "";
         switch (stmt->u.method.ns) {
         case METHOD_NAMESPACE_RVALUE: ns = ".0."; break;
@@ -1687,7 +1689,7 @@ static Unknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
         suffix = "";
         ns = "";
     }
-    functionName = Host_SymbolAsCString(selector);
+    functionName = Symbol_AsCString(selector);
     
     fprintf(out, "\t.text\n");
     fprintf(out,
@@ -1758,7 +1760,7 @@ static Unknown *emitCFunction(Stmt *stmt, CodeGen *cgen) {
     out = cgen->out;
     
     /* XXX: comdat */
-    sym = Host_SymbolAsCString(stmt->u.method.name->sym);
+    sym = Symbol_AsCString(stmt->u.method.name->sym);
     suffix = ".thunk";
     
     fprintf(out,
@@ -1832,7 +1834,7 @@ static Unknown *emitCodeForClassBody(Stmt *body, int meta, CodeGen *cgen) {
                            "initializers not allowed here");
                     if (IS_EXTERN(expr))
                         continue;
-                    sym = Host_SymbolAsCString(expr->sym->sym);
+                    sym = Symbol_AsCString(expr->sym->sym);
                     fprintf(out,
                             "%s:\n"
                             "\t.globl\t%s\n"
@@ -1875,10 +1877,10 @@ static Unknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *cge
     int methodTally[NUM_METHOD_NAMESPACES];
     
     out = cgen->out;
-    sym = Host_SymbolAsCString(classDef->expr->sym->sym);
+    sym = Symbol_AsCString(classDef->expr->sym->sym);
     superSym = classDef->u.klass.superclassName->u.ref.def->u.def.pushOpcode == OPCODE_PUSH_NULL
                ? 0 /* Class 'Object' has no superclass. */
-               : Host_SymbolAsCString(classDef->u.klass.superclassName->sym->sym);
+               : Symbol_AsCString(classDef->u.klass.superclassName->sym->sym);
     suffix = meta ? ".class" : "";
     
     for (ns = 0; ns < NUM_METHOD_NAMESPACES; ++ns) {
@@ -1998,7 +2000,7 @@ static Unknown *emitCodeForBehaviorObject(Stmt *classDef, int meta, CodeGen *cge
             if (s->kind == STMT_DEF_METHOD &&
                 s->u.method.ns == ns)
             {
-                const char *selector = Host_SymbolAsCString(s->u.method.name->sym);
+                const char *selector = Symbol_AsCString(s->u.method.name->sym);
                 willEmitSym((Symbol *)s->u.method.name->sym, cgen);
                 fprintf(out,
                         "\t.long\t__sym_%s, %s%s.%d.%s\n",

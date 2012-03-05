@@ -8,7 +8,7 @@
 #include <stdarg.h>
 
 
-typedef VariableObject Array;
+typedef struct Array Array;
 
 
 extern struct ClassTmpl ClassArrayTmpl;

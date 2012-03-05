@@ -10,9 +10,14 @@
 #include <string.h>
 
 
+struct String {
+    VariableObject base;
+};
+
+
 #define BOOL(cond) ((cond) ? GLOBAL(xtrue) : GLOBAL(xfalse))
 #define STR(op) ((char *)VariableObject_ITEM_BASE(op))
-#define LEN(op) ((op)->size - 1)
+#define LEN(op) ((op)->base.size - 1)
 
 
 /*------------------------------------------------------------------------*/
@@ -68,7 +73,7 @@ static Unknown *String_add(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     if (!result)
         return 0;
     memcpy(STR(result), STR(self), LEN(self));
-    memcpy(STR(result) + LEN(self), STR(arg), arg->size);
+    memcpy(STR(result) + LEN(self), STR(arg), arg->base.size);
     return (Unknown *)result;
 }
 
@@ -189,7 +194,7 @@ static Unknown *String_printString(Unknown *_self, Unknown *arg0, Unknown *arg1)
     }
     *d++ = '"';
     *d = '\0';
-    result->size = d - STR(result) + 1;
+    result->base.size = d - STR(result) + 1;
     return (Unknown *)result;
 }
 
@@ -240,6 +245,10 @@ ClassTmpl ClassStringTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
+int IsString(Unknown *op) {
+    return CAST(String, op) != (String *)0;
+}
+
 String *String_FromCString(const char *str) {
     return String_FromCStringAndLength(str, strlen(str));
 }
@@ -269,7 +278,7 @@ String *String_FromCStream(FILE *stream, size_t size) {
     if (!fgets(buffer, size, stream)) {
         return 0;
     }
-    result->size = strlen(buffer) + 1;
+    result->base.size = strlen(buffer) + 1;
     return result;
 }
 
@@ -285,7 +294,7 @@ String *String_Concat(String **var, String *newPart) {
         return 0;
     }
     memcpy(STR(result), STR(self), LEN(self));
-    memcpy(STR(result) + LEN(self), STR(newPart), newPart->size);
+    memcpy(STR(result) + LEN(self), STR(newPart), newPart->base.size);
     *var = result;
     return result;
 }
@@ -295,7 +304,7 @@ char *String_AsCString(String *self) {
 }
 
 size_t String_Size(String *self) {
-    return self->size;
+    return self->base.size;
 }
 
 int String_IsEqual(String *a, String *b) {

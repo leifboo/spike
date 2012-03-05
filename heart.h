@@ -61,8 +61,8 @@ typedef struct Heart {
      */
     
     struct Interpreter *theInterpreter;
-    Unknown *xfalse, *xtrue;
-    Unknown *null, *uninit, *xvoid;
+    struct Unknown *xfalse, *xtrue;
+    struct Unknown *null, *uninit, *xvoid;
     
     /* sometimes std* are macros */
     struct FileStream *xstdin, *xstdout, *xstderr;

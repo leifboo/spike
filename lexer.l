@@ -14,12 +14,14 @@ IS			(u|U|l|L)*
 #include <stdio.h>
 #include <stdlib.h>
 #include "char.h"
+#include "float.h"
 #include "gram.h"
 #include "heart.h"
-#include "host.h"
+#include "int.h"
 #include "lexer.h"
 #include "rodata.h"
 #include "st.h"
+#include "str.h"
 #include "sym.h"
 
 static void count(yyscan_t yyscanner);
@@ -193,11 +195,11 @@ static void count(yyscan_t yyscanner)
 }
 
 static Unknown *intFromLiteral(char *str, size_t len) {
-    return Host_IntegerFromCLong(strtol(str, 0, 0));
+    return (Unknown *)Integer_FromCLong(strtol(str, 0, 0));
 }
 
 static Unknown *floatFromLiteral(char *str, size_t len) {
-    return Host_FloatFromCDouble(strtod(str, 0));
+    return (Unknown *)Float_FromCDouble(strtod(str, 0));
 }
 
 static Unknown *charFromLiteral(char *str, size_t len) {
@@ -243,7 +245,7 @@ static Unknown *charFromLiteral(char *str, size_t len) {
 }
 
 static Unknown *stringFromLiteral(char *str, size_t len) {
-    Unknown *result;
+    String *result;
     char *d, *s;
     char c;
     size_t resultLen, left;
@@ -297,12 +299,12 @@ static Unknown *stringFromLiteral(char *str, size_t len) {
     }
     
     if (!result) {
-        result = Host_StringFromCStringAndLength(0, resultLen);
-        d = Host_StringAsCString(result);
+        result = String_FromCStringAndLength(0, resultLen);
+        d = String_AsCString(result);
         goto again;
     }
 
-    return result;
+    return (Unknown *)result;
 }
 
 static Unknown *symbolNodeFromCString(Unknown *st, const char *str) {
@@ -313,7 +315,7 @@ static Unknown *symbolNodeFromCString(Unknown *st, const char *str) {
 static int _isSpec(Unknown *symbolNode) {
     Unknown *bool;
     bool = Send(GLOBAL(theInterpreter), symbolNode, isSpec, 0);
-    return (bool == one || bool == GLOBAL(xtrue));
+    return (bool == (Unknown *)one || bool == GLOBAL(xtrue));
 }
 
 int Lexer_GetNextToken(Token *token, yyscan_t scanner, Unknown *st) {

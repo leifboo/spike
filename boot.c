@@ -4,9 +4,9 @@
 #include "behavior.h"
 #include "char.h"
 #include "class.h"
+#include "dict.h"
 #include "float.h"
 #include "heart.h"
-#include "host.h"
 #include "interp.h"
 #include "metaclass.h"
 #include "module.h"
@@ -206,9 +206,9 @@ static void initCoreClasses(void) {
 
     /* Finish initializing 'Object'. */
     for (ns = 0; ns < NUM_METHOD_NAMESPACES; ++ns) {
-        _Object->methodDict[ns] = Host_NewSymbolDict();
+        _Object->methodDict[ns] = IdentityDictionary_New();
     }
-    ((Class *)_Object)->name = Host_SymbolFromCString(ClassObjectTmpl.name);
+    ((Class *)_Object)->name = Symbol_FromCString(ClassObjectTmpl.name);
     
     /* Initialize the remaining core classes. */
     /**/Class_InitFromTemplate((Class *)_Behavior, &ClassBehaviorTmpl, _Object, 0);
@@ -380,7 +380,6 @@ int Boot(void) {
     initCoreClasses();
     if (InitSymbols() < 0)
         return 0;
-    Host_Init();
     
     CLASS(False) = CLASS(True) = 0; /* XXX: Heart_zero */
     

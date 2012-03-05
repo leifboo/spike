@@ -2,14 +2,15 @@
 #include "boot.h"
 #include "cxxgen.h"
 #include "heart.h"
-#include "host.h"
 #include "interp.h"
+#include "kwsel.h"
 #include "native.h"
 #include "notifier.h"
 #include "parser.h"
 #include "rodata.h"
 #include "scheck.h"
 #include "st.h"
+#include "str.h"
 #include "tree.h"
 #include "x86gen.h"
 
@@ -19,9 +20,6 @@
 #include "str.h"
 
 #include <stdio.h>
-
-
-extern char *kwSep[2];
 
 
 #define CLASS_TMPL_DEF(c) Class ## c ## Tmpl
@@ -99,8 +97,7 @@ int main(int argc, char **argv) {
         if (!treeTail)
             return 1;
         
-        tmp = Host_StringFromCString(pathname);
-        Parser_Source(treeTail, tmp);
+        Parser_Source(treeTail, String_FromCString(pathname));
         
         for (s = *treeTail; s->next; s = s->next)
             ;

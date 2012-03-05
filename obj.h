@@ -33,6 +33,9 @@ Object *Cast(struct Behavior *, Unknown *);
 Object *Object_New(struct Behavior *);
 Object *Object_NewVar(struct Behavior *, size_t);
 
+Unknown *ObjectAsString(Unknown *);
+void PrintObject(Unknown *, /*FILE*/ void *);
+
 
 extern struct ClassTmpl ClassObjectTmpl, ClassVariableObjectTmpl;
 

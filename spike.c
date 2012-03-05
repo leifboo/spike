@@ -151,7 +151,7 @@ static int Main(int argc, char **argv) {
         (Unknown *)module,
         METHOD_NAMESPACE_RVALUE,
         _main,
-        (Unknown *)args
+        args
         );
     
     if (!result) {

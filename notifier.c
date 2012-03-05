@@ -3,10 +3,12 @@
 
 #include "class.h"
 #include "heart.h"
-#include "host.h"
+#include "io.h"
 #include "native.h"
 #include "rodata.h"
 #include "st.h"
+#include "str.h"
+#include "sym.h"
 #include "tree.h"
 
 #include <stdio.h>
@@ -18,7 +20,7 @@ struct Notifier {
     Unknown *stream;
     FILE *cStream;
     unsigned int errorTally;
-    Unknown *source;
+    String *source;
 };
 
 
@@ -29,13 +31,13 @@ static Unknown *Notifier_init(Unknown *_self, Unknown *stream, Unknown *arg1) {
     Notifier *self;
     
     self = (Notifier *)_self;
-    if (!Host_IsFileStream(stream)) {
+    if (!IsFileStream(stream)) {
         Halt(HALT_TYPE_ERROR, "a stream is required");
         return 0;
     }
     
     self->stream = stream;
-    self->cStream = Host_FileStreamAsCFileStream(stream);
+    self->cStream = FileStream_AsCFileStream((FileStream *)stream);
     self->errorTally = 0;
     
     return _self;
@@ -52,14 +54,14 @@ static Unknown *Notifier_badExpr(Unknown *_self, Unknown *arg0, Unknown *arg1) {
         Halt(HALT_TYPE_ERROR, "an expression node is required");
         return 0;
     }
-    if (!Host_IsString(arg1)) {
+    if (!IsString(arg1)) {
         Halt(HALT_TYPE_ERROR, "a string is required");
         return 0;
     }
-    desc = Host_StringAsCString(arg1);
+    desc = String_AsCString((String *)arg1);
     
     source = self->source
-             ? Host_StringAsCString(self->source)
+             ? String_AsCString(self->source)
              : "<unknown>";
     fprintf(stderr, "%s:%u: %s\n",
             source, expr->lineNo, desc);
@@ -82,10 +84,10 @@ static Unknown *Notifier_redefinedSymbol(Unknown *_self, Unknown *arg0, Unknown 
     }
     
     source = self->source
-             ? Host_StringAsCString(self->source)
+             ? String_AsCString(self->source)
              : "<unknown>";
     sym = expr->sym;
-    name = Host_SymbolAsCString(sym->sym);
+    name = Symbol_AsCString(sym->sym);
     format = (sym->entry && sym->entry->scope->context->level == 0)
              ? "%s:%u: cannot redefine built-in name '%s'\n"
              : "%s:%u: symbol '%s' multiply defined\n";
@@ -110,11 +112,11 @@ static Unknown *Notifier_undefinedSymbol(Unknown *_self, Unknown *arg0, Unknown 
     }
     
     source = self->source
-                     ? Host_StringAsCString(self->source)
-                     : "<unknown>";
+             ? String_AsCString(self->source)
+             : "<unknown>";
     fprintf(self->cStream, "%s:%u: symbol '%s' undefined\n",
             source, expr->lineNo,
-            Host_SymbolAsCString(expr->sym->sym));
+            Symbol_AsCString(expr->sym->sym));
     ++self->errorTally;
     
     return GLOBAL(xvoid);

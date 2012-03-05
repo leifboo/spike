@@ -6,7 +6,6 @@
 
 %include {
     #include <assert.h>
-    #include "host.h"
     #include "lexer.h"
     #include "parser.h"
     #include "st.h"

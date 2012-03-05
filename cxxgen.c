@@ -2,9 +2,10 @@
 #include "cxxgen.h"
 
 #include "heart.h"
-#include "host.h"
 #include "native.h"
 #include "st.h"
+#include "str.h"
+#include "sym.h"
 #include "tree.h"
 
 #include <stdio.h>
@@ -24,7 +25,7 @@ if (!_tmp) goto unwind; } while (0)
 typedef struct CxxCodeGen {
     FILE *out;
     int indent;
-    Unknown *source;
+    String *source;
     unsigned int currentLineNo;
 } CxxCodeGen;
 
@@ -53,7 +54,7 @@ static void exprLine(Expr *expr, CxxCodeGen *cgen) {
             fprintf(cgen->out,
                     "\n"
                     "#line %u \"%s\"\n",
-                    expr->lineNo, Host_StringAsCString(cgen->source));
+                    expr->lineNo, String_AsCString(cgen->source));
             cgen->currentLineNo = expr->lineNo;
         }
         indent(cgen);
@@ -85,7 +86,7 @@ static int emitDeclSpecs(Expr *def, CxxCodeGen *cgen) {
     
     ptr = 0;
     for (declSpec = def->declSpecs; declSpec; declSpec = declSpec->next) {
-        fprintf(cgen->out, "%s ", Host_SymbolAsCString(declSpec->sym->sym));
+        fprintf(cgen->out, "%s ", Symbol_AsCString(declSpec->sym->sym));
         ptr = ptr ||
               (declSpec->u.ref.def &&
                declSpec->u.ref.def->kind == EXPR_NAME &&
@@ -121,7 +122,7 @@ static Unknown *emitCxxCodeForVarDefList(Expr *defList,
         for (i = 0; i < ptr; ++i)
             fputs("*", cgen->out);
         fprintf(cgen->out, "%s%s",
-                Host_SymbolAsCString(def->sym->sym),
+                Symbol_AsCString(def->sym->sym),
                 expr->next ? ", " : "");
     }
     return GLOBAL(xvoid);
@@ -196,13 +197,13 @@ static Unknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cgen,
     switch (expr->kind) {
     case EXPR_LITERAL:
         /* XXX: kludge */
-        Host_PrintObject(expr->aux.literalValue, cgen->out);
+        PrintObject(expr->aux.literalValue, cgen->out);
         break;
     case EXPR_NAME:
         if (expr->u.ref.def->u.def.pushOpcode == OPCODE_PUSH_SELF)
             fputs("this", cgen->out);
         else
-            fputs(Host_SelectorAsCString(expr->u.ref.def->sym->sym), cgen->out);
+            fputs(Symbol_AsCString(expr->u.ref.def->sym->sym), cgen->out);
         break;
     case EXPR_BLOCK:
         _(emitCxxCodeForBlock(expr, stmt, cgen, pass));
@@ -232,7 +233,7 @@ static Unknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cgen,
     case EXPR_ATTR:
         _(emitCxxCodeForExpr(expr->left, stmt, cgen, pass));
         fputs("->", cgen->out);
-        fputs(Host_SelectorAsCString(expr->sym->sym), cgen->out);
+        fputs(Symbol_AsCString(expr->sym->sym), cgen->out);
         break;
     case EXPR_POSTOP:
     case EXPR_PREOP:
@@ -273,7 +274,7 @@ static Unknown *emitCxxCodeForOneExpr(Expr *expr, Stmt *stmt, CxxCodeGen *cgen,
     case EXPR_ASSIGN:
         switch (expr->left->kind) {
         case EXPR_NAME:
-            fputs(Host_SymbolAsCString(expr->left->u.ref.def->sym->sym), cgen->out);
+            fputs(Symbol_AsCString(expr->left->u.ref.def->sym->sym), cgen->out);
             switch (expr->oper) {
             case OPER_EQ:      token = "=";    break;
             case OPER_MUL:     token = "*=";   break;
@@ -518,17 +519,17 @@ static Unknown *emitCxxCodeForMethodDef(Stmt *stmt,
         ASSERT(expr->left->kind == EXPR_NAME, "invalid method declarator");
         switch (outer->kind) {
         default:
-            fprintf(cgen->out, "%s(", Host_SelectorAsCString(stmt->u.method.name->sym));
+            fprintf(cgen->out, "%s(", Symbol_AsCString(stmt->u.method.name->sym));
             break;
         case STMT_DEF_CLASS:
             switch (outerPass) {
             case 1:
-                fprintf(cgen->out, "%s(", Host_SelectorAsCString(stmt->u.method.name->sym));
+                fprintf(cgen->out, "%s(", Symbol_AsCString(stmt->u.method.name->sym));
                 break;
             case 2:
                 fprintf(cgen->out, "%s::%s(",
-                        Host_SymbolAsCString(outer->expr->sym->sym),
-                        Host_SelectorAsCString(stmt->u.method.name->sym));
+                        Symbol_AsCString(outer->expr->sym->sym),
+                        Symbol_AsCString(stmt->u.method.name->sym));
                 break;
             }
             break;
@@ -549,7 +550,7 @@ static Unknown *emitCxxCodeForMethodDef(Stmt *stmt,
             for (i = 0; i < ptr; ++i)
                 fputs("*", cgen->out);
             fprintf(cgen->out, "%s%s",
-                    Host_SelectorAsCString(def->sym->sym),
+                    Symbol_AsCString(def->sym->sym),
                     arg->nextArg ? ", " : "");
         }
         fputs(")", cgen->out);
@@ -617,17 +618,17 @@ static Unknown *emitCxxCodeForClassDef(Stmt *stmt, Stmt *outer, CxxCodeGen *cgen
         ASSERT(stmt->expr->kind == EXPR_NAME,
                "identifier expected");
         indent(cgen);
-        fprintf(cgen->out, "struct %s;\n", Host_SymbolAsCString(stmt->expr->sym->sym));
+        fprintf(cgen->out, "struct %s;\n", Symbol_AsCString(stmt->expr->sym->sym));
         break;
         
     case 1:
         indent(cgen);
-        fprintf(cgen->out, "struct %s", Host_SymbolAsCString(stmt->expr->sym->sym));
+        fprintf(cgen->out, "struct %s", Symbol_AsCString(stmt->expr->sym->sym));
         if (stmt->u.klass.superclassName) {
             Expr *sc = stmt->u.klass.superclassName;
             fputs(" : ", cgen->out);
             ASSERT(sc->kind == EXPR_NAME, "identifier expected");
-            fputs(Host_SelectorAsCString(sc->u.ref.def->sym->sym), cgen->out);
+            fputs(Symbol_AsCString(sc->u.ref.def->sym->sym), cgen->out);
         }
         fputs(" {\n", cgen->out);
         ++cgen->indent;

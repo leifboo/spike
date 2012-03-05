@@ -170,7 +170,7 @@ struct Stmt {
             unsigned int mask;
             unsigned int value;
         } spec;
-        Unknown *source;
+        struct String *source;
     } u;
     size_t codeOffset;
     Label label;

@@ -2,12 +2,13 @@
 #include "st.h"
 
 #include "class.h"
+#include "dict.h"
 #include "heart.h"
-#include "host.h"
 #include "interp.h"
 #include "native.h"
 #include "rodata.h"
 #include "scheck.h"
+#include "sym.h"
 #include "tree.h"
 
 #include <assert.h>
@@ -18,10 +19,10 @@
 /*------------------------------------------------------------------------*/
 /* C API */
 
-SymbolNode *SymbolNode_FromSymbol(SymbolTable *st, Unknown *sym) {
+SymbolNode *SymbolNode_FromSymbol(SymbolTable *st, Symbol *sym) {
     SymbolNode *s;
     
-    s = (SymbolNode *)Host_SymbolValue(st->symbolNodes, sym);
+    s = (SymbolNode *)IdentityDictionary_GetItem(st->symbolNodes, (Unknown *)sym);
     if (s) {
         return s;
     }
@@ -29,16 +30,16 @@ SymbolNode *SymbolNode_FromSymbol(SymbolTable *st, Unknown *sym) {
     s = (SymbolNode *)Object_New(CLASS(XSymbolNode));
     s->sym = sym;
     
-    Host_DefineSymbol(st->symbolNodes, sym, (Unknown *)s);
+    IdentityDictionary_SetItem(st->symbolNodes, (Unknown *)sym, (Unknown *)s);
     
     return s;
 }
 
 SymbolNode *SymbolNode_FromCString(SymbolTable *st, const char *str) {
-    Unknown *sym;
+    Symbol *sym;
     SymbolNode *node;
     
-    sym = Host_SymbolFromCString(str);
+    sym = Symbol_FromCString(str);
     node = SymbolNode_FromSymbol(st, sym);
     return node;
 }
@@ -47,7 +48,7 @@ int SymbolNode_IsSpec(SymbolNode *node) {
     Expr *def;
     
     if (0 /*cxxgen*/ ) {
-        if (isupper(Host_SymbolAsCString(node->sym)[0]))
+        if (isupper(Symbol_AsCString(node->sym)[0]))
             return 1;
     }
 
@@ -66,7 +67,7 @@ SymbolTable *SymbolTable_New() {
     SymbolTable *newSymbolTable;
     
     newSymbolTable = (SymbolTable *)Object_New(CLASS(XSymbolTable));
-    newSymbolTable->symbolNodes = Host_NewSymbolDict();
+    newSymbolTable->symbolNodes = IdentityDictionary_New();
     return newSymbolTable;
 }
 
@@ -230,7 +231,7 @@ static Unknown *SymbolNode_isSpec(Unknown *self, Unknown *arg0, Unknown *arg1) {
     if (GLOBAL(xtrue)) {
         result = isSpec ? GLOBAL(xtrue) : GLOBAL(xfalse);
     } else /* compiling "bool.spk"; true & false don't exist yet */ {
-        result = isSpec ? one : zero;
+        result = isSpec ? (Unknown *)one : (Unknown *)zero;
     }
     return result;
 }
@@ -240,7 +241,7 @@ static Unknown *SymbolTable_init(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     SymbolTable *self;
     
     self = (SymbolTable *)_self;
-    self->symbolNodes = Host_NewSymbolDict();
+    self->symbolNodes = IdentityDictionary_New();
     
     return _self;
 }
@@ -252,7 +253,7 @@ static Unknown *SymbolTable_declareBuiltIn(Unknown *_self, Unknown *arg0, Unknow
 
 static Unknown *SymbolTable_symbolNodeForSymbol(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     SymbolTable *self = (SymbolTable *)_self;
-    return (Unknown *)SymbolNode_FromSymbol(self, arg0);
+    return (Unknown *)SymbolNode_FromSymbol(self, (Symbol *)arg0);
 }
 
 

@@ -68,6 +68,10 @@ ClassTmpl ClassSymbolTmpl = {
 /*------------------------------------------------------------------------*/
 /* C API */
 
+int IsSymbol(Unknown *op) {
+    return CAST(Symbol, op) != (Symbol *)0;
+}
+
 static size_t getHashAndLength(unsigned char *str, size_t *len) {
     /* djb2 from http://www.cse.yorku.ca/~oz/hash.html */
     unsigned char *p;

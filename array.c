@@ -12,6 +12,11 @@
 #include <stdlib.h>
 
 
+struct Array {
+    VariableObject base;
+};
+
+
 #define ARRAY(op) ((Unknown **)VariableObject_ITEM_BASE(op))
 
 
@@ -30,7 +35,7 @@ static Unknown *Array_item(Unknown *_self, Unknown *arg0, Unknown *arg1) {
         return 0;
     }
     index = Integer_AsCPtrdiff(arg);
-    if (index < 0 || self->size <= (size_t)index) {
+    if (index < 0 || self->base.size <= (size_t)index) {
         Halt(HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
@@ -49,7 +54,7 @@ static Unknown *Array_setItem(Unknown *_self, Unknown *arg0, Unknown *arg1) {
         return 0;
     }
     index = Integer_AsCPtrdiff(arg);
-    if (index < 0 || self->size <= (size_t)index) {
+    if (index < 0 || self->base.size <= (size_t)index) {
         Halt(HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
@@ -67,7 +72,7 @@ static Unknown *Array_do(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     Unknown *result;
     
     self = (Array *)_self;
-    for (i = 0; i < self->size; ++i) {
+    for (i = 0; i < self->base.size; ++i) {
         result = Call(GLOBAL(theInterpreter), arg0, OPER_APPLY, ARRAY(self)[i], 0);
         if (!result)
             return 0; /* unwind */
@@ -86,18 +91,18 @@ static Unknown *Array_printString(Unknown *_self, Unknown *arg0, Unknown *arg1) 
     
     self = (Array *)_self;
     
-    if (self->size == 0)
+    if (self->base.size == 0)
         return (Unknown *)String_FromCString("{}");
     
     result = String_FromCString("{ ");
     comma = String_FromCString(", ");
     
-    for (i = 0; i < self->size; ++i) {
+    for (i = 0; i < self->base.size; ++i) {
         s = (String *)Attr(GLOBAL(theInterpreter), ARRAY(self)[i], printString);
         if (!s)
             return 0; /* unwind */
         String_Concat(&result, s);
-        if (i + 1 < self->size)
+        if (i + 1 < self->base.size)
             String_Concat(&result, comma);
     }
     
@@ -115,7 +120,7 @@ static void Array_zero(Object *_self) {
     
     self = (Array *)_self;
     (*CLASS(Array)->superclass->zero)(_self);
-    for (i = 0; i < self->size; ++i) {
+    for (i = 0; i < self->base.size; ++i) {
         ARRAY(self)[i] = GLOBAL(uninit);
     }
 }
@@ -127,7 +132,7 @@ static void Array_zero(Object *_self) {
 typedef VariableObjectSubclass ArraySubclass;
 
 static AccessorTmpl accessors[] = {
-    { "size", T_SIZE, offsetof(Array, size), Accessor_READ },
+    { "size", T_SIZE, offsetof(Array, base.size), Accessor_READ },
     { 0 }
 };
 
@@ -185,7 +190,7 @@ Array *Array_WithArguments(Unknown **stackPointer, size_t argumentCount,
     Unknown *item;
     size_t i, n, varArgCount;
     
-    varArgCount = varArgArray ? varArgArray->size - skip : 0;
+    varArgCount = varArgArray ? varArgArray->base.size - skip : 0;
     n = argumentCount + varArgCount;
     
     argumentArray = (Array *)Object_NewVar(CLASS(Array), n);
@@ -227,18 +232,18 @@ Array *Array_FromVAList(va_list ap) {
         }
         ARRAY(newArray)[i] = obj;
     }
-    newArray->size = i;
+    newArray->base.size = i;
     return newArray;
 }
 
 size_t Array_Size(Array *self) {
-    return self->size;
+    return self->base.size;
 }
 
 Unknown *Array_GetItem(Array *self, size_t index) {
     Unknown *item;
     
-    if (index < 0 || self->size <= index) {
+    if (index < 0 || self->base.size <= index) {
         Halt(HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
@@ -247,7 +252,7 @@ Unknown *Array_GetItem(Array *self, size_t index) {
 }
 
 Unknown *Array_SetItem(Array *self, size_t index, Unknown *value) {
-    if (index < 0 || self->size <= index) {
+    if (index < 0 || self->base.size <= index) {
         Halt(HALT_INDEX_ERROR, "index out of range");
         return 0;
     }
@@ -259,7 +264,7 @@ void Array_Sort(Array *self,
                    int (*compare)(Unknown *const *, Unknown *const *))
 {
     qsort(ARRAY(self),
-          self->size,
+          self->base.size,
           sizeof(Unknown *),
           (int(*)(const void *, const void *))compare
         );

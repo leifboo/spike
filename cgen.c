@@ -1,9 +1,10 @@
 
 #include "cgen.h"
 
+#include "char.h"
 #include "float.h"
 #include "heart.h"
-#include "host.h"
+#include "int.h"
 #include "module.h"
 #include "native.h"
 #include "obj.h"
@@ -90,7 +91,7 @@ typedef struct ClassCodeGen {
     struct CodeGen *generic;
     Stmt *classDef;
     BehaviorTmpl *behaviorTmpl;
-    Unknown *source;
+    String *source;
 } ClassCodeGen;
 
 typedef struct RodataEntry {
@@ -601,13 +602,13 @@ static unsigned int getLiteralIndex(Unknown *literal, OpcodeGen *cgen) {
     mcg = cgen->generic->module;
     
     if (klass == CLASS(Integer)) {
-        long value = Host_IntegerAsCLong(literal);
+        long value = Integer_AsCLong((Integer *)literal);
         index = getIntLiteralIndex(value, mcg);
     } else if (klass == CLASS(Float)) {
-        double value = Host_FloatAsCDouble(literal);
+        double value = Float_AsCDouble((Float *)literal);
         index = getFloatLiteralIndex(value, mcg);
     } else if (klass == CLASS(Char)) {
-        unsigned int value = (unsigned char)Host_CharAsCChar(literal);
+        unsigned int value = (unsigned char)Char_AsCChar((Char *)literal);
         index = getCharLiteralIndex(value, mcg);
     } else if (klass == CLASS(String)) {
         index = getStrLiteralIndex((String *)literal, mcg);
@@ -649,7 +650,7 @@ static unsigned int getLiteralIndex(Unknown *literal, OpcodeGen *cgen) {
 static Unknown *emitCodeForInt(int intValue, OpcodeGen *cgen) {
     Unknown *intObj = 0;
     
-    intObj = Host_IntegerFromCLong(intValue);
+    intObj = (Unknown *)Integer_FromCLong(intValue);
     if (!intObj) {
         goto unwind;
     }
@@ -714,7 +715,7 @@ static Unknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         _(emitCodeForInt(expr->u.def.index, cgen));
         _(emitCodeForInt(expr->aux.block.argumentCount, cgen));
         EMIT_OPCODE(OPCODE_SEND_MESSAGE);
-        _(emitLiteralIndex(blockCopy, cgen));
+        _(emitLiteralIndex((Unknown *)blockCopy, cgen));
         encodeUnsignedInt(2, cgen);
         cgen->stackPointer -= 2;
         /* } */
@@ -735,7 +736,7 @@ static Unknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         }
         ++cgen->nMessageSends;
         EMIT_OPCODE(OPCODE_SEND_MESSAGE);
-        _(emitLiteralIndex(compoundExpression, cgen));
+        _(emitLiteralIndex((Unknown *)compoundExpression, cgen));
         encodeUnsignedInt(argumentCount, cgen);
         cgen->stackPointer -= argumentCount + 1;
         tallyPush(cgen); /* result */
@@ -789,7 +790,7 @@ static Unknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         EMIT_OPCODE(opcode);
         switch (expr->left->kind) {
         case EXPR_ATTR:
-            _(emitLiteralIndex(expr->left->sym->sym, cgen));
+            _(emitLiteralIndex((Unknown *)expr->left->sym->sym, cgen));
             break;
         case EXPR_ATTR_VAR:
             --cgen->stackPointer;
@@ -807,7 +808,7 @@ static Unknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
         ++cgen->nMessageSends;
         EMIT_OPCODE(isSuper ? OPCODE_GET_ATTR_SUPER : OPCODE_GET_ATTR);
-        _(emitLiteralIndex(expr->sym->sym, cgen));
+        _(emitLiteralIndex((Unknown *)expr->sym->sym, cgen));
         CHECK_STACKP();
         break;
     case EXPR_ATTR_VAR:
@@ -909,7 +910,7 @@ static Unknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         EMIT_OPCODE(isSuper
                     ? OPCODE_SEND_MESSAGE_SUPER
                     : OPCODE_SEND_MESSAGE);
-        _(emitLiteralIndex(expr->aux.keywords, cgen));
+        _(emitLiteralIndex((Unknown *)expr->aux.keywords, cgen));
         encodeUnsignedInt(argumentCount, cgen);
         cgen->stackPointer -= argumentCount + 1;
         tallyPush(cgen); /* result */
@@ -1009,7 +1010,7 @@ static Unknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
             EMIT_OPCODE(isSuper
                         ? OPCODE_GET_ATTR_SUPER
                         : OPCODE_GET_ATTR);
-            _(emitLiteralIndex(expr->left->sym->sym, cgen));
+            _(emitLiteralIndex((Unknown *)expr->left->sym->sym, cgen));
             break;
         case EXPR_ATTR_VAR:
             EMIT_OPCODE(isSuper
@@ -1029,7 +1030,7 @@ static Unknown *inPlaceAttrOp(Expr *expr, OpcodeGen *cgen) {
         EMIT_OPCODE(isSuper
                     ? OPCODE_SET_ATTR_SUPER
                     : OPCODE_SET_ATTR);
-        _(emitLiteralIndex(expr->left->sym->sym, cgen));
+        _(emitLiteralIndex((Unknown *)expr->left->sym->sym, cgen));
         cgen->stackPointer -= 2;
         break;
     case EXPR_ATTR_VAR:
@@ -1576,7 +1577,7 @@ static Unknown *emitCodeForMethod(Stmt *stmt, CodeGen *outer) {
     OpcodeGen *cgen; MethodCodeGen *mcg;
     Stmt *body, *s;
     Stmt sentinel;
-    Unknown *selector;
+    Symbol *selector;
     size_t stackSize;
     
     selector = stmt->u.method.name->sym;
@@ -1858,7 +1859,7 @@ static Unknown *generateInit(Stmt *stmtList, OpcodeGen *cgen) {
     tallyPush(cgen);
     ++cgen->nMessageSends;
     EMIT_OPCODE(OPCODE_SEND_MESSAGE_SUPER);
-    _(emitLiteralIndex(_init, cgen));
+    _(emitLiteralIndex((Unknown *)_init, cgen));
     encodeUnsignedInt(0, cgen);
     EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
     
@@ -1873,10 +1874,10 @@ static Unknown *generateInit(Stmt *stmtList, OpcodeGen *cgen) {
                 def = s->expr->left;
                 EMIT_OPCODE(OPCODE_PUSH_SELF); /* module object */
                 tallyPush(cgen);
-                _(emitCodeForLiteral(s->u.method.name->sym, cgen));
+                _(emitCodeForLiteral((Unknown *)s->u.method.name->sym, cgen));
                 ++cgen->nMessageSends;
                 EMIT_OPCODE(OPCODE_SEND_MESSAGE);
-                _(emitLiteralIndex(_thunk, cgen));
+                _(emitLiteralIndex((Unknown *)_thunk, cgen));
                 encodeUnsignedInt(1, cgen);
                 EMIT_OPCODE(def->u.def.storeOpcode);
                 encodeUnsignedInt(def->u.def.index, cgen);
@@ -1899,11 +1900,11 @@ static Unknown *generateInit(Stmt *stmtList, OpcodeGen *cgen) {
 
 typedef Unknown *CodeGenerator(Stmt *, OpcodeGen *);
 
-static Unknown *generateMethod(Unknown *selector,
-                                  size_t argumentCount,
-                                  CodeGenerator *generator,
-                                  Stmt *stmtList,
-                                  CodeGen *outer)
+static Unknown *generateMethod(Symbol *selector,
+                               size_t argumentCount,
+                               CodeGenerator *generator,
+                               Stmt *stmtList,
+                               CodeGen *outer)
 {
     CodeGen gcgen;
     OpcodeGen *cgen; MethodCodeGen *mcg;
@@ -2027,7 +2028,7 @@ static Unknown *createClass(Stmt *classDef, ModuleCodeGen *cgen) {
     memset(classTmpl, 0, sizeof(ClassTmpl));
     
     classTmpl->symbol = classDef->expr->sym->sym;
-    classTmpl->name = Host_SymbolAsCString(classTmpl->symbol);
+    classTmpl->name = Symbol_AsCString(classTmpl->symbol);
     
     classTmpl->classVarIndex = classDef->expr->u.def.index;
     classTmpl->superclassVarIndex = classDef->u.klass.superclassName->u.ref.def->u.def.index;

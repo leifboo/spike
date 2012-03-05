@@ -417,6 +417,10 @@ int IO_Boot(void) {
     return 1;
 }
 
+/*****/ int IsFileStream(Unknown *op) {
+    return CAST(FileStream, op) != (FileStream *)0;
+}
+
 FILE *FileStream_AsCFileStream(FileStream *self) {
     return self->stream;
 }

@@ -10,8 +10,10 @@
 #include <stddef.h>
 
 
+struct Array;
 struct Interpreter;
 struct Method;
+struct Symbol;
 
 
 #define SUPER (0)
@@ -52,17 +54,17 @@ typedef Unknown *(*NativeCode)(Unknown *, Unknown *, Unknown *);
 
 struct Method *NewNativeMethod(NativeCodeFlags, NativeCode);
 
-Unknown *SendMessage(struct Interpreter *, Unknown *, unsigned int, Unknown *, Unknown *);
+Unknown *SendMessage(struct Interpreter *, Unknown *, unsigned int, struct Symbol *, struct Array *);
 
 Unknown *SendOper(struct Interpreter *, Unknown *, Oper, ...);
 Unknown *VSendOper(struct Interpreter *, Unknown *, Oper, va_list);
 Unknown *Call(struct Interpreter *, Unknown *, CallOper, ...);
 Unknown *VCall(struct Interpreter *, Unknown *, CallOper, va_list);
-Unknown *Attr(struct Interpreter *, Unknown *, Unknown *);
-Unknown *SetAttr(struct Interpreter *, Unknown *, Unknown *, Unknown *);
-Unknown *Send(struct Interpreter *, Unknown *, Unknown *, ...);
-Unknown *VSend(struct Interpreter *, Unknown *, Unknown *, va_list);
-Unknown *SendWithArguments(struct Interpreter *, Unknown *, Unknown *, Unknown *);
+Unknown *Attr(struct Interpreter *, Unknown *, struct Symbol *);
+Unknown *SetAttr(struct Interpreter *, Unknown *, struct Symbol *, Unknown *);
+Unknown *Send(struct Interpreter *, Unknown *, struct Symbol *, ...);
+Unknown *VSend(struct Interpreter *, Unknown *, struct Symbol *, va_list);
+Unknown *SendWithArguments(struct Interpreter *, Unknown *, struct Symbol *, struct Array *);
 
 void Halt(int, const char *);
 void HaltWithFormat(int, const char *, ...);

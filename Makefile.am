@@ -45,14 +45,14 @@ libspike_a_SOURCES = \
 	gram.c \
 	gram.h \
 	heart.h \
-	host.c \
-	host.h \
 	int.c \
 	int.h \
 	interp.c \
 	interp.h \
 	io.c \
 	io.h \
+	kwsel.c \
+	kwsel.h \
 	lexer.c \
 	lexer.h \
 	metaclass.c \

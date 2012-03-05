@@ -1,13 +1,19 @@
 
 #include "native.h"
 
+#include "array.h"
 #include "class.h"
-#include "host.h"
+#include "heart.h"
 #include "interp.h"
 #include "obj.h"
 #include "rodata.h"
+#include "str.h"
+#include "sym.h"
+
 #include <assert.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 
 Method *NewNativeMethod(NativeCodeFlags flags, NativeCode nativeCode) {
@@ -86,23 +92,21 @@ Method *NewNativeMethod(NativeCodeFlags flags, NativeCode nativeCode) {
 Unknown *SendMessage(Interpreter *interpreter,
                             Unknown *obj,
                             unsigned int ns,
-                            Unknown *selector,
-                            Unknown *argumentArray)
+                            Symbol *selector,
+                            Array *argumentArray)
 {
     return Interpreter_SendMessage(interpreter, obj, ns, selector, argumentArray);
 }
 
 static Unknown *vSendMessage(Interpreter *interpreter,
-                                Unknown *obj, unsigned int ns, Unknown *selector, va_list ap)
+                                Unknown *obj, unsigned int ns, Symbol *selector, va_list ap)
 {
-    Unknown *argumentList;
-
-    argumentList = Host_ArgsFromVAList(ap);
+    Array *argumentList = Array_FromVAList(ap);
     return SendMessage(interpreter, obj, ns, selector, argumentList);
 }
 
 static Unknown *sendMessage(Interpreter *interpreter,
-                               Unknown *obj, unsigned int ns, Unknown *selector, ...)
+                               Unknown *obj, unsigned int ns, Symbol *selector, ...)
 {
     Unknown *result;
     va_list ap;
@@ -141,15 +145,15 @@ Unknown *VCall(Interpreter *interpreter, Unknown *obj, CallOper oper, va_list ap
     return vSendMessage(interpreter, obj, METHOD_NAMESPACE_RVALUE, *operCallSelectors[oper].selector, ap);
 }
 
-Unknown *Attr(Interpreter *interpreter, Unknown *obj, Unknown *name) {
+Unknown *Attr(Interpreter *interpreter, Unknown *obj, Symbol *name) {
     return SendMessage(interpreter, obj, METHOD_NAMESPACE_RVALUE, name, emptyArgs);
 }
 
-Unknown *SetAttr(Interpreter *interpreter, Unknown *obj, Unknown *name, Unknown *value) {
+Unknown *SetAttr(Interpreter *interpreter, Unknown *obj, Symbol *name, Unknown *value) {
     return sendMessage(interpreter, obj, METHOD_NAMESPACE_LVALUE, name, value, 0);
 }
 
-Unknown *Send(Interpreter *interpreter, Unknown *obj, Unknown *selector, ...) {
+Unknown *Send(Interpreter *interpreter, Unknown *obj, Symbol *selector, ...) {
     Unknown *result;
     va_list ap;
     
@@ -159,38 +163,68 @@ Unknown *Send(Interpreter *interpreter, Unknown *obj, Unknown *selector, ...) {
     return result;
 }
 
-Unknown *VSend(Interpreter *interpreter, Unknown *obj, Unknown *selector, va_list ap) {
+Unknown *VSend(Interpreter *interpreter, Unknown *obj, Symbol *selector, va_list ap) {
     return vSendMessage(interpreter, obj, METHOD_NAMESPACE_RVALUE, selector, ap);
 }
 
-Unknown *SendWithArguments(Interpreter *interpreter, Unknown *obj, Unknown *name,
-                                  Unknown *argumentArray)
+Unknown *SendWithArguments(Interpreter *interpreter, Unknown *obj, Symbol *name,
+                           Array *argumentArray)
 {
     return SendMessage(interpreter,
-                           obj,
-                           METHOD_NAMESPACE_RVALUE,
-                           name,
-                           argumentArray);
+                       obj,
+                       METHOD_NAMESPACE_RVALUE,
+                       name,
+                       argumentArray);
 }
 
 
 /*------------------------------------------------------------------------*/
 /* halting */
 
+static const char *haltDesc(int code) {
+    const char *desc;
+    
+    switch (code) {
+    case HALT_ASSERTION_ERROR: desc = "assertion error"; break;
+    case HALT_ERROR:           desc = "error";           break;
+    case HALT_INDEX_ERROR:     desc = "index error";     break;
+    case HALT_KEY_ERROR:       desc = "key error";       break;
+    case HALT_MEMORY_ERROR:    desc = "memory error";    break;
+    case HALT_RUNTIME_ERROR:   desc = "runtime error";   break;
+    case HALT_TYPE_ERROR:      desc = "type error";      break;
+    case HALT_VALUE_ERROR:     desc = "value error";     break;
+    default:
+        desc = "unknown";
+        break;
+    }
+    return desc;
+}
+
 void Halt(int code, const char *message) {
-    Host_Halt(code, message);
+    if (GLOBAL(theInterpreter))
+        Interpreter_PrintCallStack(GLOBAL(theInterpreter));
+    fprintf(stderr, "halt: %s: %s\n", haltDesc(code), message);
+    abort(); /* XXX: The proper thing to do is unwind. */
+}
+
+static void VHaltWithFormat(int code, const char *format, va_list args) {
+    fprintf(stderr, "halt: %s: ", haltDesc(code));
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
+    abort(); /* XXX */
 }
 
 void HaltWithFormat(int code, const char *format, ...) {
     va_list args;
     
     va_start(args, format);
-    Host_VHaltWithFormat(code, format, args);
+    VHaltWithFormat(code, format, args);
     va_end(args);
 }
 
 void HaltWithString(int code, Unknown *message) {
-    Host_HaltWithString(code, message);
+    String *str = CAST(String, message);
+    Halt(code, String_AsCString(str));
 }
 
 
@@ -198,13 +232,13 @@ void HaltWithString(int code, Unknown *message) {
 /* argument processing */
 
 int IsArgs(Unknown *op) {
-    return Host_IsArgs(op);
+    return CAST(Array, op) != (Array *)0;
 }
 
 size_t ArgsSize(Unknown *args) {
-    return Host_ArgsSize(args);
+    return Array_Size(CAST(Array, args));
 }
 
 Unknown *GetArg(Unknown *args, size_t index) {
-    return Host_GetArg(args, index);
+    return Array_GetItem(CAST(Array, args), index);
 }

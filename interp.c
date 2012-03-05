@@ -1,14 +1,17 @@
 
 #include "interp.h"
 
+#include "array.h"
 #include "behavior.h"
 #include "bool.h"
 #include "class.h"
 #include "heart.h"
-#include "host.h"
+#include "int.h"
 #include "module.h"
 #include "native.h"
 #include "rodata.h"
+#include "str.h"
+#include "sym.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -486,12 +489,12 @@ static Unknown *Context_blockCopy(Unknown *_self, Unknown *arg0, Unknown *arg1) 
     Context *newContext;
     
     self = (Context *)_self;
-    if (!Host_IsInteger(arg0) || !Host_IsInteger(arg1)) {
+    if (!IsInteger(arg0) || !IsInteger(arg1)) {
         Halt(HALT_TYPE_ERROR, "an integer object is required");
         return 0;
     }
-    index = (size_t)Host_IntegerAsCLong(arg0);
-    numArgs = (size_t)Host_IntegerAsCLong(arg1);
+    index = (size_t)Integer_AsCLong((Integer *)arg0);
+    numArgs = (size_t)Integer_AsCLong((Integer *)arg1);
     
     /* The compiler guarantees that the home context is at least as
        big as the biggest child block context needs to be. */
@@ -512,9 +515,9 @@ static Unknown *Context_blockCopy(Unknown *_self, Unknown *arg0, Unknown *arg1) 
 static Unknown *Context_compoundExpression(Unknown *_self, Unknown *arg0, Unknown *arg1) {
     Context *self = (Context *)_self;
     return SendWithArguments(GLOBAL(theInterpreter),
-                                 self->homeContext->u.m.receiver,
-                                 compoundExpression,
-                                 arg0);
+                             self->homeContext->u.m.receiver,
+                             compoundExpression,
+                             (Array *)arg0);
 }
 
 
@@ -589,9 +592,9 @@ do { --stackPointer; \
 #define GET_CLASS(op) (((Object *)(op))->klass)
 
 
-static Fiber *trap(Interpreter *, Unknown *, Unknown *);
+static Fiber *trap(Interpreter *, Symbol *, Unknown *);
 static void trapUnknownOpcode(Interpreter *);
-static void halt(Interpreter *, Unknown *, Unknown *);
+static void halt(Interpreter *, Symbol *, Unknown *);
 
 
 Unknown *Interpreter_Interpret(Interpreter *self) {
@@ -613,7 +616,7 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
 
     /* message sending */
     MethodNamespace ns;
-    Unknown *selector = 0; /* ref counted */
+    Symbol *selector = 0;
     size_t argumentCount = 0, varArg = 0, variadic = 0, fixedArgumentCount = 0;
     unsigned int oper;
     Opcode *oldIP;
@@ -922,7 +925,7 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             receiver = stackPointer[argumentCount];
             methodClass = GET_CLASS(receiver);
             DECODE_UINT(index);
-            selector = literalPointer[index];
+            selector = (Symbol *)literalPointer[index];
             goto lookupMethodInClass;
         case OPCODE_SET_ATTR_SUPER:
             ns = METHOD_NAMESPACE_LVALUE;
@@ -936,7 +939,7 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             oldIP = instructionPointer - 1;
             methodClass = methodClass->superclass;
             DECODE_UINT(index);
-            selector = literalPointer[index];
+            selector = (Symbol *)literalPointer[index];
             goto lookupMethodInClass;
             
             /*** send opcodes -- "obj.*attr" ***/
@@ -952,7 +955,7 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             receiver = stackPointer[argumentCount + 1];
             methodClass = GET_CLASS(receiver);
  perform:
-            selector = stackPointer[argumentCount];
+            selector = (Symbol *)stackPointer[argumentCount];
             if (0 /*!Host_IsSelector(selector)*/ ) {
                 --instructionPointer;
                 TRAP(mustBeSymbol, 0);
@@ -1007,7 +1010,7 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             methodClass = methodClass->superclass;
  send:
             ns = METHOD_NAMESPACE_RVALUE;
-            selector = literalPointer[index];
+            selector = (Symbol *)literalPointer[index];
             goto lookupMethodInClass;
 
             /*** send opcodes -- "(obj.*attr)(a1, a2, ...)" ***/
@@ -1038,7 +1041,7 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             methodClass = methodClass->superclass;
  sendVar:
             ns = METHOD_NAMESPACE_RVALUE;
-            selector = POP_OBJECT();
+            selector = (Symbol *)POP_OBJECT();
             goto lookupMethodInClass;
             
             /*** send opcodes -- generic ***/
@@ -1048,12 +1051,12 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             methodClass = GET_CLASS(receiver);
  sendNSVar:
             namespaceObj = stackPointer[2];
-            if (!Host_IsInteger(namespaceObj)) {
+            if (!IsInteger(namespaceObj)) {
                 assert(XXX); /* trap */
             }
-            ns = (MethodNamespace)Host_IntegerAsCLong(namespaceObj);
+            ns = (MethodNamespace)Integer_AsCLong((Integer *)namespaceObj);
             assert(0 <= ns && ns < NUM_METHOD_NAMESPACES);
-            selector = stackPointer[1];
+            selector = (Symbol *)stackPointer[1];
             if (0 /*!Host_IsSelector(selector)*/ ) {
                 --instructionPointer;
                 TRAP(mustBeSymbol, 0);
@@ -1113,9 +1116,9 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
                 message->ns = ns;
                 message->selector = selector;
                 message->arguments
-                    = Host_GetArgs(
+                    = Array_WithArguments(
                         stackPointer + varArg, argumentCount,
-                        varArgTuple, 0
+                        (Array *)varArgTuple, 0
                         );
                 
                 CLEAN(stackPointer, varArg + argumentCount);
@@ -1267,10 +1270,11 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
             if (variadic) {
                 /* initialize the argument array variable */
                 p = framePointer + maxFixedArgumentCount;
-                *p = Host_GetArgs(
-                    csp + varArg, excessStackArgCount,
-                    varArgTuple, consumedArrayArgCount
-                    );
+                *p = (Unknown *)
+                     Array_WithArguments(
+                         csp + varArg, excessStackArgCount,
+                         (Array *)varArgTuple, consumedArrayArgCount
+                         );
             }
             
             /* clean up the caller's stack */
@@ -1332,7 +1336,7 @@ Unknown *Interpreter_Interpret(Interpreter *self) {
                     tmp = GLOBAL(null);
                 break;
             case T_SIZE:
-                tmp = Host_IntegerFromCLong(*(size_t *)addr);
+                tmp = (Unknown *)Integer_FromCLong(*(size_t *)addr);
                 break;
             default:
                 trapUnknownOpcode(self);
@@ -1478,8 +1482,8 @@ Unknown *Interpreter_SendMessage(
     Interpreter *interpreter,
     Unknown *obj,
     unsigned int ns,
-    Unknown *selector,
-    Unknown *argumentArray
+    Symbol *selector,
+    Array *argumentArray
     )
 {
     static Method *start;
@@ -1531,9 +1535,9 @@ Unknown *Interpreter_SendMessage(
     
     /* push arguments on the stack */
     *--thisContext->stackp = obj;
-    *--thisContext->stackp = Host_IntegerFromCLong(ns);
-    *--thisContext->stackp = selector;
-    *--thisContext->stackp = argumentArray;
+    *--thisContext->stackp = (Unknown *)Integer_FromCLong(ns);
+    *--thisContext->stackp = (Unknown *)selector;
+    *--thisContext->stackp = (Unknown *)argumentArray;
     assert(thisContext->stackp >= &Context_VARIABLES(thisContext)[0]);
     
     /* interpret */
@@ -1667,7 +1671,8 @@ void Interpreter_PrintCallStack(Interpreter *self) {
     Context *ctxt, *home;
     Method *method;
     Behavior *methodClass;
-    Unknown *methodSel, *source;
+    Symbol *methodSel;
+    String *source;
     size_t offset;
     unsigned int lineNo;
     
@@ -1684,8 +1689,8 @@ void Interpreter_PrintCallStack(Interpreter *self) {
                ctxt,
                (ctxt == home ? " " : " [] in "),
                Behavior_NameAsCString(methodClass),
-               methodSel ? Host_SelectorAsCString(methodSel) : "<unknown>",
-               source ? Host_StringAsCString(source) : "<unknown>",
+               methodSel ? Symbol_AsCString(methodSel) : "<unknown>",
+               source ? String_AsCString(source) : "<unknown>",
                lineNo);
     }
 }
@@ -1694,7 +1699,7 @@ void Interpreter_PrintCallStack(Interpreter *self) {
 /*------------------------------------------------------------------------*/
 /* error handling */
 
-static Fiber *trap(Interpreter *self, Unknown *selector, Unknown *argument) {
+static Fiber *trap(Interpreter *self, Symbol *selector, Unknown *argument) {
     /* XXX */
     halt(self, selector, argument);
     return 0;
@@ -1704,22 +1709,22 @@ static void trapUnknownOpcode(Interpreter *self) {
     trap(self, unknownOpcode, 0);
 }
 
-void halt(Interpreter *self, Unknown *selector, Unknown *argument) {
+void halt(Interpreter *self, Symbol *selector, Unknown *argument) {
     if (argument) {
-        Unknown *symbol = 0; Message *message;
-        if (Host_IsSymbol(argument)) {
-            symbol = argument;
+        Symbol *symbol = 0; Message *message;
+        if (IsSymbol(argument)) {
+            symbol = (Symbol *)argument;
         }
         message = CAST(Message, argument);
         if (symbol) {
-            printf("\n%s '%s'", Host_SymbolAsCString(selector), Host_SymbolAsCString(symbol));
+            printf("\n%s '%s'", Symbol_AsCString(selector), Symbol_AsCString(symbol));
         } else if (message) {
-            printf("\n%s '%s'", Host_SymbolAsCString(selector), Host_SymbolAsCString(message->selector));
+            printf("\n%s '%s'", Symbol_AsCString(selector), Symbol_AsCString(message->selector));
         } else {
-            printf("\n%s", Host_SymbolAsCString(selector));
+            printf("\n%s", Symbol_AsCString(selector));
         }
     } else {
-        printf("\n%s", Host_SymbolAsCString(selector));
+        printf("\n%s", Symbol_AsCString(selector));
     }
     printf("\n\n");
     if (!self->printingStack) {

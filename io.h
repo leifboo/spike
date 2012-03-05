@@ -15,6 +15,7 @@ extern struct ClassTmpl ClassFileStreamTmpl;
 
 int IO_Boot(void);
 
+int IsFileStream(Unknown *);
 FILE *FileStream_AsCFileStream(FileStream *);
 
 

@@ -12,7 +12,7 @@ struct SymbolTable;
 
 typedef struct Token {
     int id;
-    Unknown *value;
+    struct Unknown *value;
     unsigned int lineNo;
 } Token;
 

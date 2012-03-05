@@ -1,153 +1,158 @@
 
 #include "rodata.h"
 
-#include "host.h"
+#include "array.h"
+#include "int.h"
+#include "kwsel.h"
 #include "native.h"
 #include "obj.h"
+#include "str.h"
+#include "sym.h"
+
 #include <stddef.h>
 #include <string.h>
 
 
-typedef struct { Unknown **p; const char *s; }           SymbolTableEntry;
-typedef SymbolTableEntry                                    SelectorTableEntry;
-typedef struct { Unknown **p; long i; }                  IntegerTableEntry;
-typedef struct { Unknown **p; const char *s; size_t n; } StringTableEntry;
+typedef struct { Symbol **p; const char *s; }            SymbolTableEntry;
+typedef SymbolTableEntry                                 SelectorTableEntry;
+typedef struct { Integer **p; long i; }                  IntegerTableEntry;
+typedef struct { String **p; const char *s; size_t n; }  StringTableEntry;
 
 
 /* symbols */
-Unknown *self;
+Symbol *self;
 
 
 /* selectors */
-Unknown *__add__;
-Unknown *__addr__;
-Unknown *__apply__;
-Unknown *__band__;
-Unknown *__bneg__;
-Unknown *__bor__;
-Unknown *__bxor__;
-Unknown *__div__;
-Unknown *__eq__;
-Unknown *__ge__;
-Unknown *__gt__;
-Unknown *__ind__;
-Unknown *__index__;
-Unknown *__le__;
-Unknown *__lneg__;
-Unknown *__lshift__;
-Unknown *__lt__;
-Unknown *__mod__;
-Unknown *__mul__;
-Unknown *__ne__;
-Unknown *__neg__;
-Unknown *__pos__;
-Unknown *__pred__;
-Unknown *__rshift__;
-Unknown *__str__;
-Unknown *__sub__;
-Unknown *__succ__;
-Unknown *_import;
-Unknown *_init;
-Unknown *_predef;
-Unknown *_thunk;
-Unknown *badExpr;
-Unknown *blockCopy;
-Unknown *cannotReenterBlock;
-Unknown *cannotReturn;
-Unknown *compoundExpression;
-Unknown *doesNotUnderstand;
-Unknown *failOnError;
-Unknown *importModule;
-Unknown *importPackage;
-Unknown *init;
-Unknown *_main;
-Unknown *mustBeBoolean;
-Unknown *mustBeSymbol;
-Unknown *mustBeTuple;
-Unknown *new;
-Unknown *noRunnableFiber;
-Unknown *numArgs;
-Unknown *printString;
-Unknown *recursiveDoesNotUnderstand;
-Unknown *redefinedSymbol;
-Unknown *source;
-Unknown *undefinedSymbol;
-Unknown *unknownOpcode;
-Unknown *wrongNumberOfArguments;
+Symbol *__add__;
+Symbol *__addr__;
+Symbol *__apply__;
+Symbol *__band__;
+Symbol *__bneg__;
+Symbol *__bor__;
+Symbol *__bxor__;
+Symbol *__div__;
+Symbol *__eq__;
+Symbol *__ge__;
+Symbol *__gt__;
+Symbol *__ind__;
+Symbol *__index__;
+Symbol *__le__;
+Symbol *__lneg__;
+Symbol *__lshift__;
+Symbol *__lt__;
+Symbol *__mod__;
+Symbol *__mul__;
+Symbol *__ne__;
+Symbol *__neg__;
+Symbol *__pos__;
+Symbol *__pred__;
+Symbol *__rshift__;
+Symbol *__str__;
+Symbol *__sub__;
+Symbol *__succ__;
+Symbol *_import;
+Symbol *_init;
+Symbol *_predef;
+Symbol *_thunk;
+Symbol *badExpr;
+Symbol *blockCopy;
+Symbol *cannotReenterBlock;
+Symbol *cannotReturn;
+Symbol *compoundExpression;
+Symbol *doesNotUnderstand;
+Symbol *failOnError;
+Symbol *importModule;
+Symbol *importPackage;
+Symbol *init;
+Symbol *_main;
+Symbol *mustBeBoolean;
+Symbol *mustBeSymbol;
+Symbol *mustBeTuple;
+Symbol *new;
+Symbol *noRunnableFiber;
+Symbol *numArgs;
+Symbol *printString;
+Symbol *recursiveDoesNotUnderstand;
+Symbol *redefinedSymbol;
+Symbol *source;
+Symbol *undefinedSymbol;
+Symbol *unknownOpcode;
+Symbol *wrongNumberOfArguments;
 
 /* selectors -- class names */
-Unknown *Boolean;
-Unknown *False;
-Unknown *True;
+Symbol *Boolean;
+Symbol *False;
+Symbol *True;
 
 /* selectors -- parser */
-Unknown *concat;
-Unknown *declSpecs;
-Unknown *exprAnd;
-Unknown *exprAssign;
-Unknown *exprAttr;
-Unknown *exprAttrVar;
-Unknown *exprBinaryOp;
-Unknown *exprBlock;
-Unknown *exprCall;
-Unknown *exprCompound;
-Unknown *exprCond;
-Unknown *exprId;
-Unknown *exprKeyword;
-Unknown *exprLiteral;
-Unknown *exprName;
-Unknown *exprNI;
-Unknown *exprOr;
-Unknown *exprPostOp;
-Unknown *exprPreOp;
-Unknown *exprUnaryOp;
-Unknown *isSpec;
-Unknown *left;
-Unknown *next;
-Unknown *nextArg;
-Unknown *operAdd;
-Unknown *operAddr;
-Unknown *operApply;
-Unknown *operBAnd;
-Unknown *operBNeg;
-Unknown *operBOr;
-Unknown *operBXOr;
-Unknown *operDiv;
-Unknown *operEq;
-Unknown *operGE;
-Unknown *operGT;
-Unknown *operInd;
-Unknown *operIndex;
-Unknown *operLE;
-Unknown *operLNeg;
-Unknown *operLShift;
-Unknown *operLT;
-Unknown *operMod;
-Unknown *operMul;
-Unknown *operNE;
-Unknown *operNeg;
-Unknown *operPos;
-Unknown *operPred;
-Unknown *operRShift;
-Unknown *operSub;
-Unknown *operSucc;
-Unknown *stmtBreak;
-Unknown *stmtCompound;
-Unknown *stmtContinue;
-Unknown *stmtDefClass;
-Unknown *stmtDefMethod;
-Unknown *stmtDefModule;
-Unknown *stmtDefSpec;
-Unknown *stmtDefVar;
-Unknown *stmtDoWhile;
-Unknown *stmtExpr;
-Unknown *stmtFor;
-Unknown *stmtIfElse;
-Unknown *stmtPragmaSource;
-Unknown *stmtReturn;
-Unknown *stmtWhile;
-Unknown *stmtYield;
-Unknown *symbolNodeForSymbol;
+Symbol *concat;
+Symbol *declSpecs;
+Symbol *exprAnd;
+Symbol *exprAssign;
+Symbol *exprAttr;
+Symbol *exprAttrVar;
+Symbol *exprBinaryOp;
+Symbol *exprBlock;
+Symbol *exprCall;
+Symbol *exprCompound;
+Symbol *exprCond;
+Symbol *exprId;
+Symbol *exprKeyword;
+Symbol *exprLiteral;
+Symbol *exprName;
+Symbol *exprNI;
+Symbol *exprOr;
+Symbol *exprPostOp;
+Symbol *exprPreOp;
+Symbol *exprUnaryOp;
+Symbol *isSpec;
+Symbol *left;
+Symbol *next;
+Symbol *nextArg;
+Symbol *operAdd;
+Symbol *operAddr;
+Symbol *operApply;
+Symbol *operBAnd;
+Symbol *operBNeg;
+Symbol *operBOr;
+Symbol *operBXOr;
+Symbol *operDiv;
+Symbol *operEq;
+Symbol *operGE;
+Symbol *operGT;
+Symbol *operInd;
+Symbol *operIndex;
+Symbol *operLE;
+Symbol *operLNeg;
+Symbol *operLShift;
+Symbol *operLT;
+Symbol *operMod;
+Symbol *operMul;
+Symbol *operNE;
+Symbol *operNeg;
+Symbol *operPos;
+Symbol *operPred;
+Symbol *operRShift;
+Symbol *operSub;
+Symbol *operSucc;
+Symbol *stmtBreak;
+Symbol *stmtCompound;
+Symbol *stmtContinue;
+Symbol *stmtDefClass;
+Symbol *stmtDefMethod;
+Symbol *stmtDefModule;
+Symbol *stmtDefSpec;
+Symbol *stmtDefVar;
+Symbol *stmtDoWhile;
+Symbol *stmtExpr;
+Symbol *stmtFor;
+Symbol *stmtIfElse;
+Symbol *stmtPragmaSource;
+Symbol *stmtReturn;
+Symbol *stmtWhile;
+Symbol *stmtYield;
+Symbol *symbolNodeForSymbol;
 
 SpecialSelector operSelectors[NUM_OPER] = {
     { &__succ__,   0 },
@@ -183,18 +188,18 @@ SpecialSelector operCallSelectors[NUM_CALL_OPER] = {
 
 
 /* integers */
-Unknown *zero;
-Unknown *one;
+Integer *zero;
+Integer *one;
 
 
 /* strings */
-Unknown *emptyString; static char strEmptyString[] = "";
-Unknown *unknownSelector; static char strUnknownSelector[] = "<unknown>";
-Unknown *unknownSourcePathname; static char strUnknownSourcePathname[] = "<filename>";
+String *emptyString; static char strEmptyString[] = "";
+String *unknownSelector; static char strUnknownSelector[] = "<unknown>";
+String *unknownSourcePathname; static char strUnknownSourcePathname[] = "<filename>";
 
 
 /* arguments */
-Unknown *emptyArgs;
+Array *emptyArgs;
 
 
 static SymbolTableEntry symbolTable[] = {
@@ -350,7 +355,7 @@ static StringTableEntry stringTable[] = {
 
 static int initSymbols(SymbolTableEntry *t) {
     for ( ; t->p; ++t) {
-        *t->p = Host_SymbolFromCString(t->s);
+        *t->p = Symbol_FromCString(t->s);
         if (!*t->p) {
             return -1;
         }
@@ -370,7 +375,7 @@ static int initSelectors(SelectorTableEntry *t) {
 
 static int initIntegers(IntegerTableEntry *t) {
     for ( ; t->p; ++t) {
-        *t->p = Host_IntegerFromCLong(t->i);
+        *t->p = Integer_FromCLong(t->i);
         if (!*t->p) {
             return -1;
         }
@@ -380,7 +385,7 @@ static int initIntegers(IntegerTableEntry *t) {
 
 static int initStrings(StringTableEntry *t) {
     for ( ; t->p; ++t) {
-        *t->p = Host_StringFromCStringAndLength(t->s, t->n - 1);
+        *t->p = String_FromCStringAndLength(t->s, t->n - 1);
         if (!*t->p) {
             return -1;
         }
@@ -399,7 +404,7 @@ int InitReadOnlyData(void) {
     if (initIntegers(integerTable) < 0)     { return -1; }
     if (initStrings(stringTable) < 0)       { return -1; }
     
-    emptyArgs = Host_EmptyArgs();
+    emptyArgs = Array_New(0);
     if (!emptyArgs) {
         return -1;
     }
@@ -407,12 +412,13 @@ int InitReadOnlyData(void) {
     return 0;
 }
 
-Unknown *ParseSelector(const char *methodName) {
-    Unknown *selector;
+Symbol *ParseSelector(const char *methodName) {
+    Symbol *selector;
     
     if (strchr(methodName, ':')) {
         /* keyword message */
-        Unknown *kw, *builder;
+        Symbol *kw;
+        Unknown *builder;
         const char *begin, *end;
         
         if (strchr(methodName, ' ') /*XXX*/ ||
@@ -420,18 +426,18 @@ Unknown *ParseSelector(const char *methodName) {
             Halt(HALT_ASSERTION_ERROR, "invalid method name");
             return 0;
         }
-        builder = Host_NewKeywordSelectorBuilder();
+        builder = NewKeywordSelectorBuilder();
         for (begin = end = methodName; *end; begin = end) {
             while (*end != ':')
                 ++end;
-            kw = Host_SymbolFromCStringAndLength(begin, end - begin);
-            Host_AppendKeyword(&builder, kw);
+            kw = Symbol_FromCStringAndLength(begin, end - begin);
+            AppendKeyword(&builder, kw);
             ++end; /* skip ':' */
         }
-        selector = Host_GetKeywordSelector(builder, 0);
+        selector = GetKeywordSelector(builder, 0);
         
     } else {
-        selector = Host_SymbolFromCString(methodName);
+        selector = Symbol_FromCString(methodName);
     }
     
     return selector;

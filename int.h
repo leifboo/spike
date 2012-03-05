@@ -12,9 +12,12 @@ typedef struct Integer Integer;
 extern struct ClassTmpl ClassIntegerTmpl;
 
 
+int IsInteger(Unknown *);
+
 Integer *Integer_FromCLong(long);
 Integer *Integer_FromCPtrdiff(ptrdiff_t);
-long Integer_AsCLong(Integer *);
+
+/***/long Integer_AsCLong(Integer *);
 ptrdiff_t Integer_AsCPtrdiff(Integer *);
 
 

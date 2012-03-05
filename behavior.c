@@ -3,12 +3,14 @@
 
 #include "cgen.h"
 #include "class.h"
+#include "dict.h"
 #include "heart.h"
-#include "host.h"
 #include "interp.h"
 #include "module.h"
 #include "native.h"
 #include "rodata.h"
+#include "sym.h"
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -92,7 +94,7 @@ void Behavior_Init(Behavior *self, Behavior *superclass, Module *module, size_t 
     self->module = module;
     
     for (ns = 0; ns < NUM_METHOD_NAMESPACES; ++ns) {
-        self->methodDict[ns] = Host_NewSymbolDict();
+        self->methodDict[ns] = IdentityDictionary_New();
     }
     for (i = 0; i < NUM_OPER; ++i) {
         self->operTable[i] = 0;
@@ -170,10 +172,10 @@ void Behavior_AddMethodsFromTemplate(Behavior *self, BehaviorTmpl *tmpl) {
         AccessorTmpl *accessorTmpl;
         
         for (accessorTmpl = tmpl->accessors; accessorTmpl->name; ++accessorTmpl) {
-            Unknown *selector;
+            Symbol *selector;
             Method *method;
             
-            selector = Host_SymbolFromCString(accessorTmpl->name);
+            selector = Symbol_FromCString(accessorTmpl->name);
             if (accessorTmpl->flags & Accessor_READ) {
                 method = CodeGen_NewNativeAccessor(Accessor_READ,
                                                       accessorTmpl->type,
@@ -194,7 +196,7 @@ void Behavior_AddMethodsFromTemplate(Behavior *self, BehaviorTmpl *tmpl) {
         MethodTmpl *methodTmpl;
         
         for (methodTmpl = tmpl->methods; methodTmpl->name; ++methodTmpl) {
-            Unknown *selector;
+            Symbol *selector;
             Method *method;
             
             selector = ParseSelector(methodTmpl->name);
@@ -206,7 +208,7 @@ void Behavior_AddMethodsFromTemplate(Behavior *self, BehaviorTmpl *tmpl) {
         MethodTmpl *methodTmpl;
         
         for (methodTmpl = tmpl->lvalueMethods; methodTmpl->name; ++methodTmpl) {
-            Unknown *selector;
+            Symbol *selector;
             Method *method;
             
             selector = ParseSelector(methodTmpl->name);
@@ -232,11 +234,11 @@ void Behavior_AddMethodsFromTemplate(Behavior *self, BehaviorTmpl *tmpl) {
     }
 }
 
-static void maybeAccelerateMethod(Behavior *self, MethodNamespace ns, Unknown *selector, Method *method) {
+static void maybeAccelerateMethod(Behavior *self, MethodNamespace ns, Symbol *selector, Method *method) {
     const char *name;
     Oper oper;
     
-    name = Host_SelectorAsCString(selector);
+    name = Symbol_AsCString(selector);
     if (!name) {
         return;
     }
@@ -270,27 +272,27 @@ static void maybeAccelerateMethod(Behavior *self, MethodNamespace ns, Unknown *s
     }
 }
 
-void Behavior_InsertMethod(Behavior *self, MethodNamespace ns, Unknown *selector, Method *method) {
-    Host_DefineSymbol(self->methodDict[ns], selector, (Unknown *)method);
+void Behavior_InsertMethod(Behavior *self, MethodNamespace ns, Symbol *selector, Method *method) {
+    IdentityDictionary_SetItem(self->methodDict[ns], (Unknown *)selector, (Unknown *)method);
     maybeAccelerateMethod(self, ns, selector, method);
 }
 
-Method *Behavior_LookupMethod(Behavior *self, MethodNamespace ns, Unknown *selector) {
+Method *Behavior_LookupMethod(Behavior *self, MethodNamespace ns, Symbol *selector) {
     Unknown *value;
     
-    value = Host_SymbolValue(self->methodDict[ns], selector);
+    value = IdentityDictionary_GetItem(self->methodDict[ns], (Unknown *)selector);
     if (value) {
         return CAST(Method, value);
     }
     return 0;
 }
 
-Unknown *Behavior_FindSelectorOfMethod(Behavior *self, Method *method) {
+Symbol *Behavior_FindSelectorOfMethod(Behavior *self, Method *method) {
     MethodNamespace ns;
-    Unknown *selector;
+    Symbol *selector;
     
     for (ns = 0; ns < NUM_METHOD_NAMESPACES; ++ns) {
-        selector = Host_FindSymbol(self->methodDict[ns], (Unknown *)method);
+        selector = (Symbol *)IdentityDictionary_KeyWithValue(self->methodDict[ns], (Unknown *)method);
         if (selector) {
             return selector;
         }
@@ -300,7 +302,7 @@ Unknown *Behavior_FindSelectorOfMethod(Behavior *self, Method *method) {
 
 const char *Behavior_NameAsCString(Behavior *self) {
     Class *c;
-    Unknown *name;
+    Symbol *name;
     const char *result;
     
     c = CAST(Class, self);
@@ -308,6 +310,6 @@ const char *Behavior_NameAsCString(Behavior *self) {
         return "<unknown>";
     
     name = Class_Name(c);
-    result = Host_SymbolAsCString(name);
+    result = Symbol_AsCString(name);
     return result;
 }

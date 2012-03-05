@@ -10,7 +10,9 @@
 #include <stddef.h>
 
 
+struct Array;
 struct Behavior;
+struct Symbol;
 
 
 typedef struct Context Context;
@@ -111,7 +113,7 @@ enum {
 struct Method {
     VariableObject base;
     struct {
-        Unknown *source;
+        struct String *source;
         size_t lineCodeTally;
         Opcode *lineCodes;
     } debug;
@@ -122,8 +124,8 @@ struct Method {
 struct Message {
     Object base;
     unsigned int ns;
-    Unknown *selector;
-    Unknown *arguments;
+    struct Symbol *selector;
+    struct Array *arguments;
 };
 
 
@@ -147,7 +149,7 @@ Interpreter *Interpreter_New(void);
 void Interpreter_Init(Interpreter *, ProcessorScheduler *);
 Unknown *Interpreter_Interpret(Interpreter *);
 Unknown *Interpreter_SendMessage(Interpreter *, Unknown *,
-                                       unsigned int, Unknown *, Unknown *);
+                                 unsigned int, struct Symbol *, struct Array *);
 void Interpreter_SynchronousSignal(Interpreter *, Semaphore *);
 void Interpreter_TransferTo(Interpreter *, Fiber *);
 Fiber *Interpreter_WakeHighestPriority(Interpreter *);

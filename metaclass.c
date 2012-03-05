@@ -4,8 +4,9 @@
 #include "behavior.h"
 #include "class.h"
 #include "heart.h"
-#include "host.h"
 #include "interp.h"
+#include "sym.h"
+
 #include <assert.h>
 #include <stdlib.h>
 
@@ -19,14 +20,14 @@ static Unknown *Metaclass_new(Unknown *_self, Unknown *name, Unknown *arg1) {
     Class *newClass;
     
     self = (Metaclass *)_self;
-    if (!Host_IsSymbol(name)) {
+    if (!IsSymbol(name)) {
         Halt(HALT_TYPE_ERROR, "a symbol is required");
         return 0;
     }
     newClass = (Class *)Object_New(CLASS(Class));
     if (!newClass)
         return 0;
-    newClass->name = name;
+    newClass->name = (Symbol *)name;
     return (Unknown *)newClass;
 }
 

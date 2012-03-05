@@ -76,9 +76,9 @@ typedef struct MethodTmpl {
     Opcode *bytecode;
     struct MethodTmpl *nextInScope;
     MethodNamespace ns; /* XXX: suspect */
-    Unknown *selector;
+    struct Symbol *selector;
     struct {
-        Unknown *source;
+        struct String *source;
         size_t lineCodeTally;
         Opcode *lineCodes;
     } debug;
@@ -107,7 +107,7 @@ struct Behavior {
     Behavior *superclass;
     struct Module *module;
     
-    Unknown *methodDict[NUM_METHOD_NAMESPACES];
+    struct IdentityDictionary *methodDict[NUM_METHOD_NAMESPACES];
     OperTable operTable;
     OperCallTable operCallTable;
     Method *assignInd;   /*  "*p = v"    */
@@ -132,9 +132,9 @@ extern struct ClassTmpl ClassBehaviorTmpl;
 void Behavior_Init(Behavior *self, Behavior *superclass, struct Module *module, size_t instVarCount);
 void Behavior_InitFromTemplate(Behavior *self, BehaviorTmpl *tmpl, Behavior *superclass, struct Module *module);
 void Behavior_AddMethodsFromTemplate(Behavior *self, BehaviorTmpl *tmpl);
-void Behavior_InsertMethod(Behavior *, MethodNamespace, Unknown *, Method *);
-Method *Behavior_LookupMethod(Behavior *, MethodNamespace, Unknown *);
-Unknown *Behavior_FindSelectorOfMethod(Behavior *, Method *);
+void Behavior_InsertMethod(Behavior *, MethodNamespace, struct Symbol *, Method *);
+Method *Behavior_LookupMethod(Behavior *, MethodNamespace, struct Symbol *);
+struct Symbol *Behavior_FindSelectorOfMethod(Behavior *, Method *);
 const char *Behavior_NameAsCString(Behavior *);
 
 

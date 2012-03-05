@@ -7,12 +7,13 @@
 #include <stdio.h>
 
 
-typedef VariableObject String;
+typedef struct String String;
 
 
 extern struct ClassTmpl ClassStringTmpl;
 
 
+int IsString(Unknown *);
 String *String_FromCString(const char *);
 String *String_FromCStringAndLength(const char *, size_t);
 String *String_FromCStream(FILE *, size_t);
