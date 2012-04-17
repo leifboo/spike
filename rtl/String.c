@@ -32,17 +32,17 @@ extern Object false, true;
 /*------------------------------------------------------------------------*/
 /* method helpers */
 
-static Object *String_binaryLogicalOper(struct String *self, Object *arg0, SpkOper oper) {
+static Object *String_binaryLogicalOper(struct String *self, Object *arg0, Oper oper) {
     struct String *arg;
     Object *result;
     
     arg = CAST(String, arg0);
     if (!arg) {
         switch (oper) {
-        case Spk_OPER_EQ:
+        case OPER_EQ:
             /* XXX: 0 == 0.0 */
             return &false;
-        case Spk_OPER_NE:
+        case OPER_NE:
             return &true;
         default:
             SpikeError(&__sym_typeError);
@@ -51,12 +51,12 @@ static Object *String_binaryLogicalOper(struct String *self, Object *arg0, SpkOp
     }
     
     switch (oper) {
-    case Spk_OPER_LT: result = BOOL(strcmp(STR(self), STR(arg)) < 0);  break;
-    case Spk_OPER_GT: result = BOOL(strcmp(STR(self), STR(arg)) > 0);  break;
-    case Spk_OPER_LE: result = BOOL(strcmp(STR(self), STR(arg)) <= 0); break;
-    case Spk_OPER_GE: result = BOOL(strcmp(STR(self), STR(arg)) >= 0); break;
-    case Spk_OPER_EQ: result = BOOL(strcmp(STR(self), STR(arg)) == 0); break;
-    case Spk_OPER_NE: result = BOOL(strcmp(STR(self), STR(arg)) != 0); break;
+    case OPER_LT: result = BOOL(strcmp(STR(self), STR(arg)) < 0);  break;
+    case OPER_GT: result = BOOL(strcmp(STR(self), STR(arg)) > 0);  break;
+    case OPER_LE: result = BOOL(strcmp(STR(self), STR(arg)) <= 0); break;
+    case OPER_GE: result = BOOL(strcmp(STR(self), STR(arg)) >= 0); break;
+    case OPER_EQ: result = BOOL(strcmp(STR(self), STR(arg)) == 0); break;
+    case OPER_NE: result = BOOL(strcmp(STR(self), STR(arg)) != 0); break;
     default: result = 0; /* not reached */
     }
     return result;
@@ -83,7 +83,7 @@ static struct String *String_fromCStringAndLength(const char *str, size_t len) {
 /*------------------------------------------------------------------------*/
 /* methods -- operators */
 
-/* Spk_OPER_ADD */
+/* OPER_ADD */
 Object *String_add(struct String *self, Object *arg0) {
     struct String *arg, *result;
     size_t resultLen;
@@ -104,37 +104,37 @@ Object *String_add(struct String *self, Object *arg0) {
     return (Object *)result;
 }
 
-/* Spk_OPER_LT */
+/* OPER_LT */
 Object *String_lt(struct String *self, Object *arg0) {
-    return String_binaryLogicalOper(self, arg0, Spk_OPER_LT);
+    return String_binaryLogicalOper(self, arg0, OPER_LT);
 }
 
-/* Spk_OPER_GT */
+/* OPER_GT */
 Object *String_gt(struct String *self, Object *arg0) {
-    return String_binaryLogicalOper(self, arg0, Spk_OPER_GT);
+    return String_binaryLogicalOper(self, arg0, OPER_GT);
 }
 
-/* Spk_OPER_LE */
+/* OPER_LE */
 Object *String_le(struct String *self, Object *arg0) {
-    return String_binaryLogicalOper(self, arg0, Spk_OPER_LE);
+    return String_binaryLogicalOper(self, arg0, OPER_LE);
 }
 
-/* Spk_OPER_GE */
+/* OPER_GE */
 Object *String_ge(struct String *self, Object *arg0) {
-    return String_binaryLogicalOper(self, arg0, Spk_OPER_GE);
+    return String_binaryLogicalOper(self, arg0, OPER_GE);
 }
 
-/* Spk_OPER_EQ */
+/* OPER_EQ */
 Object *String_eq(struct String *self, Object *arg0) {
-    return String_binaryLogicalOper(self, arg0, Spk_OPER_EQ);
+    return String_binaryLogicalOper(self, arg0, OPER_EQ);
 }
 
-/* Spk_OPER_NE */
+/* OPER_NE */
 Object *String_ne(struct String *self, Object *arg0) {
-    return String_binaryLogicalOper(self, arg0, Spk_OPER_NE);
+    return String_binaryLogicalOper(self, arg0, OPER_NE);
 }
 
-/* Spk_OPER_GET_ITEM */
+/* OPER_GET_ITEM */
 Object *String_item(struct String *self, int index) {
 #if 0 /* XXX: already unboxed -- no type check */
     if ((index & 3) != 2) {
@@ -148,7 +148,7 @@ Object *String_item(struct String *self, int index) {
         return 0;
     }
     // XXX
-    //return (Object *)SpkChar_FromCChar(STR(self)[index]);
+    //return (Object *)Char_FromCChar(STR(self)[index]);
     return (Object *)((STR(self)[index] << 2) | 2);
 }
 
