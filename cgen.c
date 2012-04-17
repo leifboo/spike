@@ -1859,7 +1859,7 @@ static Unknown *generateInit(Stmt *stmtList, OpcodeGen *cgen) {
     tallyPush(cgen);
     ++cgen->nMessageSends;
     EMIT_OPCODE(OPCODE_SEND_MESSAGE_SUPER);
-    _(emitLiteralIndex((Unknown *)_init, cgen));
+    _(emitLiteralIndex((Unknown *)_xinit, cgen));
     encodeUnsignedInt(0, cgen);
     EMIT_OPCODE(OPCODE_POP); --cgen->stackPointer;
     
@@ -2010,7 +2010,7 @@ static Unknown *emitCodeForModule(Stmt *stmt, ModuleCodeGen *moduleCodeGen) {
         = stmt->u.module.dataSize;
     _(emitCodeForClassBody(stmt->top, cgen->generic));
     _(generateMethod(_predef, 0, &generatePredef,  predefList, cgen->generic));
-    _(generateMethod(_init,   0, &generateInit,    stmt->top->top, cgen->generic));
+    _(generateMethod(_xinit,  0, &generateInit,    stmt->top->top, cgen->generic));
     
     return GLOBAL(xvoid);
     

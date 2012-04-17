@@ -266,7 +266,7 @@ static Unknown *ClassSymbolTable_new(Unknown *self, Unknown *arg0, Unknown *arg1
     newSymbolTable = Send(GLOBAL(theInterpreter), SUPER, new, 0);
     if (!newSymbolTable)
         return 0;
-    newSymbolTable = Send(GLOBAL(theInterpreter), newSymbolTable, init, 0);
+    newSymbolTable = Send(GLOBAL(theInterpreter), newSymbolTable, xinit, 0);
     return newSymbolTable;
 }
 

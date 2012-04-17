@@ -132,7 +132,7 @@ static int Main(int argc, char **argv) {
     if (!module) {
         return 1;
     }
-    tmp = Send(GLOBAL(theInterpreter), (Unknown *)module, _init, 0);
+    tmp = Send(GLOBAL(theInterpreter), (Unknown *)module, _xinit, 0);
     if (!tmp)
         return 0;
     
@@ -150,7 +150,7 @@ static int Main(int argc, char **argv) {
         GLOBAL(theInterpreter),
         (Unknown *)module,
         METHOD_NAMESPACE_RVALUE,
-        _main,
+        xmain,
         args
         );
     

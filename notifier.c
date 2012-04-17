@@ -143,7 +143,7 @@ static Unknown *ClassNotifier_new(Unknown *self, Unknown *arg0, Unknown *arg1) {
     newNotifier = Send(GLOBAL(theInterpreter), SUPER, new, 0);
     if (!newNotifier)
         return 0;
-    return Send(GLOBAL(theInterpreter), newNotifier, init, arg0, 0);
+    return Send(GLOBAL(theInterpreter), newNotifier, xinit, arg0, 0);
 }
 
 

@@ -1676,7 +1676,7 @@ static Unknown *emitCodeForMethod(Stmt *stmt, int meta, CodeGen *outer) {
         case METHOD_NAMESPACE_RVALUE: ns = ".0."; break;
         case METHOD_NAMESPACE_LVALUE: ns = ".1."; break;
         }
-    } else if (selector == _main) {
+    } else if (selector == xmain) {
         codeObjectClass = "Function";
         className = "";
         suffix = "";

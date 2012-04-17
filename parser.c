@@ -662,7 +662,7 @@ static Unknown *ClassParser_new(Unknown *self, Unknown *arg0, Unknown *arg1) {
     if (!newParser)
         return 0;
     tmp = newParser;
-    newParser = Send(GLOBAL(theInterpreter), newParser, init, arg0, arg1, 0);
+    newParser = Send(GLOBAL(theInterpreter), newParser, xinit, arg0, arg1, 0);
     return newParser;
 }
 

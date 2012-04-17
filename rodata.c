@@ -52,7 +52,7 @@ Symbol *__str__;
 Symbol *__sub__;
 Symbol *__succ__;
 Symbol *_import;
-Symbol *_init;
+Symbol *_xinit;
 Symbol *_predef;
 Symbol *_thunk;
 Symbol *badExpr;
@@ -64,8 +64,8 @@ Symbol *doesNotUnderstand;
 Symbol *failOnError;
 Symbol *importModule;
 Symbol *importPackage;
-Symbol *init;
-Symbol *_main;
+Symbol *xinit;
+Symbol *xmain;
 Symbol *mustBeBoolean;
 Symbol *mustBeSymbol;
 Symbol *mustBeTuple;
@@ -236,7 +236,7 @@ static SymbolTableEntry selectorTable[] = {
     { &__sub__,                       "__sub__"                     },
     { &__succ__,                      "__succ__"                    },
     { &_import,                       "_import"                     },
-    { &_init,                         "_init"                       },
+    { &_xinit,                        "_init"                       },
     { &_predef,                       "_predef"                     },
     { &_thunk,                        "_thunk"                      },
     { &badExpr,                       "badExpr:"                    },
@@ -248,8 +248,8 @@ static SymbolTableEntry selectorTable[] = {
     { &failOnError,                   "failOnError"                 },
     { &importModule,                  "importModule"                },
     { &importPackage,                 "importPackage"               },
-    { &init,                          "init"                        },
-    { &_main,                         "main"                        },
+    { &xinit,                         "init"                        },
+    { &xmain,                         "main"                        },
     { &mustBeBoolean,                 "mustBeBoolean"               },
     { &mustBeSymbol,                  "mustBeSymbol"                },
     { &mustBeTuple,                   "mustBeTuple"                 },
