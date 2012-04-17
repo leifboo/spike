@@ -1,7 +1,7 @@
 #!/usr/bin/env spike
 
-printf(format, ...args) { stdout.printf(format, ...args); }
-puts(s) { stdout.printf("%s\n", s); }
+extern cdecl int printf() {}
+extern cdecl int puts() {}
 
 show(v) {
     printf("%s\n", v.printString);
@@ -30,9 +30,6 @@ class Foo {
     }
     noLeafSend() {
         return self.leaf();
-    }
-    noLeafContext() {
-        return thisContext;
     }
     noLeafDepth() {
         return 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8;

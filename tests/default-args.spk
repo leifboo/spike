@@ -1,41 +1,43 @@
 #!/usr/bin/env spike
 
+extern cdecl int printf() {}
+
 hgg1(required, answer = 42, foo = "hey", weird = answer) {
-    stdout.printf("required is %d; ", required);
-    stdout.printf("answer is %d; ", answer);
-    stdout.printf("foo is %s; ", foo);
-    stdout.printf("weird is %d.\n", weird);
+    printf("required is %d; ", required);
+    printf("answer is %d; ", answer);
+    printf("foo is %s; ", foo);
+    printf("weird is %d.\n", weird);
 }
 
 hgg2(required, answer = 42, foo = "hey", weird = answer, ...extra) {
-    stdout.printf("required is %d; ", required);
-    stdout.printf("answer is %d; ", answer);
-    stdout.printf("foo is %s; ", foo);
-    stdout.printf("weird is %d", weird);
+    printf("required is %d; ", required);
+    printf("answer is %d; ", answer);
+    printf("foo is %s; ", foo);
+    printf("weird is %d", weird);
     if (extra.size > 0) {
-        stdout.printf("; extra contains");
-        extra do: [ :x | stdout.printf(" %d", x); ];
-        stdout.printf(".\n");
+        printf("; extra contains");
+        extra do: [ :x | printf(" %d", x); ];
+        printf(".\n");
     } else {
-        stdout.printf(".\n");
+        printf(".\n");
     }
 }
 
 class Foo {
     hgg3(required, answer = self.defaultAnswer, foo = self.defaultFoo, weird = answer) {
-        stdout.printf("required is %d; ", required);
-        stdout.printf("answer is %d; ", answer);
-        stdout.printf("foo is %s; ", foo);
-        stdout.printf("weird is %d.\n", weird);
+        printf("required is %d; ", required);
+        printf("answer is %d; ", answer);
+        printf("foo is %s; ", foo);
+        printf("weird is %d.\n", weird);
     }
     defaultAnswer { return 73; }
     defaultFoo { return "later"; }
 }
 
-f(x) { stdout.printf("[f(%d)] ", x); return x + 1; }
+f(x) { printf("[f(%d)] ", x); return x + 1; }
 
 flora(x = 42, y = f(x)) {
-    stdout.printf("whine: %d, %d\n", x, y);
+    printf("whine: %d, %d\n", x, y);
 }
 
 check(hgg) {
@@ -50,7 +52,7 @@ check(hgg) {
 }
 
 hgg3_wrapper(...args) {
-    f = Foo.new();
+    obj f = Foo.new();
     f.hgg3(...args);
 }
 

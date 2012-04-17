@@ -1,11 +1,13 @@
 #!/usr/bin/env spike
 
+extern cdecl int printf() {}
+
 
 class Foo {
     self doesNotUnderstand: aMessage {
-        stdout.printf("I don't understand %s with args %s!\n",
-                      aMessage.selector.printString,
-                      aMessage.arguments.printString);
+        printf("I don't understand %s with args %s!\n",
+               aMessage.selector.printString,
+               aMessage.arguments.printString);
         return 42;
     }
 }
@@ -19,7 +21,7 @@ main(argv) {
     
     f = Foo.new();
     f hey: 42;
-    stdout.printf("tomato is %d\n", f.tomato);
+    printf("tomato is %d\n", f.tomato);
     f + 42;
     f();
     args = tuple(1,2,3);

@@ -1,5 +1,7 @@
 #!/usr/bin/env spike
 
+extern cdecl int printf() {}
+
 // freefall acceleration without air friction or drag
 
 main(argv) {
@@ -15,9 +17,9 @@ main(argv) {
     vy = 0.0;
     y = 10.0;
     
-    stdout.printf("t\ty\tvy\n");
+    printf("t\ty\tvy\n");
     for ( ; t < totalTime; t += dt) {
-        stdout.printf("%e\t%e\t%e\n", t, y, vy);
+        printf("%e\t%e\t%e\n", t, y, vy);
         
         vy += dvy; // compute change in velocity
         y += vy * dt; // compute change in position

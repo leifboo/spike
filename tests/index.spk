@@ -1,11 +1,11 @@
 #!/usr/bin/env spike
 
-printf(format, ...args) { stdout.printf(format, ...args); }
-puts(s) { stdout.printf("%s\n", s); }
+extern cdecl int printf() {}
+extern cdecl int puts() {}
 
 zeroToTen() {
     obj r, i;
-    r = Array.new(10);
+    r = Array new: 10;
     for (i = 0; i < 10; ++i)
         r[i] = i;
     return r;

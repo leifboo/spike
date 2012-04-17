@@ -1,5 +1,8 @@
 #!/usr/bin/env spike
 
+extern cdecl int printf() {}
+extern cdecl int puts() {}
+
 
 // Inspired by an old "Sesame Street" segment.
 
@@ -9,20 +12,20 @@ abc(j) {
     alphabet = "abcdefghijklmnopqrstuvwxyz";
     for (i = 0; i < alphabet.len; ++i) {
         letter = alphabet[i];
-        stdout.printf("%c ", letter);
-        child(i, j, [ :x | stdout.printf("%s\n", x); break; ]);
+        printf("%c ", letter);
+        child(i, j, [ :x | printf("%s\n", x); break; ]);
     }
     for (i = 0; i < alphabet.len; ++i) {
         letter = alphabet[i];
-        stdout.printf("%c ", letter);
-        child(i, j, [ :x | stdout.printf("%s\n", x); continue; ]);
+        printf("%c ", letter);
+        child(i, j, [ :x | printf("%s\n", x); continue; ]);
     }
     for (i = 0; i < alphabet.len; ++i) {
         letter = alphabet[i];
-        stdout.printf("%c ", letter);
-        child(i, j, [ :x | stdout.printf("%s\n", x); return; ]);
+        printf("%c ", letter);
+        child(i, j, [ :x | printf("%s\n", x); return; ]);
     }
-    stdout.puts("not reached");
+    puts("not reached");
 }
 
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env spike
 
-printf(format, ...args) { stdout.printf(format, ...args); }
+extern cdecl int printf() {}
 
 class MyArray : Array {
     obj label;
@@ -24,7 +24,7 @@ class MyArray : Array {
 main(argv) {
     obj a, i;
     
-    a = MyArray.new(4);
+    a = MyArray new: 4;
     a.label = "tomato";
     printf("The array size is %d.\n", a.size);
     for (i = 0; i < 4; ++i) {

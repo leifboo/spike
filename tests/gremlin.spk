@@ -1,6 +1,6 @@
 #!/usr/bin/env spike
 
-printf(format, ...args) { stdout.printf(format, ...args); }
+extern cdecl int printf() {}
 
 obj g;
 
@@ -38,7 +38,7 @@ class Gremlin {
 
 zeroToTen() {
     obj r, i;
-    r = Array.new(10);
+    r = Array new: 10;
     for (i = 0; i < 10; ++i)
         r[i] = i;
     return r;

@@ -1,31 +1,34 @@
 #!/usr/bin/env spike
 
+extern cdecl int printf() {}
+extern cdecl int puts() {}
+
 class Foo {
     foo() {
-        stdout.puts("Hello from foo!\n");
+        puts("Hello from foo!");
     }
     bar() {
-        stdout.puts("Hello from bar!\n");
+        puts("Hello from bar!");
     }
     tomato() {
-        stdout.puts("Hello from tomato!\n");
+        puts("Hello from tomato!");
     }
     goodbye() {
-        stdout.puts("Goodbye from Foo!\n");
+        puts("Goodbye from Foo!");
     }
 }
 
 class Bar : Foo {
     bar(sym) {
-        stdout.puts("Hello from Bar.bar!\n");
+        puts("Hello from Bar.bar!");
         (self.*sym)();
         (super.*sym)();
     }
     tomato() {
-        stdout.puts("Hello from Bar.tomato!\n");
+        puts("Hello from Bar.tomato!");
     }
     whatever() {
-        stdout.puts("Whatever.\n");
+        puts("Whatever.");
     }
 }
 
@@ -34,14 +37,14 @@ math(oper) {
     
     a = 40;
     b = 2;
-    stdout.printf("math: %d\n", (a.*oper)(b));
+    printf("math: %d\n", (a.*oper)(b));
 }
 
 main(args) {
     obj sym, o;
     
     sym = $foo;
-    stdout.printf("%s\n", sym.printString);
+    printf("%s\n", sym.printString);
     
     o = Bar.new();
     (o.*sym)();

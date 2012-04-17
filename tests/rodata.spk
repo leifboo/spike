@@ -1,6 +1,6 @@
 #!/usr/bin/env spike
 
-puts(s) { stdout.printf("%s\n", s); }
+extern cdecl int puts() {}
 
 
 hash() {

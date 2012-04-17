@@ -1,5 +1,7 @@
 #!/usr/bin/env spike
 
+extern cdecl int printf() {}
+
 class Adder {
     obj value;
     
@@ -19,7 +21,7 @@ main(argv) {
     a = Adder.new();
     a.init(40);
     sum = a(2);
-    stdout.printf("The sum is %d.\n", sum);
+    printf("The sum is %d.\n", sum);
     
     return 0;
 }

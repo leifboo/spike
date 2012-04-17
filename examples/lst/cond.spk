@@ -1,14 +1,16 @@
 #!/usr/bin/env spike
 
+extern cdecl int puts() {}
+
 main(argv) {
     obj i;
     
-    stdout.puts(2 < 3 ? "correct\n" : null);
+    puts(2 < 3 ? "correct" : null);
     if (2 < 3)
-        stdout.puts("correct\n");
+        puts("correct");
     i = 1;
     while (i < 3)
         i = i + 1;
     if (i >= 3)
-        stdout.puts("correct\n");
+        puts("correct");
 }

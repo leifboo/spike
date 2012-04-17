@@ -1,13 +1,13 @@
 ## Process this file with automake to produce Makefile.in
 
-bin_PROGRAMS = spike cspk spikex
+bin_PROGRAMS = spike cspk ispike
 noinst_PROGRAMS = xcspk
 noinst_LIBRARIES = libspike.a
 
-spike_SOURCES = spike.c
-nodist_spike_SOURCES = xgenerated.c
+ispike_SOURCES = spike.c
+nodist_ispike_SOURCES = xgenerated.c
 BUILT_SOURCES = xgenerated.c
-spike_LDADD = libspike.a
+ispike_LDADD = libspike.a
 
 cspk_SOURCES = cspk.c
 cspk_LDADD = libspike.a
@@ -15,7 +15,7 @@ cspk_LDADD = libspike.a
 xcspk_SOURCES = xcspk.c
 xcspk_LDADD = libspike.a
 
-spikex_SOURCES = spikex.c
+spike_SOURCES = spikex.c
 
 
 libspike_a_SOURCES = \
@@ -180,6 +180,7 @@ TESTS = \
 	$(empty)
 
 XFAIL_TESTS = \
+	examples/circle.spk \
 	examples/primes.spk \
 	tests/bc-in-blocks.spk \
 	tests/empty.spk \

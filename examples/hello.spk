@@ -1,6 +1,8 @@
 #!/usr/bin/env spike
 
+extern cdecl int puts() {}
+
 main(argv) {
-    stdout.puts("Hello, world.\n");
+    puts("Yip!");
     return 0;
 }

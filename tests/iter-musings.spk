@@ -1,7 +1,7 @@
 #!/usr/bin/env spike
 
-printf(format, ...args) { stdout.printf(format, ...args); }
-puts(s) { stdout.printf("%s\n", s); }
+extern cdecl int printf() {}
+extern cdecl int puts() {}
 
 show(v) {
     printf("%s\n", v.printString);
@@ -94,7 +94,7 @@ gcallback(item) {
 main(argv) {
     obj a, i;
     
-    a = MyArray.new(4);
+    a = MyArray new: 4;
     printf("The array size is %d.\n", a.size);
     for (i = 0; i < 4; ++i) {
         a[i] = i * 2;

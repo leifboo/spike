@@ -1,10 +1,11 @@
 #!/usr/bin/env spike
 
+extern cdecl int printf() {}
 
 class Form {
     self display medium: aDisplayMedium location: aPoint clippingBox: clipRect rule: anInteger fillColor: aForm {
-        stdout.printf("display %s %d %d %s %s\n",
-                      aDisplayMedium, aPoint, clipRect, anInteger, aForm);
+        printf("display %s %d %d %s %s\n",
+               aDisplayMedium, aPoint, clipRect, anInteger, aForm);
     }
 }
 

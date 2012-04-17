@@ -2,11 +2,7 @@
 
 // see http://paulgraham.com/accgen.html
 
-// XXX
-xxx(n) {
-    acc(i) { return n += i; }
-    return acc;
-}
+extern cdecl int printf() {}
 
 foo(n) {
     return [ :i | n += i ];
@@ -19,6 +15,6 @@ main(argv) {
     sum = acc(10);
     sum = acc(20);
     sum = acc(2);
-    stdout.printf("%d\n", sum);
+    printf("%d\n", sum);
     return 0;
 }

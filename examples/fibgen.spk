@@ -1,5 +1,7 @@
 #!/usr/bin/env spike
 
+extern cdecl int printf() {}
+
 fib() {
     return [
         obj a, b, tmp;
@@ -22,7 +24,7 @@ main(argv) {
     max = 1000;
     n = gen();
     while (n < max) {
-        stdout.printf("%d\n", n);
+        printf("%d\n", n);
         n = gen();
     }
     return 0;

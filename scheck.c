@@ -898,6 +898,7 @@ Unknown *StaticChecker_Check(Stmt *tree,
             _(declareClass(*classVar, predefList, &checker));
         }
     }
+#if 0
     for (varBootRec = globalVarBootRec; varBootRec->varOffset; ++varBootRec) {
         Stmt *varDef = globalVarDef(varBootRec->name, &checker);
         _(SymbolTable_Insert(checker.st, varDef->expr, checker.requestor));
@@ -905,6 +906,7 @@ Unknown *StaticChecker_Check(Stmt *tree,
         varDef->expr->u.def.initValue = (Unknown *)*var;
         _(addPredef(predefList, varDef));
     }
+#endif
     
     checker.rootClassList = rootClassList;
     rootClassList->first = rootClassList->last = 0;

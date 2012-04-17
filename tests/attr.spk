@@ -1,5 +1,7 @@
 #!/usr/bin/env spike
 
+extern cdecl int printf() {}
+
 
 class Foo {
     obj attr;
@@ -14,19 +16,19 @@ class Foo {
 
 
 printAttr(f) {
-    stdout.printf("The attribute value is %d.\n", f.attr);
+    printf("The attribute value is %d.\n", f.attr);
 }
 
 printWholeExpr(tmp) {
-    stdout.printf("The value of the whole expression is %d.\n", tmp);
+    printf("The value of the whole expression is %d.\n", tmp);
 }
 
 printTmp(tmp) {
-    stdout.printf("The temporary value is %d.\n", tmp);
+    printf("The temporary value is %d.\n", tmp);
 }
 
 printOldAttr(tmp) {
-    stdout.printf("The attribute value was %d.\n", tmp);
+    printf("The attribute value was %d.\n", tmp);
 }
 
 
@@ -48,7 +50,7 @@ main(argv) {
     printOldAttr(tmp);
     
     
-    stdout.printf("\n* Reprise *\n");
+    printf("\n* Reprise *\n");
     
     obj sym;
     sym = $attr;

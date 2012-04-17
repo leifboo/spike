@@ -1,13 +1,16 @@
 #!/usr/bin/env spike
 
+extern cdecl int printf() {}
+extern cdecl int putchar() {}
+
 abc() {
     obj alphabet;
     
     alphabet = "abcdefghijklmnopqrstuvwxyz";
     alphabet do: [ :letter |
-        stdout.printf("%c ", letter);
+        printf("%c ", letter);
         ];
-    stdout.putc('\n');
+    putchar('\n');
 }
 
 main(argv) {

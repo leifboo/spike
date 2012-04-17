@@ -1,5 +1,7 @@
 #!/usr/bin/env spike
 
+extern cdecl printf() {}
+
 class Queen {
     obj row, column, neighbor, boardSize;
     
@@ -55,7 +57,7 @@ class Queen {
     printBoard() {
         if (neighbor !== null)
             neighbor.printBoard();
-        stdout.printf("Col %d Row %d\n", column, row);
+        printf("Col %d Row %d\n", column, row);
     }
 }
 

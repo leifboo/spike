@@ -3,25 +3,27 @@
 
 // from chapter 2 of blue book
 
+extern cdecl int printf() {}
+
 page33() {
     obj incrementBlock, sumBlock;
     obj sum, index;
     
-    incrementBlock = [ index += 1 ];
-    sumBlock = [ sum + index * index ];
+    incrementBlock = [index += 1 ];
+    sumBlock = [sum + index * index ];
     sum = 0;
     index = 1;
     sum = sumBlock();
     incrementBlock();
     sum = sumBlock();
     
-    stdout.printf("The sum is %d.\n", sum);
-    stdout.printf("The index is %d.\n", index);
+    printf("The sum is %d.\n", sum);
+    printf("The index is %d.\n", index);
     
     obj amount;
     amount = 1;
-    timesRepeat(4, [ amount += amount ]);
-    stdout.printf("The amount is %d.\n", amount);
+    timesRepeat(4, [amount += amount]);
+    printf("The amount is %d.\n", amount);
 }
 
 timesRepeat(count, aBlock) {
@@ -36,8 +38,8 @@ timesRepeat(count, aBlock) {
 amusingProblem() {
     obj anotherArray, aBlockArray;
     
-    aBlockArray = Array.new(4);
-    anotherArray = Array.new(4);
+    aBlockArray = Array new: 4;
+    anotherArray = Array new: 4;
     anotherArray[0] = 1;
     anotherArray[1] = 2;
     anotherArray[2] = 4;
@@ -47,13 +49,13 @@ amusingProblem() {
     range = Range.new().init(0, aBlockArray.size);
     range do:
         [ :anIndex |
-         aBlockArray[anIndex] = [ anotherArray[anIndex] * 2 ]
+         aBlockArray[anIndex] = [anotherArray[anIndex] * 2]
             ];
     
     obj i, result;
     for (i = 0; i < aBlockArray.size; ++i) {
         result = (aBlockArray[i])();
-        stdout.printf("%d\n", result);
+        printf("%d\n", result);
     }
 }
 

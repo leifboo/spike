@@ -1,5 +1,7 @@
 #!/usr/bin/env spike
 
+extern cdecl printf() {}
+
 class One {
     test() {
         return 1;
@@ -38,17 +40,17 @@ main(argv) {
     example3 = Three.new();
     example4 = Four.new();
     
-    stdout.printf("%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
-                  example1.test(),
-                  example1.result1(),
-                  example2.test(),
-                  example2.result1(),
-                  example3.test(),
-                  example4.result1(),
-                  example3.result2(),
-                  example4.result2(),
-                  example3.result3(),
-                  example4.result3()
+    printf("%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
+           example1.test(),
+           example1.result1(),
+           example2.test(),
+           example2.result1(),
+           example3.test(),
+           example4.result1(),
+           example3.result2(),
+           example4.result2(),
+           example3.result3(),
+           example4.result3()
         );
     return 0;
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env spike
 
-printf(format, ...args) { stdout.printf(format, ...args); }
-puts(s) { stdout.printf("%s\n", s); }
+extern cdecl int printf() {}
+extern cdecl int puts() {}
 
 show(v) {
     obj u;
@@ -116,7 +116,7 @@ class Foo {
         return 42;
     }
     // XXX: This should be an error.
-    answer() {
+    xxxanswer() {
         return 42;
     }
     main() {

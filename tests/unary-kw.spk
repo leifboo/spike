@@ -1,5 +1,7 @@
 #!/usr/bin/env spike
 
+extern cdecl int printf() {}
+
 class Foo {
     obj answer;
     
@@ -29,15 +31,15 @@ main(argv) {
     
     f = (Foo) new;
     a = f zoo;
-    stdout.printf("zoo: %d\n", a);
+    printf("zoo: %d\n", a);
     a = f mutate: (f zoo);
-    stdout.printf("mutation: %d\n", a);
+    printf("mutation: %d\n", a);
     
     f = (Foo) new answer: 40;
     a = f zoo;
-    stdout.printf("zoo: %d\n", a);
+    printf("zoo: %d\n", a);
     a = f mutate: (f zoo);
-    stdout.printf("mutation: %d\n", a);
+    printf("mutation: %d\n", a);
     
     return 0;
 }

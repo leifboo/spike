@@ -1,6 +1,6 @@
 #!/usr/bin/env spike
 
-printf(format, ...args) { stdout.printf(format, ...args); }
+extern cdecl int printf() {}
 
 
 class Point {
