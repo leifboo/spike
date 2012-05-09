@@ -65,6 +65,7 @@ Symbol *failOnError;
 Symbol *importModule;
 Symbol *importPackage;
 Symbol *xinit;
+Symbol *klass;
 Symbol *xmain;
 Symbol *mustBeBoolean;
 Symbol *mustBeSymbol;
@@ -249,6 +250,7 @@ static SymbolTableEntry selectorTable[] = {
     { &importModule,                  "importModule"                },
     { &importPackage,                 "importPackage"               },
     { &xinit,                         "init"                        },
+    { &klass,                         "class"                       },
     { &xmain,                         "main"                        },
     { &mustBeBoolean,                 "mustBeBoolean"               },
     { &mustBeSymbol,                  "mustBeSymbol"                },

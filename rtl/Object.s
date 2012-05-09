@@ -26,14 +26,15 @@ Object.class.0.basicNew$.code:
 	pushl	$__sym_typeError
 	call	SpikeError
 
+.L2:
 /* tally number of instance variables in %eax */
 	movl	%esi, %edi 	# get class of new object (i.e., self)
 	movl	$0, %eax 	# tally instance vars
-.L2:
+.L3:
 	addl	16(%edi), %eax	# instVarCount
 	movl	4(%edi), %edi 	# up superclass chain
 	testl	%edi, %edi
-	jne	.L2
+	jne	.L3
 
 /* add the requested number of indexable variables */
 	sarl	$2, %edx
@@ -83,12 +84,12 @@ Object.class.0.box$.code:
 	movl	%eax, 12(%ebp)	# provisional result
 	andl	$3, %eax	# test for CObject
 	cmpl	$3, %eax
-	jne	.L3
+	jne	.L4
 	movl	8(%ebp), %eax	# get pointer arg
 	andl	$~3, %eax	# discard flags
 	movl	(%eax), %eax	# get result
 	movl	%eax, 12(%ebp)	# store result
-.L3:
+.L4:
 	popl	%edi
 	popl	%esi
 	popl	%ebx

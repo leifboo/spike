@@ -545,9 +545,63 @@ lookupMethod:
 	testl	%ebx, %ebx
 	jne	.L1
 
-/* XXX createActualMessage */
-	pushl	$__sym_doesNotUnderstand
+/* lookup failed */
+	popl	%edx
+	popl	%ecx
+	cmpl	$__sym_doesNotUnderstand$, %edx
+	jne	createActualMessage
+	pushl	$__sym_doesNotUnderstand$
 	call	SpikeError
+
+createActualMessage:
+	pushl	%ecx		# save argument count
+/* create Message object */
+	leal	8(%ebp), %eax	# arg pointer
+	pushl	%eax
+	pushl	%ecx		# argumentCount
+	pushl	%edx		# selector
+	pushl	%edi		# namespace
+	call	SpikeCreateActualMessage
+	addl	$16, %esp
+
+/* switch on saved argument count */
+	popl	%ecx
+	cmpl	$1, %ecx
+	jb	.L8		# no args
+	je	.L7		# one arg
+
+/* two or more arguments -- move saved registers up stack & discard arguments */
+	movl	16(%esp), %edx
+	movl	%edx, 0(%ebp,%ecx,4)   # ret
+	movl	12(%esp), %edx
+	movl	%edx, -4(%ebp,%ecx,4)  # %ebp
+	movl	8(%esp), %edx
+	movl	%edx, -8(%ebp,%ecx,4)  # %ebx
+	movl	4(%esp), %edx
+	movl	%edx, -12(%ebp,%ecx,4) # %esi
+	movl	0(%esp), %edx
+	movl	%edx, -16(%ebp,%ecx,4) # %edi
+	leal	-16(%ebp,%ecx,4), %esp
+	leal	12(%esp), %ebp
+
+.L7:
+/* save Message object pointer as the lone argument */
+	movl	%eax, 8(%ebp)
+	jmp	.L9
+
+.L8:
+/* no arguments -- rotate Message argument into place */
+	pushl	%eax
+	movl	$6, %ecx
+	call	SpikeRotate
+	leal	12(%esp), %ebp
+
+.L9:
+/* lookup doesNotUnderstand: */
+	movl	$0, %edi	# rvalue namespace
+	movl	$__sym_doesNotUnderstand$, %edx  # new selector
+	movl	$1, %ecx	# new argument count
+	call	getClass 	# start over
 	jmp	lookupMethod
 
 /* found it */
@@ -557,7 +611,7 @@ callNewMethod:
 	leal	4(%eax), %edi
 
 	popl	%eax		# discard selector
-	popl	%edx		# get argumentCount
+	popl	%edx		# get argument count
 
 SpikeCallNewMethod: /* entry point for Function __apply__ */
 	.globl	SpikeCallNewMethod

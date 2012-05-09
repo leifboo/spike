@@ -2,15 +2,20 @@
 #include "rtl.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 
-extern Behavior Metaclass;
+extern struct Behavior Array, Message, Metaclass;
 
 
-Method *SpikeLookupMethod(Behavior *behavior, unsigned int ns, Symbol *selector)
+struct Method *SpikeLookupMethod(
+    struct Behavior *behavior,
+    unsigned int ns,
+    struct Symbol *selector
+    )
 {
-    Array *methodTable;
-    struct Pair { Symbol *selector; Method *method; } *p, *end;
+    struct Array *methodTable;
+    struct Pair { struct Symbol *selector; struct Method *method; } *p, *end;
     
 #if LOOKUP_DEBUG
     fprintf(stderr,
@@ -18,7 +23,7 @@ Method *SpikeLookupMethod(Behavior *behavior, unsigned int ns, Symbol *selector)
             (char *)selector->str,
             behavior->base.klass == &Metaclass
             ? "metaclass"
-            : (*((Symbol **)(behavior + 1)))->str);
+            : (*((struct Symbol **)(behavior + 1)))->str);
 #endif
     
     methodTable = behavior->methodTable[ns];
@@ -52,5 +57,35 @@ Method *SpikeLookupMethod(Behavior *behavior, unsigned int ns, Symbol *selector)
 #endif
     
     return 0;
+}
+
+
+struct Message *SpikeCreateActualMessage(
+    unsigned int ns,
+    struct Symbol *selector,
+    size_t argumentCount,
+    struct Object **arg
+    )
+{
+    struct Array *arguments;
+    struct Message *message;
+    size_t i;
+    
+    arguments = (struct Array *)calloc(1, offsetof(struct Array, item[argumentCount]));
+    message = (struct Message *)calloc(1, sizeof(struct Message));
+    
+    arguments->base.klass = &Array;
+    arguments->size = argumentCount;
+    
+    /* copy & reverse arguments from stack */
+    for (i = 0; i < argumentCount; ++i)
+        arguments->item[i] = arg[argumentCount - i - 1];
+    
+    message->base.klass = &Message;
+    message->ns = (ns << 2) | 2; /* box */
+    message->selector = selector;
+    message->arguments = arguments;
+    
+    return message;
 }
 

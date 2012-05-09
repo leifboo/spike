@@ -914,9 +914,15 @@ static Unknown *emitCodeForOneExpr(Expr *expr, int *super, OpcodeGen *cgen) {
         break;
     case EXPR_ATTR:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
-        _(emitCodeForLiteral((Unknown *)expr->sym->sym, cgen));
-        emitOpcode(cgen, "popl", "%%edx");
-        emitOpcode(cgen, "call", "SpikeGetAttr%s", (isSuper ? "Super" : ""));
+        if (expr->sym->sym == klass) {
+            /* "foo.class": push 'klass' is-a pointer */
+            pop(cgen);
+            emitOpcode(cgen, "pushl", "(%%eax)");
+        } else {
+            _(emitCodeForLiteral((Unknown *)expr->sym->sym, cgen));
+            emitOpcode(cgen, "popl", "%%edx");
+            emitOpcode(cgen, "call", "SpikeGetAttr%s", (isSuper ? "Super" : ""));
+        }
         break;
     case EXPR_ATTR_VAR:
         _(emitCodeForExpr(expr->left, &isSuper, cgen));
@@ -1278,6 +1284,28 @@ static Unknown *emitBranchForOneExpr(Expr *expr, int cond,
     return 0;
 }
 
+static void blockEpilogue(OpcodeGen *cgen) {
+    /* save result */
+    pop(cgen);
+    emitOpcode(cgen, "movl", "%%eax, %lu(%%esp)",
+               4*(6+cgen->maxArgumentCount));
+    
+    /* pop BlockContext pointer */
+    emitOpcode(cgen, "popl", "%%ecx");
+    
+    /* restore caller's registers */
+    emitOpcode(cgen, "popl", "%%edi"); /* instVarPointer */
+    emitOpcode(cgen, "popl", "%%esi"); /* self */
+    emitOpcode(cgen, "popl", "%%ebx"); /* methodClass */
+    emitOpcode(cgen, "popl", "%%ebp"); /* framePointer */
+    emitOpcode(cgen, "popl", "%%eax"); /* return address */
+    if (cgen->maxArgumentCount)
+        emitOpcode(cgen, "addl", "$%lu, %%esp", 4*cgen->maxArgumentCount); 
+    
+    /* save our %eip in BlockContext.pc and resume caller */
+    emitOpcode(cgen, "call", "SpikeResumeCaller");
+}
+
 static Unknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
     CodeGen gcgen;
     OpcodeGen *cgen; BlockCodeGen *bcg;
@@ -1340,7 +1368,7 @@ static Unknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
             index = expr->u.def.index + arg;
             emitOpcode(cgen, "movl", "%lu(%%esp), %%eax", 4*(6+expr->aux.block.argumentCount-arg-1));
             emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)", offsetOfIndex(index, cgen));
-        } while (index > expr->u.def.index);
+        }
     }
     
     /*
@@ -1358,25 +1386,7 @@ static Unknown *emitCodeForBlock(Expr *expr, CodeGen *outer) {
      * epilogue
      */
     
-    /* save result */
-    pop(cgen);
-    emitOpcode(cgen, "movl", "%%eax, %lu(%%esp)",
-               4*(6+expr->aux.block.argumentCount));
-    
-    /* pop BlockContext pointer */
-    emitOpcode(cgen, "popl", "%%ecx");
-    
-    /* restore caller's registers */
-    emitOpcode(cgen, "popl", "%%edi"); /* instVarPointer */
-    emitOpcode(cgen, "popl", "%%esi"); /* self */
-    emitOpcode(cgen, "popl", "%%ebx"); /* methodClass */
-    emitOpcode(cgen, "popl", "%%ebp"); /* framePointer */
-    emitOpcode(cgen, "popl", "%%eax"); /* return address */
-    if (expr->aux.block.argumentCount)
-        emitOpcode(cgen, "addl", "$%lu, %%esp", 4*expr->aux.block.argumentCount); 
-    
-    /* save our %eip in BlockContext.pc and resume caller */
-    emitOpcode(cgen, "call", "SpikeResumeCaller");
+    blockEpilogue(cgen);
     
     /* upon resume, loop */
     _(emitBranch(OPCODE_BRANCH_ALWAYS, &start, cgen));
@@ -1527,13 +1537,41 @@ static Unknown *emitCodeForStmt(Stmt *stmt,
     case STMT_PRAGMA_SOURCE:
         break;
     case STMT_RETURN:
-        if (stmt->expr) {
-            _(emitCodeForExpr(stmt->expr, 0, cgen));
+        if (cgen->generic->kind == CODE_GEN_BLOCK) {
+            /*
+             * Here the code has to longjmp (in essence) to the home
+             * context, and then branch to the enclosing method's
+             * epilogue.
+             */
+            OpcodeGen *mcg; CodeGen *cg;
+            
+            /* find the code gen for the enclosing method */
+            cg = cgen->generic;
+            do cg = cg->outer; while (cg->kind != CODE_GEN_METHOD);
+            mcg = &cg->u.o;
+            
+            /* evaluate result */
+            if (stmt->expr) {
+                _(emitCodeForExpr(stmt->expr, 0, cgen));
+            } else {
+                emitOpcode(cgen, "pushl", "$void");
+            }
+            
+            /* resume home context, moving result to home stack */
+            emitOpcode(cgen, "call", "SpikeResumeHome");
+            
+            /* pop result and return from home context */
             pop(cgen);
+            _(emitBranch(OPCODE_BRANCH_ALWAYS, &mcg->epilogueLabel, cgen));
         } else {
-            emitOpcode(cgen, "movl", "$void, %%eax");
+            if (stmt->expr) {
+                _(emitCodeForExpr(stmt->expr, 0, cgen));
+                pop(cgen);
+            } else {
+                emitOpcode(cgen, "movl", "$void, %%eax");
+            }
+            _(emitBranch(OPCODE_BRANCH_ALWAYS, &cgen->epilogueLabel, cgen));
         }
-        _(emitBranch(OPCODE_BRANCH_ALWAYS, &cgen->epilogueLabel, cgen));
         break;
     case STMT_WHILE:
         childNextLabel = &stmt->expr->label;
@@ -1550,7 +1588,7 @@ static Unknown *emitCodeForStmt(Stmt *stmt,
         } else {
             emitOpcode(cgen, "pushl", "$void");
         }
-        emitOpcode(cgen, "call", "__spike_xxx_yield"); /* XXX */
+        blockEpilogue(cgen);
         break;
     }
     

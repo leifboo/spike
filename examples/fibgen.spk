@@ -8,7 +8,7 @@ fib() {
         
         a = 0;
         b = 1;
-        while (true) {
+        for (;;) {
             yield a;
             tmp = a;
             a = b;

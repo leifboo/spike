@@ -54,6 +54,7 @@ extern struct Symbol *failOnError;
 extern struct Symbol *importModule;
 extern struct Symbol *importPackage;
 extern struct Symbol *xinit;
+extern struct Symbol *klass;
 extern struct Symbol *xmain;
 extern struct Symbol *mustBeBoolean;
 extern struct Symbol *mustBeSymbol;

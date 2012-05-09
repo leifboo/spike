@@ -4,28 +4,28 @@
 #include <stdlib.h>
 
 
-extern Behavior MethodContext, BlockContext;
+extern struct Behavior MethodContext, BlockContext;
 
 
-Context *SpikeCreateMethodContext(
+struct Context *SpikeCreateMethodContext(
     size_t minArgumentCount,
     size_t maxArgumentCount,
     int varArgList,
     size_t localCount,
     size_t argumentCount,
-    Object **arg,
-    Behavior *methodClass,
-    Object *receiver,
-    Object **instVarPointer,
+    struct Object **arg,
+    struct Behavior *methodClass,
+    struct Object *receiver,
+    struct Object **instVarPointer,
     void *stackp
     )
 {
-    Context *newContext;
+    struct Context *newContext;
     size_t size, n, i;
     
     size = maxArgumentCount + localCount;
     
-    newContext = (Context *)calloc(1, sizeof(Context) + size*sizeof(Object *));
+    newContext = (struct Context *)calloc(1, offsetof(struct Context, var[size]));
     
     newContext->base.klass = &MethodContext;
     newContext->homeContext = newContext;
@@ -43,10 +43,15 @@ Context *SpikeCreateMethodContext(
 }
 
 
-Context *SpikeCreateBlockContext(void *const startpc, size_t nargs, Context *homeContext) {
-    Context *newContext;
+struct Context *SpikeCreateBlockContext(
+    void *const startpc,
+    size_t nargs,
+    struct Context *homeContext
+    )
+{
+    struct Context *newContext;
     
-    newContext = (Context *)calloc(1, sizeof(Context));
+    newContext = (struct Context *)calloc(1, sizeof(struct Context));
     
     newContext->base.klass = &BlockContext;
     newContext->homeContext = homeContext;

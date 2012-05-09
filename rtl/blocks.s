@@ -28,3 +28,37 @@ SpikeResumeCaller:
 	jmp	*%eax		# return to block's caller
 
 	.size	SpikeResumeCaller, .-SpikeResumeCaller
+
+
+SpikeResumeHome:
+	.globl	SpikeResumeHome
+	.type	SpikeResumeHome, @function
+
+/* save stuff from old stack before we mess with %esp */
+	popl	%eax		# return address
+	popl	%edx		# result
+	popl	%ecx		# BlockContext
+
+/* sabotage BlockContext.pc */
+	movl	$SpikeCannotReenterBlock, 12(%ecx)
+
+/* longjmp home */
+	movl	4(%ecx), %ebp	# get homeContext
+	movl	8(%ebp), %ebx	# restore methodClass
+	movl	12(%ebp), %esi	# restore receiver
+	movl	16(%ebp), %edi	# restore instVarPointer
+	movl	20(%ebp), %esp	# restore stackp
+	pushl	%edx		# push result onto home stack
+	jmp	*%eax		# return
+
+	.size	SpikeResumeHome, .-SpikeResumeHome
+
+
+SpikeCannotReenterBlock:
+	.globl	SpikeCannotReenterBlock
+	.type	SpikeCannotReenterBlock, @function
+
+	pushl	$__sym_cannotReenterBlock
+	call	SpikeError
+
+	.size	SpikeCannotReenterBlock, .-SpikeCannotReenterBlock

@@ -2,6 +2,7 @@
 class Object : null {
     self == x { return self === x; }
     self != x { return self !== x; }
+    printString { return "<XXX Object printString>"; }    
     extern unboxed {}
 } meta {
     self new { return self basicNew; }
@@ -248,9 +249,10 @@ class Junk {
     rangeError {}
     mustBeBoolean{}
     badObjectPointer {}
-    doesNotUnderstand {}
+    self doesNotUnderstand: aMessage {}
+    cannotReenterBlock {}
     wrongNumberOfArguments {}
-}
+ }
 
 
 extern cdecl obj String_add(s1, s2) {}

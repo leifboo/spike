@@ -8,7 +8,7 @@ generator(gn) {
     obj i;
     i = 2;
     if (gn == 0) {
-        return [yield 1; yield 2; yield 3; /*return 42;*/ while(true) yield i+=2;];
+        return [yield 1; yield 2; yield 3; /*return 42;*/ for (;;) yield i+=2;];
     } else if (gn == 1) {
         return [yield i+= 2; i];
     }
@@ -39,7 +39,7 @@ main(argv) {
 
 down() {
     obj b;
-    b = [while (true) { yield 666; yield 42; } /*return b; cannotReenterBlock */ ];
+    b = [for (;;) { yield 666; yield 42; } /*return b; cannotReenterBlock */ ];
     downDown(b);
     return b;
 }

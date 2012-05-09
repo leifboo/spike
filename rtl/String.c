@@ -7,6 +7,9 @@
 #include <string.h>
 
 
+typedef struct Object Object;
+
+
 struct String {
     Object base;
     size_t size;
@@ -17,7 +20,7 @@ struct String {
 extern void SpikeError(Object *);
 
 
-extern Behavior String;
+extern struct Behavior String;
 extern Object __sym_typeError, __sym_rangeError;
 extern Object false, true;
 
