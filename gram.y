@@ -1,170 +1,138 @@
 
 %name Parser_Parse
-%token_type {Token}
+%token_type {int}
 %token_prefix TOKEN_
-%extra_argument { Parser *parser }
 
 %include {
     #include <assert.h>
-    #include "lexer.h"
-    #include "parser.h"
-    #include "st.h"
+    static int S, E, L, TMP;
 }
 
-start ::= statement_list(stmtList).                                             { parser->root = stmtList.first; }
+start ::= statement_list(stmtList).                                             { printf("root = l%d\n", stmtList); }
 
-%type statement_list {StmtList}
-statement_list(r) ::= statement(stmt).                                          { r.first = stmt; r.last = stmt; r.expr = 0; }
-statement_list(r) ::= statement_list(stmtList) statement(stmt).                 { r = stmtList; Parser_SetNextStmt(r.last, stmt, parser); r.last = stmt; r.expr = 0; }
+statement_list(r) ::= statement(stmt).                                          { printf("l%d = [s%d]\n", r = ++L, stmt); }
+statement_list(r) ::= statement_list(stmtList) statement(stmt).                 { r = stmtList; printf("l%d.append(s%d)\n", r, stmt); }
 
-%type statement_list_expr {StmtList}
-statement_list_expr(r) ::= statement_list(stmtList) expr(e).                    { r = stmtList; r.expr = e.first; } 
-statement_list_expr(r) ::= statement_list(stmtList).                            { r = stmtList; } 
-statement_list_expr(r) ::= expr(e).                                             { r.first = 0; r.last = 0; r.expr = e.first; } 
+statement_list_expr(r) ::= statement_list(stmtList) expr(e).                    { printf("tmp%d = (l%d,  e%d)\n", r = ++TMP, stmtList, e); } 
+statement_list_expr(r) ::= statement_list(stmtList).                            { printf("tmp%d = (l%d, None)\n", r = ++TMP, stmtList   ); } 
+statement_list_expr(r) ::= expr(e).                                             { printf("tmp%d = (None, e%d)\n", r = ++TMP,           e); } 
 
-%type statement {Stmt *}
 statement(r) ::= open_statement(stmt).                                          { r = stmt; }
 statement(r) ::= closed_statement(stmt).                                        { r = stmt; }
 //statement(r) ::= IDENTIFIER COLON statement(stmt).                              { r = stmt; }
 
-%type open_statement {Stmt *}
-open_statement(r) ::= IF LPAREN expr(expr) RPAREN statement(ifTrue).            { r = Parser_NewStmt(STMT_IF_ELSE, expr.first, ifTrue, 0, parser); }
+open_statement(r) ::= IF LPAREN expr(expr) RPAREN statement(ifTrue).            { printf("s%d = f.stmtIfElse(e%d, s%d, None)\n", r = ++S, expr, ifTrue); }
 open_statement(r) ::= IF LPAREN expr(expr) RPAREN closed_statement(ifTrue)
-                      ELSE open_statement(ifFalse).                             { r = Parser_NewStmt(STMT_IF_ELSE, expr.first, ifTrue, ifFalse, parser); }
-open_statement(r) ::= WHILE LPAREN expr(expr) RPAREN statement(body).           { r = Parser_NewStmt(STMT_WHILE, expr.first, body, 0, parser); }
+                      ELSE open_statement(ifFalse).                             { printf("s%d = f.stmtIfElse(e%d, s%d, s%d)\n", r = ++S, expr, ifTrue, ifFalse); }
+open_statement(r) ::= WHILE LPAREN expr(expr) RPAREN statement(body).           { printf("s%d = f.stmtWhile(e%d, s%d)\n", r = ++S, expr, body); }
 open_statement(r) ::= FOR LPAREN             SEMI             SEMI             RPAREN statement(body).
-                                                                                { r = Parser_NewForStmt(          0,           0,           0, body, parser); }
+                                                                                { printf("s%d = f.stmtFor(None, None, None, s%d)\n", r = ++S,                      body); }
 open_statement(r) ::= FOR LPAREN             SEMI             SEMI expr(expr3) RPAREN statement(body).
-                                                                                { r = Parser_NewForStmt(          0,           0, expr3.first, body, parser); }
+                                                                                { printf("s%d = f.stmtFor(None, None, e%d,  s%d)\n", r = ++S,               expr3, body); }
 open_statement(r) ::= FOR LPAREN             SEMI expr(expr2) SEMI             RPAREN statement(body).
-                                                                                { r = Parser_NewForStmt(          0, expr2.first,           0, body, parser); }
+                                                                                { printf("s%d = f.stmtFor(None, e%d,  None, s%d)\n", r = ++S,        expr2,        body); }
 open_statement(r) ::= FOR LPAREN             SEMI expr(expr2) SEMI expr(expr3) RPAREN statement(body).
-                                                                                { r = Parser_NewForStmt(          0, expr2.first, expr3.first, body, parser); }
+                                                                                { printf("s%d = f.stmtFor(None, e%d,  e%d,  s%d)\n", r = ++S,        expr2, expr3, body); }
 open_statement(r) ::= FOR LPAREN expr(expr1) SEMI             SEMI             RPAREN statement(body).
-                                                                                { r = Parser_NewForStmt(expr1.first,           0,           0, body, parser); }
+                                                                                { printf("s%d = f.stmtFor(e%d,  None, None, s%d)\n", r = ++S, expr1,               body); }
 open_statement(r) ::= FOR LPAREN expr(expr1) SEMI             SEMI expr(expr3) RPAREN statement(body).
-                                                                                { r = Parser_NewForStmt(expr1.first,           0, expr3.first, body, parser); }
+                                                                                { printf("s%d = f.stmtFor(e%d,  None, e%d,  s%d)\n", r = ++S, expr1,        expr3, body); }
 open_statement(r) ::= FOR LPAREN expr(expr1) SEMI expr(expr2) SEMI             RPAREN statement(body).
-                                                                                { r = Parser_NewForStmt(expr1.first, expr2.first,           0, body, parser); }
+                                                                                { printf("s%d = f.stmtFor(e%d,  e%d,  None, s%d)\n", r = ++S, expr1, expr2,        body); }
 open_statement(r) ::= FOR LPAREN expr(expr1) SEMI expr(expr2) SEMI expr(expr3) RPAREN statement(body).
-                                                                                { r = Parser_NewForStmt(expr1.first, expr2.first, expr3.first, body, parser); }
+                                                                                { printf("s%d = f.stmtFor(e%d,  e%d,  e%d,  s%d)\n", r = ++S, expr1, expr2, expr3, body); }
 
-%type closed_statement {Stmt *}
 closed_statement(r) ::= IF LPAREN expr(expr) RPAREN closed_statement(ifTrue)
-                        ELSE closed_statement(ifFalse).                         { r = Parser_NewStmt(STMT_IF_ELSE, expr.first, ifTrue, ifFalse, parser); }
-closed_statement(r) ::= SEMI.                                                   { r = Parser_NewStmt(STMT_EXPR, 0, 0, 0, parser); }
-closed_statement(r) ::= expr(expr) SEMI.                                        { r = Parser_NewStmt(STMT_EXPR, expr.first, 0, 0, parser); }
+                        ELSE closed_statement(ifFalse).                         { printf("s%d = f.stmtIfElse(e%d, s%d, s%d)\n", r = ++S, expr, ifTrue, ifFalse); }
+closed_statement(r) ::= SEMI.                                                   { printf("s%d = f.stmtExpr(None)\n", r = ++S); }
+closed_statement(r) ::= expr(expr) SEMI.                                        { printf("s%d = f.stmtExpr(e%d)\n", r = ++S, expr); }
 closed_statement(r) ::= compound_statement(stmt).                               { r = stmt; }
-closed_statement(r) ::= DO statement(body) WHILE LPAREN expr(expr) RPAREN SEMI. { r = Parser_NewStmt(STMT_DO_WHILE, expr.first, body, 0, parser); }
-closed_statement(r) ::= CONTINUE SEMI.                                          { r = Parser_NewStmt(STMT_CONTINUE, 0, 0, 0, parser); }
-closed_statement(r) ::= BREAK SEMI.                                             { r = Parser_NewStmt(STMT_BREAK, 0, 0, 0, parser); }
-closed_statement(r) ::= RETURN            SEMI.                                 { r = Parser_NewStmt(STMT_RETURN, 0, 0, 0, parser); }
-closed_statement(r) ::= RETURN expr(expr) SEMI.                                 { r = Parser_NewStmt(STMT_RETURN, expr.first, 0, 0, parser); }
-closed_statement(r) ::= YIELD            SEMI.                                  { r = Parser_NewStmt(STMT_YIELD, 0, 0, 0, parser); }
-closed_statement(r) ::= YIELD expr(expr) SEMI.                                  { r = Parser_NewStmt(STMT_YIELD, expr.first, 0, 0, parser); }
-closed_statement(r) ::= expr(expr) compound_statement(stmt).                    { r = Parser_NewStmt(STMT_DEF_METHOD, expr.first, stmt, 0, parser); }
-closed_statement(r) ::= CLASS IDENTIFIER(name) class_body(body).                { r = Parser_NewClassDef(&name, 0, body.top, body.bottom, parser); }
-closed_statement(r) ::= CLASS SPECIFIER(name) class_body(body).                 { r = Parser_NewClassDef(&name, 0, body.top, body.bottom, parser); }
+closed_statement(r) ::= DO statement(body) WHILE LPAREN expr(expr) RPAREN SEMI. { printf("s%d = f.stmtDoWhile(s%d, e%d)\n", r = ++S, body, expr); }
+closed_statement(r) ::= CONTINUE SEMI.                                          { printf("s%d = f.stmtContinue()\n", r = ++S); }
+closed_statement(r) ::= BREAK SEMI.                                             { printf("s%d = f.stmtBreak()\n", r = ++S); }
+closed_statement(r) ::= RETURN            SEMI.                                 { printf("s%d = f.stmtReturn(None)\n", r = ++S); }
+closed_statement(r) ::= RETURN expr(expr) SEMI.                                 { printf("s%d = f.stmtReturn(e%d)\n", r = ++S, expr); }
+closed_statement(r) ::= YIELD            SEMI.                                  { printf("s%d = f.stmtYield(None)\n", r = ++S); }
+closed_statement(r) ::= YIELD expr(expr) SEMI.                                  { printf("s%d = f.stmtYield(e%d)\n", r = ++S, expr); }
+closed_statement(r) ::= expr(expr) compound_statement(stmt).                    { printf("s%d = f.stmtDefMethod(e%d, s%d)\n", r = ++S, expr, stmt); }
+closed_statement(r) ::= CLASS IDENTIFIER(name) class_body(body).                { printf("s%d = f.stmtDefClass(t%d, None, tmp%d[0], tmp%d[1])\n", r = ++S, name, body, body); }
+closed_statement(r) ::= CLASS SPECIFIER(name) class_body(body).                 { printf("s%d = f.stmtDefClass(t%d, None, tmp%d[0], tmp%d[1])\n", r = ++S, name, body, body); }
 closed_statement(r) ::= CLASS IDENTIFIER(name) COLON IDENTIFIER(super) class_body(body).
-                                                                                { r = Parser_NewClassDef(&name, &super, body.top, body.bottom, parser); }
+                                                                                { printf("s%d = f.stmtDefClass(t%d, t%d,  tmp%d[0], tmp%d[1])\n", r = ++S, name, super, body, body); }
 closed_statement(r) ::= CLASS IDENTIFIER(name) COLON SPECIFIER(super) class_body(body).
-                                                                                { r = Parser_NewClassDef(&name, &super, body.top, body.bottom, parser); }
+                                                                                { printf("s%d = f.stmtDefClass(t%d, t%d,  tmp%d[0], tmp%d[1])\n", r = ++S, name, super, body, body); }
 closed_statement(r) ::= CLASS SPECIFIER(name) COLON IDENTIFIER(super) class_body(body).
-                                                                                { r = Parser_NewClassDef(&name, &super, body.top, body.bottom, parser); }
+                                                                                { printf("s%d = f.stmtDefClass(t%d, t%d,  tmp%d[0], tmp%d[1])\n", r = ++S, name, super, body, body); }
 closed_statement(r) ::= CLASS SPECIFIER(name) COLON SPECIFIER(super) class_body(body).
-                                                                                { r = Parser_NewClassDef(&name, &super, body.top, body.bottom, parser); }
+                                                                                { printf("s%d = f.stmtDefClass(t%d, t%d,  tmp%d[0], tmp%d[1])\n", r = ++S, name, super, body, body); }
 
-%type class_body {StmtPair}
-class_body(r) ::= compound_statement(body).                                     { r.top = body; r.bottom = 0; }
-class_body(r) ::= compound_statement(body) META compound_statement(metaBody).   { r.top = body; r.bottom = metaBody; } 
+class_body(r) ::= compound_statement(body).                                     { printf("tmp%d = (s%d, None)\n", r = ++TMP, body); }
+class_body(r) ::= compound_statement(body) META compound_statement(metaBody).   { printf("tmp%d = (s%d,  s%d)\n", r = ++TMP, body, metaBody); } 
 
-%type compound_statement {Stmt *}
-compound_statement(r) ::= LCURLY                          RCURLY.               { r = Parser_NewStmt(STMT_COMPOUND, 0, 0, 0, parser); }
-compound_statement(r) ::= LCURLY statement_list(stmtList) RCURLY.               { r = Parser_NewStmt(STMT_COMPOUND, 0, stmtList.first, 0, parser); }
+compound_statement(r) ::= LCURLY                          RCURLY.               { printf("s%d = f.stmtCompound([])\n", r = ++S); }
+compound_statement(r) ::= LCURLY statement_list(stmtList) RCURLY.               { printf("s%d = f.stmtCompound(l%d)\n", r = ++S, stmtList); }
 
-%type expr {ExprList}
 expr(r) ::= comma_expr(expr).                                                   { r = expr; }
-expr(r) ::= decl_spec_list(declSpecList) comma_expr(expr).                      { r = expr; Parser_SetDeclSpecs(r.first, declSpecList.first, parser); }
+expr(r) ::= decl_spec_list(declSpecList) comma_expr(expr).                      { r = expr; printf("e%d.declSpecs = l%d\n", r, declSpecList); }
 
-%type decl_spec_list {ExprList}
-decl_spec_list(r) ::= decl_spec(declSpec).                                      { r.first = declSpec; r.last = declSpec; }
-decl_spec_list(r) ::= decl_spec_list(declSpecList) decl_spec(declSpec).         { r = declSpecList; Parser_SetNextExpr(r.last, declSpec, parser); r.last = declSpec; }
+decl_spec_list(r) ::= decl_spec(declSpec).                                      { printf("l%d = [e%d]\n", r = ++L, declSpec); }
+decl_spec_list(r) ::= decl_spec_list(declSpecList) decl_spec(declSpec).         { r = declSpecList; printf("l%d.append(e%d)\n", r, declSpec); }
 
-%type decl_spec {Expr *}
-decl_spec(r) ::= SPECIFIER(name).                                               { r = Parser_NewExpr(EXPR_NAME, 0, 0, 0, 0, &name, parser); }
+decl_spec(r) ::= SPECIFIER(name).                                               { printf("e%d = f.exprName(t%d)\n", r = ++E, name); }
 
-%type comma_expr {ExprList}
-comma_expr(r) ::= colon_expr(expr).                                             { r.first = expr; r.last = expr; }
-comma_expr(r) ::= comma_expr(left) COMMA colon_expr(right).                     { r = left; Parser_SetNextExpr(r.last, right, parser); r.last = right; }
+comma_expr(r) ::= colon_expr(expr).                                             { r = expr; }
+comma_expr(r) ::= comma_expr(left) COMMA colon_expr(right).                     { printf("e%d = e%d.comma(e%d)\n", r = ++E, left, right); }
 
-%type colon_expr {Expr *}
 colon_expr(r) ::= assignment_expr(expr).                                        { r = expr; }
 //colon_expr(r) ::= colon_expr COLON assignment_expr(expr).                       { r = expr; }
 
-%type assignment_expr {Expr *}
 assignment_expr(r) ::= keyword_expr(expr).                                      { r = expr; }
-assignment_expr(r) ::= unary_expr(left) ASSIGN(t)        assignment_expr(right).
-                                                                                { r = Parser_NewExpr(EXPR_ASSIGN, OPER_EQ,     0, left, right, &t, parser); }
-assignment_expr(r) ::= unary_expr(left) ASSIGN_TIMES(t)  assignment_expr(right).
-                                                                                { r = Parser_NewExpr(EXPR_ASSIGN, OPER_MUL,    0, left, right, &t, parser); }
-assignment_expr(r) ::= unary_expr(left) ASSIGN_DIVIDE(t) assignment_expr(right).
-                                                                                { r = Parser_NewExpr(EXPR_ASSIGN, OPER_DIV,    0, left, right, &t, parser); }
-assignment_expr(r) ::= unary_expr(left) ASSIGN_MOD(t)    assignment_expr(right).
-                                                                                { r = Parser_NewExpr(EXPR_ASSIGN, OPER_MOD,    0, left, right, &t, parser); }
-assignment_expr(r) ::= unary_expr(left) ASSIGN_PLUS(t)   assignment_expr(right).
-                                                                                { r = Parser_NewExpr(EXPR_ASSIGN, OPER_ADD,    0, left, right, &t, parser); }
-assignment_expr(r) ::= unary_expr(left) ASSIGN_MINUS(t)  assignment_expr(right).
-                                                                                { r = Parser_NewExpr(EXPR_ASSIGN, OPER_SUB,    0, left, right, &t, parser); }
-assignment_expr(r) ::= unary_expr(left) ASSIGN_LSHIFT(t) assignment_expr(right).
-                                                                                { r = Parser_NewExpr(EXPR_ASSIGN, OPER_LSHIFT, 0, left, right, &t, parser); }
-assignment_expr(r) ::= unary_expr(left) ASSIGN_RSHIFT(t) assignment_expr(right).
-                                                                                { r = Parser_NewExpr(EXPR_ASSIGN, OPER_RSHIFT, 0, left, right, &t, parser); }
-assignment_expr(r) ::= unary_expr(left) ASSIGN_BAND(t)   assignment_expr(right).
-                                                                                { r = Parser_NewExpr(EXPR_ASSIGN, OPER_BAND,   0, left, right, &t, parser); }
-assignment_expr(r) ::= unary_expr(left) ASSIGN_BXOR(t)   assignment_expr(right).
-                                                                                { r = Parser_NewExpr(EXPR_ASSIGN, OPER_BXOR,   0, left, right, &t, parser); }
-assignment_expr(r) ::= unary_expr(left) ASSIGN_BOR(t)    assignment_expr(right).
-                                                                                { r = Parser_NewExpr(EXPR_ASSIGN, OPER_BOR,    0, left, right, &t, parser); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN        assignment_expr(right).   { printf("e%d = f.exprAssign(f.operEq,     e%d, e%d)\n", r = ++E, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_TIMES  assignment_expr(right).   { printf("e%d = f.exprAssign(f.operMul,    e%d, e%d)\n", r = ++E, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_DIVIDE assignment_expr(right).   { printf("e%d = f.exprAssign(f.operDiv,    e%d, e%d)\n", r = ++E, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_MOD    assignment_expr(right).   { printf("e%d = f.exprAssign(f.operMod,    e%d, e%d)\n", r = ++E, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_PLUS   assignment_expr(right).   { printf("e%d = f.exprAssign(f.operAdd,    e%d, e%d)\n", r = ++E, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_MINUS  assignment_expr(right).   { printf("e%d = f.exprAssign(f.operSub,    e%d, e%d)\n", r = ++E, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_LSHIFT assignment_expr(right).   { printf("e%d = f.exprAssign(f.operLShift, e%d, e%d)\n", r = ++E, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_RSHIFT assignment_expr(right).   { printf("e%d = f.exprAssign(f.operRShift, e%d, e%d)\n", r = ++E, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_BAND   assignment_expr(right).   { printf("e%d = f.exprAssign(f.operBAnd,   e%d, e%d)\n", r = ++E, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_BXOR   assignment_expr(right).   { printf("e%d = f.exprAssign(f.operBXOr,   e%d, e%d)\n", r = ++E, left, right); }
+assignment_expr(r) ::= unary_expr(left) ASSIGN_BOR    assignment_expr(right).   { printf("e%d = f.exprAssign(f.operBOr,    e%d, e%d)\n", r = ++E, left, right); }
 
-%type keyword_expr {Expr *}
 keyword_expr(r) ::= conditional_expr(expr).                                     { r = expr; }
-keyword_expr(r) ::= conditional_expr(receiver) keyword_message(expr).           { r = expr; Parser_SetLeftExpr(r, receiver, parser); }
+keyword_expr(r) ::= conditional_expr(receiver) keyword_message(expr).           { r = expr; printf("e%d.left = e%d\n", r, receiver); }
 
-%type keyword_message {Expr *}
-keyword_message(r) ::= keyword_list(expr).                                      { r = Parser_FreezeKeywords(expr, 0, parser); }
-keyword_message(r) ::= keyword(kw).                                             { r = Parser_FreezeKeywords(0, &kw, parser); }
-keyword_message(r) ::= keyword(kw) keyword_list(expr).                          { r = Parser_FreezeKeywords(expr, &kw, parser); }
+keyword_message(r) ::= keyword_list(kwList).                                    { printf("e%d = f.exprKeyword(None, tmp%d[0], tmp%d[1])\n", r = ++E, kwList, kwList); }
+keyword_message(r) ::= keyword(kw).                                             { printf("e%d = f.exprKeyword(t%d, None, None)\n", r = ++E, kw); }
+keyword_message(r) ::= keyword(kw) keyword_list(kwList).                        { printf("e%d = f.exprKeyword(t%d, tmp%d[0], tmp%d[1])\n", r = ++E, kw, kwList, kwList); }
 
-%type keyword_list {Expr *}
-keyword_list(r) ::= keyword(kw) COLON conditional_expr(arg).                    { r = Parser_NewKeywordExpr(&kw, arg, parser); }
-keyword_list(r) ::= keyword_list(expr) keyword(kw) COLON conditional_expr(arg). { r = Parser_AppendKeyword(expr, &kw, arg, parser); }
+keyword_list(r) ::= keyword(kw) COLON conditional_expr(arg).                    { printf("tmp%d = ([t%d], [e%d])\n", r = ++TMP, kw, arg); }
+keyword_list(r) ::= keyword_list(kwList) keyword(kw) COLON conditional_expr(arg).
+                                                                                { r = kwList; printf("tmp%d[0].append(t%d); tmp%d[1].append(e%d)\n", r, kw, r, arg); }
 
-%type keyword {Token}
-keyword(r) ::= IDENTIFIER(t).                                                   { r = t; }
-keyword(r) ::= BREAK(t).                                                        { r = t; }
-keyword(r) ::= CLASS(t).                                                        { r = t; }
-keyword(r) ::= CONTINUE(t).                                                     { r = t; }
-keyword(r) ::= DO(t).                                                           { r = t; }
-keyword(r) ::= ELSE(t).                                                         { r = t; }
-keyword(r) ::= FOR(t).                                                          { r = t; }
-keyword(r) ::= IF(t).                                                           { r = t; }
-keyword(r) ::= META(t).                                                         { r = t; }
-keyword(r) ::= RETURN(t).                                                       { r = t; }
-keyword(r) ::= WHILE(t).                                                        { r = t; }
-keyword(r) ::= YIELD(t).                                                        { r = t; }
+keyword(r) ::= IDENTIFIER(kw).                                                  { r = kw; }
+keyword(r) ::= BREAK(kw).                                                       { r = kw; }
+keyword(r) ::= CLASS(kw).                                                       { r = kw; }
+keyword(r) ::= CONTINUE(kw).                                                    { r = kw; }
+keyword(r) ::= DO(kw).                                                          { r = kw; }
+keyword(r) ::= ELSE(kw).                                                        { r = kw; }
+keyword(r) ::= FOR(kw).                                                         { r = kw; }
+keyword(r) ::= IF(kw).                                                          { r = kw; }
+keyword(r) ::= META(kw).                                                        { r = kw; }
+keyword(r) ::= RETURN(kw).                                                      { r = kw; }
+keyword(r) ::= WHILE(kw).                                                       { r = kw; }
+keyword(r) ::= YIELD(kw).                                                       { r = kw; }
 
-%type conditional_expr {Expr *}
 conditional_expr(r) ::= logical_expr(expr).                                     { r = expr; }
-conditional_expr(r) ::= logical_expr(cond) QM(t) logical_expr(left) COLON conditional_expr(right).
-                                                                                { r = Parser_NewExpr(EXPR_COND, 0, cond, left, right, &t, parser); }
+conditional_expr(r) ::= logical_expr(cond) QM logical_expr(left) COLON conditional_expr(right).
+                                                                                { printf("e%d = f.exprCond(e%d, e%d, e%d)\n", r = ++E, cond, left, right); }
 
 %left OR.
 %left AND.
 
-%type logical_expr {Expr *}
 logical_expr(r) ::= binary_expr(expr).                                          { r = expr; }
-logical_expr(r) ::= logical_expr(left) OR(t) logical_expr(right).               { r = Parser_NewExpr(EXPR_OR, 0, 0, left, right, &t, parser); }
-logical_expr(r) ::= logical_expr(left) AND(t) logical_expr(right).              { r = Parser_NewExpr(EXPR_AND, 0, 0, left, right, &t, parser); }
+logical_expr(r) ::= logical_expr(left) OR logical_expr(right).                  { printf("e%d = f.exprOr(e%d, e%d)\n", r = ++E, left, right); }
+logical_expr(r) ::= logical_expr(left) AND logical_expr(right).                 { printf("e%d = f.exprAnd(e%d, e%d)\n", r = ++E, left, right); }
 
 %left ID NI EQ NE.
 %left GT GE LT LE.
@@ -176,97 +144,85 @@ logical_expr(r) ::= logical_expr(left) AND(t) logical_expr(right).              
 %left TIMES DIVIDE MOD.
 %left DOT_STAR.
 
-%type binary_expr {Expr *}
 binary_expr(r) ::= unary_expr(expr).                                            { r = expr; }
-binary_expr(r) ::= binary_expr(left) ID(t) binary_expr(right).                  { r = Parser_NewExpr(EXPR_ID, 0, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) NI(t) binary_expr(right).                  { r = Parser_NewExpr(EXPR_NI, 0, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) EQ(t) binary_expr(right).                  { r = Parser_NewExpr(EXPR_BINARY, OPER_EQ, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) NE(t) binary_expr(right).                  { r = Parser_NewExpr(EXPR_BINARY, OPER_NE, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) GT(t) binary_expr(right).                  { r = Parser_NewExpr(EXPR_BINARY, OPER_GT, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) GE(t) binary_expr(right).                  { r = Parser_NewExpr(EXPR_BINARY, OPER_GE, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) LT(t) binary_expr(right).                  { r = Parser_NewExpr(EXPR_BINARY, OPER_LT, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) LE(t) binary_expr(right).                  { r = Parser_NewExpr(EXPR_BINARY, OPER_LE, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) BOR(t) binary_expr(right).                 { r = Parser_NewExpr(EXPR_BINARY, OPER_BOR, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) BXOR(t) binary_expr(right).                { r = Parser_NewExpr(EXPR_BINARY, OPER_BXOR, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) AMP(t) binary_expr(right).                 { r = Parser_NewExpr(EXPR_BINARY, OPER_BAND, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) LSHIFT(t) binary_expr(right).              { r = Parser_NewExpr(EXPR_BINARY, OPER_LSHIFT, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) RSHIFT(t) binary_expr(right).              { r = Parser_NewExpr(EXPR_BINARY, OPER_RSHIFT, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) PLUS(t) binary_expr(right).                { r = Parser_NewExpr(EXPR_BINARY, OPER_ADD, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) MINUS(t) binary_expr(right).               { r = Parser_NewExpr(EXPR_BINARY, OPER_SUB, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) TIMES(t) binary_expr(right).               { r = Parser_NewExpr(EXPR_BINARY, OPER_MUL, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) DIVIDE(t) binary_expr(right).              { r = Parser_NewExpr(EXPR_BINARY, OPER_DIV, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) MOD(t) binary_expr(right).                 { r = Parser_NewExpr(EXPR_BINARY, OPER_MOD, 0, left, right, &t, parser); }
-binary_expr(r) ::= binary_expr(left) DOT_STAR(t) binary_expr(right).            { r = Parser_NewExpr(EXPR_ATTR_VAR, 0, 0, left, right, &t, parser); }
+binary_expr(r) ::= binary_expr(left) ID binary_expr(right).                     { printf("e%d = f.exprID(e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) NI binary_expr(right).                     { printf("e%d = f.exprNI(e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) EQ binary_expr(right).                     { printf("e%d = f.exprBinary(f.operEq,     e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) NE binary_expr(right).                     { printf("e%d = f.exprBinary(f.operNE,     e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) GT binary_expr(right).                     { printf("e%d = f.exprBinary(f.operGT,     e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) GE binary_expr(right).                     { printf("e%d = f.exprBinary(f.operGE,     e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) LT binary_expr(right).                     { printf("e%d = f.exprBinary(f.operLT,     e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) LE binary_expr(right).                     { printf("e%d = f.exprBinary(f.operLE,     e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) BOR binary_expr(right).                    { printf("e%d = f.exprBinary(f.operBOr,    e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) BXOR binary_expr(right).                   { printf("e%d = f.exprBinary(f.operBXOr,   e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) AMP binary_expr(right).                    { printf("e%d = f.exprBinary(f.operBAnd,   e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) LSHIFT binary_expr(right).                 { printf("e%d = f.exprBinary(f.operLShift, e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) RSHIFT binary_expr(right).                 { printf("e%d = f.exprBinary(f.operRShift, e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) PLUS binary_expr(right).                   { printf("e%d = f.exprBinary(f.operAdd,    e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) MINUS binary_expr(right).                  { printf("e%d = f.exprBinary(f.operSub,    e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) TIMES binary_expr(right).                  { printf("e%d = f.exprBinary(f.operMul,    e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) DIVIDE binary_expr(right).                 { printf("e%d = f.exprBinary(f.operDiv,    e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) MOD binary_expr(right).                    { printf("e%d = f.exprBinary(f.operMod,    e%d, e%d)\n", r = ++E, left, right); }
+binary_expr(r) ::= binary_expr(left) DOT_STAR binary_expr(right).               { printf("e%d = f.exprAttrVar(e%d, e%d)\n", r = ++E, left, right); }
 
-%type unary_expr {Expr *}
 unary_expr(r) ::= postfix_expr(expr).                                           { r = expr; }
-unary_expr(r) ::= INC(t)   unary_expr(expr).                                    { r = Parser_NewExpr(EXPR_PREOP, OPER_SUCC, 0, expr, 0, &t, parser); }
-unary_expr(r) ::= DEC(t)   unary_expr(expr).                                    { r = Parser_NewExpr(EXPR_PREOP, OPER_PRED, 0, expr, 0, &t, parser); }
-unary_expr(r) ::= PLUS(t)  unary_expr(expr).                                    { r = Parser_NewExpr(EXPR_UNARY, OPER_POS,  0, expr, 0, &t, parser); }
-unary_expr(r) ::= MINUS(t) unary_expr(expr).                                    { r = Parser_NewExpr(EXPR_UNARY, OPER_NEG,  0, expr, 0, &t, parser); }
-unary_expr(r) ::= TIMES(t) unary_expr(expr).                                    { r = Parser_NewExpr(EXPR_UNARY, OPER_IND,  0, expr, 0, &t, parser); }
-unary_expr(r) ::= BNEG(t)  unary_expr(expr).                                    { r = Parser_NewExpr(EXPR_UNARY, OPER_BNEG, 0, expr, 0, &t, parser); }
-unary_expr(r) ::= LNEG(t)  unary_expr(expr).                                    { r = Parser_NewExpr(EXPR_UNARY, OPER_LNEG, 0, expr, 0, &t, parser); }
+unary_expr(r) ::= INC   unary_expr(expr).                                       { printf("e%d = f.exprPreOp(f.operSucc, e%d, e%d)\n", r = ++E, expr); }
+unary_expr(r) ::= DEC   unary_expr(expr).                                       { printf("e%d = f.exprPreOp(f.operPred, e%d, e%d)\n", r = ++E, expr); }
+unary_expr(r) ::= PLUS  unary_expr(expr).                                       { printf("e%d = f.exprUnary(f.operPos,  e%d, e%d)\n", r = ++E, expr); }
+unary_expr(r) ::= MINUS unary_expr(expr).                                       { printf("e%d = f.exprUnary(f.operNeg,  e%d, e%d)\n", r = ++E, expr); }
+unary_expr(r) ::= TIMES unary_expr(expr).                                       { printf("e%d = f.exprUnary(f.operInd,  e%d, e%d)\n", r = ++E, expr); }
+unary_expr(r) ::= BNEG  unary_expr(expr).                                       { printf("e%d = f.exprUnary(f.operBNeg, e%d, e%d)\n", r = ++E, expr); }
+unary_expr(r) ::= LNEG  unary_expr(expr).                                       { printf("e%d = f.exprUnary(f.operLNeg, e%d, e%d)\n", r = ++E, expr); }
 
-%type postfix_expr {Expr *}
 postfix_expr(r) ::= primary_expr(expr).                                         { r = expr; }
-postfix_expr(r) ::= postfix_expr(func) LBRACK(t) argument_list(args) RBRACK.    { r = Parser_NewCallExpr(OPER_INDEX, func, &args, &t, parser); }
-postfix_expr(r) ::= postfix_expr(func) LPAREN(t) RPAREN.                        { r = Parser_NewCallExpr(OPER_APPLY, func, 0,     &t, parser); }
-postfix_expr(r) ::= postfix_expr(func) LPAREN(t) argument_list(args) RPAREN.    { r = Parser_NewCallExpr(OPER_APPLY, func, &args, &t, parser); }
-postfix_expr(r) ::= postfix_expr(obj) DOT(t) IDENTIFIER(attr).                  { r = Parser_NewAttrExpr(obj, &attr, &t, parser); }
-postfix_expr(r) ::= postfix_expr(obj) DOT(t) SPECIFIER(attr).                   { r = Parser_NewAttrExpr(obj, &attr, &t, parser); }
-postfix_expr(r) ::= postfix_expr(obj) DOT(t) CLASS(attr).                       { r = Parser_NewAttrExpr(obj, &attr, &t, parser); }
-postfix_expr(r) ::= SPECIFIER(name) DOT(t) IDENTIFIER(attr).                    { r = Parser_NewClassAttrExpr(&name, &attr, &t, parser); }
-postfix_expr(r) ::= SPECIFIER(name) DOT(t) CLASS(attr).                         { r = Parser_NewClassAttrExpr(&name, &attr, &t, parser); }
-postfix_expr(r) ::= postfix_expr(expr) INC(t).                                  { r = Parser_NewExpr(EXPR_POSTOP, OPER_SUCC, 0, expr, 0, &t, parser); }
-postfix_expr(r) ::= postfix_expr(expr) DEC(t).                                  { r = Parser_NewExpr(EXPR_POSTOP, OPER_PRED, 0, expr, 0, &t, parser); }
+postfix_expr(r) ::= postfix_expr(func) LBRACK argument_list(args) RBRACK.       { printf("e%d = f.exprCall(f.operIndex, e%d, tmp%d[0], tmp%d[1])\n", r = ++E, func, args, args); }
+postfix_expr(r) ::= postfix_expr(func) LPAREN RPAREN.                           { printf("e%d = f.exprCall(f.operApply, e%d, [],       [],     )\n", r = ++E, func            ); }
+postfix_expr(r) ::= postfix_expr(func) LPAREN argument_list(args) RPAREN.       { printf("e%d = f.exprCall(f.operApply, e%d, tmp%d[0], tmp%d[1])\n", r = ++E, func, args, args); }
+postfix_expr(r) ::= postfix_expr(obj) DOT IDENTIFIER(attr).                     { printf("e%d = f.exprAttr(e%d, t%d)\n", r = ++E, obj,  attr); }
+postfix_expr(r) ::= postfix_expr(obj) DOT SPECIFIER(attr).                      { printf("e%d = f.exprAttr(e%d, t%d)\n", r = ++E, obj,  attr); }
+postfix_expr(r) ::= postfix_expr(obj) DOT CLASS(attr).                          { printf("e%d = f.exprAttr(e%d, t%d)\n", r = ++E, obj,  attr); }
+postfix_expr(r) ::= SPECIFIER(name) DOT IDENTIFIER(attr).                       { printf("e%d = f.exprAttr(t%d, t%d)\n", r = ++E, name, attr); }
+postfix_expr(r) ::= SPECIFIER(name) DOT CLASS(attr).                            { printf("e%d = f.exprAttr(t%d, t%d)\n", r = ++E, name, attr); }
+postfix_expr(r) ::= postfix_expr(expr) INC.                                     { printf("e%d = f.exprPostOp(f.operSucc, e%d, e%d)\n", r = ++E, expr); }
+postfix_expr(r) ::= postfix_expr(expr) DEC.                                     { printf("e%d = f.exprPostOp(f.operPred, e%d, e%d)\n", r = ++E, expr); }
 
-%type primary_expr {Expr *}
-primary_expr(r) ::= IDENTIFIER(name).                                           { r = Parser_NewExpr(EXPR_NAME, 0, 0, 0, 0, &name, parser); }
-primary_expr(r) ::= LITERAL_SYMBOL(t).                                          { r = Parser_NewExpr(EXPR_LITERAL, 0, 0, 0, 0, &t, parser); }
-primary_expr(r) ::= LITERAL_INT(t).                                             { r = Parser_NewExpr(EXPR_LITERAL, 0, 0, 0, 0, &t, parser); }
-primary_expr(r) ::= LITERAL_FLOAT(t).                                           { r = Parser_NewExpr(EXPR_LITERAL, 0, 0, 0, 0, &t, parser); }
-primary_expr(r) ::= LITERAL_CHAR(t).                                            { r = Parser_NewExpr(EXPR_LITERAL, 0, 0, 0, 0, &t, parser); }
+primary_expr(r) ::= IDENTIFIER(name).                                           { printf("e%d = f.exprName(t%d)\n", r = ++E, name); }
+primary_expr(r) ::= LITERAL_SYMBOL(token).                                      { printf("e%d = f.exprLiteral(t%d)\n", r = ++E, token); }
+primary_expr(r) ::= LITERAL_INT(token).                                         { printf("e%d = f.exprLiteral(t%d)\n", r = ++E, token); }
+primary_expr(r) ::= LITERAL_FLOAT(token).                                       { printf("e%d = f.exprLiteral(t%d)\n", r = ++E, token); }
+primary_expr(r) ::= LITERAL_CHAR(token).                                        { printf("e%d = f.exprLiteral(t%d)\n", r = ++E, token); }
 primary_expr(r) ::= literal_string(expr).                                       { r = expr; }
-primary_expr(r) ::= LPAREN expr(expr) RPAREN.                                   { r = expr.first; }
-primary_expr(r) ::= LPAREN SPECIFIER(name) RPAREN.                              { r = Parser_NewExpr(EXPR_NAME, 0, 0, 0, 0, &name, parser); }
+primary_expr(r) ::= LPAREN expr(expr) RPAREN.                                   { r = expr; }
+primary_expr(r) ::= LPAREN SPECIFIER(name) RPAREN.                              { printf("e%d = f.exprName(t%d)\n", r = ++E, name); }
 primary_expr(r) ::= block(expr).                                                { r = expr; }
-//primary_expr(r) ::= LCURLY(t) expr(expr) RCURLY.                                { r = Parser_NewCompoundExpr(expr.first, &t, parser); }
+//primary_expr(r) ::= LCURLY expr(expr) RCURLY.                                   { printf("e%d = f.exprCompound(e%d)\n", r = ++E, expr); }
 
-%type literal_string {Expr *}
-literal_string(r) ::= LITERAL_STR(t).                                           { r = Parser_NewExpr(EXPR_LITERAL, 0, 0, 0, 0, &t, parser); }
-literal_string(r) ::= literal_string(expr) LITERAL_STR(t).                      { r = expr; Parser_Concat(r, &t, parser); }
+literal_string(r) ::= LITERAL_STR(token).                                       { printf("e%d = f.exprLiteral(t%d)\n", r = ++E, token); }
+literal_string(r) ::= literal_string(expr) LITERAL_STR(token).                  { r = expr; printf("e%d.concat(t%d)\n", r, token); }
 
-%type block {Expr *}
-block(r) ::= LBRACK(t) statement_list_expr(sle) RBRACK.                         { r = Parser_NewBlock(0,          sle.first, sle.expr, &t, parser); }
-block(r) ::= LBRACK(t) block_argument_list(args) BOR statement_list_expr(sle) RBRACK.
-                                                                                { r = Parser_NewBlock(args.first, sle.first, sle.expr, &t, parser); }
+block(r) ::= LBRACK statement_list_expr(sle) RBRACK.                            { printf("e%d = f.exprBlock(None, tmp%d[0], tmp%d[1])\n", r = ++E, sle, sle); }
+block(r) ::= LBRACK block_argument_list(args) BOR statement_list_expr(sle) RBRACK.
+                                                                                { printf("e%d = f.exprBlock(l%d, tmp%d[0], tmp%d[1])\n", r = ++E, args, sle, sle); }
 
-%type block_argument_list {ExprList}
-block_argument_list(r) ::= COLON block_arg(arg).                                { r.first = arg; r.last = arg; }
-block_argument_list(r) ::= block_argument_list(args) COLON block_arg(arg).      { r = args; Parser_SetNextArg(r.last, arg, parser); r.last = arg; }
+block_argument_list(r) ::= COLON block_arg(arg).                                { printf("l%d = [e%d]\n", r = ++L, arg); }
+block_argument_list(r) ::= block_argument_list(args) COLON block_arg(arg).      { r = args; printf("l%d.append(s%d)\n", r, arg); }
 
-%type block_arg {Expr *}
 block_arg(r) ::= unary_expr(arg).                                               { r = arg; }
-block_arg(r) ::= decl_spec_list(declSpecList) unary_expr(arg).                  { r = arg; Parser_SetDeclSpecs(arg, declSpecList.first, parser); }
+block_arg(r) ::= decl_spec_list(declSpecList) unary_expr(arg).                  { r = arg; printf("e%d.declSpecs = l%d\n", r, declSpecList); }
 
-%type argument_list {ArgList}
-argument_list(r) ::= fixed_arg_list(f).                                         { r.fixed = f.first; r.var = 0; }
-argument_list(r) ::= fixed_arg_list(f) COMMA ELLIPSIS assignment_expr(v).       { r.fixed = f.first; r.var = v; }
-argument_list(r) ::= ELLIPSIS assignment_expr(v).                               { r.fixed = 0;       r.var = v; }
+argument_list(r) ::= fixed_arg_list(f).                                         { printf("tmp%d = (l%d,  [])\n", r = ++TMP, f   ); }
+argument_list(r) ::= fixed_arg_list(f) COMMA ELLIPSIS assignment_expr(v).       { printf("tmp%d = (l%d, e%d)\n", r = ++TMP, f, v); }
+argument_list(r) ::= ELLIPSIS assignment_expr(v).                               { printf("tmp%d = ([],  e%d)\n", r = ++TMP,    v); }
 
-%type fixed_arg_list {ExprList}
-fixed_arg_list(r) ::= arg(arg).                                                 { r.first = arg; r.last = arg; }
-fixed_arg_list(r) ::= fixed_arg_list(args) COMMA arg(arg).                      { r = args; Parser_SetNextArg(r.last, arg, parser); r.last = arg; }
+fixed_arg_list(r) ::= arg(arg).                                                 { printf("l%d = [e%d]\n", r = ++L, arg); }
+fixed_arg_list(r) ::= fixed_arg_list(args) COMMA arg(arg).                      { r = args; printf("l%d.append(s%d)\n", r, arg); }
 
-%type arg {Expr *}
 arg(r) ::= colon_expr(arg).                                                     { r = arg; }
-arg(r) ::= decl_spec_list(declSpecList) colon_expr(arg).                        { r = arg; Parser_SetDeclSpecs(arg, declSpecList.first, parser); }
+arg(r) ::= decl_spec_list(declSpecList) colon_expr(arg).                        { r = arg; printf("e%d.declSpecs = l%d\n", r, declSpecList); }
 
 
 %syntax_error {
-    fprintf(stderr, "syntax error! token %d, line %u\n", TOKEN.id, TOKEN.lineNo);
-    parser->error = 1;
+    fprintf(stderr, "syntax error!\n");
 }
 
 %parse_accept {

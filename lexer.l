@@ -10,23 +10,17 @@ FS			(f|F|l|L)
 IS			(u|U|l|L)*
 
 %{
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "char.h"
-#include "float.h"
+#include <string.h>
 #include "gram.h"
-#include "heart.h"
-#include "int.h"
 #include "lexer.h"
-#include "rodata.h"
-#include "st.h"
-#include "str.h"
-#include "sym.h"
 
 static void count(yyscan_t yyscanner);
 static void comment(yyscan_t yyscanner);
 static void lcomment(yyscan_t yyscanner);
+
+static int T;
 %}
 
 %%
@@ -194,163 +188,51 @@ static void count(yyscan_t yyscanner)
     yyset_column(column, yyscanner);
 }
 
-static Unknown *intFromLiteral(char *str, size_t len) {
-    return (Unknown *)Integer_FromCLong(strtol(str, 0, 0));
+/* XXX: make these configurable */
+static char *builtInSpecifiers[] = {
+    "obj",
+    "int",
+    "char",
+    "import",
+    "export",
+    "extern",
+    "cdecl",
+    0
+};
+
+static int isSpec(const char *t) {
+    char **p;
+    
+    for (p = builtInSpecifiers; *p; ++p)
+        if (0 == strcmp(*p, t))
+            return 1;
+    return 0;
 }
 
-static Unknown *floatFromLiteral(char *str, size_t len) {
-    return (Unknown *)Float_FromCDouble(strtod(str, 0));
-}
-
-static Unknown *charFromLiteral(char *str, size_t len) {
-    char *s;
-    char c, result;
-    
-    /* strip quotes */
-    s = str + 1; len -= 2;
-    
-    while (len--) {
-        c = *s++;
-        /* Note: a trailing '\' is syntactically impossible. */
-        if (len && c == '\\') {
-            c = *s++;
-            --len;
-            
-            /* XXX: numeric escape codes */
-            switch (c) {
-            case 'a': c = '\a'; break;
-            case 'b': c = '\b'; break;
-            case 'f': c = '\f'; break;
-            case 'n': c = '\n'; break;
-            case 'r': c = '\r'; break;
-            case 't': c = '\t'; break;
-            case 'v': c = '\v'; break;
-                
-            case '\\':
-            case '\'':
-            case '"':
-                break;
-                
-            default:
-                /* XXX: error */
-                break;
-            }
-            result = c;
-        } else {
-            result = c;
-        }
-    }
-    
-    return (Unknown *)Char_FromCChar(result);
-}
-
-static Unknown *stringFromLiteral(char *str, size_t len) {
-    String *result;
-    char *d, *s;
-    char c;
-    size_t resultLen, left;
-    
-    len -= 2; /* strip quotes */
-    
-    result = 0;
-    d = 0;
-    resultLen = 0;
-    
- again:
-    left = len;
-    s = str + 1; /* skip leading quote */
-    
-    while (left--) {
-        c = *s++;
-        /* Note: a trailing '\' is syntactically impossible. */
-        if (left && c == '\\') {
-            c = *s++;
-            --left;
-            
-            /* XXX: numeric escape codes */
-            switch (c) {
-            case 'a': c = '\a'; break;
-            case 'b': c = '\b'; break;
-            case 'f': c = '\f'; break;
-            case 'n': c = '\n'; break;
-            case 'r': c = '\r'; break;
-            case 't': c = '\t'; break;
-            case 'v': c = '\v'; break;
-                
-            case '\\':
-            case '\'':
-            case '"':
-                break;
-                
-            default:
-                /* XXX: error */
-                break;
-            }
-            if (d)
-                *d++ = c;
-            else
-                ++resultLen;
-        } else {
-            if (d)
-                *d++ = c;
-            else
-                ++resultLen;
-        }
-    }
-    
-    if (!result) {
-        result = String_FromCStringAndLength(0, resultLen);
-        d = String_AsCString(result);
-        goto again;
-    }
-
-    return (Unknown *)result;
-}
-
-static Unknown *symbolNodeFromCString(Unknown *st, const char *str) {
-    Symbol *sym = Symbol_FromCString(str);
-    return Send(GLOBAL(theInterpreter), st, symbolNodeForSymbol, sym, 0);
-}
-
-static int _isSpec(Unknown *symbolNode) {
-    Unknown *bool;
-    bool = Send(GLOBAL(theInterpreter), symbolNode, isSpec, 0);
-    return (bool == (Unknown *)one || bool == GLOBAL(xtrue));
-}
-
-int Lexer_GetNextToken(Token *token, yyscan_t scanner, Unknown *st) {
+int Lexer_GetNextToken(int *token, yyscan_t scanner) {
     int id;
-    struct yyguts_t * yyg = (struct yyguts_t*)scanner;
+    struct yyguts_t * yyg = (struct yyguts_t*)scanner; /* for yylineno */
     
     id = yylex(scanner);
-    token->id = id;
-    token->value = 0;
-    token->lineNo = yylineno;
-    if (id <= 0) {
-        return 0;
-    }
+    
     switch (id) {
     case TOKEN_LITERAL_INT:
-        token->value = intFromLiteral(yyget_text(scanner), yyget_leng(scanner));
-        break;
     case TOKEN_LITERAL_FLOAT:
-        token->value = floatFromLiteral(yyget_text(scanner), yyget_leng(scanner));
-        break;
     case TOKEN_LITERAL_CHAR:
-        token->value = charFromLiteral(yyget_text(scanner), yyget_leng(scanner));
-        break;
     case TOKEN_LITERAL_STR:
-        token->value = stringFromLiteral(yyget_text(scanner), yyget_leng(scanner));
-        break;
     case TOKEN_LITERAL_SYMBOL:
-        token->value = (Unknown *)Symbol_FromCString(yyget_text(scanner) + 1);
+        *token = ++T;
+        printf("t%d = f.token(%s, %d)\n", T, yyget_text(scanner), yylineno);
         break;
     case TOKEN_IDENTIFIER:
-        token->value = symbolNodeFromCString(st, yyget_text(scanner));
-        if (_isSpec(token->value)) {
-            token->id = TOKEN_SPECIFIER;
-        }
+        *token = ++T;
+        printf("t%d = f.token('%s', %d)\n", T, yyget_text(scanner), yylineno);
+        if (isSpec(yyget_text(scanner)))
+            id = TOKEN_SPECIFIER;
         break;
+    default:
+        *token = 0;
     }
+    
     return id;
 }

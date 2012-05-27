@@ -1,12 +1,13 @@
 ## Process this file with automake to produce Makefile.in
 
-bin_PROGRAMS = spike cspk ispike
-noinst_PROGRAMS = xcspk
-noinst_LIBRARIES = libspike.a
+#bin_PROGRAMS = spike cspk ispike
+bin_PROGRAMS = pspk
+#noinst_PROGRAMS = xcspk
+#noinst_LIBRARIES = libspike.a
 
 ispike_SOURCES = spike.c
 nodist_ispike_SOURCES = xgenerated.c
-BUILT_SOURCES = xgenerated.c
+#BUILT_SOURCES = xgenerated.c
 ispike_LDADD = libspike.a
 
 cspk_SOURCES = cspk.c
@@ -17,6 +18,13 @@ xcspk_LDADD = libspike.a
 
 spike_SOURCES = spikex.c
 
+pspk_SOURCES = \
+	pspk.c \
+	gram.c \
+	gram.h \
+	lexer.c \
+	lexer.h \
+	$(empty)
 
 libspike_a_SOURCES = \
 	array.c \
@@ -42,8 +50,6 @@ libspike_a_SOURCES = \
 	disasm.h \
 	float.c \
 	float.h \
-	gram.c \
-	gram.h \
 	heart.h \
 	int.c \
 	int.h \
@@ -53,8 +59,6 @@ libspike_a_SOURCES = \
 	io.h \
 	kwsel.c \
 	kwsel.h \
-	lexer.c \
-	lexer.h \
 	metaclass.c \
 	metaclass.h \
 	module.c \
