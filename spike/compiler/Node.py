@@ -3,9 +3,16 @@
 class Node(object):
 
 
+    def _iterChildren(self):
+        for name in self.childAttrNames:
+            yield (name, getattr(self, name))
+        return
+    children = property(_iterChildren)
+
+
     def dump(self, stream, indent=0):
         for attr, child in self.children:
-            print "%s%s: %r" % ("    " * indent, attr, child)
+            print >>stream, "%s%s: %r" % ("    " * indent, attr, child)
             if hasattr(child, 'dump'):
                 child.dump(stream, indent + 1)
         return

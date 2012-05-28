@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+
+
+def pspk(filename):
+    import os
+    from popen2 import Popen4
+
+    argv = ["./pspk", filename]
+
+    child = Popen4(argv)
+
+    child.tochild.close()
+
+    output = []
+    for line in child.fromchild:
+        output.append(line)
+    
+    return ''.join(output)
+
+
+def parse(filename):
+    from spike.compiler import NodeFactory
+    
+    output = pspk(filename)
+    
+    namespace = dict(
+        f = NodeFactory(),
+        )
+    exec output in namespace
+
+    tree = namespace['root']
+
+    stream = open("/dev/null", "w")
+    for child in tree:
+        print >>stream, child
+        child.dump(stream, 1)
+    stream.close()
+    
+    #dot = "ast.dot"
+    dot = "/dev/null"
+    stream = open(dot, "w")
+    print >>stream, "digraph AST {"
+    for child in tree:
+        child.graphviz(stream)
+    print >>stream, "}"
+    stream.close()
+
+
+import sys
+for filename in sys.argv[1:]:
+    print filename
+    parse(filename)

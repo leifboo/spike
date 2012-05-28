@@ -220,15 +220,32 @@ int Lexer_GetNextToken(int *token, yyscan_t scanner) {
     case TOKEN_LITERAL_FLOAT:
     case TOKEN_LITERAL_CHAR:
     case TOKEN_LITERAL_STR:
-    case TOKEN_LITERAL_SYMBOL:
         *token = ++T;
         printf("t%d = f.token(%s, %d)\n", T, yyget_text(scanner), yylineno);
+        break;
+    case TOKEN_LITERAL_SYMBOL:
+        *token = ++T;
+        printf("t%d = f.token('%s', %d)\n", T, yyget_text(scanner) + 1, yylineno);
         break;
     case TOKEN_IDENTIFIER:
         *token = ++T;
         printf("t%d = f.token('%s', %d)\n", T, yyget_text(scanner), yylineno);
         if (isSpec(yyget_text(scanner)))
             id = TOKEN_SPECIFIER;
+        break;
+    case TOKEN_BREAK:
+    case TOKEN_CLASS:
+    case TOKEN_CONTINUE:
+    case TOKEN_DO:
+    case TOKEN_ELSE:
+    case TOKEN_FOR:
+    case TOKEN_IF:
+    case TOKEN_META:
+    case TOKEN_RETURN:
+    case TOKEN_WHILE:
+    case TOKEN_YIELD:
+        *token = ++T;
+        printf("t%d = f.token('%s', %d)\n", T, yyget_text(scanner), yylineno);
         break;
     default:
         *token = 0;

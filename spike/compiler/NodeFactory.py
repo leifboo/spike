@@ -2,28 +2,47 @@
 
 class NodeFactory(object):
 
-    from statements import ClassDef   as classDef
+    from statements import Break      as stmtBreak
     from statements import Compound   as stmtCompound
+    from statements import Continue   as stmtContinue
+    from statements import ClassDef   as stmtDefClass
+    from statements import MethodDef  as stmtDefMethod
+    # STMT_DEF_MODULE
+    # STMT_DEF_SPEC
+    from statements import VarDef     as stmtDefVar
+    from statements import DoWhile    as stmtDoWhile
     from statements import Expr       as stmtExpr
-    from statements import MethodDef  as methodDef
+    from statements import For        as stmtFor
+    from statements import IfElse     as stmtIfElse
+    # STMT_PRAGMA_SOURCE
+    from statements import Return     as stmtReturn
+    from statements import While      as stmtWhile
+    from statements import Yield      as stmtYield
 
+    def stmtExprOrDefVar(self, expr):
+        declSpecs = getattr(expr, 'declSpecs', None)
+        if declSpecs:
+            return self.stmtDefVar(expr)
+        return self.stmtExpr(expr)
+    
     from expressions import And       as exprAnd
     from expressions import Assign    as exprAssign
     from expressions import Attr      as exprAttr
     from expressions import AttrVar   as exprAttrVar
-    from expressions import BinaryOp  as exprBinaryOp
+    from expressions import Binary    as exprBinary
     from expressions import Block     as exprBlock
     from expressions import Call      as exprCall
     from expressions import Compound  as exprCompound
     from expressions import Cond      as exprCond
-    from expressions import Expr      as exprExpr
     from expressions import Id        as exprId
+    from expressions import Keyword   as exprKeyword
     from expressions import Literal   as exprLiteral
     from expressions import Name      as exprName
+    exprNI = lambda self, left, right: self.exprId(left, right, True)
     from expressions import Or        as exprOr
     from expressions import PostOp    as exprPostOp
     from expressions import PreOp     as exprPreOp
-    from expressions import UnaryOp   as exprUnaryOp
+    from expressions import Unary     as exprUnary
     
     from operators import succ    as operSucc
     from operators import pred    as operPred
@@ -52,3 +71,6 @@ class NodeFactory(object):
     from operators import apply   as operApply
     from operators import index   as operIndex
 
+    from collections import namedtuple
+    token = namedtuple('Token', ('value', 'lineNo'))
+    del namedtuple

@@ -1,34 +1,39 @@
 
 
-from Stmt import Stmt
+from Node import Node
+
+
+
+class Stmt(Node):
+
+
+    def __repr__(self):
+        return "<stmt %s>" % self.__class__.__name__
+
+
+
+class Break(Stmt):
+    pass
+
 
 
 class ClassDef(Stmt):
 
 
-    def __init__(self, name, superclass, body):
+    childAttrNames = ('body', 'metaBody')
+
+
+    def __init__(self, name, superclass, body, metaBody):
         super(ClassDef, self).__init__()
-        self.name = name
-        self.superclass = superclass
+        self.name = name.value
+        self.superclass = superclass and superclass.value or "Object"
         self.body = body
+        self.metaBody = metaBody
         return
 
-
-    def _iterChildren(self):
-        yield ('body', self.body)
-        return
-    children = property(_iterChildren)
-
-
-from Stmt import Stmt
 
 
 class Compound(Stmt, list):
-
-
-    def __init__(self, stmtList):
-        super(Compound, self).__init__(stmtList)
-        return
 
 
     def _iterChildren(self):
@@ -38,10 +43,30 @@ class Compound(Stmt, list):
     children = property(_iterChildren)
 
 
-from Stmt import Stmt
+
+class Continue(Stmt):
+    pass
+
+
+
+class DoWhile(Stmt):
+
+
+    childAttrNames = ('body', 'expr')
+
+
+    def __init__(self, body, expr):
+        super(DoWhile, self).__init__()
+        self.body = body
+        self.expr = expr
+        return
+
 
 
 class Expr(Stmt):
+
+
+    childAttrNames = ('expr',)
 
 
     def __init__(self, expr):
@@ -50,37 +75,100 @@ class Expr(Stmt):
         return
 
 
-    def _iterChildren(self):
-        yield ('expr', self.expr)
+
+class For(Stmt):
+
+
+    childAttrNames = ('expr1', 'expr2', 'expr3', 'body')
+
+
+    def __init__(self, expr1, expr2, expr3, body):
+        super(For, self).__init__()
+        self.expr1 = expr1
+        self.expr2 = expr2
+        self.expr3 = expr3
+        self.body = body
         return
-    children = property(_iterChildren)
 
 
-from Stmt import Stmt
+
+class IfElse(Stmt):
+
+
+    childAttrNames = ('expr', 'ifTrue', 'ifFalse')
+
+
+    def __init__(self, expr, ifTrue, ifFalse):
+        super(IfElse, self).__init__()
+        self.expr = expr
+        self.ifTrue = ifTrue
+        self.ifFalse = ifFalse
+        return
+
 
 
 class MethodDef(Stmt):
 
 
-    def __init__(self, expr, stmt):
+    childAttrNames = ('decl', 'body')
+
+
+    def __init__(self, decl, body):
         super(MethodDef, self).__init__()
+        self.decl = decl
+        self.body = body
+        return
+
+
+
+class Return(Stmt):
+
+
+    childAttrNames = ('expr',)
+
+
+    def __init__(self, expr):
+        super(Return, self).__init__()
         self.expr = expr
-        self.stmt = stmt
         return
 
 
-    def _iterChildren(self):
-        yield ('expr', self.expr)
-        yield ('stmt', self.stmt)
+
+class VarDef(Stmt):
+
+
+    childAttrNames = ('expr',)
+
+
+    def __init__(self, expr):
+        super(VarDef, self).__init__()
+        assert expr.declSpecs is not None # XXX: user error everywhere else
+        self.expr = expr
         return
-    children = property(_iterChildren)
 
 
-from spike.compiler.tree.Node import Node
+
+class While(Stmt):
 
 
-class Stmt(Node):
+    childAttrNames = ('expr', 'body')
 
 
-    def __repr__(self):
-        return "<stmt %s>" % self.__class__.__name__
+    def __init__(self, expr, body):
+        super(While, self).__init__()
+        self.expr = expr
+        self.body = body
+        return
+
+
+
+class Yield(Stmt):
+
+
+    childAttrNames = ('expr',)
+
+
+    def __init__(self, expr):
+        super(Yield, self).__init__()
+        self.expr = expr
+        return

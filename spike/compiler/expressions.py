@@ -1,125 +1,104 @@
 
 
-from Expr import Expr
+from Node import Node
+
+
+
+class Expr(Node):
+
+
+    def __repr__(self):
+        return "<expr %s>" % self.__class__.__name__
+
+
+    def comma(self, right):
+        c = Comma()
+        c.append(self)
+        c.append(right)
+        return c
+
 
 
 class And(Expr):
 
 
-    def __init__(self, left, right, token):
+    childAttrNames = ('left', 'right')
+
+
+    def __init__(self, left, right):
         super(And, self).__init__()
         self.left = left
         self.right = right
-        self.token = token
         return
 
-
-    def _iterChildren(self):
-        yield ('left', self.left)
-        yield ('right', self.right)
-        return
-    children = property(_iterChildren)
-
-
-from Expr import Expr
 
 
 class Assign(Expr):
 
 
-    def __init__(self, op, left, right, token):
+    childAttrNames = ('op', 'left', 'right')
+
+
+    def __init__(self, op, left, right):
         super(Assign, self).__init__()
         self.op = op
         self.left = left
         self.right = right
-        self.token = token
         return
 
-
-    def _iterChildren(self):
-        yield ('op', self.op)
-        yield ('left', self.left)
-        yield ('right', self.right)
-        return
-    children = property(_iterChildren)
-
-
-from Expr import Expr
 
 
 class Attr(Expr):
 
 
-    def __init__(self, obj, attr, token):
+    childAttrNames = ('obj', 'attr')
+
+
+    def __init__(self, obj, attr):
         super(Attr, self).__init__()
         self.obj = obj
         self.attr = attr
-        self.token = token
         return
 
-
-    def _iterChildren(self):
-        yield ('obj', self.obj)
-        yield ('attr', self.attr)
-        return
-    children = property(_iterChildren)
-
-
-from Expr import Expr
 
 
 class AttrVar(Expr):
 
 
-    def __init__(self, obj, attr, token):
+    childAttrNames = ('obj', 'attr')
+
+
+    def __init__(self, obj, attr):
         super(AttrVar, self).__init__()
         self.obj = obj
         self.attr = attr
-        self.token = token
         return
 
 
-    def _iterChildren(self):
-        yield ('obj', self.obj)
-        yield ('attr', self.attr)
-        return
-    children = property(_iterChildren)
+
+class Binary(Expr):
 
 
-from Expr import Expr
+    childAttrNames = ('op', 'left', 'right')
 
 
-class BinaryOp(Expr):
-
-
-    def __init__(self, op, left, right, token):
-        super(BinaryOp, self).__init__()
+    def __init__(self, op, left, right):
+        super(Binary, self).__init__()
         self.op = op
         self.left = left
         self.right = right
-        self.token = token
         return
 
-
-    def _iterChildren(self):
-        yield ('op', self.op)
-        yield ('left', self.left)
-        yield ('right', self.right)
-        return
-    children = property(_iterChildren)
-
-
-from Expr import Expr
 
 
 class Block(Expr):
 
 
-    def __init__(self, stmtList, expr, token):
+    def __init__(self, args, stmtList, expr):
         super(Block, self).__init__()
+        self.args = args
         self.stmtList = stmtList
         self.expr = expr
-        self.token = token
         return
 
 
@@ -131,30 +110,21 @@ class Block(Expr):
     children = property(_iterChildren)
 
 
-from Expr import Expr
-
 
 class Call(Expr):
 
 
-    def __init__(self, oper, func, args, token):
+    childAttrNames = ('oper', 'func', 'fixedArgs', 'varArgs')
+
+
+    def __init__(self, oper, func, fixedArgs, varArgs):
         super(Call, self).__init__()
         self.oper = oper
         self.func = func
-        self.args = args
-        self.token = token
+        self.fixedArgs = fixedArgs
+        self.varArgs = varArgs
         return
 
-
-    def _iterChildren(self):
-        yield ('oper', self.oper)
-        yield ('func', self.func)
-        yield ('args', self.args)
-        return
-    children = property(_iterChildren)
-
-
-from Expr import Expr
 
 
 class Comma(Expr, list):
@@ -172,91 +142,70 @@ class Comma(Expr, list):
         return self
 
 
-from Expr import Expr
-
 
 class Compound(Expr):
 
 
-    def __init__(self, expr, token):
+    childAttrNames = ('expr',)
+
+
+    def __init__(self, expr):
         super(Compound, self).__init__()
         self.expr = expr
-        self.token = token
         return
 
-
-    def _iterChildren(self):
-        yield ('expr', self.expr)
-        return
-    children = property(_iterChildren)
-
-
-from Expr import Expr
 
 
 class Cond(Expr):
 
 
-    def __init__(self, cond, left, right, token):
+    childAttrNames = ('cond', 'left', 'right')
+
+
+    def __init__(self, cond, left, right):
         super(Cond, self).__init__()
         self.cond = cond
         self.left = left
         self.right = right
-        self.token = token
         return
 
-
-    def _iterChildren(self):
-        yield ('cond', self.cond)
-        yield ('left', self.left)
-        yield ('right', self.right)
-        return
-    children = property(_iterChildren)
-
-
-from spike.compiler.tree.Node import Node
-
-
-class Expr(Node):
-
-
-    def __repr__(self):
-        return "<expr %s>" % self.__class__.__name__
-
-
-    def comma(self, right):
-        from Comma import Comma
-        c = Comma()
-        c.append(self)
-        c.append(right)
-        return c
-
-
-from Expr import Expr
 
 
 class Id(Expr):
 
 
-    def __init__(self, left, right, token):
+    childAttrNames = ('left', 'right')
+
+
+    def __init__(self, left, right, invert = False):
         super(Id, self).__init__()
         self.left = left
         self.right = right
-        self.token = token
+        self.invert = invert
         return
 
 
-    def _iterChildren(self):
-        yield ('left', self.left)
-        yield ('right', self.right)
+
+class Keyword(Expr):
+
+
+    childAttrNames = ('receiver', 'keyword', 'argKeywords', 'args')
+
+
+    def __init__(self, receiver, keyword, argKeywords, args):
+        super(Keyword, self).__init__()
+        self.receiver = receiver
+        self.keyword = keyword
+        self.argKeywords = argKeywords
+        self.args = args
         return
-    children = property(_iterChildren)
 
-
-from Expr import Expr
 
 
 class Literal(Expr):
+
+
+    childAttrNames = ()
 
 
     def __init__(self, token):
@@ -265,21 +214,16 @@ class Literal(Expr):
         return
 
 
-    def _iterChildren(self):
-        return iter([])
-    children = property(_iterChildren)
-
-
-
     def concat(self, token):
         self.tokens.append(token)
         return self
 
 
-from Expr import Expr
-
 
 class Name(Expr):
+
+
+    childAttrNames = ()
 
 
     def __init__(self, token):
@@ -288,90 +232,57 @@ class Name(Expr):
         return
 
 
-    def _iterChildren(self):
-        return iter([])
-    children = property(_iterChildren)
-
-
-from Expr import Expr
-
 
 class Or(Expr):
 
 
-    def __init__(self, left, right, token):
+    childAttrNames = ('left', 'right')
+
+
+    def __init__(self, left, right):
         super(Or, self).__init__()
         self.left = left
         self.right = right
-        self.token = token
         return
 
-
-    def _iterChildren(self):
-        yield ('left', self.left)
-        yield ('right', self.right)
-        return
-    children = property(_iterChildren)
-
-
-from Expr import Expr
 
 
 class PostOp(Expr):
 
 
-    def __init__(self, op, expr, token):
+    childAttrNames = ('op', 'expr')
+
+
+    def __init__(self, op, expr):
         super(PostOp, self).__init__()
         self.op = op
         self.expr = expr
-        self.token = token
         return
 
-
-    def _iterChildren(self):
-        yield ('op', self.expr)
-        yield ('expr', self.expr)
-        return
-    children = property(_iterChildren)
-
-
-from Expr import Expr
 
 
 class PreOp(Expr):
 
 
-    def __init__(self, op, expr, token):
+    childAttrNames = ('op', 'expr')
+
+
+    def __init__(self, op, expr):
         super(PreOp, self).__init__()
         self.op = op
         self.expr = expr
-        self.token = token
         return
 
 
-    def _iterChildren(self):
-        yield ('op', self.op)
-        yield ('expr', self.expr)
-        return
-    children = property(_iterChildren)
+
+class Unary(Expr):
 
 
-from Expr import Expr
+    childAttrNames = ('op', 'expr')
 
 
-class UnaryOp(Expr):
-
-
-    def __init__(self, op, expr, token):
-        super(UnaryOp, self).__init__()
+    def __init__(self, op, expr):
+        super(Unary, self).__init__()
         self.op = op
         self.expr = expr
-        self.token = token
         return
-
-
-    def _iterChildren(self):
-        yield ('op', self.op)
-        yield ('expr', self.expr)
-        return
-    children = property(_iterChildren)
