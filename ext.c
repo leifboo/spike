@@ -6,20 +6,28 @@
 #include <Python.h>
 
 
+FILE *spkout, *spkerr;
+
 
 static PyObject *parse(PyObject *self, PyObject *args) {
-    PyObject *pyin; FILE *in;
+    PyObject *pyin = 0, *pyout = 0, *pyerr = 0;
+    FILE *spkin;
     void *parser; yyscan_t lexer;
     char buffer[1024];
     int id, token;
     
     (void)self;
-    if (!PyArg_ParseTuple(args, "O!:parse", &PyFile_Type, &pyin))
+    if (!PyArg_ParseTuple(args, "O!O!O!:parse",
+                          &PyFile_Type, &pyin,
+                          &PyFile_Type, &pyout,
+                          &PyFile_Type, &pyerr))
         return 0;
-    in = PyFile_AsFile(pyin);
+    spkin  = PyFile_AsFile(pyin);
+    spkout = PyFile_AsFile(pyout);
+    spkerr = PyFile_AsFile(pyerr);
     
     Lexer_lex_init(&lexer);
-    Lexer_restart(in, lexer);
+    Lexer_restart(spkin, lexer);
     Lexer_set_lineno(2, lexer);
     Lexer_set_column(1, lexer);
     

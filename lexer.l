@@ -16,6 +16,8 @@ IS			(u|U|l|L)*
 #include "gram.h"
 #include "lexer.h"
 
+extern FILE *spkout, *spkerr;
+
 static void count(yyscan_t yyscanner);
 static void comment(yyscan_t yyscanner);
 static void lcomment(yyscan_t yyscanner);
@@ -101,7 +103,7 @@ ${L}({L}|{D})*		{ count(yyscanner); return TOKEN_LITERAL_SYMBOL; }
 "?"			{ count(yyscanner); return TOKEN_QM; }
 
 [ \t\v\n\f]		{ count(yyscanner); }
-.			{ fprintf(stderr, "bad character in source: '%s'\n", yyget_text(yyscanner)); return -1; }
+.			{ fprintf(spkerr, "bad character in source: '%s'\n", yyget_text(yyscanner)); return -1; }
 
 %%
 
@@ -221,15 +223,15 @@ int Lexer_GetNextToken(int *token, yyscan_t scanner) {
     case TOKEN_LITERAL_CHAR:
     case TOKEN_LITERAL_STR:
         *token = ++T;
-        printf("t%d = f.token(%s, %d)\n", T, yyget_text(scanner), yylineno);
+        fprintf(spkout, "t%d = f.token(%s, %d)\n", T, yyget_text(scanner), yylineno);
         break;
     case TOKEN_LITERAL_SYMBOL:
         *token = ++T;
-        printf("t%d = f.token('%s', %d)\n", T, yyget_text(scanner) + 1, yylineno);
+        fprintf(spkout, "t%d = f.token('%s', %d)\n", T, yyget_text(scanner) + 1, yylineno);
         break;
     case TOKEN_IDENTIFIER:
         *token = ++T;
-        printf("t%d = f.token('%s', %d)\n", T, yyget_text(scanner), yylineno);
+        fprintf(spkout, "t%d = f.token('%s', %d)\n", T, yyget_text(scanner), yylineno);
         if (isSpec(yyget_text(scanner)))
             id = TOKEN_SPECIFIER;
         break;
@@ -245,7 +247,7 @@ int Lexer_GetNextToken(int *token, yyscan_t scanner) {
     case TOKEN_WHILE:
     case TOKEN_YIELD:
         *token = ++T;
-        printf("t%d = f.token('%s', %d)\n", T, yyget_text(scanner), yylineno);
+        fprintf(spkout, "t%d = f.token('%s', %d)\n", T, yyget_text(scanner), yylineno);
         break;
     default:
         *token = 0;
