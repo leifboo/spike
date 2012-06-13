@@ -13,7 +13,7 @@ class Stmt(Node):
 
 
 class Break(Stmt):
-    pass
+    childAttrNames = ()
 
 
 
@@ -23,12 +23,26 @@ class ClassDef(Stmt):
     childAttrNames = ('body', 'metaBody')
 
 
-    def __init__(self, name, superclass, body, metaBody):
+    # XXX: legacy code support
+    u = property(lambda self: self)
+    klass = property(lambda self: self)
+    expr = property(lambda self: self.name)
+    top = property(lambda self: self.body)
+    bottom = property(lambda self: self.metaBody)
+    predefined = False
+
+
+    def __init__(self, name, superclassName, body, metaBody):
         super(ClassDef, self).__init__()
-        self.name = name.value
-        self.superclass = superclass and superclass.value or "Object"
+        from expressions import Name
+        self.name = Name(name)
+        if not superclassName:
+            superclassName = "Object"
+        self.superclassName = Name(superclassName)
         self.body = body
         self.metaBody = metaBody
+        self.superclassDef = None
+        self.subclassDefs = []
         return
 
 
@@ -45,7 +59,7 @@ class Compound(Stmt, list):
 
 
 class Continue(Stmt):
-    pass
+    childAttrNames = ()
 
 
 
@@ -79,14 +93,18 @@ class Expr(Stmt):
 class For(Stmt):
 
 
-    childAttrNames = ('expr1', 'expr2', 'expr3', 'body')
+    childAttrNames = ('init', 'test', 'incr', 'body')
 
 
-    def __init__(self, expr1, expr2, expr3, body):
+    # XXX: legacy code support
+    top = property(lambda self: self.body)
+
+
+    def __init__(self, init, test, incr, body):
         super(For, self).__init__()
-        self.expr1 = expr1
-        self.expr2 = expr2
-        self.expr3 = expr3
+        self.init = init
+        self.test = test
+        self.incr = incr
         self.body = body
         return
 
@@ -96,6 +114,11 @@ class IfElse(Stmt):
 
 
     childAttrNames = ('expr', 'ifTrue', 'ifFalse')
+
+
+    # XXX: legacy code support
+    top = property(lambda self: self.ifTrue)
+    bottom = property(lambda self: self.ifFalse)
 
 
     def __init__(self, expr, ifTrue, ifFalse):
@@ -113,10 +136,24 @@ class MethodDef(Stmt):
     childAttrNames = ('decl', 'body')
 
 
+    # XXX: legacy code support
+    u = property(lambda self: self)
+    method = property(lambda self: self)
+
+
     def __init__(self, decl, body):
         super(MethodDef, self).__init__()
+
         self.decl = decl
         self.body = body
+
+        self.fixedArgs = []
+        self.varArg = None
+
+        self.minArgumentCount = 0
+        self.maxArgumentCount = 0
+        self.blockCount = 0
+
         return
 
 
@@ -129,6 +166,24 @@ class Return(Stmt):
 
     def __init__(self, expr):
         super(Return, self).__init__()
+        self.expr = expr
+        return
+
+
+
+class SpecDef(Stmt):
+
+
+    childAttrNames = ('expr',)
+
+
+    # XXX: legacy code support
+    u = property(lambda self: self)
+    spec = property(lambda self: self)
+
+
+    def __init__(self, expr):
+        super(SpecDef, self).__init__()
         self.expr = expr
         return
 
@@ -154,6 +209,9 @@ class While(Stmt):
     childAttrNames = ('expr', 'body')
 
 
+    top = property(lambda self: self.body)
+
+
     def __init__(self, expr, body):
         super(While, self).__init__()
         self.expr = expr
@@ -172,3 +230,30 @@ class Yield(Stmt):
         super(Yield, self).__init__()
         self.expr = expr
         return
+
+
+
+# aliases to work-around name collisions with 'expressions'
+
+CompoundStmt    = Compound
+ExprStmt        = Expr
+
+
+# XXX: legacy code support
+
+STMT_BREAK          = Break
+STMT_COMPOUND       = Compound
+STMT_CONTINUE       = Continue
+STMT_DEF_CLASS      = ClassDef
+STMT_DEF_METHOD     = MethodDef
+#STMT_DEF_MODULE     = ModuleDef
+STMT_DEF_SPEC       = SpecDef
+STMT_DEF_VAR        = VarDef
+STMT_DO_WHILE       = DoWhile
+STMT_EXPR           = Expr
+STMT_FOR            = For
+STMT_IF_ELSE        = IfElse
+STMT_PRAGMA_SOURCE  = 0
+STMT_RETURN         = Return
+STMT_WHILE          = While
+STMT_YIELD          = Yield

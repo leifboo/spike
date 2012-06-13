@@ -3,6 +3,10 @@
 class Node(object):
 
 
+    # XXX: legacy code support
+    kind = property(lambda self: self.__class__)
+
+
     def _iterChildren(self):
         for name in self.childAttrNames:
             yield (name, getattr(self, name))

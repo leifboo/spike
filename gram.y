@@ -104,7 +104,7 @@ keyword_expr(r) ::= conditional_expr(expr).                                     
 keyword_expr(r) ::= conditional_expr(receiver) keyword_message(message).        { fprintf(spkout, "e%d = f.exprKeyword(e%d, *tmp%d)\n", r = ++E, receiver, message); }
 
 keyword_message(r) ::= keyword_list(kwList).                                    { fprintf(spkout, "tmp%d = (None, tmp%d[0], tmp%d[1])\n", r = ++TMP,     kwList, kwList); }
-keyword_message(r) ::= keyword(kw).                                             { fprintf(spkout, "tmp%d = (t%d,  None,     None    )\n", r = ++TMP, kw                ); }
+keyword_message(r) ::= keyword(kw).                                             { fprintf(spkout, "tmp%d = (t%d,  None,     []      )\n", r = ++TMP, kw                ); }
 keyword_message(r) ::= keyword(kw) keyword_list(kwList).                        { fprintf(spkout, "tmp%d = (t%d,  tmp%d[0], tmp%d[1])\n", r = ++TMP, kw, kwList, kwList); }
 
 keyword_list(r) ::= keyword(kw) COLON conditional_expr(arg).                    { fprintf(spkout, "tmp%d = ([t%d], [e%d])\n", r = ++TMP, kw, arg); }
@@ -177,7 +177,7 @@ unary_expr(r) ::= LNEG  unary_expr(expr).                                       
 
 postfix_expr(r) ::= primary_expr(expr).                                         { r = expr; }
 postfix_expr(r) ::= postfix_expr(func) LBRACK argument_list(args) RBRACK.       { fprintf(spkout, "e%d = f.exprCall(f.operIndex, e%d, tmp%d[0], tmp%d[1])\n", r = ++E, func, args, args); }
-postfix_expr(r) ::= postfix_expr(func) LPAREN RPAREN.                           { fprintf(spkout, "e%d = f.exprCall(f.operApply, e%d, [],       [],     )\n", r = ++E, func            ); }
+postfix_expr(r) ::= postfix_expr(func) LPAREN RPAREN.                           { fprintf(spkout, "e%d = f.exprCall(f.operApply, e%d, [],       None    )\n", r = ++E, func            ); }
 postfix_expr(r) ::= postfix_expr(func) LPAREN argument_list(args) RPAREN.       { fprintf(spkout, "e%d = f.exprCall(f.operApply, e%d, tmp%d[0], tmp%d[1])\n", r = ++E, func, args, args); }
 postfix_expr(r) ::= postfix_expr(obj) DOT IDENTIFIER(attr).                     { fprintf(spkout, "e%d = f.exprAttr(e%d, t%d)\n", r = ++E, obj,  attr); }
 postfix_expr(r) ::= postfix_expr(obj) DOT SPECIFIER(attr).                      { fprintf(spkout, "e%d = f.exprAttr(e%d, t%d)\n", r = ++E, obj,  attr); }
@@ -201,7 +201,7 @@ primary_expr(r) ::= block(expr).                                                
 literal_string(r) ::= LITERAL_STR(token).                                       { fprintf(spkout, "e%d = f.exprLiteral(t%d)\n", r = ++E, token); }
 literal_string(r) ::= literal_string(expr) LITERAL_STR(token).                  { r = expr; fprintf(spkout, "e%d.concat(t%d)\n", r, token); }
 
-block(r) ::= LBRACK statement_list_expr(sle) RBRACK.                            { fprintf(spkout, "e%d = f.exprBlock(None, tmp%d[0], tmp%d[1])\n", r = ++E, sle, sle); }
+block(r) ::= LBRACK statement_list_expr(sle) RBRACK.                            { fprintf(spkout, "e%d = f.exprBlock([], tmp%d[0], tmp%d[1])\n", r = ++E, sle, sle); }
 block(r) ::= LBRACK block_argument_list(args) BOR statement_list_expr(sle) RBRACK.
                                                                                 { fprintf(spkout, "e%d = f.exprBlock(l%d, tmp%d[0], tmp%d[1])\n", r = ++E, args, sle, sle); }
 
@@ -211,9 +211,9 @@ block_argument_list(r) ::= block_argument_list(args) COLON block_arg(arg).      
 block_arg(r) ::= unary_expr(arg).                                               { r = arg; }
 block_arg(r) ::= decl_spec_list(declSpecList) unary_expr(arg).                  { r = arg; fprintf(spkout, "e%d.declSpecs = l%d\n", r, declSpecList); }
 
-argument_list(r) ::= fixed_arg_list(f).                                         { fprintf(spkout, "tmp%d = (l%d,  [])\n", r = ++TMP, f   ); }
-argument_list(r) ::= fixed_arg_list(f) COMMA ELLIPSIS assignment_expr(v).       { fprintf(spkout, "tmp%d = (l%d, e%d)\n", r = ++TMP, f, v); }
-argument_list(r) ::= ELLIPSIS assignment_expr(v).                               { fprintf(spkout, "tmp%d = ([],  e%d)\n", r = ++TMP,    v); }
+argument_list(r) ::= fixed_arg_list(f).                                         { fprintf(spkout, "tmp%d = (l%d, None)\n", r = ++TMP, f   ); }
+argument_list(r) ::= fixed_arg_list(f) COMMA ELLIPSIS assignment_expr(v).       { fprintf(spkout, "tmp%d = (l%d,  e%d)\n", r = ++TMP, f, v); }
+argument_list(r) ::= ELLIPSIS assignment_expr(v).                               { fprintf(spkout, "tmp%d = ([],   e%d)\n", r = ++TMP,    v); }
 
 fixed_arg_list(r) ::= arg(arg).                                                 { fprintf(spkout, "l%d = [e%d]\n", r = ++L, arg); }
 fixed_arg_list(r) ::= fixed_arg_list(args) COMMA arg(arg).                      { r = args; fprintf(spkout, "l%d.append(e%d)\n", r, arg); }
