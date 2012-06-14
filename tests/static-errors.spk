@@ -66,6 +66,10 @@ local() {
     return y; // symbol 'y' undefined
 }
 
+more() {
+    obj x += 1; // invalid variable definition
+}
+
 main(argv) {
     return 1;
 }

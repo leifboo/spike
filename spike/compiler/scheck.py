@@ -45,6 +45,9 @@ def checkVarDefList(defList, stmt, checker, _pass):
     for expr in defList:
         if expr.kind == EXPR_ASSIGN:
             _def = expr.left
+            if expr.oper != OPER_EQ and _pass == 1:
+                notifyBadExpr(_def, "invalid variable definition", checker)
+                # fall though and define it, to reduce the number of errors
             checkExpr(expr.right, stmt, checker, _pass)
         else:
             _def = expr
