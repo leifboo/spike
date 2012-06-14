@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import spike.ext as ext
-
 
 tests = [
     "examples/accgen.spk",
@@ -47,39 +45,10 @@ tests = [
     ]
 
 
-class Notifier(object):
-    def badExpr(self, expr, desc):
-        print "    badExpr", expr, desc
-    def redefinedSymbol(self, expr):
-        print "    redefinedSymbol", expr.sym
-    def undefinedSymbol(self, expr):
-        print "    undefinedSymbol", expr.sym
-
-
-def parse(pathname):
-    input = open(pathname)
-    output = open("out", "w+")
-    error = open("err", "w")
-
-    input.readline() # skip shebang
-
-    ext.parse(input, output,error)
-
-    output.seek(0)
-
-    from spike.compiler.NodeFactory import NodeFactory
-    namespace = dict(
-        f = NodeFactory()
-        )
-    exec output in namespace
-
-    from spike.compiler.statements import Compound
-    return Compound(namespace['root'])
-
-
 def scheck(tree):
     from spike.compiler.scheck import check, declareBuiltIn
     from spike.compiler.symbols import SymbolTable
+    from spike.compiler import Notifier
 
     notifier = Notifier()
     st = SymbolTable()
@@ -89,6 +58,7 @@ def scheck(tree):
 
 
 def spike(pathname):
+    from spike.compiler import parse
     tree = parse(pathname)
     scheck(tree)
 
