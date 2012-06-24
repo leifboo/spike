@@ -13,7 +13,6 @@ static PyObject *parse(PyObject *self, PyObject *args) {
     PyObject *pyin = 0, *pyout = 0, *pyerr = 0;
     FILE *spkin;
     void *parser; yyscan_t lexer;
-    char buffer[1024];
     int id, token;
     
     (void)self;

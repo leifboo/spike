@@ -1,5 +1,6 @@
 
 
+from literals import *
 from operators import *
 from expressions import *
 from statements import *
@@ -34,15 +35,12 @@ def checkDeclSpecs(declSpecs, checker, _pass):
     return specifiers
 
 
-def checkVarDefList(defList, stmt, checker, _pass):
+def checkVarDef(varDef, stmt, checker, _pass):
 
     if _pass == 1:
-        specifiers = checkDeclSpecs(defList.declSpecs, checker, _pass)
+        specifiers = checkDeclSpecs(varDef.expr.declSpecs, checker, _pass)
 
-    if defList.kind != EXPR_COMMA:
-        defList = [defList]
-
-    for expr in defList:
+    for expr in varDef.defList:
         if expr.kind == EXPR_ASSIGN:
             _def = expr.left
             if expr.oper != OPER_EQ and _pass == 1:
@@ -198,7 +196,7 @@ def checkMethodDef(stmt, outer, checker, outerPass):
                         notifyBadExpr(expr, "invalid method declarator", checker)
 
                     else:
-                        name = '__index__'
+                        name = expr.left.oper.selector
                         # build the formal parameter list
                         assert expr.left.varArg is None, 'XXX: vararg index lvalue'
                         stmt.u.method.fixedArgs = expr.left.fixedArgs + [expr.right]
@@ -245,7 +243,8 @@ def checkMethodDef(stmt, outer, checker, outerPass):
                         stmt.u.method.fixedArgs = [expr.right]
 
                     elif expr.right.kind == EXPR_LITERAL:
-                        if isinstance(expr.right.aux.literalValue, int) and expr.right.aux.literalValue == 1:
+                        # NB: a float might also equal one, so we check for integer
+                        if isinstance(expr.right.aux.value, Integer) and expr.right.aux.value == 1:
                             if oper == OPER_ADD:
                                 oper = OPER_SUCC
                             elif oper == OPER_SUB:
@@ -275,7 +274,7 @@ def checkMethodDef(stmt, outer, checker, outerPass):
         else:
             notifyBadExpr(expr, "invalid method declarator", checker)
 
-
+        assert isinstance(name, Symbol), "expected symbol, not %r" % name
         stmt.u.method.ns = ns
         stmt.u.method.name = name
 
@@ -432,6 +431,8 @@ def checkClassDef(stmt, outer, checker, outerPass):
         stmt.u.klass.instVarCount = checkClassBody(stmt.top, stmt, outer, checker, outerPass)
         if stmt.bottom:
             stmt.u.klass.classVarCount = checkClassBody(stmt.bottom, stmt, outer, checker, outerPass)
+        else:
+            stmt.u.klass.classVarCount = 0
 
     elif outerPass == 3:
         checkExpr(stmt.u.klass.superclassName, stmt, checker, outerPass)
@@ -454,16 +455,13 @@ def checkStmt(stmt, outer, checker, outerPass):
             checker.st.exitScope()
 
     elif stmt.kind == STMT_DEF_VAR:
-        checkVarDefList(stmt.expr, stmt, checker, outerPass)
+        checkVarDef(stmt, stmt, checker, outerPass)
 
     elif stmt.kind == STMT_DEF_METHOD:
         checkMethodDef(stmt, outer, checker, outerPass)
 
     elif stmt.kind == STMT_DEF_CLASS:
         checkClassDef(stmt, outer, checker, outerPass)
-
-    elif stmt.kind == STMT_DEF_SPEC:
-        assert False, "unexpected spec node"
 
     elif stmt.kind == STMT_DO_WHILE:
         checkExpr(stmt.expr, stmt, checker, outerPass)
@@ -498,6 +496,9 @@ def checkStmt(stmt, outer, checker, outerPass):
     elif stmt.kind == STMT_WHILE:
         checkExpr(stmt.expr, stmt, checker, outerPass)
         checkStmt(stmt.top, stmt, checker, outerPass)
+
+    else:
+        assert False, "unexpected statement node: %r" % stmt
 
     return
 
@@ -550,7 +551,8 @@ def declareBuiltInSpecifier(bis, st):
 def newPseudoVariable(pv, st):
     from expressions import Name
     newExpr = Name(pv.name)
-    newExpr.u._def.pushOpcode = pv.pushOpcode
+    newExpr.level = 0
+    newExpr.builtInPushOpcode = pv.pushOpcode
     return newExpr
 
 

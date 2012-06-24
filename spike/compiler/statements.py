@@ -7,6 +7,13 @@ from Node import Node
 class Stmt(Node):
 
 
+    def __init__(self):
+        super(Stmt, self).__init__()
+        from cgen import Label
+        self.label = Label()
+        return
+
+
     def __repr__(self):
         return "<stmt %s>" % self.__class__.__name__
 
@@ -50,11 +57,31 @@ class ClassDef(Stmt):
 class Compound(Stmt, list):
 
 
+    def __init__(self, iterable = None):
+        super(Compound, self).__init__()
+        if iterable:
+            self.extend(iterable)
+        return
+
+
     def _iterChildren(self):
         for index, stmt in enumerate(self):
             yield (index, stmt)
         return
     children = property(_iterChildren)
+
+
+    def pairwise(self):
+        '''Return the sequence (s0, s1), (s1, s2), ... (sN, None).'''
+        return zip([None] + self, self + [None])[1:]
+
+
+    def iterWithLabels(self, parentNextLabel):
+        '''Generate the sequence (s0, s1.label), (s1, s2.label), (sN, parentNextLabel).'''
+        for stmt, nextStmt in self.pairwise():
+            childNextLabel = nextStmt.label if nextStmt else parentNextLabel
+            yield stmt, childNextLabel
+        return
 
 
 
@@ -193,6 +220,9 @@ class VarDef(Stmt):
 
 
     childAttrNames = ('expr',)
+
+
+    defList = property(lambda self: self.expr.asList())
 
 
     def __init__(self, expr):

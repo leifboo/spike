@@ -55,7 +55,7 @@ class SymbolTable:
         
         if enterNewContext:
             if outerScope:
-                level = max(outerScope.context.level + 1, 3)
+                level = min(outerScope.context.level + 1, 3)
             else:
                 # built-in scope
                 level = 0

@@ -71,6 +71,11 @@ class NodeFactory(object):
     from operators import apply   as operApply
     from operators import index   as operIndex
 
-    from collections import namedtuple
-    token = namedtuple('Token', ('value', 'lineNo'))
-    del namedtuple
+    from tokens import Integer     as int
+    from tokens import Float       as float
+    from tokens import Character   as char
+    from tokens import String      as str
+    from tokens import Symbol      as sym
+    from tokens import Identifier  as id
+    from tokens import Specifier   as spec
+    from tokens import Keyword     as kw

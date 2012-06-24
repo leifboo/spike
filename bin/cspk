@@ -6,6 +6,7 @@ import sys
 from spike.compiler.scheck import check, declareBuiltIn
 from spike.compiler.symbols import SymbolTable
 from spike.compiler import parse, Notifier
+from spike.compiler.cgen import generateCode
 from spike.compiler.statements import Compound
 
 
@@ -21,7 +22,7 @@ def main(argv):
     st = SymbolTable()
     declareBuiltIn(st, notifier)
     
-    tree = Compound([])
+    tree = Compound()
     
     for arg in argv[1:]:
         pathname = arg
@@ -34,7 +35,7 @@ def main(argv):
     
     notifier.failOnError()
     
-    #X86CodeGen_GenerateCode(tree, sys.stdout)
+    generateCode(tree, sys.stdout)
     
     return 0
 

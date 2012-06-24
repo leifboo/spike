@@ -25,6 +25,14 @@ class Expr(Node):
     declSpecs = ()
 
 
+    def __init__(self):
+        super(Expr, self).__init__()
+        from cgen import Label
+        self.label = Label()
+        self.endLabel = Label()
+        return
+
+
     def __repr__(self):
         return "<expr %s>" % self.__class__.__name__
 
@@ -34,6 +42,10 @@ class Expr(Node):
         c.append(self)
         c.append(right)
         return c
+
+
+    def asList(self):
+        return [self]
 
 
 
@@ -76,10 +88,12 @@ class Attr(Expr):
     left = property(lambda self: self.obj)
 
 
-    def __init__(self, obj, attr):
+    def __init__(self, obj, attrToken):
+        from literals import Symbol
+        assert isinstance(attrToken.value, Symbol)
         super(Attr, self).__init__()
         self.obj = obj
-        self.attr = attr
+        self.attr = attrToken.value
         return
 
 
@@ -184,6 +198,10 @@ class Comma(Expr, list):
         return self
 
 
+    def asList(self):
+        return self
+
+
 
 class Compound(Expr):
 
@@ -219,11 +237,11 @@ class Id(Expr):
     childAttrNames = ('left', 'right')
 
 
-    def __init__(self, left, right, invert = False):
+    def __init__(self, left, right, inverted = False):
         super(Id, self).__init__()
         self.left = left
         self.right = right
-        self.invert = invert
+        self.inverted = inverted
         return
 
 
@@ -244,6 +262,7 @@ class Keyword(Expr):
 
 
     def getSelector(self):
+        from literals import Symbol
         selector = ''
         if self.keyword:
             selector += self.keyword
@@ -251,7 +270,7 @@ class Keyword(Expr):
                 selector += ' '
         for kw in self.argKeywords:
             selector += kw + ':'
-        return selector
+        return Symbol(selector)
     selector = property(getSelector)
 
 
@@ -278,12 +297,14 @@ class Literal(Expr):
     def __init__(self, token):
         super(Literal, self).__init__()
         self.tokens = [token]
-        self.literalValue = token.value
+        self.value = token.value
         return
 
 
     def concat(self, token):
+        # called for string literals only
         self.tokens.append(token)
+        self.value += token.value
         return self
 
 
@@ -300,18 +321,55 @@ class Name(Expr):
     _def = property(lambda self: self)
 
 
+    specifiers = 0
+
+
     def __init__(self, arg):
+        from literals import Symbol
         super(Name, self).__init__()
         if isinstance(arg, basestring):
             self.token = None
-            self.sym = arg
+            self.sym = Symbol(arg)
         else:
+            assert isinstance(arg.value, Symbol)
             self.token = arg
             self.sym = arg.value
         # initial state is undefined reference
         self.definition = None
         self.stmt = None # XXX: cycle
         return
+
+
+    def getPushOpcode(self):
+        from spike.il import (
+            OPCODE_PUSH_GLOBAL,
+            OPCODE_PUSH_INST_VAR,
+            OPCODE_PUSH_LOCAL,
+            )
+        opcode = {
+            0: self.builtInPushOpcode,
+            1: OPCODE_PUSH_GLOBAL,
+            2: OPCODE_PUSH_INST_VAR,
+            3: OPCODE_PUSH_LOCAL,
+        }
+        return opcode[self.level]
+
+    def getStoreOpcode(self):
+        from spike.il import (
+            OPCODE_STORE_GLOBAL,
+            OPCODE_STORE_INST_VAR,
+            OPCODE_STORE_LOCAL,
+            )
+        opcode = {
+            1: OPCODE_STORE_GLOBAL,
+            2: OPCODE_STORE_INST_VAR,
+            3: OPCODE_STORE_LOCAL,
+        }
+        return opcode[self.level]
+
+    builtInPushOpcode = None
+    pushOpcode = property(getPushOpcode)
+    storeOpcode = property(getStoreOpcode)
 
 
 

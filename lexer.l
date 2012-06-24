@@ -211,6 +211,18 @@ static int isSpec(const char *t) {
     return 0;
 }
 
+static void printLiteralStr(const char *s) {
+    const char *p;
+    
+    for (p = s; *p; ++p) {
+        switch (*p) {
+        case '\\': fputs("\\\\", spkout); break;
+        case '\'': fputs("\\'", spkout);  break;
+        default:   fputc(*p, spkout);     break;
+        }
+    }
+}
+
 int Lexer_GetNextToken(int *token, yyscan_t scanner) {
     int id;
     struct yyguts_t * yyg = (struct yyguts_t*)scanner; /* for yylineno */
@@ -219,21 +231,37 @@ int Lexer_GetNextToken(int *token, yyscan_t scanner) {
     
     switch (id) {
     case TOKEN_LITERAL_INT:
+        *token = ++T;
+        fprintf(spkout, "t%d = f.int('%s', %d)\n", T, yyget_text(scanner), yylineno);
+        break;
     case TOKEN_LITERAL_FLOAT:
+        *token = ++T;
+        fprintf(spkout, "t%d = f.float('%s', %d)\n", T, yyget_text(scanner), yylineno);
+        break;
     case TOKEN_LITERAL_CHAR:
+        *token = ++T;
+        fprintf(spkout, "t%d = f.char('", T);
+        printLiteralStr(yyget_text(scanner));
+        fprintf(spkout, "', %d)\n", yylineno);
+        break;
     case TOKEN_LITERAL_STR:
         *token = ++T;
-        fprintf(spkout, "t%d = f.token(%s, %d)\n", T, yyget_text(scanner), yylineno);
+        fprintf(spkout, "t%d = f.str('", T);
+        printLiteralStr(yyget_text(scanner));
+        fprintf(spkout, "', %d)\n", yylineno);
         break;
     case TOKEN_LITERAL_SYMBOL:
         *token = ++T;
-        fprintf(spkout, "t%d = f.token('%s', %d)\n", T, yyget_text(scanner) + 1, yylineno);
+        fprintf(spkout, "t%d = f.sym('%s', %d)\n", T, yyget_text(scanner), yylineno);
         break;
     case TOKEN_IDENTIFIER:
         *token = ++T;
-        fprintf(spkout, "t%d = f.token('%s', %d)\n", T, yyget_text(scanner), yylineno);
-        if (isSpec(yyget_text(scanner)))
+        if (isSpec(yyget_text(scanner))) {
             id = TOKEN_SPECIFIER;
+            fprintf(spkout, "t%d = f.spec('%s', %d)\n", T, yyget_text(scanner), yylineno);
+        } else {
+            fprintf(spkout, "t%d = f.id('%s', %d)\n", T, yyget_text(scanner), yylineno);
+        }
         break;
     case TOKEN_BREAK:
     case TOKEN_CLASS:
@@ -247,7 +275,7 @@ int Lexer_GetNextToken(int *token, yyscan_t scanner) {
     case TOKEN_WHILE:
     case TOKEN_YIELD:
         *token = ++T;
-        fprintf(spkout, "t%d = f.token('%s', %d)\n", T, yyget_text(scanner), yylineno);
+        fprintf(spkout, "t%d = f.kw('%s', %d)\n", T, yyget_text(scanner), yylineno);
         break;
     default:
         *token = 0;
