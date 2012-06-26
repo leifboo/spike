@@ -5,4 +5,4 @@ include *.h *.c *.y *.l
 recursive-include rtl *.h *.c *.s *.spk
 recursive-include examples *.spk *.in *.out *.err
 recursive-include tests *.spk *.in *.out *.err
-include COPYING
+include LICENSE
