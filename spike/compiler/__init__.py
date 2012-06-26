@@ -27,3 +27,57 @@ def parse(pathname):
     return Compound(namespace['root'])
 
 
+def compile(pathnames, out):
+    from spike.compiler.scheck import check, declareBuiltIn
+    from spike.compiler.symbols import SymbolTable
+    from spike.compiler.cgen import generateCode
+    from spike.compiler.statements import Compound
+    
+    notifier = Notifier()
+    
+    st = SymbolTable()
+    declareBuiltIn(st, notifier)
+    
+    tree = Compound()
+    
+    for pathname in pathnames:
+        tree.extend(parse(pathname))
+    
+    check(tree, st, notifier)
+    
+    notifier.failOnError()
+    
+    generateCode(tree, out)
+    
+    return
+
+
+def assembleAndLink(assembly):
+    from os import spawnlp, P_WAIT
+    status = spawnlp(
+        P_WAIT,
+        "gcc", "gcc", "-g", "-I.",
+        #"-DLOOKUP_DEBUG",
+        assembly,
+        "rtl/Array.s",
+        "rtl/BlockContext.s",
+        "rtl/blocks.s",
+        "rtl/CFunction.s",
+        "rtl/CObject.s",
+        "rtl/Context.c",
+        "rtl/Char.s",
+        "rtl/error.s",
+        "rtl/Function.s",
+        "rtl/Integer.s",
+        "rtl/main.s",
+        "rtl/Object.s",
+        "rtl/rot.s",
+        "rtl/send.s",
+        "rtl/singletons.s",
+        "rtl/String.c",
+        "rtl/String.s",
+        "rtl/test.s",
+        "rtl/lookup.c",
+        )
+    return status
+

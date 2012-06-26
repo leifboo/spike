@@ -2,12 +2,7 @@
 
 
 import sys
-
-from spike.compiler.scheck import check, declareBuiltIn
-from spike.compiler.symbols import SymbolTable
-from spike.compiler import parse, Notifier
-from spike.compiler.cgen import generateCode
-from spike.compiler.statements import Compound
+from spike.compiler import compile
 
 
 def main(argv):
@@ -16,26 +11,8 @@ def main(argv):
         print >>sys.stderr, "Spike Compiler"
         print >>sys.stderr, "usage: %s FILE ..." % argv[0]
         return 1
-    
-    notifier = Notifier()
-    
-    st = SymbolTable()
-    declareBuiltIn(st, notifier)
-    
-    tree = Compound()
-    
-    for arg in argv[1:]:
-        pathname = arg
-        tree.extend(parse(pathname))
-    
-    if not tree:
-        return 1
-    
-    check(tree, st, notifier)
-    
-    notifier.failOnError()
-    
-    generateCode(tree, sys.stdout)
+
+    compile(argv[1:], sys.stdout)
     
     return 0
 

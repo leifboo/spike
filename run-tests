@@ -46,7 +46,7 @@ tests = [
 
 
 def spike(pathname):
-    from spike.compiler import parse
+    from spike.compiler import parse, assembleAndLink
     from spike.compiler.scheck import check, declareBuiltIn
     from spike.compiler.cgen import generateCode
     from spike.compiler.symbols import SymbolTable
@@ -66,41 +66,11 @@ def spike(pathname):
     generateCode(tree, asm)
     asm.close()
     
-    gcc('test.s')
+    status = assembleAndLink('test.s')
+    assert status == 0
     
     run('./a.out')
     
-    return
-
-
-def gcc(assembly):
-    from os import spawnlp, P_WAIT
-    status = spawnlp(
-        P_WAIT,
-        "gcc", "gcc", "-g", "-I.",
-        #"-DLOOKUP_DEBUG",
-        assembly,
-        "rtl/Array.s",
-        "rtl/BlockContext.s",
-        "rtl/blocks.s",
-        "rtl/CFunction.s",
-        "rtl/CObject.s",
-        "rtl/Context.c",
-        "rtl/Char.s",
-        "rtl/error.s",
-        "rtl/Function.s",
-        "rtl/Integer.s",
-        "rtl/main.s",
-        "rtl/Object.s",
-        "rtl/rot.s",
-        "rtl/send.s",
-        "rtl/singletons.s",
-        "rtl/String.c",
-        "rtl/String.s",
-        "rtl/test.s",
-        "rtl/lookup.c",
-        )
-    assert status == 0
     return
 
 
