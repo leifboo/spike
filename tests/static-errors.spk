@@ -44,16 +44,16 @@ class Clark : Superman {}
 (Loisfunc)() {}
 class Lois : Loisfunc {}
 
-pirate() {
-    obj aBlock, x;
-    
-    // 'arg' can only be used as the first statement of a block
-    aBlock = [
-        /*arg*/ obj booty;
-        x = 42;
-        /*arg*/ obj thar, be, errors;
-        ];
+more(a, b, c = 42, d) { // non-default arg follows default arg
+    obj x += 1; // invalid variable definition
 }
+
+
+
+
+
+
+
 
 obj g;
 
@@ -64,10 +64,6 @@ local() {
     obj x; // symbol 'x' multiply defined
     
     return y; // symbol 'y' undefined
-}
-
-more() {
-    obj x += 1; // invalid variable definition
 }
 
 main(argv) {

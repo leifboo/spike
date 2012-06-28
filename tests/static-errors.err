@@ -24,6 +24,8 @@
 10: invalid argument definition
 43: invalid superclass specification
 45: invalid superclass specification
+47: non-default argument follows default argument
+48: invalid variable definition
 64: symbol 'x' multiply defined
 66: symbol 'y' undefined
 36: cycle in superclass chain

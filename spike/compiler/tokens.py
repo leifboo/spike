@@ -3,7 +3,7 @@ from collections import namedtuple
 import literals
 
 
-Token = namedtuple('Token', ('text', 'lineNo'))
+Token = namedtuple('Token', ('text', 'lineNum'))
 
 
 class Integer(Token):

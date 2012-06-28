@@ -17,9 +17,7 @@ def main(argv):
     assembly = basename(script) + ".s"
     
     out = open(assembly, "w")
-    
     compile(["rtl/rtl.spk", script], out)
-    
     out.close()
     
     status = assembleAndLink(assembly)

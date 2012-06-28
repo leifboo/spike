@@ -13,11 +13,6 @@ declareObject = False #True
 
 
 
-def notifyBadExpr(expr, desc, checker):
-    checker.requestor.badExpr(expr, desc)
-    return
-
-
 def checkDeclSpecs(declSpecs, checker, _pass):
 
     specifiers = 0
@@ -29,7 +24,7 @@ def checkDeclSpecs(declSpecs, checker, _pass):
             # XXX: check for invalid combinations
             specDef = declSpec.definition.u._def.stmt
             if specifiers & specDef.u.spec.mask:
-                notifyBadExpr(declSpec, "invalid specifier", checker)
+                checker.requestor.invalidSpecifier(declSpec)
             specifiers = (specifiers & (~specDef.u.spec.mask)) | specDef.u.spec.value
 
     return specifiers
@@ -44,7 +39,7 @@ def checkVarDef(varDef, stmt, checker, _pass):
         if expr.kind == EXPR_ASSIGN:
             _def = expr.left
             if expr.oper != OPER_EQ and _pass == 1:
-                notifyBadExpr(_def, "invalid variable definition", checker)
+                checker.requestor.invalidVariableDefinition(_def)
                 # fall though and define it, to reduce the number of errors
             checkExpr(expr.right, stmt, checker, _pass)
         else:
@@ -55,7 +50,7 @@ def checkVarDef(varDef, stmt, checker, _pass):
 
         if _def.kind != EXPR_NAME:
             if _pass == 1:
-                notifyBadExpr(_def, "invalid variable definition", checker)
+                checker.requestor.invalidVariableDefinition(_def)
             continue
 
         if _pass == 1:
@@ -81,7 +76,7 @@ def checkBlock(expr, stmt, checker, outerPass):
         # declare block arguments
         for arg in expr.aux.block.argList:
             if arg.kind != EXPR_NAME:
-                notifyBadExpr(arg, "invalid argument definition", checker)
+                checker.requestor.invalidArgumentDefinition(arg)
                 continue
             checker.st.insert(arg, checker.requestor)
 
@@ -182,7 +177,7 @@ def checkMethodDef(stmt, outer, checker, outerPass):
 
         elif expr.kind == EXPR_ASSIGN:
             if expr.right.kind != EXPR_NAME:
-                notifyBadExpr(expr, "invalid method declarator", checker)
+                checker.requestor.invalidMethodDeclarator(expr)
 
             else:
                 ns = METHOD_NAMESPACE_LVALUE
@@ -193,7 +188,7 @@ def checkMethodDef(stmt, outer, checker, outerPass):
 
                 elif expr.left.kind == EXPR_CALL:
                     if (expr.left.oper != OPER_INDEX) or (expr.left.left.sym != 'self'):
-                        notifyBadExpr(expr, "invalid method declarator", checker)
+                        checker.requestor.invalidMethodDeclarator(expr)
 
                     else:
                         name = expr.left.oper.selector
@@ -202,12 +197,12 @@ def checkMethodDef(stmt, outer, checker, outerPass):
                         stmt.u.method.fixedArgs = expr.left.fixedArgs + [expr.right]
 
                 else:
-                    notifyBadExpr(expr, "invalid method declarator", checker)
+                    checker.requestor.invalidMethodDeclarator(expr)
 
 
         elif expr.kind == EXPR_CALL:
             if expr.left.kind != EXPR_NAME:
-                notifyBadExpr(expr, "invalid method declarator", checker)
+                checker.requestor.invalidMethodDeclarator(expr)
 
             else:
                 if expr.left.sym == 'self':
@@ -221,7 +216,7 @@ def checkMethodDef(stmt, outer, checker, outerPass):
                     # definition?  More generally, could the method
                     # declarator be seen as the application of an inverse
                     # thingy?
-                    notifyBadExpr(expr, "invalid method declarator", checker)
+                    checker.requestor.invalidMethodDeclarator(expr)
 
                 if name:
                     if (not outer) or (outer.kind != STMT_DEF_CLASS):
@@ -234,7 +229,7 @@ def checkMethodDef(stmt, outer, checker, outerPass):
 
         elif expr.kind in (EXPR_UNARY, EXPR_BINARY):
             if (expr.left.kind != EXPR_NAME) or (expr.left.sym != 'self'):
-                notifyBadExpr(expr, "invalid method declarator", checker)
+                checker.requestor.invalidMethodDeclarator(expr)
 
             else:
                 oper = expr.oper
@@ -250,14 +245,14 @@ def checkMethodDef(stmt, outer, checker, outerPass):
                             elif oper == OPER_SUB:
                                 oper = OPER_PRED
                             else:
-                                notifyBadExpr(expr, "invalid method declarator", checker)
+                                checker.requestor.invalidMethodDeclarator(expr)
                                 oper = None
                         else:
-                            notifyBadExpr(expr, "invalid method declarator", checker)
+                            checker.requestor.invalidMethodDeclarator(expr)
                             oper = None
 
                     else:
-                        notifyBadExpr(expr, "invalid method declarator", checker)
+                        checker.requestor.invalidMethodDeclarator(expr)
                         oper = None
 
                 if oper is not None:
@@ -265,16 +260,16 @@ def checkMethodDef(stmt, outer, checker, outerPass):
 
         elif expr.kind == EXPR_KEYWORD:
             if (expr.left.kind != EXPR_NAME) or (expr.left.sym != 'self'):
-                notifyBadExpr(expr, "invalid method declarator", checker)
+                checker.requestor.invalidMethodDeclarator(expr)
 
             else:
                 name = expr.selector
                 stmt.u.method.fixedArgs = expr.args
 
         else:
-            notifyBadExpr(expr, "invalid method declarator", checker)
+            checker.requestor.invalidMethodDeclarator(expr)
 
-        assert isinstance(name, Symbol), "expected symbol, not %r" % name
+        assert name is None or isinstance(name, Symbol), "expected symbol, not %r" % name
         stmt.u.method.ns = ns
         stmt.u.method.name = name
 
@@ -308,14 +303,14 @@ def checkMethodDef(stmt, outer, checker, outerPass):
                 else:
                     _def = arg
                     if _def.kind == EXPR_NAME:
-                        notifyBadExpr(arg, "non-default argument follows default argument", checker)
+                        checker.requestor.nonDefaultArgumentFollowsDefaultArgument(arg)
                         # fall though and define it, to reduce the number of errors
 
                 while (_def.kind == EXPR_UNARY) and (_def.oper == OPER_IND):
                     _def = _def.left
 
                 if _def.kind != EXPR_NAME:
-                    notifyBadExpr(arg, "invalid argument definition", checker)
+                    checker.requestor.invalidArgumentDefinition(arg)
                     continue
 
                 checker.st.insert(_def, checker.requestor)
@@ -324,13 +319,13 @@ def checkMethodDef(stmt, outer, checker, outerPass):
         arg = stmt.u.method.varArg
         if arg:
             if arg.kind != EXPR_NAME:
-                notifyBadExpr(arg, "invalid argument definition", checker)
+                checker.requestor.invalidArgumentDefinition(arg)
             else:
                 checker.st.insert(arg, checker.requestor)
 
 
         if ((expr.specifiers & SPEC_STORAGE) == SPEC_STORAGE_EXTERN) and len(body):
-            notifyBadExpr(expr, "'extern' method with a non-empty body", checker)
+            checker.requestor.externMethodWithANonEmptyBody(expr)
 
         for innerPass in range(1, 4):
             for arg in stmt.u.method.fixedArgs:
@@ -382,7 +377,7 @@ def checkForSuperclassCycle(aClassDef, checker):
         hare = hare.u.klass.superclassDef
 
     if hare:
-        notifyBadExpr(aClassDef.u.klass.superclassName, "cycle in superclass chain", checker)
+        checker.requestor.cycleInSuperclassChain(aClassDef.u.klass.superclassName)
 
     return
 
@@ -424,7 +419,7 @@ def checkClassDef(stmt, outer, checker, outerPass):
                 # for class Object, which has no superclass
                 pass
             else:
-                notifyBadExpr(stmt.u.klass.superclassName, "invalid superclass specification", checker)
+                checker.requestor.invalidSuperclassSpecification(stmt.u.klass.superclassName)
                 return
         # else undefined
 
@@ -487,7 +482,7 @@ def checkStmt(stmt, outer, checker, outerPass):
             checkStmt(stmt.bottom, stmt, checker, outerPass)
 
     elif stmt.kind == STMT_PRAGMA_SOURCE:
-        checker.requestor.source = stmt.u.source
+        checker.requestor.source = stmt.pathname
 
     elif stmt.kind in (STMT_RETURN, STMT_YIELD):
         if stmt.expr:

@@ -566,7 +566,7 @@ def emitROData(cgen):
                 "\t.long\t%lu\n"
                 "\t.string\t",
                 i, i, i,
-                len(value))
+                len(value) + 1)
         printStringLiteral(value, out)
         fprintf(out,
                 "\n"
@@ -1435,7 +1435,7 @@ def emitCodeForCompound(body, meta, cgen):
             emitCodeForClass(s, cgen)
 
         elif s.kind == STMT_PRAGMA_SOURCE:
-            cgen.module.source = s.u.source
+            cgen.module.source = s.pathname
 
         else:
             assert False, "executable code not allowed here"

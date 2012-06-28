@@ -2,6 +2,7 @@
 from Node import Node
 from NodeFactory import NodeFactory
 from Notifier import Notifier
+import sys
 
 
 
@@ -27,13 +28,13 @@ def parse(pathname):
     return Compound(namespace['root'])
 
 
-def compile(pathnames, out):
+def compile(pathnames, out, err = sys.stderr):
     from spike.compiler.scheck import check, declareBuiltIn
     from spike.compiler.symbols import SymbolTable
     from spike.compiler.cgen import generateCode
-    from spike.compiler.statements import Compound
+    from spike.compiler.statements import Compound, PragmaSource
     
-    notifier = Notifier()
+    notifier = Notifier(stream = err)
     
     st = SymbolTable()
     declareBuiltIn(st, notifier)
@@ -41,6 +42,7 @@ def compile(pathnames, out):
     tree = Compound()
     
     for pathname in pathnames:
+        tree.append(PragmaSource(pathname))
         tree.extend(parse(pathname))
     
     check(tree, st, notifier)

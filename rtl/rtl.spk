@@ -16,12 +16,19 @@ class Object : null {
 class Array : Object {
     obj size;
     
+    // initializing
     extern self init: anInteger {}
     extern self initWithContentsOfStack: end {}
+    
+    // accessing
     extern size {}
     extern self[i] {}
     extern self[i] = v {}
     printString { return "<XXX Array printString>"; }    
+    
+    // enumerating
+    self do: aBlock { obj i, s; s = self.size; for (i = 0; i < s; ++i) aBlock(self[i]); }
+    
 } meta {
     self new { return self new: 0; }
     self new: size { return (self basicNew: size) init: size; }
@@ -129,6 +136,7 @@ class String : Object {
     
     // accessing
     size { return String_size(self.asCObject); }
+    len { return self.size; }
     self[i] { return String_item(self.asCObject, i); }
     printString { return String_printString(self.asCObject); }
     

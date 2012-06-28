@@ -25,6 +25,9 @@ class Expr(Node):
     declSpecs = ()
 
 
+    lineNum = property(lambda self: self.firstChildExpr().lineNum)
+
+
     def __init__(self):
         super(Expr, self).__init__()
         from cgen import Label
@@ -35,6 +38,13 @@ class Expr(Node):
 
     def __repr__(self):
         return "<expr %s>" % self.__class__.__name__
+
+
+    def firstChildExpr(self):
+        for attr, child in self.children:
+            if isinstance(child, Expr):
+                return child
+        return None
 
 
     def comma(self, right):
@@ -294,6 +304,9 @@ class Literal(Expr):
     aux = property(lambda self: self)
 
 
+    lineNum = property(lambda self: self.tokens[0].lineNum)
+
+
     def __init__(self, token):
         super(Literal, self).__init__()
         self.tokens = [token]
@@ -322,6 +335,8 @@ class Name(Expr):
 
 
     specifiers = 0
+
+    lineNum = property(lambda self: self.token.lineNum)
 
 
     def __init__(self, arg):

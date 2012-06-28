@@ -185,6 +185,19 @@ class MethodDef(Stmt):
 
 
 
+class PragmaSource(Stmt):
+
+
+    childAttrNames = ()
+
+
+    def __init__(self, pathname):
+        super(PragmaSource, self).__init__()
+        self.pathname = pathname
+        return
+
+
+
 class Return(Stmt):
 
 
@@ -283,7 +296,7 @@ STMT_DO_WHILE       = DoWhile
 STMT_EXPR           = Expr
 STMT_FOR            = For
 STMT_IF_ELSE        = IfElse
-STMT_PRAGMA_SOURCE  = 0
+STMT_PRAGMA_SOURCE  = PragmaSource
 STMT_RETURN         = Return
 STMT_WHILE          = While
 STMT_YIELD          = Yield

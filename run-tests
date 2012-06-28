@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 
-tests = [
+allTests = [
     "examples/accgen.spk",
     "examples/blocks.spk",
-    #"examples/circle.spk",
-    "examples/fibgen.spk",
+    "examples/circle.spk",
     "examples/fib.spk",
-    #"examples/fma.spk",
+    "examples/fibgen.spk",
+    "examples/fma.spk",
     "examples/foreach.spk",
     "examples/functor.spk",
     "examples/hello.spk",
@@ -16,72 +16,255 @@ tests = [
     "examples/lst/cond.spk",
     "examples/lst/super.spk",
     "examples/lst/temp.spk",
-    #"examples/nlines.spk",
+    "examples/nlines.spk",
     "examples/point.spk",
-    #"examples/primes.spk",
+    "examples/primes.spk",
     "tests/attr.spk",
-    #"tests/bc-in-blocks.spk",
-    #"tests/cycle.spk",
-    #"tests/default-args.spk", # SIGSEGV
+    "tests/bc-in-blocks.spk",
+    "tests/cycle.spk",
+    "tests/default-args.spk", # SIGSEGV
     "tests/dnu.spk",
     "tests/dot-star.spk",
-    #"tests/empty.spk",
-    #"tests/fe.spk",
+    "tests/empty.spk",
+    "tests/fe.spk",           # SIGTRAP
+    #     * r133: "Implemented x86 blocks.  This doesn't work with varargs yet."
+    #     * String do: returning ints instead of chars
     "tests/gen.spk",
     "tests/gremlin.spk",
     "tests/index.spk",
-    #"tests/iter-musings.spk",
-    #"tests/kw-permutations.spk",
+    "tests/iter-musings.spk",
+    "tests/kw-permutations.spk",
     "tests/leaf.spk",
     "tests/my-array.spk",
-    #"tests/no-main.spk",
-    #"tests/old.spk",
-    #"tests/pi.spk",
-    #"tests/rodata.spk",
-    #"tests/static-errors.spk",
-    #"tests/syntax-error.spk",
+    "tests/no-main.spk",
+    "tests/old.spk",          # SIGSEGV:  .class doesn't work for smallints
+    "tests/pi.spk",
+    "tests/rodata.spk",
+    "tests/static-errors.spk",
+    "tests/syntax-error.spk",
     "tests/unary-kw.spk",
     "tests/varargs.spk",
     ]
 
+xallTests = [
+    "examples/hello.spk",
+    "tests/static-errors.spk",
+    ]
 
-def spike(pathname):
-    from spike.compiler import parse, assembleAndLink
-    from spike.compiler.scheck import check, declareBuiltIn
-    from spike.compiler.cgen import generateCode
-    from spike.compiler.symbols import SymbolTable
-    from spike.compiler import Notifier
-    from spike.compiler.statements import Compound
+xfailTests = [
+    "examples/circle.spk",
+    "examples/primes.spk",
+    "tests/bc-in-blocks.spk",
+    "tests/empty.spk",
+    "tests/kw-permutations.spk",
+    "tests/no-main.spk",
+    "tests/pi.spk",
+    "tests/syntax-error.spk",
+    ]
+
+skipTests = [
+    ]
+
+
+def clipSourcePathname(output):
+    from os import rename, remove
+
+    tmp = output + '.in'
+
+    rename(output, tmp)
+    oldOut = open(tmp)
+    newOut = open(output, 'w')
+
+    for line in oldOut:
+        if ':' in line:
+            line = ''.join(line.split(':', 1)[1:])
+        newOut.write(line)
+
+    oldOut.close()
+    newOut.close()
+
+    remove(tmp)
+
+    return
+
+
+errFilters = {
+    "tests/cycle.spk": clipSourcePathname,
+    "tests/static-errors.spk": clipSourcePathname,
+    }
+
+
+
+#------------------------------------------------------------------------
+# utilities
+
+def spawn(argv):
+    from os import spawnvp, P_WAIT
+    return spawnvp(P_WAIT, argv[0], argv)
+
+
+def spawnAndRedirect(argv, out, err):
+    import os, stat
     
-    tree = Compound()
-    tree.extend(parse("rtl/rtl.spk"))
-    tree.extend(parse(pathname))
-    notifier = Notifier()
-    st = SymbolTable()
-    declareBuiltIn(st, notifier)
-    check(tree, st, notifier)
-    notifier.failOnError()
+    pid = os.fork()
+
+    if not pid:
+        flags = os.O_CREAT | os.O_TRUNC | os.O_WRONLY
+        mode = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+        fd = os.open(out, flags, mode)
+        os.dup2(fd, 1)
+        os.close(fd)
+        fd = os.open(err, flags, mode)
+        os.dup2(fd, 2)
+        os.close(fd)
+        
+        os.execv(argv[0], argv)
     
-    asm = open('test.s', 'w')
-    generateCode(tree, asm)
-    asm.close()
+    pid, status = os.wait()
+    return status
+
+
+def diff(*files):
+    argv = ['diff'] + list(files)
+    return spawn(argv)
+
+
+
+#------------------------------------------------------------------------
+# running a spike program
+
+def spike(pathname, args, testOut, testErr):
+    from spike.compiler import compile, assembleAndLink
+
+    open(testOut, 'w').close() # truncate
+    err = open(testErr, 'w')
     
+    try:
+        asm = open('test.s', 'w')
+        compile(["rtl/rtl.spk", pathname], asm, err)
+        asm.close()
+
+    except (Exception, SystemExit):
+        return 1
+
+    finally:
+        err.close()
+
     status = assembleAndLink('test.s')
-    assert status == 0
+    if status != 0:
+        return status
     
-    run('./a.out')
+    argv = ['./a.out'] + args
+    status = spawnAndRedirect(argv, testOut, testErr)
     
+    return status
+
+
+
+#------------------------------------------------------------------------
+# running tests
+
+def runTest(testSource):
+    from os.path import isfile, splitext
+
+    testOut = 'test.out'
+    testErr = 'test.err'
+    
+    base = splitext(testSource)[0]
+    control = base + '.out'
+    controlErr = base + '.err'
+    input = base + '.in'
+    
+    status = spike(testSource, [input], testOut, testErr)
+    errFilter = errFilters.get(testSource)
+    if errFilter:
+        errFilter(testErr)
+    
+    if isfile(controlErr):
+        if status == 1:
+            status = diff(control, testOut)
+            if status == 0:
+                status = diff(controlErr, testErr)
+    elif status == 0:
+        status = diff(control, testOut)
+    
+    return status
+
+
+def runTests():
+    from sys import stdout
+
+    failed = 0; all = 0; xfail = 0; xpass = 0; skip = 0
+
+    for testSource in allTests:
+        if testSource in skipTests:
+            skip += 1
+            res = 'SKIP'
+        else:
+            status = runTest(testSource)
+            if status == 0:
+                all += 1
+                if testSource in xfailTests:
+                    xpass += 1
+                    failed += 1
+                    res = 'XPASS'
+                else:
+                    res = 'PASS'
+            elif status == 77:
+                skip += 1
+                res = 'SKIP'
+            else:
+                all += 1
+                if testSource in xfailTests:
+                    xfail += 1
+                    res = 'XFAIL'
+                else:
+                    failed += 1
+                    res = 'FAIL'
+
+        print >>stdout, '%s: %s' % (res, testSource)
+        stdout.flush()
+
+    if all == 1:
+        tests = 'test'
+        All = ''
+    else:
+        tests = 'tests'
+        All = 'All '
+
+    if failed == 0:
+        if xfail == 0:
+            banner = "%(All)s%(all)d %(tests)s passed" % locals()
+        else:
+            failures = 'failure' + ('' if xfail == 1 else 's')
+            banner = ("%(All)s%(all)d %(tests)s behaved as expected "
+                      "(%(xfail)d expected %(failures)s)" % locals())
+    else:
+        if xpass == 0:
+            banner = "%(failed)d of %(all)d %(tests)s failed" % locals()
+        else:
+            passes = 'pass' + ('' if xpass == 1 else 'es')
+            banner = ("%(failed)d of %(all)d %(tests)s did not behave as expected "
+                      "(%(xpass)d unexpected %(passes)s)" % locals())
+
+    if skip == 0:
+        skipped = ""
+    else:
+        if skip == 1:
+            skipped = "(%(skip)d test was not run)" % locals()
+        else:
+            skipped = "(%(skip)d tests were not run)" % locals()
+
+    dashes = '=' * max(len(banner), len(skipped))
+    
+    print >>stdout, dashes
+    print >>stdout, banner
+    if skipped:
+        print >>stdout, skipped
+    print >>stdout, dashes
+
     return
 
 
-def run(exe):
-    from os import spawnl, P_WAIT
-    status = spawnl(P_WAIT, exe, exe)
-    assert status == 0
-    return
-
-
-for pathname in tests:
-    print "===", pathname
-    spike(pathname)
+runTests()
 
