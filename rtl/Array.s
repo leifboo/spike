@@ -191,7 +191,7 @@ Array.0.__index__.code:
 	.type	Array.0.__index__.code, @function
 	movl	8(%ebp), %edx		# get index arg
 	call	typeRangeCheck		# check type & range
-	movl	4(%edi,%edx,4), %eax 	# get item
+	movl	(%edi,%edx,4), %eax 	# get item
 	movl	%eax, 12(%ebp)		# return it
 	popl	%edi
 	popl	%esi
@@ -215,7 +215,7 @@ Array.1.__index__.code:
 	movl	12(%ebp), %edx		# get index arg
 	call	typeRangeCheck		# check type & range
 	movl	8(%ebp), %eax		# get item arg
-	movl	%eax, 4(%edi,%edx,4) 	# set item
+	movl	%eax, (%edi,%edx,4) 	# set item
 	movl	%esi, 16(%ebp)		# return self
 	popl	%edi
 	popl	%esi
@@ -244,5 +244,15 @@ typeRangeCheck:
 	pushl	$__sym_rangeError
 	call	SpikeError
 .L4:
+/* tally number of instance variables in %eax */
+	movl	(%esi), %edi 	# get class of array (Array itself or a subclass)
+	movl	$0, %eax 	# tally instance vars
+.L13:
+	addl	16(%edi), %eax	# instVarCount
+	movl	4(%edi), %edi 	# up superclass chain
+	testl	%edi, %edi
+	jne	.L13
+/* set up pointer to indexable variables in %edi */
+	leal	4(%esi,%eax,4), %edi
 	ret
 	.size	typeRangeCheck, .-typeRangeCheck

@@ -62,8 +62,12 @@ iter: 4
 self[3] == 6
 iter: 6
 There are 4 items.
+self[0] == 0
 0
+self[1] == 2
 2
+self[2] == 4
 4
+self[3] == 6
 6
 There are indeed 4 items.
