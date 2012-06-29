@@ -47,7 +47,7 @@ v1(x, ...args) {
 }
 
 zoo() {
-    puts("zoo\n");
+    puts("zoo");
 }
 
 bar(x, y, z) {

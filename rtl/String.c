@@ -97,7 +97,7 @@ static Object *String_binaryLogicalOper(struct String *self, Object *arg0, Oper 
 }
 
 
-static struct String *String_fromCStringAndLength(const char *str, size_t len) {
+struct String *String_fromCStringAndLength(const char *str, size_t len) {
     struct String *result;
     char *buffer;
     
@@ -112,6 +112,12 @@ static struct String *String_fromCStringAndLength(const char *str, size_t len) {
     buffer[len] = '\0';
     return result;
 }
+
+
+char *String_asCString(struct String *self) {
+    return STR(self);
+}
+
 
 
 /*------------------------------------------------------------------------*/

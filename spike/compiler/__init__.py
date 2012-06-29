@@ -78,6 +78,7 @@ def assembleAndLink(assembly):
         "rtl/singletons.s",
         "rtl/String.c",
         "rtl/String.s",
+        "rtl/Symbol.c",
         "rtl/test.s",
         "rtl/lookup.c",
         )

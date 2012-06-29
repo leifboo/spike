@@ -24,7 +24,22 @@ class Array : Object {
     extern size {}
     extern self[i] {}
     extern self[i] = v {}
-    printString { return "<XXX Array printString>"; }    
+    
+    printString {
+        obj i, s, result;
+        
+        s = self.size;
+        if (s == 0)
+            return "{}";
+        result = "{ ";
+        for (i = 0; i < s; ++i) {
+            result += self[i].printString;
+            if (i + 1 < s)
+                result += ", ";
+        }
+        result += " }";
+        return result;
+    }
     
     // enumerating
     self do: aBlock { obj i, s; s = self.size; for (i = 0; i < s; ++i) aBlock(self[i]); }
@@ -157,6 +172,8 @@ class String : Object {
 class Symbol : Object {
     obj hash;
     // str...
+    
+    printString { return Symbol_printString(self); }
 }
 
 
@@ -275,3 +292,4 @@ extern cdecl obj String_item(s, i) {}
 extern cdecl obj String_printString(s) {}
 extern cdecl obj String_fromInteger(i) {}
 
+extern cdecl obj Symbol_printString(s) {}
