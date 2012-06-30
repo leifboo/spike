@@ -262,3 +262,19 @@ Object *String_fromInteger(int anInteger) {
     result->size = strlen(str) + 1;
     return (Object *)result;
 }
+
+
+Object *String_fromFloat(double aFloat) {
+    struct String *result;
+    char *str;
+    
+    /* XXX: argument already unboxed -- no type check */
+    result = String_fromCStringAndLength(0, 4*sizeof(aFloat));
+    if (!result)
+        return 0;
+    str = STR(result);
+    sprintf(str, "%f", aFloat);
+    result->size = strlen(str) + 1;
+    return (Object *)result;
+}
+

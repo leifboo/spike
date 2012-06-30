@@ -22,7 +22,12 @@ CFunction.0.__apply__.code:
 	pushl	8(%ebp,%esi,4)	# push arg
 	movl	$__sym_unboxed, %edx
 	call	SpikeGetAttr	# unbox it
-	movl	%eax, (%esp)	# replace fake obj result with real one
+	cmpl	$4, %ecx	# replace fake obj result with real one
+	je	.L3
+	movl	%edx, (%esp)
+	pushl	$0
+.L3:
+	movl	%eax, (%esp)
 	addl	$1, %esi	# walk back to previous arg
 .L2:
 	cmpl	%esi, %ebx
@@ -32,7 +37,7 @@ CFunction.0.__apply__.code:
 	sall	$2, %ebx	# remember size of args
 	movl	4(%edi), %eax	# get function pointer
 	call	*%eax		# call it
-	addl	%ebx, %esp	# clean up C args
+	leal	-12(%ebp), %esp	# clean up C args
 
 /* box result */
 	pushl	%eax		# arg is Spike pointer (CObject)
@@ -74,6 +79,7 @@ CFunction.0.unboxed.code:
 	.type	CFunction.0.unboxed.code, @function
 	movl	%esi, 8(%ebp)	# fake, safe result for Spike code
 	movl	4(%edi), %eax	# real result for C/asm code
+	movl	$4, %ecx	# result size
 	popl	%edi
 	popl	%esi
 	popl	%ebx

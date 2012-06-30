@@ -113,6 +113,7 @@ Object.0.unboxed.code:
 	.type	Object.0.unboxed.code, @function
 	movl	%esi, %eax	# real result is object pointer
 	movl	%eax, 8(%ebp)	# fake result is the same
+	movl	$4, %ecx	# result size
 	popl	%edi
 	popl	%esi
 	popl	%ebx

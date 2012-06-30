@@ -69,6 +69,8 @@ def assembleAndLink(assembly):
         "rtl/Context.c",
         "rtl/Char.s",
         "rtl/error.s",
+        "rtl/Float.c",
+        "rtl/Float.s",
         "rtl/Function.s",
         "rtl/Integer.s",
         "rtl/main.s",
@@ -81,6 +83,7 @@ def assembleAndLink(assembly):
         "rtl/Symbol.c",
         "rtl/test.s",
         "rtl/lookup.c",
+        "-lm",
         )
     return status
 

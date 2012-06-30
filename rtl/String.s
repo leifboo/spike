@@ -14,6 +14,7 @@ String.0.unboxed.code:
 	.type	String.0.unboxed.code, @function
 	movl	%esi, 8(%ebp)	# fake, safe result for Spike code
 	leal	4(%edi), %eax	# real result for C/asm code
+	movl	$4, %ecx	# result size
 	popl	%edi
 	popl	%esi
 	popl	%ebx

@@ -83,8 +83,37 @@ class IdentityDictionary : Object {
 }
 
 
-
-// class Float : Object
+class Float : Object {
+    obj valueLow, valueHigh; // XXX: kludge
+    
+    // unary operators
+    self + 1 { return Float_succ(self.asCObject); }
+    self - 1 { return Float_pred(self.asCObject); }
+    +self    { return Float_pos(self.asCObject);  }
+    -self    { return Float_neg(self.asCObject);  }
+    
+    // binary operators
+    self *  x { return Float_mul(self.asCObject, x.asCObject); }
+    self /  x { return Float_div(self.asCObject, x.asCObject); }
+    self %  x { return Float_mod(self.asCObject, x.asCObject); }
+    self +  x { return Float_add(self.asCObject, x.asCObject); }
+    self -  x { return Float_sub(self.asCObject, x.asCObject); }
+    
+    // comparison operators
+    self <  x { return Float_lt(self.asCObject, x.asCObject); }
+    self >  x { return Float_gt(self.asCObject, x.asCObject); }
+    self <= x { return Float_le(self.asCObject, x.asCObject); }
+    self >= x { return Float_ge(self.asCObject, x.asCObject); }
+    self == x { return Float_eq(self.asCObject, x.asCObject); }
+    self != x { return Float_ne(self.asCObject, x.asCObject); }
+    
+    // printing
+    printString { return String fromFloat: self; }
+    
+    // unboxing
+    extern unboxed {}
+    extern asCObject {} // to suppress unboxing
+}
 
 
 class Integer : Object {
@@ -163,9 +192,8 @@ class String : Object {
     extern asCObject {} // to suppress unboxing
     
 } meta {
-    
     self fromInteger: anInteger { return String_fromInteger(anInteger); }
-
+    self fromFloat: aFloat { return String_fromFloat(aFloat); }
 }
 
 
@@ -277,8 +305,24 @@ class Junk {
     self doesNotUnderstand: aMessage {}
     cannotReenterBlock {}
     wrongNumberOfArguments {}
- }
+}
 
+
+extern cdecl obj Float_succ(f) {}
+extern cdecl obj Float_pred(f) {}
+extern cdecl obj Float_pos(f) {}
+extern cdecl obj Float_neg(f) {}
+extern cdecl obj Float_mul(f1, f2) {}
+extern cdecl obj Float_div(f1, f2) {}
+extern cdecl obj Float_mod(f1, f2) {}
+extern cdecl obj Float_add(f1, f2) {}
+extern cdecl obj Float_sub(f1, f2) {}
+extern cdecl obj Float_lt(f1, f2) {}
+extern cdecl obj Float_gt(f1, f2) {}
+extern cdecl obj Float_le(f1, f2) {}
+extern cdecl obj Float_ge(f1, f2) {}
+extern cdecl obj Float_eq(f1, f2) {}
+extern cdecl obj Float_ne(f1, f2) {}
 
 extern cdecl obj String_add(s1, s2) {}
 extern cdecl obj String_lt(s1, s2) {}
@@ -291,5 +335,6 @@ extern cdecl int String_size(s) {}
 extern cdecl obj String_item(s, i) {}
 extern cdecl obj String_printString(s) {}
 extern cdecl obj String_fromInteger(i) {}
+extern cdecl obj String_fromFloat(f) {}
 
 extern cdecl obj Symbol_printString(s) {}
