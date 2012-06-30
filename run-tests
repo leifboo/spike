@@ -37,7 +37,7 @@ allTests = [
     "tests/leaf.spk",
     "tests/my-array.spk",
     "tests/no-main.spk",
-    "tests/old.spk",          # SIGSEGV:  .class doesn't work for smallints
+    "tests/old.spk",
     "tests/pi.spk",
     "tests/rodata.spk",
     "tests/static-errors.spk",

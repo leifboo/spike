@@ -441,41 +441,6 @@ SpikeSetAttrSuper:
 	jmp	SpikeSendMessageSuperLValue
 
 
-/* helper routines */
-
-getClass:
-	cmpl	$0, %esi	# test for null
-	jne	.L11
-
-	movl	$Null, %ebx
-	ret
-.L11:
-	movl	%esi, %eax
-	andl	$3, %eax	# test for object pointer
-	cmpl	$0, %eax
-	jne	.L12
-
-	movl	(%esi), %ebx 	# get class
-	ret
-.L12:
-	cmpl	$2, %eax	# test for SmallInteger
-	jne	.L13
-
-	movl	$Integer, %ebx
-	ret
-.L13:
-	cmpl	$3, %eax	# test for CObject (aligned pointer)
-	jne	.L14
-
-	movl	$CObject, %ebx
-	ret
-.L14:
-	pushl	$__sym_badObjectPointer
-	call	SpikeError
-	movl	$0, %ebx
-	ret
-
-
 /*
  * send message bottleneck
  *
@@ -503,7 +468,7 @@ SpikeSendMessageLValue:
 	pushl	%esi
 	pushl	%edi
 	movl	8(%ebp,%ecx,4), %esi  # get receiver
-	call	getClass 	# get class
+	call	SpikeGetClass 	# get class
 	movl	$1, %edi	# lvalue namespace
 	jmp	lookupMethod
 
@@ -526,7 +491,7 @@ SpikeSendMessage:
 	pushl	%esi
 	pushl	%edi
 	movl	8(%ebp,%ecx,4), %esi  # get receiver
-	call	getClass 	# get class
+	call	SpikeGetClass 	# get class
 	movl	$0, %edi	# rvalue namespace
 	/* fall through */
 
@@ -601,7 +566,7 @@ createActualMessage:
 	movl	$0, %edi	# rvalue namespace
 	movl	$__sym_doesNotUnderstand$, %edx  # new selector
 	movl	$1, %ecx	# new argument count
-	call	getClass 	# start over
+	call	SpikeGetClass 	# start over
 	jmp	lookupMethod
 
 /* found it */

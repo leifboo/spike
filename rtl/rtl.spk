@@ -3,6 +3,7 @@ class Object : null {
     self == x { return self === x; }
     self != x { return self !== x; }
     printString { return "<XXX Object printString>"; }    
+    extern self.class {}
     extern unboxed {}
 } meta {
     self new { return self basicNew; }
@@ -211,6 +212,7 @@ class Boolean {
     self & x { self subclassResponsibility; }
     self ^ x { self subclassResponsibility; }
     self | x { self subclassResponsibility; }
+    printString { self subclassResponsibility; }    
 }
 
 class False : Boolean {
@@ -219,6 +221,7 @@ class False : Boolean {
     self & x { return false; }
     self ^ x { return x; }
     self | x { return x; }
+    printString { return "false"; }    
 }
 
 class True : Boolean {
@@ -227,6 +230,7 @@ class True : Boolean {
     self & x { return x; }
     self ^ x { return !x; }
     self | x { return true; }
+    printString { return "true"; }    
 }
 
 

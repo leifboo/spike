@@ -25,7 +25,7 @@ class Foo {
     (a + b) foo {}
     (a - b) foo: c {}
     self && b {}
-    self.x {}
+    (self + 1).x {}
     self === v {}
     42 {}
     self++ {}

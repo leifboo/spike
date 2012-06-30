@@ -1,5 +1,69 @@
 
 /*------------------------------------------------------------------------*/
+/* class */
+
+	.text
+	.align	4
+Object.0.class:
+	.globl	Object.0.class
+	.type	Object.0.class, @object
+	.size	Object.0.class, 16
+	.long	Method
+	.long	0
+	.long	0
+	.long	0
+Object.0.class.code:
+	.globl	Object.0.class.code
+	.type	Object.0.class.code, @function
+	call	SpikeGetClass
+	movl	%ebx, 8(%ebp)
+	popl	%edi
+	popl	%esi
+	popl	%ebx
+	popl	%ebp
+	ret	$0
+	.size	Object.0.class.code, .-Object.0.class.code
+
+
+SpikeGetClass:
+	.globl	SpikeGetClass
+	.type	SpikeGetClass, @function
+
+	cmpl	$0, %esi	# test for null
+	jne	.L11
+
+	movl	$Null, %ebx
+	ret
+.L11:
+	movl	%esi, %eax
+	andl	$3, %eax	# test for object pointer
+	cmpl	$0, %eax
+	jne	.L12
+
+	movl	(%esi), %ebx 	# get class
+	ret
+.L12:
+	cmpl	$2, %eax	# test for SmallInteger
+	jne	.L13
+
+	movl	$Integer, %ebx
+	ret
+.L13:
+	cmpl	$3, %eax	# test for CObject (aligned pointer)
+	jne	.L14
+
+	movl	$CObject, %ebx
+	ret
+.L14:
+	pushl	$__sym_badObjectPointer
+	call	SpikeError
+	movl	$0, %ebx
+	ret
+
+	.size	SpikeGetClass, .-SpikeGetClass
+
+
+/*------------------------------------------------------------------------*/
 /* basicNew: */
 
 	.text

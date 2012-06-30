@@ -175,6 +175,12 @@ def checkMethodDef(stmt, outer, checker, outerPass):
         if expr.kind == EXPR_NAME:
             name = expr.sym
 
+        elif expr.kind == EXPR_ATTR:
+            if expr.left.kind != EXPR_NAME:
+                checker.requestor.invalidMethodDeclarator(expr)
+            else:
+                name = expr.attr
+
         elif expr.kind == EXPR_ASSIGN:
             if expr.right.kind != EXPR_NAME:
                 checker.requestor.invalidMethodDeclarator(expr)
@@ -198,7 +204,6 @@ def checkMethodDef(stmt, outer, checker, outerPass):
 
                 else:
                     checker.requestor.invalidMethodDeclarator(expr)
-
 
         elif expr.kind == EXPR_CALL:
             if expr.left.kind != EXPR_NAME:

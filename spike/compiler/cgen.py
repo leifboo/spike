@@ -680,14 +680,9 @@ def emitCodeForExpr(expr, super, cgen):
 
     elif expr.kind == EXPR_ATTR:
         emitCodeForExpr(expr.left, isSuper, cgen)
-        if expr.attr == 'class':
-            # "foo.class": push 'klass' is-a pointer
-            pop(cgen)
-            emitOpcode(cgen, "pushl", "(%%eax)")
-        else:
-            emitCodeForLiteral(expr.attr, cgen)
-            emitOpcode(cgen, "popl", "%%edx")
-            emitOpcode(cgen, "call", "SpikeGetAttr%s", "Super" if isSuper[0] else "")
+        emitCodeForLiteral(expr.attr, cgen)
+        emitOpcode(cgen, "popl", "%%edx")
+        emitOpcode(cgen, "call", "SpikeGetAttr%s", "Super" if isSuper[0] else "")
 
     elif expr.kind == EXPR_ATTR_VAR:
         emitCodeForExpr(expr.left, isSuper, cgen)
