@@ -1,0 +1,8 @@
+gram.c
+gram.h
+gram.out
+lexer.c
+lemon
+build
+dist
+MANIFEST
