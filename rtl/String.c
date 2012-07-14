@@ -48,10 +48,16 @@ struct String {
 };
 
 
+struct Char {
+    Object base;
+    unsigned int value;
+};
+
+
 extern void SpikeError(Object *);
 
 
-extern struct Behavior String;
+extern struct Behavior String, Char;
 extern Object __sym_typeError, __sym_rangeError;
 extern Object false, true;
 
@@ -118,6 +124,21 @@ char *String_asCString(struct String *self) {
     return STR(self);
 }
 
+
+struct Char *Char_fromCChar(char c) {
+    struct Char *result;
+
+    result = (struct Char *)malloc(sizeof(struct Char));
+    result->base.klass = &Char;
+    result->value = c;
+    return result;
+}
+
+
+Object *Char_eq(unsigned int self, unsigned int arg) {
+    /* XXX: arg already unboxed -- no type check */
+    return BOOL(self == arg);
+}
 
 
 /*------------------------------------------------------------------------*/
@@ -187,9 +208,7 @@ Object *String_item(struct String *self, int index) {
         SpikeError(&__sym_rangeError);
         return 0;
     }
-    // XXX
-    //return (Object *)Char_FromCChar(STR(self)[index]);
-    return (Object *)((STR(self)[index] << 2) | 2);
+    return (Object *)Char_fromCChar(STR(self)[index]);
 }
 
 

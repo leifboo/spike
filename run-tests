@@ -26,8 +26,7 @@ allTests = [
     "tests/dnu.spk",
     "tests/dot-star.spk",
     "tests/empty.spk",
-    "tests/fe.spk",           # SIGTRAP
-    #     * String do: returning ints instead of chars
+    "tests/fe.spk",
     "tests/gen.spk",
     "tests/gremlin.spk",
     "tests/index.spk",
@@ -52,6 +51,7 @@ xallTests = [
 
 xfailTests = [
     "examples/circle.spk",
+    "examples/nlines.spk",
     "examples/primes.spk",
     "tests/bc-in-blocks.spk",
     "tests/empty.spk",

@@ -63,6 +63,8 @@ class Behavior : Object {
 // XXX
 class Char : Object {
     obj value;
+    self == x { return Char_eq(self, x); }
+    self != x { return !Char_eq(self, x); }
     extern unboxed {}
 }
 
@@ -323,6 +325,8 @@ class Junk {
     wrongNumberOfArguments {}
 }
 
+
+extern cdecl obj Char_eq(c1, c2) {}
 
 extern cdecl obj Float_succ(f) {}
 extern cdecl obj Float_pred(f) {}

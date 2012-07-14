@@ -36,6 +36,7 @@ abc() {
     
     alphabet do: [ :l | printf("%c ", l); if (l == 'g') return "hey"; ];
     puts("ERROR: not reached");
+    return "ERROR";
 }
 
 tuple(...args) {
