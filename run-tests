@@ -3,8 +3,6 @@
 
 allTests = [
     "examples/accgen.spk",
-    "examples/blocks.spk",
-    "examples/circle.spk",
     "examples/fib.spk",
     "examples/fibgen.spk",
     "examples/fma.spk",
@@ -21,6 +19,7 @@ allTests = [
     "examples/primes.spk",
     "tests/attr.spk",
     "tests/bc-in-blocks.spk",
+    "tests/blocks.spk",
     "tests/cycle.spk",
     "tests/default-args.spk",
     "tests/dnu.spk",
@@ -50,18 +49,17 @@ xallTests = [
     ]
 
 xfailTests = [
-    "examples/circle.spk",
     "examples/nlines.spk",
-    "examples/primes.spk",
     "tests/bc-in-blocks.spk",
     "tests/empty.spk",
     "tests/kw-permutations.spk",
     "tests/no-main.spk",
-    "tests/pi.spk",
     "tests/syntax-error.spk",
     ]
 
 skipTests = [
+    "examples/primes.spk",
+    "tests/pi.spk",
     ]
 
 
