@@ -2,61 +2,171 @@
 #include "rtl.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 
-extern struct Behavior MethodContext, BlockContext;
-
-
-struct Context *SpikeCreateMethodContext(
-    size_t minArgumentCount,
-    size_t maxArgumentCount,
-    int varArgList,
-    size_t localCount,
-    size_t argumentCount,
-    struct Object **arg,
-    struct Behavior *methodClass,
-    struct Object *receiver,
-    struct Object **instVarPointer,
-    void *stackp
-    )
-{
-    struct Context *newContext;
-    size_t size, n, i;
-    
-    size = maxArgumentCount + localCount;
-    
-    newContext = (struct Context *)calloc(1, offsetof(struct Context, var[size]));
-    
-    newContext->base.klass = &MethodContext;
-    newContext->homeContext = newContext;
-    newContext->u.m.methodClass     = methodClass;
-    newContext->u.m.receiver        = receiver;
-    newContext->u.m.instVarPointer  = instVarPointer;
-    newContext->u.m.stackp          = stackp;
-    
-    /* copy & reverse fixed arguments from stack */
-    n = argumentCount < maxArgumentCount ? argumentCount : maxArgumentCount;
-    for (i = 0; i < n; ++i)
-        newContext->var[i] = arg[-(i + 1)];
-    
-    return newContext;
-}
+extern struct Behavior BlockContext, Closure, Array;
 
 
 struct Context *SpikeCreateBlockContext(
-    void *const startpc,
-    size_t nargs,
+    void *const pc,
+    size_t argumentCount,
     struct Context *homeContext
     )
 {
     struct Context *newContext;
     
-    newContext = (struct Context *)calloc(1, sizeof(struct Context));
+    newContext = (struct Context *)calloc(1, offsetof(struct Context, method));
     
     newContext->base.klass = &BlockContext;
+    newContext->caller = 0;
     newContext->homeContext = homeContext;
-    newContext->u.b.nargs = nargs;
-    newContext->u.b.pc = startpc;
+    newContext->argumentCount = argumentCount;
+    newContext->pc = pc;
+    newContext->sp = 0;
+    newContext->regSaveArea[0] = homeContext; /* %ebx */
+    newContext->regSaveArea[1] = homeContext->receiver; /* %esi */
+    newContext->regSaveArea[2] = homeContext->instVarPointer; /* %edi */
+    newContext->regSaveArea[3] = 0; /* reserved/unused */
     
     return newContext;
+}
+
+
+struct Context *SpikeCreateClosure(struct Context *blockContext) {
+    struct Context *newContext, *homeContext;
+    size_t size;
+    int i;
+    void *reg;
+    
+    /* copy the home context */
+    homeContext = blockContext->homeContext;
+    size = offsetof(struct Context, var[homeContext->size]);
+    newContext = (struct Context *)malloc(size);
+    memcpy(newContext, homeContext, size);
+    
+    /* reset certain fields */
+    newContext->base.klass = &Closure;
+    newContext->caller = 0;
+    newContext->homeContext = newContext;
+    newContext->stackBase = 0;
+    
+    /* copy certain fields from the block context */
+    newContext->argumentCount = blockContext->argumentCount;
+    newContext->pc = blockContext->pc;
+    newContext->sp = blockContext->sp;
+    for (i = 0; i < 4; ++i) {
+        reg = blockContext->regSaveArea[i];
+        if (reg == blockContext || reg == homeContext)
+            reg = newContext;
+        newContext->regSaveArea[i] = reg;
+    }
+    
+    return newContext;
+}
+
+
+void SpikeMoveVarArgs(struct Context *context) {
+    /*
+     * Create a new variable argument array.  Move any excess
+     * arguments into the new array.  ("Excess" arguments are those
+     * beyond the last fixed argument.)  Slide any fixed arguments to
+     * fill-in the resulting gap, so that they reside at known offsets
+     * from the Context pointer.
+     *
+     *
+     * On entry:
+     *
+     *     +------------+ <- context
+     *     |            |
+     *     | header     |
+     *     | (struct    |
+     *     |  Context)  |
+     *     |            |
+     *     |------------|
+     *     | var M      |
+     *     | ...        | local vars
+     *     | var 3      |
+     *     | var 2      |
+     *     | var 1      |
+     *     |------------|
+     *     | arg N      |
+     *     | arg N-1    |
+     *     | ...        |
+     *     | arg F+1    |
+     *     | arg F      | reversed arguments pushed by caller
+     *     | arg F-1    |
+     *     | ...        |
+     *     | arg 2      |
+     *     | arg 1      |
+     *     +------------+
+     *     | receiver   | receiver / space for result
+     *     +------------+
+     *
+     *
+     * On exit:
+     *
+     *     +------------+ <- context
+     *     |            |
+     *     | header     |
+     *     | (struct    |
+     *     |  Context)  |
+     *     |            |
+     *     |------------|
+     *     | var M      |
+     *     | ...        | other local vars
+     *     | var 3      |
+     *     | var 2      |
+     *     |------------|
+     *     | var 1      | -> argument array with arg F+1 ... arg N
+     *     |------------|
+     *     | arg F      |
+     *     | arg F-1    |
+     *     | ...        | fixed arguments
+     *     | arg 2      |
+     *     | arg 1      |
+     *     |------------|
+     *     |            |
+     *     | ...        | vacated and cleared space (N - F)
+     *     |            |
+     *     +------------+
+     *     | receiver   | receiver / space for result
+     *     +------------+
+     *
+     */
+    
+    struct Object **arg;
+    struct Method *method;
+    struct Array *varArgArray;
+    size_t fixedArgCount, varArgCount, i;
+    
+    method = context->method;
+    
+    fixedArgCount = method->maxArgumentCount & 0x7FFFFFFF;
+    if (context->argumentCount > fixedArgCount)
+        varArgCount = context->argumentCount - fixedArgCount;
+    else
+        varArgCount = 0;
+    
+    /* create the variable argument array */
+    varArgArray = (struct Array *)calloc(1, offsetof(struct Array, item[varArgCount]));
+    varArgArray->base.klass = &Array;
+    varArgArray->size = varArgCount;
+    
+    /* copy & reverse arguments from stack */
+    arg = &context->var[method->localCount];
+    for (i = 0; i < varArgCount; ++i)
+        varArgArray->item[i] = arg[varArgCount - i - 1];
+    
+    /* initialize the "...args" local variable */
+    context->var[method->localCount - 1] = (struct Object *)varArgArray;
+    
+    /* slide the fixed arguments */
+    for (i = 0; i < fixedArgCount; ++i)
+        arg[i] = arg[i + varArgCount];
+    
+    /* clear the vacated space */
+    arg += fixedArgCount;
+    for (i = 0; i < varArgCount; ++i)
+        arg[i] = 0;
 }

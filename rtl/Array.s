@@ -98,7 +98,7 @@ Array.0.init$:
 Array.0.init$.code:
 	.globl	Array.0.init$.code
 	.type	Array.0.init$.code, @function
-	movl	8(%ebp), %edx	# get size arg
+	movl	64(%ebp), %edx	# get size arg
 	movl	%edx, %eax
 	andl	$3, %eax	# test for SmallInteger
 	cmpl	$2, %eax
@@ -108,51 +108,8 @@ Array.0.init$.code:
 .L1:
 	sarl	$2, %edx	# unbox size
 	movl	%edx, 0(%edi)	# save it
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	ret
 	.size	Array.0.init$.code, .-Array.0.init$.code
-
-	.align	4
-Array.0.initWithContentsOfStack$:
-	.globl	Array.0.initWithContentsOfStack$
-	.type	Array.0.initWithContentsOfStack$, @object
-	.size	Array.0.initWithContentsOfStack$, 16
-	.long	Method
-	.long	1
-	.long	1
-	.long	0
-Array.0.initWithContentsOfStack$.code:
-	.globl	Array.0.initWithContentsOfStack$.code
-	.type	Array.0.initWithContentsOfStack$.code, @function
-	movl	8(%ebp), %edx	# get pointer arg
-	movl	%edx, %eax
-	andl	$3, %eax	# test for CObject
-	cmpl	$3, %eax
-	je	.L5
-	pushl	$__sym_typeError
-	call	SpikeError
-.L5:
-	andl	$~3, %edx	# unbox pointer
-	movl	(%edi), %ecx	# get size
-	addl	$4, %edi	# skip size
-	cmpl	$0, %ecx
-	je	.L7
-.L6:
-	movl	-4(%edx,%ecx,4), %eax 	# get items from stack in reverse
-	movl	%eax, (%edi)	# init my items
-	addl	$4, %edi	# next item
-	loop	.L6
-.L7:
-	movl	%esi, 12(%ebp)	# return self
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
-	.size	Array.0.initWithContentsOfStack$.code, .-Array.0.initWithContentsOfStack$.code
 
 	.align	4
 Array.0.size:
@@ -169,12 +126,8 @@ Array.0.size.code:
 	movl	(%edi), %eax	# get size
 	sall	$2, %eax	# box it
 	orl	$2, %eax
-	movl	%eax, 8(%ebp)	# return it
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	movl	%eax, 64(%ebp)	# return it
+	ret
 	.size	Array.0.size.code, .-Array.0.size.code
 
 	.align	4
@@ -189,15 +142,11 @@ Array.0.__index__:
 Array.0.__index__.code:
 	.globl	Array.0.__index__.code
 	.type	Array.0.__index__.code, @function
-	movl	8(%ebp), %edx		# get index arg
+	movl	64(%ebp), %edx		# get index arg
 	call	typeRangeCheck		# check type & range
 	movl	(%edi,%edx,4), %eax 	# get item
-	movl	%eax, 12(%ebp)		# return it
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	movl	%eax, 68(%ebp)		# return it
+	ret
 	.size	Array.0.__index__.code, .-Array.0.__index__.code
 
 	.align	4
@@ -212,16 +161,12 @@ Array.1.__index__:
 Array.1.__index__.code:
 	.globl	Array.1.__index__.code
 	.type	Array.1.__index__.code, @function
-	movl	12(%ebp), %edx		# get index arg
+	movl	68(%ebp), %edx		# get index arg
 	call	typeRangeCheck		# check type & range
-	movl	8(%ebp), %eax		# get item arg
+	movl	64(%ebp), %eax		# get item arg
 	movl	%eax, (%edi,%edx,4) 	# set item
-	movl	%esi, 16(%ebp)		# return self
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$8
+	movl	%esi, 72(%ebp)		# return self
+	ret
 	.size	Array.1.__index__.code, .-Array.1.__index__.code
 
 

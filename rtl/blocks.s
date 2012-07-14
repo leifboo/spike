@@ -7,58 +7,36 @@ SpikeBlockCopy:
 
 	movl	(%esp), %eax	# get return address
 	addl	$2, %eax	# account for branch
-	movl	%eax, (%esp)	# set startpc
+	movl	%eax, (%esp)	# set pc
 
 	call	SpikeCreateBlockContext
 
 	movl	%eax, 8(%esp)	# save new BlockContext
-	popl	%eax		# pop startpc
+	popl	%eax		# pop pc
 	subl	$2, %eax	# account for branch
-	addl	$4, %esp	# pop nargs
+	addl	$4, %esp	# pop argumentCount
 	jmp	*%eax		# return
 
 	.size	SpikeBlockCopy, .-SpikeBlockCopy
 
 
-SpikeResumeCaller:
-	.globl	SpikeResumeCaller
-	.type	SpikeResumeCaller, @function
+SpikeYield:
+	.globl	SpikeYield
+	.type	SpikeYield, @function
 
-	popl	12(%ecx)	# pop return address into BlockContext.pc
-	jmp	*%eax		# return to block's caller
+/* pop return address into BlockContext.pc */
+	popl	16(%ebp)
 
-	.size	SpikeResumeCaller, .-SpikeResumeCaller
+/* set activeContext to the caller */
+	movl	4(%ebp), %ebp
 
+/* restore registers */
+	movl	24(%ebp), %ebx
+	movl	28(%ebp), %esi
+	movl	32(%ebp), %edi
 
-SpikeResumeHome:
-	.globl	SpikeResumeHome
-	.type	SpikeResumeHome, @function
+/* return */
+	movl	16(%ebp), %eax	# pc
+	jmp	*%eax
 
-/* save stuff from old stack before we mess with %esp */
-	popl	%eax		# return address
-	popl	%edx		# result
-	popl	%ecx		# BlockContext
-
-/* sabotage BlockContext.pc */
-	movl	$SpikeCannotReenterBlock, 12(%ecx)
-
-/* longjmp home */
-	movl	4(%ecx), %ebp	# get homeContext
-	movl	8(%ebp), %ebx	# restore methodClass
-	movl	12(%ebp), %esi	# restore receiver
-	movl	16(%ebp), %edi	# restore instVarPointer
-	movl	20(%ebp), %esp	# restore stackp
-	pushl	%edx		# push result onto home stack
-	jmp	*%eax		# return
-
-	.size	SpikeResumeHome, .-SpikeResumeHome
-
-
-SpikeCannotReenterBlock:
-	.globl	SpikeCannotReenterBlock
-	.type	SpikeCannotReenterBlock, @function
-
-	pushl	$__sym_cannotReenterBlock
-	call	SpikeError
-
-	.size	SpikeCannotReenterBlock, .-SpikeCannotReenterBlock
+	.size	SpikeYield, .-SpikeYield

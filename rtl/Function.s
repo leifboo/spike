@@ -12,7 +12,15 @@ Function.0.__apply__:
 Function.0.__apply__.code:
 	.globl	Function.0.__apply__.code
 	.type	Function.0.__apply__.code, @function
+
+/* discard our own context */
+	movl	12(%ebp), %edx	# get argumentCount
+	movl	4(%ebp), %ebp	# activeContext = caller
+	leal	64(%ebx), %esp	# pop context
+
 /* jump to the code represented by the receiver */
-	leal	4(%esi), %edi
+	movl	(%esi), %ebx	# methodClass = my class
+	leal	4(%esi), %edi	# method = self
 	jmp	SpikeCallNewMethod
+
 	.size	Function.0.__apply__.code, .-Function.0.__apply__.code

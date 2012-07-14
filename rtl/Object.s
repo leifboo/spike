@@ -16,12 +16,8 @@ Object.0.class.code:
 	.globl	Object.0.class.code
 	.type	Object.0.class.code, @function
 	call	SpikeGetClass
-	movl	%ebx, 8(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	popl	%ebp
-	ret	$0
+	movl	%ebx, 64(%ebp)
+	ret
 	.size	Object.0.class.code, .-Object.0.class.code
 
 
@@ -81,7 +77,7 @@ Object.class.0.basicNew$.code:
 	.type	Object.class.0.basicNew$.code, @function
 
 /* check type of arg */
-	movl	8(%ebp), %edx	# get arg
+	movl	64(%ebp), %edx	# get arg
 	movl	%edx, %eax
 	andl	$3, %eax	# test for SmallInteger
 	cmpl	$2, %eax
@@ -117,14 +113,11 @@ Object.class.0.basicNew$.code:
 	movl	%esi, (%eax)
 	
 /* store result */
-	movl	%eax, 12(%ebp)
+	movl	%eax, 68(%ebp)
 
-/* clean up */
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+/* return */
+	ret
+
 	.size	Object.class.0.basicNew$.code, .-Object.class.0.basicNew$.code
 
 
@@ -144,21 +137,17 @@ Object.class.0.box$:
 Object.class.0.box$.code:
 	.globl	Object.class.0.box$.code
 	.type	Object.class.0.box$.code, @function
-	movl	8(%ebp), %eax	# get pointer arg
-	movl	%eax, 12(%ebp)	# provisional result
+	movl	64(%ebp), %eax	# get pointer arg
+	movl	%eax, 68(%ebp)	# provisional result
 	andl	$3, %eax	# test for CObject
 	cmpl	$3, %eax
 	jne	.L4
-	movl	8(%ebp), %eax	# get pointer arg
+	movl	64(%ebp), %eax	# get pointer arg
 	andl	$~3, %eax	# discard flags
 	movl	(%eax), %eax	# get result
-	movl	%eax, 12(%ebp)	# store result
+	movl	%eax, 68(%ebp)	# store result
 .L4:
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	ret
 	.size	Object.class.0.box$.code, .-Object.class.0.box$.code
 
 
@@ -176,12 +165,8 @@ Object.0.unboxed.code:
 	.globl	Object.0.unboxed.code
 	.type	Object.0.unboxed.code, @function
 	movl	%esi, %eax	# real result is object pointer
-	movl	%eax, 8(%ebp)	# fake result is the same
+	movl	%eax, 64(%ebp)	# fake result is the same
 	movl	$4, %ecx	# result size
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	ret
 	.size	Object.0.unboxed.code, .-Object.0.unboxed.code
 

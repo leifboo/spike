@@ -35,22 +35,22 @@ struct Method {
 };
 
 
-struct Context {
+struct Context {  /* <- %ebp */
     struct Object base;
-    struct Context *homeContext;            /* %ebp */
-    union {
-        struct /* MethodContext */ {
-            struct Behavior *methodClass;   /* %ebx */
-            struct Object *receiver;        /* %esi */
-            struct Object **instVarPointer; /* %edi */
-            void *stackp;                   /* %esp */
-        } m;
-        struct /* BlockContext */ {
-            size_t nargs;
-            void *pc;
-        } b;
-    } u;
-    struct Object *var[1];
+    struct Context *caller;                 /*  4 saved %ebp */
+    struct Context *homeContext;            /*  8 %ebx */
+    size_t argumentCount;                   /* 12 */
+    void *pc;                               /* 16 %eip (return address) */
+    void *sp;                               /* 20 %esp */
+    void *regSaveArea[4];                   /* 24 %ebx, %esi, %edi, (reserved) */
+    /* the following are not present for BlockContext */
+    struct Method *method;                  /* 40 */
+    struct Behavior *methodClass;           /* 44 */
+    struct Object *receiver;                /* 48 %esi */
+    struct Object **instVarPointer;         /* 52 %edi */
+    void *stackBase;                        /* 56 base/bottom %esp */
+    size_t size;                            /* 60 size of 'var' array */
+    struct Object *var[1];                  /* 64 */
 };
 
 

@@ -12,12 +12,8 @@ Char.0.unboxed:
 Char.0.unboxed.code:
 	.globl	Char.0.unboxed.code
 	.type	Char.0.unboxed.code, @function
-	movl	%esi, 8(%ebp)	# fake, safe result for Spike code
+	movl	%esi, 64(%ebp)	# fake, safe result for Spike code
 	movl	(%edi), %eax	# real result for C/asm code
 	movl	$4, %ecx	# result size
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	ret
 	.size	Char.0.unboxed.code, .-Char.0.unboxed.code

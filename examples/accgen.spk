@@ -5,7 +5,7 @@
 extern cdecl int printf() {}
 
 foo(n) {
-    return [ :i | n += i ];
+    return [ :i | n += i ] closure;
 }
 
 main(argv) {

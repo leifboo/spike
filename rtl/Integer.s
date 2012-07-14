@@ -18,12 +18,8 @@ Integer.0.__succ__.code:
 	.globl	Integer.0.__succ__.code
 	.type	Integer.0.__succ__.code, @function
 	addl	$4, %esi
-	movl	%esi, 8(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	movl	%esi, 64(%ebp)
+	ret
 	.size	Integer.0.__succ__.code, .-Integer.0.__succ__.code
 
 	.text
@@ -40,12 +36,8 @@ Integer.0.__pred__.code:
 	.globl	Integer.0.__pred__.code
 	.type	Integer.0.__pred__.code, @function
 	subl	$4, %esi
-	movl	%esi, 8(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	movl	%esi, 64(%ebp)
+	ret
 	.size	Integer.0.__pred__.code, .-Integer.0.__pred__.code
 
 	.text
@@ -61,12 +53,8 @@ Integer.0.__pos__:
 Integer.0.__pos__.code:
 	.globl	Integer.0.__pos__.code
 	.type	Integer.0.__pos__.code, @function
-	movl	%esi, 8(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	movl	%esi, 64(%ebp)
+	ret
 	.size	Integer.0.__pos__.code, .-Integer.0.__pos__.code
 
 	.text
@@ -84,12 +72,8 @@ Integer.0.__neg__.code:
 	.type	Integer.0.__neg__.code, @function
 	xorl	$~3, %esi
 	addl	$4, %esi
-	movl	%esi, 8(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	movl	%esi, 64(%ebp)
+	ret
 	.size	Integer.0.__neg__.code, .-Integer.0.__neg__.code
 
 	.text
@@ -106,12 +90,8 @@ Integer.0.__bneg__.code:
 	.globl	Integer.0.__bneg__.code
 	.type	Integer.0.__bneg__.code, @function
 	xorl	$~3, %esi
-	movl	%esi, 8(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	movl	%esi, 64(%ebp)
+	ret
 	.size	Integer.0.__bneg__.code, .-Integer.0.__bneg__.code
 
 
@@ -123,7 +103,7 @@ Integer.0.__bneg__.code:
 
 binaryOperInit:
 	.type	binaryOperInit, @function
-	movl	8(%ebp), %eax	# get arg
+	movl	64(%ebp), %eax	# get arg
 	movl	%eax, %edx
 	andl	$3, %edx	# test for SmallInteger
 	cmpl	$2, %edx
@@ -154,12 +134,8 @@ Integer.0.__mul__.code:
 	imull	%esi, %eax
 	sall	$2, %eax
 	orl	$2, %eax
-	movl	%eax, 12(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	movl	%eax, 68(%ebp)
+	ret
 	.size	Integer.0.__mul__.code, .-Integer.0.__mul__.code
 
 	.text
@@ -182,12 +158,8 @@ Integer.0.__div__.code:
 	idivl	%esi
 	sall	$2, %eax
 	orl	$2, %eax
-	movl	%eax, 12(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	movl	%eax, 68(%ebp)
+	ret
 	.size	Integer.0.__div__.code, .-Integer.0.__div__.code
 
 	.text
@@ -210,12 +182,8 @@ Integer.0.__mod__.code:
 	idivl	%esi
 	sall	$2, %edx
 	orl	$2, %edx
-	movl	%edx, 12(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	movl	%edx, 68(%ebp)
+	ret
 	.size	Integer.0.__mod__.code, .-Integer.0.__mod__.code
 
 	.text
@@ -235,12 +203,8 @@ Integer.0.__add__.code:
 	addl	%esi, %eax
 	sall	$2, %eax
 	orl	$2, %eax
-	movl	%eax, 12(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	movl	%eax, 68(%ebp)
+	ret
 	.size	Integer.0.__add__.code, .-Integer.0.__add__.code
 
 	.text
@@ -260,12 +224,8 @@ Integer.0.__sub__.code:
 	subl	%eax, %esi
 	sall	$2, %esi
 	orl	$2, %esi
-	movl	%esi, 12(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	movl	%esi, 68(%ebp)
+	ret
 	.size	Integer.0.__sub__.code, .-Integer.0.__sub__.code
 
 	.text
@@ -286,12 +246,8 @@ Integer.0.__lshift__.code:
 	sall	%cl, %esi
 	sall	$2, %esi
 	orl	$2, %esi
-	movl	%esi, 12(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	movl	%esi, 68(%ebp)
+	ret
 	.size	Integer.0.__lshift__.code, .-Integer.0.__lshift__.code
 
 	.text
@@ -312,12 +268,8 @@ Integer.0.__rshift__.code:
 	sarl	%cl, %esi
 	sall	$2, %esi
 	orl	$2, %esi
-	movl	%esi, 12(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	movl	%esi, 68(%ebp)
+	ret
 	.size	Integer.0.__rshift__.code, .-Integer.0.__rshift__.code
 
 	.text
@@ -337,12 +289,8 @@ Integer.0.__band__.code:
 	andl	%esi, %eax
 	sall	$2, %eax
 	orl	$2, %eax
-	movl	%eax, 12(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	movl	%eax, 68(%ebp)
+	ret
 	.size	Integer.0.__band__.code, .-Integer.0.__band__.code
 
 	.text
@@ -362,12 +310,8 @@ Integer.0.__bxor__.code:
 	xorl	%esi, %eax
 	sall	$2, %eax
 	orl	$2, %eax
-	movl	%eax, 12(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	movl	%eax, 68(%ebp)
+	ret
 	.size	Integer.0.__bxor__.code, .-Integer.0.__bxor__.code
 
 	.text
@@ -387,12 +331,8 @@ Integer.0.__bor__.code:
 	orl	%esi, %eax
 	sall	$2, %eax
 	orl	$2, %eax
-	movl	%eax, 12(%ebp)
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	movl	%eax, 68(%ebp)
+	ret
 	.size	Integer.0.__bor__.code, .-Integer.0.__bor__.code
 
 
@@ -415,16 +355,12 @@ Integer.0.__lt__.code:
 	.globl	Integer.0.__lt__.code
 	.type	Integer.0.__lt__.code, @function
 	call	binaryOperInit
-	movl	$true, 12(%ebp)
+	movl	$true, 68(%ebp)
 	cmpl	%eax, %esi
 	jl	.L2
-	movl	$false, 12(%ebp)
+	movl	$false, 68(%ebp)
 .L2:
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	ret
 	.size	Integer.0.__lt__.code, .-Integer.0.__lt__.code
 
 	.text
@@ -441,16 +377,12 @@ Integer.0.__gt__.code:
 	.globl	Integer.0.__gt__.code
 	.type	Integer.0.__gt__.code, @function
 	call	binaryOperInit
-	movl	$true, 12(%ebp)
+	movl	$true, 68(%ebp)
 	cmpl	%eax, %esi
 	jg	.L3
-	movl	$false, 12(%ebp)
+	movl	$false, 68(%ebp)
 .L3:
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	ret
 	.size	Integer.0.__gt__.code, .-Integer.0.__gt__.code
 
 	.text
@@ -467,16 +399,12 @@ Integer.0.__le__.code:
 	.globl	Integer.0.__le__.code
 	.type	Integer.0.__le__.code, @function
 	call	binaryOperInit
-	movl	$true, 12(%ebp)
+	movl	$true, 68(%ebp)
 	cmpl	%eax, %esi
 	jle	.L4
-	movl	$false, 12(%ebp)
+	movl	$false, 68(%ebp)
 .L4:
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	ret
 	.size	Integer.0.__le__.code, .-Integer.0.__le__.code
 
 	.text
@@ -493,16 +421,12 @@ Integer.0.__ge__.code:
 	.globl	Integer.0.__ge__.code
 	.type	Integer.0.__ge__.code, @function
 	call	binaryOperInit
-	movl	$true, 12(%ebp)
+	movl	$true, 68(%ebp)
 	cmpl	%eax, %esi
 	jge	.L5
-	movl	$false, 12(%ebp)
+	movl	$false, 68(%ebp)
 .L5:
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	ret
 	.size	Integer.0.__ge__.code, .-Integer.0.__ge__.code
 
 	.text
@@ -519,16 +443,12 @@ Integer.0.__eq__.code:
 	.globl	Integer.0.__eq__.code
 	.type	Integer.0.__eq__.code, @function
 	call	binaryOperInit
-	movl	$true, 12(%ebp)
+	movl	$true, 68(%ebp)
 	cmpl	%eax, %esi
 	je	.L6
-	movl	$false, 12(%ebp)
+	movl	$false, 68(%ebp)
 .L6:
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	ret
 	.size	Integer.0.__eq__.code, .-Integer.0.__eq__.code
 
 	.text
@@ -545,16 +465,12 @@ Integer.0.__ne__.code:
 	.globl	Integer.0.__ne__.code
 	.type	Integer.0.__ne__.code, @function
 	call	binaryOperInit
-	movl	$true, 12(%ebp)
+	movl	$true, 68(%ebp)
 	cmpl	%eax, %esi
 	jne	.L7
-	movl	$false, 12(%ebp)
+	movl	$false, 68(%ebp)
 .L7:
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	ret
 	.size	Integer.0.__ne__.code, .-Integer.0.__ne__.code
 
 
@@ -576,23 +492,19 @@ Integer.class.0.box$:
 Integer.class.0.box$.code:
 	.globl	Integer.class.0.box$.code
 	.type	Integer.class.0.box$.code, @function
-	movl	8(%ebp), %eax	# get pointer arg
-	movl	%eax, 12(%ebp)	# provisional result
+	movl	64(%ebp), %eax	# get pointer arg
+	movl	%eax, 68(%ebp)	# provisional result
 	andl	$3, %eax	# test for CObject
 	cmpl	$3, %eax
 	jne	.L8
-	movl	8(%ebp), %eax	# get pointer arg
+	movl	64(%ebp), %eax	# get pointer arg
 	andl	$~3, %eax	# discard flags
 	movl	(%eax), %eax	# get result
 	sall	$2, %eax	# box it
 	orl	$2, %eax
-	movl	%eax, 12(%ebp)	# store result
+	movl	%eax, 68(%ebp)	# store result
 .L8:
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$4
+	ret
 	.size	Integer.class.0.box$.code, .-Integer.class.0.box$.code
 
 
@@ -609,13 +521,9 @@ Integer.0.unboxed:
 Integer.0.unboxed.code:
 	.globl	Integer.0.unboxed.code
 	.type	Integer.0.unboxed.code, @function
-	movl	%esi, 8(%ebp)	# fake, safe result for Spike code is 'self'
+	movl	%esi, 64(%ebp)	# fake, safe result for Spike code is 'self'
 	movl	%esi, %eax	# real result for C/asm code...
 	sarl	$2, %eax	# ...is also 'self', but unboxed
 	movl	$4, %ecx	# result size
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	ret
 	.size	Integer.0.unboxed.code, .-Integer.0.unboxed.code

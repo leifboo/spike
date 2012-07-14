@@ -12,14 +12,10 @@ String.0.unboxed:
 String.0.unboxed.code:
 	.globl	String.0.unboxed.code
 	.type	String.0.unboxed.code, @function
-	movl	%esi, 8(%ebp)	# fake, safe result for Spike code
+	movl	%esi, 64(%ebp)	# fake, safe result for Spike code
 	leal	4(%edi), %eax	# real result for C/asm code
 	movl	$4, %ecx	# result size
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	ret
 	.size	String.0.unboxed.code, .-String.0.unboxed.code
 
 
@@ -37,10 +33,6 @@ String.0.asCObject.code:
 	.globl	String.0.asCObject.code
 	.type	String.0.asCObject.code, @function
 	orl	$3, %esi	# map to CObject
-	movl	%esi, 8(%ebp)	# store result
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	movl	%esi, 64(%ebp)	# store result
+	ret
 	.size	String.0.asCObject.code, .-String.0.asCObject.code

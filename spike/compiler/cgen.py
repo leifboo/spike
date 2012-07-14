@@ -8,7 +8,9 @@ from spike.il import *
 
 
 SIZEOF_OBJ_PTR = 4
-OFFSETOF_CONTEXT_VAR = 24
+SIZEOF_CONTEXT_HEADER = 16*SIZEOF_OBJ_PTR
+OFFSETOF_ARGUMENT_COUNT = 3*SIZEOF_OBJ_PTR
+OFFSETOF_STACK_BASE = 14*SIZEOF_OBJ_PTR
 
 
 #------------------------------------------------------------------------
@@ -64,26 +66,23 @@ class ClassCodeGen(CodeGen):
 
 class OpcodeGen(CodeGen):
 
+    varCount = property(lambda self: self.localCount + self.maxArgumentCount)
+
     def __init__(self, outer, minArgumentCount, maxArgumentCount, localCount):
         super(OpcodeGen, self).__init__(outer)
         
         self.minArgumentCount = minArgumentCount
         self.maxArgumentCount = maxArgumentCount
-        self.localCount = localCount + int(self.varArgList)
+        self.localCount = localCount
         
-        self.epilogueLabel = Label()
-
         return
 
 
 class MethodCodeGen(OpcodeGen):
 
-    method = property(lambda self: self)
+    home = property(lambda self: self)
 
     def __init__(self, outer, stmt):
-        
-        self.varArgList = stmt.varArg is not None
-        
         super(MethodCodeGen, self).__init__(
             outer = outer,
             minArgumentCount = stmt.u.method.minArgumentCount,
@@ -91,6 +90,7 @@ class MethodCodeGen(OpcodeGen):
             localCount = stmt.u.method.localCount,
             )
         
+        self.varArgList = stmt.varArg is not None
         self.blockCount = stmt.u.method.blockCount
         
         return
@@ -99,7 +99,6 @@ class MethodCodeGen(OpcodeGen):
 class BlockCodeGen(OpcodeGen):
 
     varArgList = False
-    blockCount = 1 # trigger alternate %ebp mapping
 
     def __init__(self, outer, expr):
         assert outer.kind in (BlockCodeGen, MethodCodeGen), "block not allowed here"
@@ -109,7 +108,8 @@ class BlockCodeGen(OpcodeGen):
             maxArgumentCount = expr.aux.block.argumentCount,
             localCount = expr.aux.block.localCount,
             )
-        self.method = outer.method
+        self.home = outer.home
+        self.blockIndex = expr.u._def.index # XXX: interpreter cruft
         return
 
 
@@ -135,7 +135,7 @@ def fputc(c, stream):
 #------------------------------------------------------------------------
 # opcodes
 
-def emitOpcode(cgen, mnemonic, operands, *args):
+def emitOpcode(cgen, mnemonic, operands = None, *args):
     out = cgen.out
     fprintf(out, "\t%s", mnemonic)
     if operands:
@@ -188,27 +188,11 @@ def instVarOffset(_def, cgen):
 
 
 def offsetOfIndex(index, cgen):
-    
-    if cgen.blockCount:
-        # all vars are in MethodContext on heap at %ebp
-        return OFFSETOF_CONTEXT_VAR + SIZEOF_OBJ_PTR * index
-
-    if cgen.varArgList:
-        # all vars are below %ebp
-        # skip saved edx, edi, esi, ebx
-        return -(SIZEOF_OBJ_PTR * (index + 1 + 4))
-
-    if index < cgen.maxArgumentCount:
-        # argument
-        # args are pushed in order, so they are reversed in memory
-        # skip saved ebp, eip
-        return SIZEOF_OBJ_PTR * (cgen.maxArgumentCount - index - 1 + 2)
-
-    # ordinary local variable
-    # skip saved edi, esi, ebx
-    index -= cgen.maxArgumentCount
-    return -(SIZEOF_OBJ_PTR * (index + 1 + 3))
-
+    # vars are stored in reverse order starting at end of home context
+    return (
+        SIZEOF_CONTEXT_HEADER +
+        (cgen.home.varCount - index - 1) * SIZEOF_OBJ_PTR
+        )
 
 def localVarOffset(_def, cgen):
     return offsetOfIndex(_def.u._def.index, cgen)
@@ -231,12 +215,13 @@ def emitCodeForName(expr, super, cgen):
     if _def.u._def.level == 0:
         # built-in
         builtins = {
-            OPCODE_PUSH_SELF:  "%%esi",
-            OPCODE_PUSH_SUPER: "%%esi",
-            OPCODE_PUSH_FALSE: "$false",
-            OPCODE_PUSH_TRUE:  "$true",
-            OPCODE_PUSH_NULL:  "$0",
-            OPCODE_PUSH_VOID:  "$void",
+            OPCODE_PUSH_SELF:    "%%esi",
+            OPCODE_PUSH_SUPER:   "%%esi",
+            OPCODE_PUSH_FALSE:   "$false",
+            OPCODE_PUSH_TRUE:    "$true",
+            OPCODE_PUSH_NULL:    "$0",
+            OPCODE_PUSH_VOID:    "$void",
+            OPCODE_PUSH_CONTEXT: "%%ebp",
             }
         builtin = builtins[pushOpcode]
         
@@ -254,7 +239,7 @@ def emitCodeForName(expr, super, cgen):
         elif pushOpcode == OPCODE_PUSH_INST_VAR:
             emitOpcode(cgen, "pushl", "%d(%%edi)", instVarOffset(_def, cgen))
         elif pushOpcode == OPCODE_PUSH_LOCAL:
-            emitOpcode(cgen, "pushl", "%d(%%ebp)", localVarOffset(_def, cgen))
+            emitOpcode(cgen, "pushl", "%d(%%ebx)", localVarOffset(_def, cgen))
         else:
             assert False, "unexpected push opcode"
 
@@ -307,139 +292,12 @@ def store(var, cgen):
     elif storeOpcode == OPCODE_STORE_INST_VAR:
         emitOpcode(cgen, "movl", "%%eax, %d(%%edi)", instVarOffset(_def, cgen))
     elif storeOpcode == OPCODE_STORE_LOCAL:
-        emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)", localVarOffset(_def, cgen))
+        emitOpcode(cgen, "movl", "%%eax, %d(%%ebx)", localVarOffset(_def, cgen))
     return
 
 
 def pop(cgen):
     emitOpcode(cgen, "popl", "%%eax")
-    return
-
-
-def prologue(cgen):
-
-    if not cgen.varArgList and not cgen.blockCount:
-        # nothing to do -- shared prologue did all the work
-        return
-
-    # discard local variable area
-    emitOpcode(cgen, "addl", "$%lu, %%esp", SIZEOF_OBJ_PTR * cgen.localCount)
-
-    # save argument count for epilogue
-    emitOpcode(cgen, "pushl", "%%edx")
-    
-    if cgen.blockCount:
-        # XXX: push Method pointer ?
-        emitOpcode(cgen, "pushl", "%%esp") # stackp
-        emitOpcode(cgen, "pushl", "%%edi") # instVarPointer
-        emitOpcode(cgen, "pushl", "%%esi") # receiver
-        emitOpcode(cgen, "pushl", "%%ebx") # methodClass
-        emitOpcode(cgen, "leal", "8(%%ebp,%%edx,4), %%eax") # pointer to first arg
-        emitOpcode(cgen, "pushl", "%%eax")
-        emitOpcode(cgen, "pushl", "%%edx") # actual argument count
-        emitOpcode(cgen, "pushl", "$%lu", cgen.localCount)
-        emitOpcode(cgen, "pushl", "$%d", cgen.varArgList)
-        emitOpcode(cgen, "pushl", "$%lu", cgen.maxArgumentCount)
-        emitOpcode(cgen, "pushl", "$%lu", cgen.minArgumentCount)
-        emitOpcode(cgen, "call", "SpikeCreateMethodContext")
-        emitOpcode(cgen, "addl", "$%lu, %%esp", SIZEOF_OBJ_PTR * 10)
-        emitOpcode(cgen, "movl", "%%eax, %%ebp")
-        # pointer to new, heap-allocated, initialized MethodContext
-        # object is now in %ebp
-        return
-
-    if cgen.maxArgumentCount:
-        # copy fixed arguments
-        emitOpcode(cgen, "movl", "$%lu, %%ecx", cgen.maxArgumentCount)
-        loop = Label()
-        defineLabel(loop, cgen)
-        emitOpcode(cgen, "cmpl", "$%lu, %%edx", cgen.maxArgumentCount)
-        emitOpcode(cgen, "jae", ".L%u", getLabel(loop, cgen))
-        emitOpcode(cgen, "movl", "$%lu, %%edx", cgen.maxArgumentCount)
-        maybeEmitLabel(loop, cgen)
-        emitOpcode(cgen, "pushl", "4(%%ebp,%%edx,4)")
-        emitOpcode(cgen, "decl", "%%edx")
-        emitOpcode(cgen, "loop", ".L%u", getLabel(loop, cgen))
-
-    # create var arg array
-    skip = Label()
-    defineLabel(skip, cgen)
-    emitOpcode(cgen, "pushl", "$Array")
-    emitOpcode(cgen, "leal", "8(%%ebp), %%eax")
-    emitOpcode(cgen, "orl", "$3, %%eax") # map to CObject
-    emitOpcode(cgen, "pushl", "%%eax")
-    emitOpcode(cgen, "movl", "-16(%%ebp), %%eax") # compute excess arg count
-    emitOpcode(cgen, "subl", "$%lu, %%eax", cgen.maxArgumentCount)
-    emitOpcode(cgen, "jae", ".L%u", getLabel(skip, cgen))
-    emitOpcode(cgen, "movl", "$0, %%eax")
-    maybeEmitLabel(skip, cgen)
-    emitOpcode(cgen, "sall", "$2, %%eax") # box it
-    emitOpcode(cgen, "orl", "$2, %%eax")
-    emitOpcode(cgen, "pushl", "%%eax")
-    emitOpcode(cgen, "movl", "$__sym_withContentsOfStack$size$, %%edx")
-    emitOpcode(cgen, "movl", "$2, %%ecx")
-    emitOpcode(cgen, "call", "SpikeSendMessage") # leave result on stack
-
-    # restore %edx
-    emitOpcode(cgen, "movl", "-16(%%ebp), %%edx")
-    
-    if cgen.localCount > 1:
-        # reallocate locals
-        emitOpcode(cgen, "movl", "$%lu, %%ecx", cgen.localCount - 1)
-        loop = Label()
-        defineLabel(loop, cgen)
-        maybeEmitLabel(loop, cgen)
-        emitOpcode(cgen, "pushl", "$0")
-        emitOpcode(cgen, "loop", ".L%u", getLabel(loop, cgen))
-    
-    return
-
-
-def epilogue(cgen):
-    # discard locals
-    if cgen.blockCount:
-        # locals on heap
-        pass
-    elif cgen.varArgList:
-        emitOpcode(cgen, "addl", "$%lu, %%esp", SIZEOF_OBJ_PTR * (cgen.localCount + cgen.maxArgumentCount))
-    elif cgen.localCount != 0:
-        emitOpcode(cgen, "addl", "$%lu, %%esp", SIZEOF_OBJ_PTR * cgen.localCount)
-
-    if cgen.varArgList or cgen.blockCount:
-        skip = Label()
-        defineLabel(skip, cgen)
-        emitOpcode(cgen, "popl", "%%edx") # argumentCount
-        emitOpcode(cgen, "cmpl", "$%lu, %%edx", cgen.maxArgumentCount)
-        emitOpcode(cgen, "jae", ".L%u", getLabel(skip, cgen))
-        emitOpcode(cgen, "movl", "$%lu, %%edx", cgen.maxArgumentCount)
-        maybeEmitLabel(skip, cgen)
-        emitOpcode(cgen, "shll", "$2, %%edx") # convert to byte count
-
-    # restore registers
-    emitOpcode(cgen, "popl", "%%edi") # instVarPointer
-    emitOpcode(cgen, "popl", "%%esi") # self
-    emitOpcode(cgen, "popl", "%%ebx") # methodClass
-    
-    # save result
-    if cgen.blockCount:
-        emitOpcode(cgen, "movl", "%%eax, 8(%%esp,%%edx)")
-    elif cgen.varArgList:
-        emitOpcode(cgen, "movl", "%%eax, 8(%%ebp,%%edx)")
-    else:
-        emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)", SIZEOF_OBJ_PTR * (2 + cgen.maxArgumentCount))
-
-    # restore caller's stack frame (%ebp)
-    emitOpcode(cgen, "popl", "%%ebp")
-    
-    # pop arguments and return, leaving result on the stack
-    if cgen.varArgList or cgen.blockCount:
-        # ret %edx
-        emitOpcode(cgen, "popl", "%%eax") # return address
-        emitOpcode(cgen, "addl", "%%edx, %%esp")
-        emitOpcode(cgen, "jmp", "*%%eax")  # return
-    else:
-        emitOpcode(cgen, "ret", "$%lu", SIZEOF_OBJ_PTR * cgen.maxArgumentCount)
-
     return
 
 
@@ -613,7 +471,7 @@ def emitCodeForExpr(expr, super, cgen):
         emitCodeForName(expr, super, cgen)
 
     elif expr.kind == EXPR_BLOCK:
-        emitOpcode(cgen, "pushl", "%%ebp")
+        emitOpcode(cgen, "pushl", "%%ebx")
         emitOpcode(cgen, "pushl", "$%lu", expr.aux.block.argumentCount)
         emitOpcode(cgen, "call", "SpikeBlockCopy")
         emitBranch(OPCODE_BRANCH_ALWAYS, expr.endLabel, cgen)
@@ -984,38 +842,21 @@ def emitBranchForExpr(expr, cond, label, fallThroughLabel, dup, cgen):
     return
 
 
-def blockEpilogue(cgen):
-    # save result
+def popBlockArgs(cgen):
+    argumentCount = cgen.maxArgumentCount
+    if argumentCount:
+        # store args into local variables
+        for arg in reversed(xrange(argumentCount)):
+            index = cgen.blockIndex + arg # XXX: interpreter cruft
+            emitOpcode(cgen, "popl", "%d(%%ebx)", offsetOfIndex(index, cgen))
+    # pop receiver
     pop(cgen)
-    emitOpcode(cgen, "movl", "%%eax, %lu(%%esp)", SIZEOF_OBJ_PTR * (6 + cgen.maxArgumentCount))
-
-    # pop BlockContext pointer
-    emitOpcode(cgen, "popl", "%%ecx")
-
-    # restore caller's registers
-    emitOpcode(cgen, "popl", "%%edi") # instVarPointer
-    emitOpcode(cgen, "popl", "%%esi") # self
-    emitOpcode(cgen, "popl", "%%ebx") # methodClass
-    emitOpcode(cgen, "popl", "%%ebp") # framePointer
-    emitOpcode(cgen, "popl", "%%eax") # return address
-    if cgen.maxArgumentCount:
-        emitOpcode(cgen, "addl", "$%lu, %%esp", SIZEOF_OBJ_PTR * cgen.maxArgumentCount)
-
-    # save our %eip in BlockContext.pc and resume caller
-    emitOpcode(cgen, "call", "SpikeResumeCaller")
-
     return
 
 
 def emitCodeForBlock(expr, outer):
 
-    voidDef = Name('void')
-    voidDef.level = 0
-    voidDef.builtInPushOpcode = OPCODE_PUSH_VOID
-    voidExpr = Name('void')
-    voidExpr.u.ref.definition = voidDef
-
-    valueExpr = expr.right if expr.right else voidExpr
+    sentinel = Yield(expr.right)
 
     # push block code generator
     cgen = BlockCodeGen(outer, expr)
@@ -1023,34 +864,25 @@ def emitCodeForBlock(expr, outer):
     #
     # prologue
     #
-    
+
+    popBlockArgs(cgen)
+
     start = Label()
     defineLabel(start, cgen)
     maybeEmitLabel(start, cgen)
-
-    if expr.aux.block.argumentCount:
-        # store args into local variables
-        for arg in xrange(expr.aux.block.argumentCount):
-            index = expr.u._def.index + arg
-            emitOpcode(cgen, "movl", "%lu(%%esp), %%eax", SIZEOF_OBJ_PTR * (6 + expr.aux.block.argumentCount - arg - 1))
-            emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)", offsetOfIndex(index, cgen))
 
     #
     # body
     #
     
     body = CompoundStmt(expr.aux.block.stmtList) # XXX ?
-
-    for s, childNextLabel in body.iterWithLabels(valueExpr.label):
-        emitCodeForStmt(s, childNextLabel, None, None, cgen)
-
-    emitCodeForExpr(valueExpr, None, cgen)
+    emitCodeForStmt(body, sentinel.label, None, None, cgen)
 
     #
     # epilogue
     #
     
-    blockEpilogue(cgen)
+    emitCodeForStmt(sentinel, None, None, None, cgen)
 
     # upon resume, loop
     emitBranch(OPCODE_BRANCH_ALWAYS, start, cgen)
@@ -1070,7 +902,7 @@ def emitCodeForInitializer(expr, cgen):
     assert _def.kind == EXPR_NAME, "name expected"
     assert _def.u._def.storeOpcode == OPCODE_STORE_LOCAL, "local variable expected"
     pop(cgen)
-    emitOpcode(cgen, "movl", "%%eax, %d(%%ebp)", localVarOffset(_def, cgen))
+    emitOpcode(cgen, "movl", "%%eax, %d(%%ebx)", localVarOffset(_def, cgen))
 
     maybeEmitLabel(expr.endLabel, cgen)
 
@@ -1153,34 +985,28 @@ def emitCodeForStmt(stmt, nextLabel, breakLabel, continueLabel, cgen):
         pass
 
     elif stmt.kind == STMT_RETURN:
-        if cgen.kind == BlockCodeGen:
-            # Here the code has to longjmp (in essence) to the home
-            # context, and then branch to the enclosing method's
-            # epilogue.
-
-            # get the code gen for the enclosing method
-            mcg = cgen.method
-
-            # evaluate result
-            if stmt.expr:
-                emitCodeForExpr(stmt.expr, None, cgen)
-            else:
-                emitOpcode(cgen, "pushl", "$void")
-
-            # resume home context, moving result to home stack
-            emitOpcode(cgen, "call", "SpikeResumeHome")
-
-            # pop result and return from home context
-            pop(cgen)
-            emitBranch(OPCODE_BRANCH_ALWAYS, mcg.epilogueLabel, cgen)
+        # evaluate result
+        if stmt.expr:
+            emitCodeForExpr(stmt.expr, None, cgen)
         else:
-            if stmt.expr:
-                emitCodeForExpr(stmt.expr, None, cgen)
-                pop(cgen)
-            else:
-                emitOpcode(cgen, "movl", "$void, %%eax")
+            emitOpcode(cgen, "pushl", "$void")
+        
+        # store result
+        if cgen.varArgList:
+            emitOpcode(cgen, "movl", "%d(%%ebx), %%ecx", OFFSETOF_ARGUMENT_COUNT)
+            emitOpcode(cgen, "popl", "%d(%%ebx,%%ecx,4)",
+                       SIZEOF_CONTEXT_HEADER + cgen.home.localCount * SIZEOF_OBJ_PTR
+                       )
+        else:
+            emitOpcode(cgen, "popl", "%d(%%ebx)", offsetOfIndex(-1, cgen))
+        
+        if cgen.kind == BlockCodeGen:
+            # resume home context
+            emitOpcode(cgen, "movl", "%d(%%ebx), %%esp", OFFSETOF_STACK_BASE) # reset stack pointer
+            emitOpcode(cgen, "movl", "%%ebx, %%ebp") # activeContext = homeContext
 
-            emitBranch(OPCODE_BRANCH_ALWAYS, cgen.epilogueLabel, cgen)
+        # return to SpikeEpilogue
+        emitOpcode(cgen, "ret")
 
     elif stmt.kind == STMT_WHILE:
         childNextLabel = stmt.expr.label
@@ -1195,7 +1021,11 @@ def emitCodeForStmt(stmt, nextLabel, breakLabel, continueLabel, cgen):
         else:
             emitOpcode(cgen, "pushl", "$void")
 
-        blockEpilogue(cgen)
+        # save our %eip in BlockContext.pc and resume caller
+        emitOpcode(cgen, "call", "SpikeYield")
+
+        # upon return, pop arguments anew
+        popBlockArgs(cgen)
 
     else:
         assert False, "unexpected statement node: %r" % stmt
@@ -1207,6 +1037,13 @@ def emitCodeForStmt(stmt, nextLabel, breakLabel, continueLabel, cgen):
 # methods
 
 def emitCodeForArgList(stmt, cgen):
+
+    if cgen.varArgList:
+        emitOpcode(cgen, "pushl", "%%ebp")
+        emitOpcode(cgen, "call", "SpikeMoveVarArgs")
+        emitOpcode(cgen, "addl", "$4, %%esp")
+
+
     if cgen.minArgumentCount < cgen.maxArgumentCount:
         # generate code for default argument initializers
 
@@ -1224,15 +1061,18 @@ def emitCodeForArgList(stmt, cgen):
         defineLabel(skip, cgen)
         defineLabel(table, cgen)
 
+        # load argumentCount
+        emitOpcode(cgen, "movl", "%d(%%ebx), %%ecx", OFFSETOF_ARGUMENT_COUNT)
+
         if cgen.varArgList:
             # range check
-            emitOpcode(cgen, "cmpl", "$%lu, %%edx", cgen.maxArgumentCount)
+            emitOpcode(cgen, "cmpl", "$%lu, %%ecx", cgen.maxArgumentCount)
             emitOpcode(cgen, "jae", ".L%u", getLabel(skip, cgen))
 
         # switch jump
-        emitOpcode(cgen, "subl", "$%lu, %%edx", cgen.minArgumentCount)
-        emitOpcode(cgen, "shll", "$2, %%edx") # convert to byte offset
-        emitOpcode(cgen, "movl", ".L%u(%%edx), %%eax", getLabel(table, cgen))
+        emitOpcode(cgen, "subl", "$%lu, %%ecx", cgen.minArgumentCount)
+        emitOpcode(cgen, "shll", "$2, %%ecx") # convert to byte offset
+        emitOpcode(cgen, "movl", ".L%u(%%ecx), %%eax", getLabel(table, cgen))
         emitOpcode(cgen, "jmp", "*%%eax")
 
         # switch table
@@ -1323,14 +1163,9 @@ def emitCodeForMethod(stmt, meta, outer):
             className, suffix, ns, functionName, code,
             className, suffix, ns, functionName, code)
 
-    prologue(cgen)
-
     emitCodeForArgList(stmt, cgen)
     emitCodeForStmt(body, sentinel.label, None, None, cgen)
     emitCodeForStmt(sentinel, None, None, None, cgen)
-
-    maybeEmitLabel(cgen.epilogueLabel, cgen)
-    epilogue(cgen)
 
     fprintf(out,
             "\t.size\t%s%s%s%s.code, .-%s%s%s%s.code\n"

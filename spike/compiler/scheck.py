@@ -323,6 +323,9 @@ def checkMethodDef(stmt, outer, checker, outerPass):
 
         arg = stmt.u.method.varArg
         if arg:
+            # NB: The 'args' in "...args" is considered a local
+            # variable (it is counted in 'localCount'), even though it
+            # appears in the argument list.
             if arg.kind != EXPR_NAME:
                 checker.requestor.invalidArgumentDefinition(arg)
             else:
@@ -341,9 +344,8 @@ def checkMethodDef(stmt, outer, checker, outerPass):
                 checkStmt(s, stmt, checker, innerPass)
 
 
-        stmt.u.method.localCount = ((checker.st.currentScope.context.nDefs
-                                     - stmt.u.method.maxArgumentCount)
-                                    - (1 if stmt.u.method.varArg else 0))
+        stmt.u.method.localCount = (checker.st.currentScope.context.nDefs
+                                    - stmt.u.method.maxArgumentCount)
         checker.st.exitScope()
         if (not outer) or (outer.kind != STMT_DEF_CLASS):
             checker.st.exitScope()

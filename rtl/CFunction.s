@@ -13,15 +13,13 @@ CFunction.0.__apply__.code:
 	.globl	CFunction.0.__apply__.code
 	.type	CFunction.0.__apply__.code, @function
 
-	movl	%edx, %ebx	# remember arg count
-
 /* copy, reverse, and unbox args */
 	movl	$0, %esi	# start at last arg
 	jmp	.L2
 .L1:
-	pushl	8(%ebp,%esi,4)	# push arg
+	pushl	64(%ebp,%esi,4)	# push arg
 	movl	$__sym_unboxed, %edx
-	call	SpikeGetAttr	# unbox it
+	call	SpikeGetAttr	# unbox arg
 	cmpl	$4, %ecx	# replace fake obj result with real one
 	je	.L3
 	movl	%edx, (%esp)
@@ -30,14 +28,13 @@ CFunction.0.__apply__.code:
 	movl	%eax, (%esp)
 	addl	$1, %esi	# walk back to previous arg
 .L2:
-	cmpl	%esi, %ebx
-	ja	.L1
+	cmpl	12(%ebp), %esi	# compare with argumentCount
+	jb	.L1
 
 /* call C function */
-	sall	$2, %ebx	# remember size of args
 	movl	4(%edi), %eax	# get function pointer
 	call	*%eax		# call it
-	leal	-12(%ebp), %esp	# clean up C args
+	movl	56(%ebp), %esp	# clean up C args
 
 /* box result */
 	pushl	%eax		# arg is Spike pointer (CObject)
@@ -48,18 +45,12 @@ CFunction.0.__apply__.code:
 	movl	$__sym_box$, %edx
 	movl	$1, %ecx	# argument count
 	call	SpikeSendMessage
-	popl	8(%ebp,%ebx)	# store result
+	movl	12(%ebp), %edx	# get argumentCount
+	popl	64(%ebp,%edx,4)	# store result
 	popl	%eax		# pop arg storage
 
-/* clean up */
-	movl	%ebx, %ecx	# stash size of args
-	popl	%edi		# tear down stack frame
-	popl	%esi
-	popl	%ebx
-	leave
-	popl	%eax		# pop return address
-	addl	%ecx, %esp	# clean up Spike args
-	jmp	*%eax		# return
+/* return */
+	ret
 
 	.size	CFunction.0.__apply__.code, .-CFunction.0.__apply__.code
 
@@ -77,12 +68,8 @@ CFunction.0.unboxed:
 CFunction.0.unboxed.code:
 	.globl	CFunction.0.unboxed.code
 	.type	CFunction.0.unboxed.code, @function
-	movl	%esi, 8(%ebp)	# fake, safe result for Spike code
+	movl	%esi, 64(%ebp)	# fake, safe result for Spike code
 	movl	4(%edi), %eax	# real result for C/asm code
 	movl	$4, %ecx	# result size
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	ret
 	.size	CFunction.0.unboxed.code, .-CFunction.0.unboxed.code

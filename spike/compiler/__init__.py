@@ -68,6 +68,7 @@ def assembleAndLink(assembly):
         "rtl/CObject.s",
         "rtl/Context.c",
         "rtl/Char.s",
+        "rtl/epilogue.s",
         "rtl/error.s",
         "rtl/Float.c",
         "rtl/Float.s",

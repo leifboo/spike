@@ -14,7 +14,7 @@ fib() {
             a = b;
             b = tmp + b;
         }
-        ];
+        ] closure;
 }
 
 main(argv) {

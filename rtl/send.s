@@ -445,53 +445,67 @@ SpikeSetAttrSuper:
  * send message bottleneck
  *
  * On entry:
+ *
+ *     %ebp: activeContext / sender (MethodContext or BlockContext)
+ *
  *     %edx: selector
- *     %ecx: argument count
+ *     %ecx: argumentCount
+ *
+ *     |------------|
+ *     | receiver   | receiver / space for result
+ *     |------------|
+ *     | arg 1      | args pushed by caller left-to-right
+ *     | arg 2      |
+ *     | ...        |
+ *     | arg N      |
+ *     |------------|
+ *     | ret addr   |
+ *     |------------| <- %esp
  */
+
+saveRegisters:
+	popl	%eax
+	popl	16(%ebp)	# pop sender's return address into Context.pc
+	movl	%ebx, 24(%ebp)	# save callee-preserved registers
+	movl	%esi, 28(%ebp)
+	movl	%edi, 32(%ebp)
+	leal	(%esp,%ecx,4), %esi	# Context.sp = %esp upon return
+	movl	%esi, 20(%ebp)
+	jmp	*%eax
 
 SpikeSendMessageSuperLValue:
 	.globl	SpikeSendMessageSuperLValue
-	pushl	%ebp		# create new stack frame
-	movl	%esp, %ebp
-	pushl	%ebx		# save registers
-	pushl	%esi
-	pushl	%edi
-	movl	4(%ebx), %ebx 	# get superclass
+	call	saveRegisters
+	movl	8(%ebp), %ebx	# get homeContext
+	movl	48(%ebx), %esi	# restore self
+	movl	44(%ebx), %ebx 	# get methodClass
+	movl	4(%ebx), %ebx 	# get superclass of methodClass
 	movl	$1, %edi	# lvalue namespace
 	jmp	lookupMethod
 
 SpikeSendMessageLValue:
 	.globl	SpikeSendMessageLValue
-	pushl	%ebp		# create new stack frame
-	movl	%esp, %ebp
-	pushl	%ebx		# save registers
-	pushl	%esi
-	pushl	%edi
-	movl	8(%ebp,%ecx,4), %esi  # get receiver
-	call	SpikeGetClass 	# get class
+	call	saveRegisters
+	movl	(%esp,%ecx,4), %esi	# get receiver
+	call	SpikeGetClass 	# get class in %ebx
 	movl	$1, %edi	# lvalue namespace
 	jmp	lookupMethod
 
 SpikeSendMessageSuper:
 	.globl	SpikeSendMessageSuper
-	pushl	%ebp		# create new stack frame
-	movl	%esp, %ebp
-	pushl	%ebx		# save registers
-	pushl	%esi
-	pushl	%edi
-	movl	4(%ebx), %ebx 	# get superclass
+	call	saveRegisters
+	movl	8(%ebp), %ebx	# get homeContext
+	movl	48(%ebx), %esi	# restore self
+	movl	44(%ebx), %ebx 	# get methodClass
+	movl	4(%ebx), %ebx 	# get superclass of methodClass
 	movl	$0, %edi	# rvalue namespace
 	jmp	lookupMethod
 
 SpikeSendMessage:
 	.globl	SpikeSendMessage
-	pushl	%ebp		# create new stack frame
-	movl	%esp, %ebp
-	pushl	%ebx		# save registers
-	pushl	%esi
-	pushl	%edi
-	movl	8(%ebp,%ecx,4), %esi  # get receiver
-	call	SpikeGetClass 	# get class
+	call	saveRegisters
+	movl	(%esp,%ecx,4), %esi	# get receiver
+	call	SpikeGetClass 	# get class in %ebx
 	movl	$0, %edi	# rvalue namespace
 	/* fall through */
 
@@ -521,7 +535,7 @@ lookupMethod:
 createActualMessage:
 	pushl	%ecx		# save argument count
 /* create Message object */
-	leal	8(%ebp), %eax	# arg pointer
+	leal	4(%esp), %eax	# arg pointer
 	pushl	%eax
 	pushl	%ecx		# argumentCount
 	pushl	%edx		# selector
@@ -529,39 +543,13 @@ createActualMessage:
 	call	SpikeCreateActualMessage
 	addl	$16, %esp
 
-/* switch on saved argument count */
+/* discard arguments pushed by caller */
 	popl	%ecx
-	cmpl	$1, %ecx
-	jb	.L8		# no args
-	je	.L7		# one arg
+	leal	(%esp,%ecx,4), %esp
 
-/* two or more arguments -- move saved registers up stack & discard arguments */
-	movl	16(%esp), %edx
-	movl	%edx, 0(%ebp,%ecx,4)   # ret
-	movl	12(%esp), %edx
-	movl	%edx, -4(%ebp,%ecx,4)  # %ebp
-	movl	8(%esp), %edx
-	movl	%edx, -8(%ebp,%ecx,4)  # %ebx
-	movl	4(%esp), %edx
-	movl	%edx, -12(%ebp,%ecx,4) # %esi
-	movl	0(%esp), %edx
-	movl	%edx, -16(%ebp,%ecx,4) # %edi
-	leal	-16(%ebp,%ecx,4), %esp
-	leal	12(%esp), %ebp
-
-.L7:
-/* save Message object pointer as the lone argument */
-	movl	%eax, 8(%ebp)
-	jmp	.L9
-
-.L8:
-/* no arguments -- rotate Message argument into place */
+/* push Message object pointer as the lone argument */
 	pushl	%eax
-	movl	$6, %ecx
-	call	SpikeRotate
-	leal	12(%esp), %ebp
 
-.L9:
 /* lookup doesNotUnderstand: */
 	movl	$0, %edi	# rvalue namespace
 	movl	$__sym_doesNotUnderstand$, %edx  # new selector
@@ -578,31 +566,35 @@ callNewMethod:
 	popl	%eax		# discard selector
 	popl	%edx		# get argument count
 
-SpikeCallNewMethod: /* entry point for Function __apply__ */
-	.globl	SpikeCallNewMethod
-
 /*
+ * SpikeCallNewMethod
+ *
+ * NB: entry point for Function|__apply__
+ *
+ * On entry:
+ *
+ *     %eax: undefined
+ *     %ecx: undefined
+ *     %edx: argumentCount
+ *
+ *     %ebx: methodClass in context of new method
+ *     %esi: self in context of new method
+ *     %edi: instVarPointer for Method/Function object itself
+ *
+ *     %ebp: activeContext / sender
+ *
  *     |------------|
- *     | self/rslt  | receiver / space for result
+ *     | receiver   | receiver / space for result
  *     |------------|
  *     | arg 1      | args pushed by caller left-to-right
  *     | arg 2      |
  *     | ...        |
  *     | arg N      |
- *     |------------| <- missing args inserted here
- *     | ret addr   |
- *     | saved %ebp |
- *     |------------| <- %ebp
- *     | saved %ebx |
- *     | saved %esi |
- *     | saved %edi |
- *     |------------| -12(%%ebp), %esp on entry
- *     | local 1    |
- *     | local 2    |
- *     | ...        |
- *     | local N    |
- *     |------------| <- %esp on exit
+ *     |------------| <- %esp
  */
+
+SpikeCallNewMethod:
+	.globl	SpikeCallNewMethod
 
 	cmpl	0(%edi), %edx	# minArgumentCount
 	jb	wrongNumberOfArguments
@@ -610,76 +602,87 @@ SpikeCallNewMethod: /* entry point for Function __apply__ */
 	cmpl	%eax, %edx
 	ja	wrongNumberOfArguments
 
-	andl	$0x7FFFFFFF, %eax	# get max fixed arg count
-	subl	%edx, %eax		# calc missingArgumentCount
-	jbe	allocInitLocals
+	andl	$0x7FFFFFFF, %eax	# get maxFixedArgumentCount
+	movl	%eax, %ecx
+	subl	%edx, %ecx		# calc missingFixedArgumentCount
+	jbe	newMethodContext
 
-/* insert missing (optional fixed) args */
-insertMissingArgs:
-	movl	%eax, %ecx	# save missingArgumentCount for loop below
-
-	shll	$2, %eax	# allocate space
-	subl	%eax, %esp
-
-	movl	-12(%ebp), %eax	# copy reg save area
-	movl	%eax, (%esp)
-	movl	-8(%ebp), %eax
-	movl	%eax, 4(%esp)
-	movl	-4(%ebp), %eax
-	movl	%eax, 8(%esp)
-	movl	(%ebp), %eax
-	movl	%eax, 12(%esp)
-	movl	4(%ebp), %eax
-	movl	%eax, 16(%esp)
-
-	leal	20(%esp), %ebp	# point to 1st inserted arg
-.L6:
-	movl	$0, (%ebp)	# zero inserted args
-	addl	$4, %ebp
-	loop	.L6
-
-	leal	12(%esp), %ebp	# adjust frame pointer
-
-/* allocate and initialize locals */
-allocInitLocals:
-	movl	8(%edi), %ecx	# localCount
-	cmpl	$0, %ecx
-	je	.L3
 .L2:
-	pushl	$0
+	pushl	$0		# allocate missing fixed args
 	loop	.L2
+
+/*
+ * allocate and initialize the new MethodContext
+ */
+
+newMethodContext:
+
+	movl	8(%edi), %ecx	# localCount
+	addl	$16, %ecx	# add Context overhead
 .L3:
-/* compute code entry point */
-	addl	$12, %edi	# skip Method instance variables
-	pushl	%edi		# save entry point for later
+	pushl	$0		# alloc and init locals and Context header
+	loop	.L3
+
+	cmpl	%edx, %eax	# calc max(maxFixedArgumentCount, argumentCount)
+	ja	.L4
+	movl	%edx, %eax
+.L4:
+	addl	8(%edi), %eax	# add localCount
+	movl	%eax, 60(%esp)	# -> size
+
+	movl	$MethodContext, (%esp)	# -> klass is-a pointer
+	movl	%ebp, 4(%esp)	# -> caller
+	movl	%esp, 8(%esp)	# -> homeContext
+
+	leal	12(%edi), %eax	# skip Method instance variables
+	movl	%eax, 16(%esp)	# -> pc
+	leal	-4(%edi), %eax	# skip klass pointer
+	movl	%eax, 40(%esp)	# -> method
 
 /* set up receiver's instance variable pointer in %edi */
 	movl	%ebx, %edi 	# get class
 	movl	$0, %eax 	# tally instance vars...
-	jmp	.L5 		# ...in superclasses
-.L4:
-	addl	16(%edi), %eax	# instVarCount
+	jmp	.L6 		# ...in superclasses
 .L5:
+	addl	16(%edi), %eax	# instVarCount
+.L6:
 	movl	4(%edi), %edi 	# up superclass chain
 	testl	%edi, %edi
-	jne	.L4
+	jne	.L5
 
 	leal	4(%esi,%eax,4), %edi
+
+/* save Context registers */
+	movl	%edx, 12(%esp)	# -> argumentCount
+	movl	%ebx, 44(%esp)	# -> methodClass
+	movl	%esi, 48(%esp)	# -> receiver
+	movl	%edi, 52(%esp)	# -> instVarPointer
+
+/* enable methods to return with a one-byte 'ret' instruction */
+	pushl	$SpikeEpilogue
+
+	movl	%esp, 56+4(%esp)	# -> stackBase
 
 /*
  * call the method
  *
  * On entry:
+ *
  *     %eax: undefined
  *     %ecx: undefined
- *     %edx: argumentCount
- *     %ebx: methodClass
+ *     %edx: undefined
+ *
+ *     %ebx: homeContext (== activeContext)
  *     %esi: self
  *     %edi: instVarPointer
  *
- *     %esp/%ebp point to a fully initialized stack frame
+ *     %ebp: activeContext
+ *     %esp: stackBase
  */
-	ret			# call it
+	leal	4(%esp), %ebp	# switch to new context
+	movl	8(%ebp), %ebx
+	movl	16(%ebp), %eax	# load initial pc
+	jmpl	*%eax		# jump to it
 
 wrongNumberOfArguments:
 	pushl	$__sym_wrongNumberOfArguments

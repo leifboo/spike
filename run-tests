@@ -22,12 +22,11 @@ allTests = [
     "tests/attr.spk",
     "tests/bc-in-blocks.spk",
     "tests/cycle.spk",
-    "tests/default-args.spk", # SIGSEGV
+    "tests/default-args.spk",
     "tests/dnu.spk",
     "tests/dot-star.spk",
     "tests/empty.spk",
     "tests/fe.spk",           # SIGTRAP
-    #     * r133: "Implemented x86 blocks.  This doesn't work with varargs yet."
     #     * String do: returning ints instead of chars
     "tests/gen.spk",
     "tests/gremlin.spk",

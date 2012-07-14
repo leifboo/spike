@@ -12,14 +12,10 @@ CObject.0.unboxed:
 CObject.0.unboxed.code:
 	.globl	CObject.0.unboxed.code
 	.type	CObject.0.unboxed.code, @function
-	movl	%esi, 8(%ebp)	# fake, safe result for Spike code is 'self'
+	movl	%esi, 64(%ebp)	# fake, safe result for Spike code is 'self'
 	movl	%esi, %eax	# real result for C/asm code...
 	andl	$~3, %eax	# ...is also 'self', but unboxed
 	movl	$4, %ecx	# result size
-	popl	%edi
-	popl	%esi
-	popl	%ebx
-	leave
-	ret	$0
+	ret
 	.size	CObject.0.unboxed.code, .-CObject.0.unboxed.code
 

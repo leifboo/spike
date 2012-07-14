@@ -19,7 +19,6 @@ class Array : Object {
     
     // initializing
     extern self init: anInteger {}
-    extern self initWithContentsOfStack: end {}
     
     // accessing
     extern size {}
@@ -48,7 +47,6 @@ class Array : Object {
 } meta {
     self new { return self new: 0; }
     self new: size { return (self basicNew: size) init: size; }
-    self withContentsOfStack: end size: size { return (self new: size) initWithContentsOfStack: end; }
 }
 
 
@@ -247,21 +245,35 @@ class Function : Method {
 
 
 class Context : Object {
+    obj caller;
     obj homeContext;
-}
-
-class MethodContext : Context {
+    obj argumentCount;
+    obj pc;
+    obj sp;
+    obj regSaveArea0;
+    obj regSaveArea1;
+    obj regSaveArea2;
+    obj regSaveArea3;
+    /* the following are not present for BlockContext */
+    obj method;
     obj methodClass;
     obj receiver;
     obj instVarPointer;
-    obj stackp;
+    obj stackBase;
+    obj size;
+    // obj var[size];
+}
+
+class MethodContext : Context {
 }
 
 class BlockContext : Context {
-    obj nargs;
-    obj pc;
-    
     extern self( /*...args*/ ) {}
+    extern closure {}
+}
+
+class Closure : BlockContext {
+    closure { return self; }
 }
 
 

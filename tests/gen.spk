@@ -8,11 +8,11 @@ generator(gn) {
     obj i;
     i = 2;
     if (gn == 0) {
-        return [yield 1; yield 2; yield 3; /*return 42;*/ for (;;) yield i+=2;];
+        return [yield 1; yield 2; yield 3; /*return 42;*/ for (;;) yield i+=2;] closure;
     } else if (gn == 1) {
-        return [yield i+= 2; i];
+        return [yield i+= 2; i] closure;
     }
-    return [i+= 2];
+    return [i += 2] closure;
 }
 
 main(argv) {
