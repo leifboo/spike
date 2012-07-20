@@ -1,0 +1,171 @@
+
+Alpha 2 (i.e., embarrasing stuff)
+---------------------------------
+
+* compiler, driver
+
+  - remove interpreter cruft
+
+  - visitor?
+
+  - Pyrize
+
+  - get rid of ad-hoc stuff
+
+  - libs
+
+    + factor-out C bridge
+
+* garbage collector
+
+* Spike programs must be easier to debug!
+
+  - print call stack on trap
+  
+  - possible/difficult to make 'gdb' usable?
+
+* FFI needs help
+
+  - type checking, more types
+
+  - related: name mangling
+  
+  - need "no-box/unbox" C declarator; CMethod?
+
+* PIC code
+
+  - must sacrifice a register
+
+  - no relocations in text!
+
+* Unresolved/Unfinished/Absent
+  
+  - compiled method hashtables, interning
+  
+    + do we really need Symbol?
+  
+  - unordered keyword expressions
+  
+  - require 'self' in method declarators
+  
+  - abandon function-style methods?
+  
+  - method return should default to 'self'
+  
+    + allow stmt-list-expr ?
+
+
+Refactoring
+-----------
+
+* IL ("yip"?)
+
+  - Reasons to have a printable/parsable representation:
+
+    + avoids polluting high-level language with stuff only needed in
+      Integer, etc.
+
+    + Assembly language is better adapted to primitive operations.
+      E.g., 'add' could take a third argument: a label that is
+      branched to when the primitive fails.
+
+  - enables more backends:  PowerPC, x86-64, ARM
+
+
+Features
+--------
+
+* compound literals
+
+  - vital that there be a data format similar to plist/JSON
+
+* switch
+
+  - 'pass' ?
+
+* visit
+
+  - Nested switches in compiler highlights need for this.
+
+  - I don't care about purity, but message/selector switch is a
+    "cleaner" alternative.
+
+* unless (from Perl)
+
+  - Then why not Pascal's "do [repeat] ... until (cond)"?  ...and
+    simply "until (cond) ..."?  In general, I might remember things I
+    like about Pascal by doing a Pascal plug-in grammar... and I
+    should then steal those things.
+
+* just 'do' (for 'break')
+
+* break/continue in blocks
+
+  - indiscriminate 'break' now seems easy, but 'continue' still problematic
+  
+    + break similar to method unwind & return:  unwind and branch
+    + continue is block return?
+    + which ones are loops?
+
+  - nested blocks: can unwind to BlockContext?
+
+* namespaces
+
+  - Simple except for 'use' problem.
+
+
+Ideas
+-----
+
+* lightweight blocks
+
+  - semi-statically alloca()te BlockContext objects on method entry
+
+    + since 'closure' is now needed for true closures, this should have little
+      impact
+
+    + probably only affects code which tries to create blocks in a loop
+
+
+Things to steal from Python
+---------------------------
+
+* string literal delimiters
+
+* tuple (un)packing
+
+  - hopefully can be accomplished with sub-grammars
+
+    + comma/assign has different relative precedence according to context
+
+  - perhaps assignment could be excluded in some contexts
+  
+    + "if (a = b)" not just warning, but a syntax error
+
+* slices
+
+* 'assert' keyword
+
+* and, or
+
+* else clause on loops
+
+* in ? is ?
+
+* comprehensions ?
+
+  - competes with blocks
+
+
+Python features that must be answered
+-------------------------------------
+
+* exceptions
+
+* multiple inheritance
+
+  - a radical solution:  eliminate 'super'
+
+    + How would a cooperative method (e.g., init) be written?
+
+  - less radical:  method-only ABCs (no vars, no super)
