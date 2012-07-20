@@ -2,8 +2,6 @@
 
 // see http://paulgraham.com/accgen.html
 
-extern cdecl int printf() {}
-
 foo(n) {
     return [ :i | n += i ] closure;
 }

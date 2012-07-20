@@ -1,8 +1,5 @@
 #!/usr/bin/env spike
 
-extern cdecl int printf() {}
-extern cdecl int puts() {}
-
 class Foo {
     foo() {
         puts("Hello from foo!");

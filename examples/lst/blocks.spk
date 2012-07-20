@@ -1,7 +1,5 @@
 #!/usr/bin/env spike
 
-extern cdecl int puts() {}
-
 class Main {
     main() {
         ifTrue(2 < 3, [puts("correct-1")]);

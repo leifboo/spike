@@ -1,7 +1,5 @@
 #!/usr/bin/env spike
 
-extern cdecl printf() {}
-
 class Queen {
     obj row, column, neighbor, boardSize;
     

@@ -138,7 +138,7 @@ def spike(pathname, args, testOut, testErr):
     
     try:
         asm = open('test.s', 'w')
-        compile(["rtl/rtl.spk", pathname], asm, err)
+        compile(["rtl/rtl.spk", "libc.spk", pathname], asm, err)
         asm.close()
 
     except (Exception, SystemExit):

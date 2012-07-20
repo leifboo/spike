@@ -1,7 +1,5 @@
 #!/usr/bin/env spike
 
-extern cdecl int printf() {}
-extern cdecl int puts() {}
 repr(o) { return o.printString; }
 
 generator(gn) {

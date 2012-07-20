@@ -1,6 +1,4 @@
 #!/usr/bin/env spike
 
-extern cdecl int puts() {}
-
 puts("Hello, world.");
 

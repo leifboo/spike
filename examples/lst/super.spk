@@ -1,7 +1,5 @@
 #!/usr/bin/env spike
 
-extern cdecl printf() {}
-
 class One {
     test() {
         return 1;

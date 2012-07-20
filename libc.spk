@@ -1,0 +1,5 @@
+
+extern cdecl int printf() {}
+extern cdecl int putchar() {}
+extern cdecl int puts() {}
+

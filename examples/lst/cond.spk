@@ -1,7 +1,5 @@
 #!/usr/bin/env spike
 
-extern cdecl int puts() {}
-
 main(argv) {
     obj i;
     

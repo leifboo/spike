@@ -1,7 +1,5 @@
 #!/usr/bin/env spike
 
-extern cdecl int printf() {}
-
 hgg1(required, answer = 42, foo = "hey", weird = answer) {
     printf("required is %d; ", required);
     printf("answer is %d; ", answer);

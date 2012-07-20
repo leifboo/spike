@@ -1,7 +1,5 @@
 #!/usr/bin/env spike
 
-extern cdecl int printf() {}
-
 
 class Point {
     obj x, y;

@@ -3,8 +3,6 @@
 
 // from chapter 2 of blue book
 
-extern cdecl int printf() {}
-
 page33() {
     obj incrementBlock, sumBlock;
     obj sum, index;

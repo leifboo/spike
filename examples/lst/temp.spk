@@ -1,7 +1,5 @@
 #!/usr/bin/env spike
 
-extern cdecl printf() {}
-
 main(argv) {
     obj i;
     

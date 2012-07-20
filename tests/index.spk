@@ -1,8 +1,5 @@
 #!/usr/bin/env spike
 
-extern cdecl int printf() {}
-extern cdecl int puts() {}
-
 zeroToTen() {
     obj r, i;
     r = Array new: 10;
