@@ -314,6 +314,10 @@ class Literal(Expr):
         return
 
 
+    def __repr__(self):
+        return "<expr %s %r>" % (self.__class__.__name__, self.value)
+
+
     def concat(self, token):
         # called for string literals only
         self.tokens.append(token)
@@ -353,6 +357,10 @@ class Name(Expr):
         self.definition = None
         self.stmt = None # XXX: cycle
         return
+
+
+    def __repr__(self):
+        return "<expr %s %r>" % (self.__class__.__name__, self.sym)
 
 
     def getPushOpcode(self):

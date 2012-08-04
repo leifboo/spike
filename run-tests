@@ -54,7 +54,6 @@ xfailTests = [
     "tests/empty.spk",
     "tests/kw-permutations.spk",
     "tests/no-main.spk",
-    "tests/syntax-error.spk",
     ]
 
 skipTests = [
@@ -88,6 +87,7 @@ def clipSourcePathname(output):
 errFilters = {
     "tests/cycle.spk": clipSourcePathname,
     "tests/static-errors.spk": clipSourcePathname,
+    "tests/syntax-error.spk": clipSourcePathname,
     }
 
 

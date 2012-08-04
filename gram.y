@@ -2,8 +2,10 @@
 %name Parser_Parse
 %token_type {int}
 %token_prefix TOKEN_
+%extra_argument { yyscan_t lexer }
 
 %include {
+    #include "lexer.h"
     #include <assert.h>
     extern FILE *spkout, *spkerr;
     static int S, E, L, TMP;
@@ -223,12 +225,13 @@ arg(r) ::= decl_spec_list(declSpecList) colon_expr(arg).                        
 
 
 %syntax_error {
-    fprintf(spkerr, "syntax error!\n");
+    fprintf(spkerr, "n.syntaxError(%d)\n", Lexer_get_lineno(lexer));
 }
 
 %parse_accept {
+    fprintf(spkerr, "accepted = True\n");
 }
 
 %parse_failure {
-    fprintf(spkerr, "Giving up.  Parser is hopelessly lost...\n");
+    fprintf(spkerr, "accepted = False\n");
 }

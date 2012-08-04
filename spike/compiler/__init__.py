@@ -6,19 +6,30 @@ import sys
 
 
 
-def parse(pathname):
+def parse(pathname, notifier):
     import spike.ext as ext
     
     input = open(pathname)
     output = open("out", "w+") # XXX
-    error = open("err", "w") # XXX
+    error = open("err", "w+") # XXX
     
     input.readline() # XXX: skip shebang
     
     ext.parse(input, output, error)
     
-    output.seek(0)
+    error.seek(0)
+    namespace = dict(
+        n = notifier
+        )
+    notifier.source = pathname
+    exec error in namespace
+    accepted = namespace['accepted']
     
+    # NB: Input with recoverable parse errors is still "accepted".
+    if not accepted:
+        return None
+    
+    output.seek(0)
     namespace = dict(
         f = NodeFactory()
         )
@@ -26,6 +37,12 @@ def parse(pathname):
     
     from spike.compiler.statements import Compound
     return Compound(namespace['root'])
+
+
+try:
+    from spike.ext import trace
+except:
+    pass
 
 
 def compile(pathnames, out, err = sys.stderr):
@@ -42,8 +59,11 @@ def compile(pathnames, out, err = sys.stderr):
     tree = Compound()
     
     for pathname in pathnames:
+        t = parse(pathname, notifier)
+        if t is None:
+            continue
         tree.append(PragmaSource(pathname))
-        tree.extend(parse(pathname))
+        tree.extend(t)
     
     check(tree, st, notifier)
     

@@ -33,9 +33,9 @@ static PyObject *parse(PyObject *self, PyObject *args) {
     parser = Parser_ParseAlloc(&malloc);
     
     while ((id = Lexer_GetNextToken(&token, lexer)))
-        Parser_Parse(parser, id, token);
+        Parser_Parse(parser, id, token, lexer);
     if (id != -1)
-        Parser_Parse(parser, 0, token);
+        Parser_Parse(parser, 0, token, lexer);
     
     Parser_ParseFree(parser, &free);
     Lexer_lex_destroy(lexer);
@@ -45,9 +45,32 @@ static PyObject *parse(PyObject *self, PyObject *args) {
 }
 
 
+#ifndef NDEBUG
+static PyObject *trace(PyObject *self, PyObject *args) {
+    PyObject *pyTraceFile = 0;
+    FILE *traceFile; char *tracePrompt;
+    
+    (void)self;
+    if (!PyArg_ParseTuple(args, "O!s:trace",
+                          &PyFile_Type, &pyTraceFile,
+                          &tracePrompt))
+        return 0;
+    traceFile = PyFile_AsFile(pyTraceFile);
+    
+    Parser_ParseTrace(traceFile, tracePrompt);
+    
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+#endif
+
+
 
 static struct PyMethodDef methods[] = {
     { "parse", (PyCFunction)&parse, METH_VARARGS, 0 },
+#ifndef NDEBUG
+    { "trace", (PyCFunction)&trace, METH_VARARGS, 0 },
+#endif
     { 0 }
 };
 

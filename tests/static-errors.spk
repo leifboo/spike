@@ -48,12 +48,12 @@ more(a, b, c = 42, d) { // non-default arg follows default arg
     obj x += 1; // invalid variable definition
 }
 
-
-
-
-
-
-
+strange() {
+    // Here's a strange example of a recoverable syntax error that I
+    // stumbled upon.
+    return "{}" // missing semi
+        return "wtf";
+}
 
 obj g;
 

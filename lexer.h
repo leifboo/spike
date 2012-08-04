@@ -20,6 +20,7 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
 int Lexer_lex_init(yyscan_t *);
 void Lexer_restart(FILE *, yyscan_t);
 YY_BUFFER_STATE Lexer__scan_string(const char *, yyscan_t);
+int Lexer_get_lineno(yyscan_t);
 int Lexer_get_column(yyscan_t);
 void Lexer_set_lineno(int, yyscan_t);
 void Lexer_set_column(int, yyscan_t);

@@ -16,6 +16,8 @@ setup(name = 'spike',
                                ['ext.c',
                                 'gram.c',
                                 'lexer.c',
-                                ])
+                                ],
+                               #undef_macros = ['NDEBUG'],
+                               )
                      ],
       )
