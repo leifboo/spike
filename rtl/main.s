@@ -5,6 +5,8 @@ main:
 	.globl	main
 	.type	main, @function
 
+	call	SpikeInstallTrapHandler
+
 /* allocate and initialize the first Context */
 	leal	-64(%esp), %esp
 	movl	$0, %eax

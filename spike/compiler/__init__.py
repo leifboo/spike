@@ -99,10 +99,12 @@ def assembleAndLink(assembly):
         "rtl/rot.s",
         "rtl/send.s",
         "rtl/singletons.s",
+        "rtl/stacktrace.c",
         "rtl/String.c",
         "rtl/String.s",
         "rtl/Symbol.c",
         "rtl/test.s",
+        "rtl/trap.c",
         "rtl/lookup.c",
         "-lm",
         )

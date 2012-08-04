@@ -20,8 +20,6 @@ Alpha 2 (i.e., embarrasing stuff)
 
 * Spike programs must be easier to debug!
 
-  - print call stack on trap
-  
   - possible/difficult to make 'gdb' usable?
 
 * FFI needs help

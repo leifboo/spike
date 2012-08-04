@@ -52,7 +52,6 @@ extern Object false, true;
 
 
 #define BOOL(cond) ((cond) ? &true : &false)
-#define CAST(c, op) ((op)->klass == &c ? (struct c *)(op) : 0)
 
 
 /*------------------------------------------------------------------------*/

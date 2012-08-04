@@ -5,6 +5,9 @@
 #include <stdlib.h>
 
 
+struct Pair { struct Symbol *selector; struct Method *method; };
+
+
 extern struct Behavior Array, Message, Metaclass;
 
 
@@ -15,7 +18,7 @@ struct Method *SpikeLookupMethod(
     )
 {
     struct Array *methodTable;
-    struct Pair { struct Symbol *selector; struct Method *method; } *p, *end;
+    struct Pair *p, *end;
     
 #if LOOKUP_DEBUG
     fprintf(stderr,
@@ -55,6 +58,48 @@ struct Method *SpikeLookupMethod(
         if (p->selector == selector)
             return p->method;
 #endif
+    
+    return 0;
+}
+
+
+struct Symbol *SpikeFindSelectorOfMethod(
+    struct Behavior *behavior,
+    struct Method *method
+    )
+{
+    struct Array *methodTable;
+    struct Pair *p, *end;
+    int ns;
+    
+    for (ns = 0; ns < 2 /*NUM_METHOD_NAMESPACES*/; ++ns) {
+        
+        methodTable = behavior->methodTable[ns];
+        if (!methodTable)
+            continue;
+        
+        p = (struct Pair *)methodTable->item;
+        end = p + methodTable->size / 2;
+        
+        for ( ; p < end; ++p)
+            if (p->method == method)
+                return p->selector;
+    }
+    
+    return 0;
+}
+
+
+struct Object *SpikeCast(struct Behavior *target, struct Object *object) {
+    struct Behavior *c;
+    
+    if (!object)
+        return 0;
+    
+    for (c = object->klass; c; c = c->superclass) {
+        if (c == target)
+            return object;
+    }
     
     return 0;
 }

@@ -66,8 +66,6 @@ extern Object false, true;
 #define STR(op) ((char *)(op)->str)
 #define LEN(op) ((op)->size - 1)
 
-#define CAST(c, op) ((op)->klass == &c ? (struct c *)(op) : 0)
-
 
 /*------------------------------------------------------------------------*/
 /* method helpers */

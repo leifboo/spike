@@ -70,6 +70,11 @@ struct Array {
 
 
 extern struct Method *SpikeLookupMethod(struct Behavior *behavior, unsigned int ns, struct Symbol *selector);
+extern struct Symbol *SpikeFindSelectorOfMethod(struct Behavior *behavior, struct Method *method);
+extern struct Object *SpikeCast(struct Behavior *target, struct Object *object);
+
+
+#define CAST(c, o) ((struct c *)SpikeCast(&(c), (struct Object *)(o)))
 
 
 #endif /* __spike_rtl_h__ */
