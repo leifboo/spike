@@ -21,6 +21,6 @@ Function.0.__apply__.code:
 /* jump to the code represented by the receiver */
 	movl	(%esi), %ebx	# methodClass = my class
 	leal	4(%esi), %edi	# method = self
-	jmp	SpikeCallNewMethod
+	jmp	SpikePrologue
 
 	.size	Function.0.__apply__.code, .-Function.0.__apply__.code

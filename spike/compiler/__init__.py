@@ -96,6 +96,7 @@ def assembleAndLink(assembly):
         "rtl/Integer.s",
         "rtl/main.s",
         "rtl/Object.s",
+        "rtl/prologue.s",
         "rtl/rot.s",
         "rtl/send.s",
         "rtl/singletons.s",
