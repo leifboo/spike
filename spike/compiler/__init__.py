@@ -107,6 +107,7 @@ def assembleAndLink(assembly):
         "rtl/test.s",
         "rtl/trap.c",
         "rtl/lookup.c",
+        "rtl/XFunction.s",
         "-lm",
         )
     return status

@@ -13,6 +13,9 @@ OFFSETOF_ARGUMENT_COUNT = 3*SIZEOF_OBJ_PTR
 OFFSETOF_STACK_BASE = 14*SIZEOF_OBJ_PTR
 
 
+cCallingConventions = (SPEC_CALL_CONV_C, SPEC_CALL_CONV_EXTENSION)
+
+
 #------------------------------------------------------------------------
 # data structures
 
@@ -234,7 +237,7 @@ def emitCodeForName(expr, super, cgen):
     else:
         if pushOpcode == OPCODE_PUSH_GLOBAL:
             operands = "%s%s" if isVarDef(_def) else "$%s%s"
-            suffix = ".thunk" if ((_def.specifiers & SPEC_STORAGE) == SPEC_STORAGE_EXTERN) and ((_def.specifiers & SPEC_CALL_CONV) == SPEC_CALL_CONV_C) else ""
+            suffix = ".thunk" if ((_def.specifiers & SPEC_STORAGE) == SPEC_STORAGE_EXTERN) and ((_def.specifiers & SPEC_CALL_CONV) in cCallingConventions) else ""
             emitOpcode(cgen, "pushl", operands, _def.sym, suffix)
         elif pushOpcode == OPCODE_PUSH_INST_VAR:
             emitOpcode(cgen, "pushl", "%d(%%edi)", instVarOffset(_def, cgen))
@@ -1197,6 +1200,11 @@ def emitCFunction(stmt, cgen):
             "\t.type\t%s%s, @object\n",
             sym, suffix, sym, suffix)
 
+    t = stmt.decl.specifiers & SPEC_TYPE
+    cc = stmt.decl.specifiers & SPEC_CALL_CONV
+
+    assert t == SPEC_TYPE_OBJ or cc == SPEC_CALL_CONV_C, "extension functions must have 'obj' return type"
+
     # Currently, the "signature" is simply the return type (used for
     # boxing).
     signature = {
@@ -1204,12 +1212,17 @@ def emitCFunction(stmt, cgen):
         SPEC_TYPE_OBJ:   "Object",
         SPEC_TYPE_INT:   "Integer",
         SPEC_TYPE_CHAR:  "Char",
-        }[stmt.decl.specifiers & SPEC_TYPE]
+        }[t]
 
-    fprintf(out, "\t.long\tCFunction\n" # klass
+    klass = {
+        SPEC_CALL_CONV_C: 'CFunction',
+        SPEC_CALL_CONV_EXTENSION: 'XFunction',
+        }[cc]
+
+    fprintf(out, "\t.long\t%s\n" # klass
             "\t.long\t%s\n" # signature
             "\t.long\t%s\n", # pointer
-            signature, sym)
+            klass, signature, sym)
 
     fprintf(out, "\t.size\t%s%s, .-%s%s\n",
             sym, suffix, sym, suffix)
@@ -1229,7 +1242,7 @@ def emitCodeForCompound(body, meta, cgen):
 
         if s.kind == STMT_DEF_METHOD:
             if (s.decl.specifiers & SPEC_STORAGE) == SPEC_STORAGE_EXTERN:
-                if (s.decl.specifiers & SPEC_CALL_CONV) == SPEC_CALL_CONV_C:
+                if (s.decl.specifiers & SPEC_CALL_CONV) in cCallingConventions:
                     emitCFunction(s, cgen)
             else:
                 emitCodeForMethod(s, meta, cgen)

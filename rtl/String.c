@@ -195,13 +195,12 @@ Object *String_ne(struct String *self, Object *arg0) {
 
 /* OPER_GET_ITEM */
 Object *String_item(struct String *self, int index) {
-#if 0 /* XXX: already unboxed -- no type check */
     if ((index & 3) != 2) {
         SpikeError(&__sym_typeError);
         return 0;
     }
     index >>= 2;
-#endif
+
     if (index < 0 || LEN(self) <= (size_t)index) {
         SpikeError(&__sym_rangeError);
         return 0;
@@ -214,7 +213,7 @@ Object *String_item(struct String *self, int index) {
 /* methods -- attributes */
 
 int String_size(struct String *self) {
-    return LEN(self);
+    return (LEN(self) << 2) | 2;
 }
 
 

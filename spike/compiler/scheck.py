@@ -533,6 +533,7 @@ builtInSpecifiers = (
     Spec('export',  SPEC_STORAGE,   SPEC_STORAGE_EXPORT),
     Spec('extern',  SPEC_STORAGE,   SPEC_STORAGE_EXTERN),
     Spec('cdecl',   SPEC_CALL_CONV, SPEC_CALL_CONV_C),
+    Spec('extension', SPEC_CALL_CONV, SPEC_CALL_CONV_EXTENSION),
     )
 
 

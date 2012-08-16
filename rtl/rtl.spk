@@ -88,32 +88,31 @@ class Float : Object {
     obj valueLow, valueHigh; // XXX: kludge
     
     // unary operators
-    self + 1 { return Float_succ(self.asCObject); }
-    self - 1 { return Float_pred(self.asCObject); }
-    +self    { return Float_pos(self.asCObject);  }
-    -self    { return Float_neg(self.asCObject);  }
+    self + 1 { return Float_succ(self); }
+    self - 1 { return Float_pred(self); }
+    +self    { return Float_pos(self);  }
+    -self    { return Float_neg(self);  }
     
     // binary operators
-    self *  x { return Float_mul(self.asCObject, x.asCObject); }
-    self /  x { return Float_div(self.asCObject, x.asCObject); }
-    self %  x { return Float_mod(self.asCObject, x.asCObject); }
-    self +  x { return Float_add(self.asCObject, x.asCObject); }
-    self -  x { return Float_sub(self.asCObject, x.asCObject); }
+    self *  x { return Float_mul(self, x); }
+    self /  x { return Float_div(self, x); }
+    self %  x { return Float_mod(self, x); }
+    self +  x { return Float_add(self, x); }
+    self -  x { return Float_sub(self, x); }
     
     // comparison operators
-    self <  x { return Float_lt(self.asCObject, x.asCObject); }
-    self >  x { return Float_gt(self.asCObject, x.asCObject); }
-    self <= x { return Float_le(self.asCObject, x.asCObject); }
-    self >= x { return Float_ge(self.asCObject, x.asCObject); }
-    self == x { return Float_eq(self.asCObject, x.asCObject); }
-    self != x { return Float_ne(self.asCObject, x.asCObject); }
+    self <  x { return Float_lt(self, x); }
+    self >  x { return Float_gt(self, x); }
+    self <= x { return Float_le(self, x); }
+    self >= x { return Float_ge(self, x); }
+    self == x { return Float_eq(self, x); }
+    self != x { return Float_ne(self, x); }
     
     // printing
     printString { return String fromFloat: self; }
     
     // unboxing
     extern unboxed {}
-    extern asCObject {} // to suppress unboxing
 }
 
 
@@ -169,28 +168,27 @@ class String : Object {
     // str...
     
     // binary operators
-    self + x { return String_add(self.asCObject, x.asCObject); }
+    self + x { return String_add(self, x); }
     
     // comparison operators
-    self <  x { return String_lt(self.asCObject, x.asCObject); }
-    self >  x { return String_gt(self.asCObject, x.asCObject); }
-    self <= x { return String_le(self.asCObject, x.asCObject); }
-    self >= x { return String_ge(self.asCObject, x.asCObject); }
-    self == x { return String_eq(self.asCObject, x.asCObject); }
-    self != x { return String_ne(self.asCObject, x.asCObject); }
+    self <  x { return String_lt(self, x); }
+    self >  x { return String_gt(self, x); }
+    self <= x { return String_le(self, x); }
+    self >= x { return String_ge(self, x); }
+    self == x { return String_eq(self, x); }
+    self != x { return String_ne(self, x); }
     
     // accessing
-    size { return String_size(self.asCObject); }
+    size { return String_size(self); }
     len { return self.size; }
-    self[i] { return String_item(self.asCObject, i); }
-    printString { return String_printString(self.asCObject); }
+    self[i] { return String_item(self, i); }
+    printString { return String_printString(self); }
     
     // enumerating
     self do: aBlock { obj i, s; s = self.size; for (i = 0; i < s; ++i) aBlock(self[i]); }
     
     // unboxing
     extern unboxed {}
-    extern asCObject {} // to suppress unboxing
     
 } meta {
     self fromInteger: anInteger { return String_fromInteger(anInteger); }
@@ -241,7 +239,15 @@ class Method : Object {
     // code...
 }
 
-class Function : Method {
+class Function : Object {
+    obj signature;
+    obj pointer;
+    extern self( /*...args*/ ) {}
+}
+
+class XFunction : Object {
+    obj signature;
+    obj pointer;
     extern self( /*...args*/ ) {}
 }
 
@@ -328,33 +334,33 @@ class Junk {
 
 extern cdecl obj Char_eq(c1, c2) {}
 
-extern cdecl obj Float_succ(f) {}
-extern cdecl obj Float_pred(f) {}
-extern cdecl obj Float_pos(f) {}
-extern cdecl obj Float_neg(f) {}
-extern cdecl obj Float_mul(f1, f2) {}
-extern cdecl obj Float_div(f1, f2) {}
-extern cdecl obj Float_mod(f1, f2) {}
-extern cdecl obj Float_add(f1, f2) {}
-extern cdecl obj Float_sub(f1, f2) {}
-extern cdecl obj Float_lt(f1, f2) {}
-extern cdecl obj Float_gt(f1, f2) {}
-extern cdecl obj Float_le(f1, f2) {}
-extern cdecl obj Float_ge(f1, f2) {}
-extern cdecl obj Float_eq(f1, f2) {}
-extern cdecl obj Float_ne(f1, f2) {}
+extern extension obj Float_succ(f) {}
+extern extension obj Float_pred(f) {}
+extern extension obj Float_pos(f) {}
+extern extension obj Float_neg(f) {}
+extern extension obj Float_mul(f1, f2) {}
+extern extension obj Float_div(f1, f2) {}
+extern extension obj Float_mod(f1, f2) {}
+extern extension obj Float_add(f1, f2) {}
+extern extension obj Float_sub(f1, f2) {}
+extern extension obj Float_lt(f1, f2) {}
+extern extension obj Float_gt(f1, f2) {}
+extern extension obj Float_le(f1, f2) {}
+extern extension obj Float_ge(f1, f2) {}
+extern extension obj Float_eq(f1, f2) {}
+extern extension obj Float_ne(f1, f2) {}
 
-extern cdecl obj String_add(s1, s2) {}
-extern cdecl obj String_lt(s1, s2) {}
-extern cdecl obj String_gt(s1, s2) {}
-extern cdecl obj String_le(s1, s2) {}
-extern cdecl obj String_ge(s1, s2) {}
-extern cdecl obj String_eq(s1, s2) {}
-extern cdecl obj String_ne(s1, s2) {}
-extern cdecl int String_size(s) {}
-extern cdecl obj String_item(s, i) {}
-extern cdecl obj String_printString(s) {}
-extern cdecl obj String_fromInteger(i) {}
-extern cdecl obj String_fromFloat(f) {}
+extern extension obj String_add(s1, s2) {}
+extern extension obj String_lt(s1, s2) {}
+extern extension obj String_gt(s1, s2) {}
+extern extension obj String_le(s1, s2) {}
+extern extension obj String_ge(s1, s2) {}
+extern extension obj String_eq(s1, s2) {}
+extern extension obj String_ne(s1, s2) {}
+extern extension obj String_size(s) {}
+extern extension obj String_item(s, i) {}
+extern extension obj String_printString(s) {}
+extern cdecl     obj String_fromInteger(i) {}
+extern cdecl     obj String_fromFloat(f) {}
 
-extern cdecl obj Symbol_printString(s) {}
+extern extension obj Symbol_printString(s) {}

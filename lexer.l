@@ -199,6 +199,7 @@ static char *builtInSpecifiers[] = {
     "export",
     "extern",
     "cdecl",
+    "extension",
     0
 };
 
