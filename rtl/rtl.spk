@@ -2,9 +2,9 @@
 class Object : null {
     self == x { return self === x; }
     self != x { return self !== x; }
-    printString { return "<XXX Object printString>"; }    
+    self.printString { return "<XXX Object printString>"; }    
     extern self.class {}
-    extern unboxed {}
+    extern self.unboxed {}
 } meta {
     self new { return self basicNew; }
     self new: anInteger { return self basicNew: anInteger; }
@@ -21,11 +21,11 @@ class Array : Object {
     extern self init: anInteger {}
     
     // accessing
-    extern size {}
+    extern self.size {}
     extern self[i] {}
     extern self[i] = v {}
     
-    printString {
+    self.printString {
         obj i, s, result;
         
         s = self.size;
@@ -56,7 +56,7 @@ class Behavior : Object {
     obj lvMethodTable;
     obj instVarCount;
     
-    superclass { return superclass; }
+    self.superclass { return superclass; }
 }
 
 
@@ -65,22 +65,22 @@ class Char : Object {
     obj value;
     self == x { return Char_eq(self, x); }
     self != x { return !Char_eq(self, x); }
-    extern unboxed {}
+    extern self.unboxed {}
 }
 
 
 class Class : Behavior {
     obj name;
     
-    name { return name; }
+    self.name { return name; }
 }
 
 
 class IdentityDictionary : Object {
-    size { /* XXX */ }
+    self.size { /* XXX */ }
     self[k] { /* XXX */ }
     self[k] = v { /* XXX */ }
-    get(k) { /* XXX */ }
+    self.get(k) { /* XXX */ }
 }
 
 
@@ -109,10 +109,10 @@ class Float : Object {
     self != x { return Float_ne(self, x); }
     
     // printing
-    printString { return String fromFloat: self; }
+    self.printString { return String fromFloat: self; }
     
     // unboxing
-    extern unboxed {}
+    extern self.unboxed {}
 }
 
 
@@ -146,10 +146,10 @@ class Integer : Object {
     extern self != x {}
     
     // unboxing
-    extern unboxed {}
+    extern self.unboxed {}
     
     // printing
-    printString { return String fromInteger: self; }
+    self.printString { return String fromInteger: self; }
     
 } meta {
     extern self box: aPointer {}
@@ -159,7 +159,7 @@ class Integer : Object {
 class Metaclass : Behavior {
     obj thisClass;
     
-    new { /* XXX ??? */ }
+    self.new { /* XXX ??? */ }
 }
 
 
@@ -179,16 +179,16 @@ class String : Object {
     self != x { return String_ne(self, x); }
     
     // accessing
-    size { return String_size(self); }
-    len { return self.size; }
+    self.size { return String_size(self); }
+    self.len { return self.size; }
     self[i] { return String_item(self, i); }
-    printString { return String_printString(self); }
+    self.printString { return String_printString(self); }
     
     // enumerating
     self do: aBlock { obj i, s; s = self.size; for (i = 0; i < s; ++i) aBlock(self[i]); }
     
     // unboxing
-    extern unboxed {}
+    extern self.unboxed {}
     
 } meta {
     self fromInteger: anInteger { return String_fromInteger(anInteger); }
@@ -200,7 +200,7 @@ class Symbol : Object {
     obj hash;
     // str...
     
-    printString { return Symbol_printString(self); }
+    self.printString { return Symbol_printString(self); }
 }
 
 
@@ -210,7 +210,7 @@ class Boolean : Object {
     self & x { self subclassResponsibility; }
     self ^ x { self subclassResponsibility; }
     self | x { self subclassResponsibility; }
-    printString { self subclassResponsibility; }    
+    self.printString { self subclassResponsibility; }    
 }
 
 class False : Boolean {
@@ -219,7 +219,7 @@ class False : Boolean {
     self & x { return false; }
     self ^ x { return x; }
     self | x { return x; }
-    printString { return "false"; }    
+    self.printString { return "false"; }    
 }
 
 class True : Boolean {
@@ -228,7 +228,7 @@ class True : Boolean {
     self & x { return x; }
     self ^ x { return !x; }
     self | x { return true; }
-    printString { return "true"; }    
+    self.printString { return "true"; }    
 }
 
 
@@ -277,16 +277,16 @@ class MethodContext : Context {
 
 class BlockContext : Context {
     extern self( /*...args*/ ) {}
-    extern closure {}
+    extern self.closure {}
 }
 
 class Closure : BlockContext {
-    closure { return self; }
+    self.closure { return self; }
 }
 
 
 class CObject : Object {
-    extern unboxed {}
+    extern self.unboxed {}
 }
 
 class CFunction : Object {
@@ -294,7 +294,7 @@ class CFunction : Object {
     obj pointer;
     
     extern self( /*...args*/ ) {}
-    extern unboxed {}
+    extern self.unboxed {}
 }
 
 
@@ -303,32 +303,32 @@ class Message : Object {
     obj selector;
     obj arguments;
     
-    selector { return selector; }
-    arguments { return arguments; }
+    self.selector { return selector; }
+    self.arguments { return arguments; }
 }
 
 
 class Null : Object {
-    printString { return "null"; }
+    self.printString { return "null"; }
 }
 
 class Void : Object {
-    printString { return "void"; }
+    self.printString { return "void"; }
 }
 
 
 // This is here just to make the compiler generate symbols.
 class Junk : Object {
-    __ind__ {}
-    __addr__ {}
+    self.__ind__ {}
+    self.__addr__ {}
     
-    typeError {}
-    rangeError {}
-    mustBeBoolean{}
-    badObjectPointer {}
+    self.typeError {}
+    self.rangeError {}
+    self.mustBeBoolean {}
+    self.badObjectPointer {}
     self doesNotUnderstand: aMessage {}
-    cannotReenterBlock {}
-    wrongNumberOfArguments {}
+    self.cannotReenterBlock {}
+    self.wrongNumberOfArguments {}
 }
 
 

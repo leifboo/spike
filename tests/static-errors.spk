@@ -4,10 +4,10 @@ class Foo : Object {
     obj +x; // invalid variable definition
     
     // invalid argument definitions
-    red(a, -b) {
+    self.red(a, -b) {
         return [ :(x + y) | return a; ];
     }
-    green(a, b, c, ... +d) {}
+    self.green(a, b, c, ... +d) {}
     
     // invalid method declarators
     a = (b + c) {}
@@ -30,6 +30,7 @@ class Foo : Object {
     42 {}
     self++ {}
     --self {}
+    self.attr += x {}
 }
 
 // cycle in superclass chain
@@ -65,6 +66,30 @@ local() {
     
     return y; // symbol 'y' undefined
 }
+
+class Bar : Object {
+    // method declarators must include 'self'
+    f() {}
+    a[i] {}
+    a[i] = newValue {}
+    attr {}
+    attr = newValue {}
+    foo.attr {}
+}
+
+// naked function declarators must not include 'self'
+self() {}
+self[i] {}
+self[i] = newValue {}
+self.attr {}
+self.attr = newValue {}
+self.foo() {}
+
+// naked function declarators must be function calls
+wtf {}
+a[i] {}
+a[i] = newValue {}
+hey = zoo {}
 
 main(argv) {
     return 1;

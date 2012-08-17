@@ -22,14 +22,14 @@ hgg2(required, answer = 42, foo = "hey", weird = answer, ...extra) {
 }
 
 class Foo : Object {
-    hgg3(required, answer = self.defaultAnswer, foo = self.defaultFoo, weird = answer) {
+    self.hgg3(required, answer = self.defaultAnswer, foo = self.defaultFoo, weird = answer) {
         printf("required is %d; ", required);
         printf("answer is %d; ", answer);
         printf("foo is %s; ", foo);
         printf("weird is %d.\n", weird);
     }
-    defaultAnswer { return 73; }
-    defaultFoo { return "later"; }
+    self.defaultAnswer { return 73; }
+    self.defaultFoo { return "later"; }
 }
 
 f(x) { printf("[f(%d)] ", x); return x + 1; }

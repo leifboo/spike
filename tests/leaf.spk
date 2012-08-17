@@ -10,32 +10,32 @@ class Foo : Object {
     obj a2, b2, c2;
     obj tally;
     
-    init() {
+    self.init() {
         instVar = 7;
         tally = 0;
         return self;
     }
     
-    leaf() {
+    self.leaf() {
         return 42;
     }
-    getValue() {
+    self.getValue() {
         return instVar;
     }
-    setValue(newValue, junk, junk2) {
+    self.setValue(newValue, junk, junk2) {
         instVar = newValue;
     }
-    noLeafSend() {
+    self.noLeafSend() {
         return self.leaf();
     }
-    noLeafDepth() {
+    self.noLeafDepth() {
         return 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8;
     }
-    noLeafVar() {
+    self.noLeafVar() {
         obj x;
         return 42;
     }
-    reverse(a, b, c) {
+    self.reverse(a, b, c) {
         a1 = a;
         b1 = b;
         c1 = c;
@@ -46,7 +46,7 @@ class Foo : Object {
         b2 = b;
         c2 = c;
     }
-    diagnose() {
+    self.diagnose() {
         printf("a1 is %s\n", a1.printString);
         printf("b1 is %s\n", b1.printString);
         printf("c1 is %s\n", c1.printString);
@@ -54,7 +54,7 @@ class Foo : Object {
         printf("b2 is %s\n", b2.printString);
         printf("c2 is %s\n", c2.printString);
     }
-    leafLoop(flag) {
+    self.leafLoop(flag) {
         while (flag) {
             tally = 1;
             flag = false;

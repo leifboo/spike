@@ -3,7 +3,7 @@
 class Adder : Object {
     obj value;
     
-    init(aValue) {
+    self init: aValue {
         value = aValue;
     }
     
@@ -16,8 +16,8 @@ class Adder : Object {
 main(argv) {
     obj a, sum;
     
-    a = Adder.new();
-    a.init(40);
+    a = Adder new;
+    a init: 40;
     sum = a(2);
     printf("The sum is %d.\n", sum);
     

@@ -7,12 +7,12 @@ show(v) {
 class MyArray : Array {
     obj x, y, z;
     
-    tomato(a, b, c) {
+    self.tomato(a, b, c) {
         x = a;
         y = b;
         z = c;
     }
-    report() {
+    self.report() {
         show(x);
         show(y);
         show(z);
@@ -41,25 +41,25 @@ class MyArray : Array {
 class ArrayIter : Object {
     obj array, i;
     
-    init(anArray) {
+    self.init(anArray) {
         array = anArray;
         i = 0;
         return self;
     }
-    atEnd {
+    self.atEnd {
         return i >= array.size;
     }
-    next() {
+    self.next() {
         return array[i++];
     }
 }
 
 
 class Foo : Object {
-    mcallback(item) {
+    self.mcallback(item) {
         printf("method callback: %s\n", item.printString);
     }
-    iterate(a) {
+    self.iterate(a) {
         obj callback;
         callback = [ :item | self.mcallback(item) ];
         a forEachItem: callback;

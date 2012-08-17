@@ -4,17 +4,11 @@
 class Point : Object {
     obj x, y;
     
-    // initializing
-    init(newX, newY) {
-        x = newX;
-        y = newY;
-    }
-    
     // accessing
-    x { return x; }
-    y { return y; }
-    x = newX { x = newX; }
-    y = newY { y = newY; }
+    self.x { return x; }
+    self.y { return y; }
+    self.x = newX { x = newX; }
+    self.y = newY { y = newY; }
     
     self x: newX y: newY {
         x = newX;
@@ -23,7 +17,7 @@ class Point : Object {
     }
         
     // printing
-    printString() {
+    self.printString() {
         return "(" + x.printString + ", " + y.printString + ")";
     }
     
@@ -65,8 +59,8 @@ class Point : Object {
 main(argv) {
     obj a, b, c;
     
-    a = (Point) x: 4  y: 2;
-    b = (Point) x: 22 y: 44;
+    a = Point x: 4  y: 2;
+    b = Point x: 22 y: 44;
     
     printf("a is %s\n", a.printString);
     printf("b is %s\n", b.printString);

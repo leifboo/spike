@@ -1,31 +1,31 @@
 #!/usr/bin/env spike
 
 class One : Object {
-    test() {
+    self.test() {
         return 1;
     }
-    result1() {
+    self.result1() {
         return self.test();
     }
 }
 
 class Two : One {
-    test() {
+    self.test() {
         return 2;
     }
 }
 
 class Three : Two {
-    result2() {
+    self.result2() {
         return self.result1();
     }
-    result3() {
+    self.result3() {
         return super.test();
     }
 }
 
 class Four : Three {
-    test() {
+    self.test() {
         return 4;
     }
 }

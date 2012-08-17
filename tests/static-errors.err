@@ -1,4 +1,15 @@
-55: syntax error
+56: syntax error
+70: symbol 'Bar' multiply defined
+81: invalid method declarator
+82: invalid method declarator
+83: invalid method declarator
+84: invalid method declarator
+85: invalid method declarator
+86: invalid method declarator
+89: invalid method declarator
+90: invalid method declarator
+91: invalid method declarator
+92: invalid method declarator
 4: invalid variable definition
 13: invalid method declarator
 14: invalid method declarator
@@ -20,16 +31,23 @@
 30: invalid method declarator
 31: invalid method declarator
 32: invalid method declarator
+33: invalid method declarator
 7: invalid argument definition
 8: invalid argument definition
 10: invalid argument definition
-43: invalid superclass specification
-45: invalid superclass specification
-47: non-default argument follows default argument
-48: invalid variable definition
-64: symbol 'x' multiply defined
-66: symbol 'y' undefined
-36: cycle in superclass chain
+44: invalid superclass specification
+46: invalid superclass specification
+48: non-default argument follows default argument
+49: invalid variable definition
+65: symbol 'x' multiply defined
+67: symbol 'y' undefined
+72: invalid method declarator
+73: invalid method declarator
+74: invalid method declarator
+75: invalid method declarator
+76: invalid method declarator
+77: invalid method declarator
 37: cycle in superclass chain
 38: cycle in superclass chain
 39: cycle in superclass chain
+40: cycle in superclass chain

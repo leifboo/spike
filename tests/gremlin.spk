@@ -16,17 +16,17 @@ class Gremlin : Object {
         return aBlock("tomato");
     }
     
-    anotherGizmo = aGizmo {
+    self.anotherGizmo = aGizmo {
         anotherGizmo = aGizmo;
     }
     
-    crash(crashBlock) {
+    self.crash(crashBlock) {
         crashBlock(self);
     }
     
-    red() { self.green(); }
-    green() { self.blue(); }
-    blue() { self.huh; }
+    self.red() { self.green(); }
+    self.green() { self.blue(); }
+    self.blue() { self.huh; }
 
     self doesNotUnderstand: aMessage {
         printf("I don't understand '%s'!\n",

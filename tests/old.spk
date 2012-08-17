@@ -88,7 +88,7 @@ scope(a, b, c) {
 }
 
 class XBar : Foo {
-    scope(a, b, c) {
+    self.scope(a, b, c) {
         obj d, e, f;
         
         show(d);
@@ -110,32 +110,32 @@ class XBar : Foo {
 class Foo : Object {
     obj secret;
     
-    answer() {
+    self.answer() {
         return 42;
     }
     // XXX: This should be an error.
-    xxxanswer() {
+    self.xxxanswer() {
         return 42;
     }
-    main() {
+    self.main() {
         obj b;
         
         b = Bar.new();
         show(b.wrongAnswer());
         self.red();
     }
-    red() {
+    self.red() {
         self.green();
         return 1;
     }
-    green() {
+    self.green() {
         self.blue();
     }
-    blue() {
+    self.blue() {
         //self.xxx();
         //self.print();
     }
-    psst(x, y) {
+    self.psst(x, y) {
         obj a, b;
         
         puts("psst");
@@ -147,11 +147,11 @@ class Foo : Object {
         secret = a + b + y;
         return secret;
     }
-    fib(x) {
+    self.fib(x) {
         if (x<=2) return 1;
         return self.fib(x-1) + self.fib(x-2);
     }
-    wrongAnswer() {
+    self.wrongAnswer() {
         return 24;
     }
 }
@@ -161,49 +161,49 @@ tomato() {
 }
 
 class Bar : Foo {
-    tomato() {
+    self.tomato() {
         return 1 + 2 + self.wrongAnswer();
     }
-    wrongAnswer() {
+    self.wrongAnswer() {
         return super.wrongAnswer() + 6;
     }
-    getFunc() {
+    self.getFunc() {
         return tomato;
     }
-    funcTest() {
+    self.funcTest() {
         obj f;
         f = self.getFunc();
         f();
         f = [self.blub()];
         f().doStuff(1, 2, 3);
     }
-    doStuff(x, y, z) {
+    self.doStuff(x, y, z) {
         show(x);
         show(x + y + z);
     }
-    blub() {
+    self.blub() {
         return self;
     }
     
-    falseLeft() {
+    self.falseLeft() {
         printf("left ");
         return false;
     }
-    trueLeft() {
+    self.trueLeft() {
         printf("left ");
         return true;
     }
-    falseRight() {
+    self.falseRight() {
         printf("right ");
         return false;
     }
-    trueRight() {
+    self.trueRight() {
         printf("right ");
         return true;
     }
-    getTrue() { return true; }
-    getFalse() { return false; }
-    condTest() {
+    self.getTrue() { return true; }
+    self.getFalse() { return false; }
+    self.condTest() {
         printf("\n--- condTest ---\n");
         puts("cond");
         true ? self.trueLeft() : self.trueRight();
@@ -254,11 +254,11 @@ class Bar : Foo {
             puts("hey!");
     }
     
-    logic() {
+    self.logic() {
         return (self.trueLeft() || self.trueRight()) & false;
     }
     
-    opt() {
+    self.opt() {
         if ((false && false) & false) {
             puts("wtf!");
         }

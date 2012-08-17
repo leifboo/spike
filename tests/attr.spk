@@ -4,10 +4,10 @@
 class Foo : Object {
     obj attr;
     
-    attr {
+    self.attr {
         return attr;
     }
-    attr = newValue {
+    self.attr = newValue {
         attr = newValue;
     }
 }

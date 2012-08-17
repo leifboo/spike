@@ -44,7 +44,7 @@ amusingProblem() {
     anotherArray[3] = 8;
     
     obj range;
-    range = Range.new().init(0, aBlockArray.size);
+    range = (Range new) begin: 0 end: aBlockArray.size;
     range do:
         [ :anIndex |
          aBlockArray[anIndex] = [anotherArray[anIndex] * 2]
@@ -60,7 +60,7 @@ amusingProblem() {
 class Range : Object {
     obj begin, end;
     
-    init(i, j) { begin = i; end = j; return self; }
+    self begin: i end: j { begin = i; end = j; return self; }
     
     self do: block {
         obj i;

@@ -167,25 +167,31 @@ def checkMethodDef(stmt, outer, checker, outerPass):
         while (expr.kind == EXPR_UNARY) and (expr.oper == OPER_IND):
             expr = expr.left
 
-        if expr.kind == EXPR_NAME:
-            name = expr.sym
-
-        elif expr.kind == EXPR_ATTR:
-            if expr.left.kind != EXPR_NAME:
-                checker.requestor.invalidMethodDeclarator(expr)
-            else:
+        if expr.kind == EXPR_ATTR:
+            if (outer.kind == STMT_DEF_CLASS and
+                expr.left.kind == EXPR_NAME and
+                expr.left.sym == 'self'
+                ):
                 name = expr.attr
+            else:
+                checker.requestor.invalidMethodDeclarator(expr)
 
         elif expr.kind == EXPR_ASSIGN:
-            if expr.right.kind != EXPR_NAME:
+            if outer.kind != STMT_DEF_CLASS or expr.right.kind != EXPR_NAME:
                 checker.requestor.invalidMethodDeclarator(expr)
 
             else:
                 ns = METHOD_NAMESPACE_LVALUE
 
-                if expr.left.kind == EXPR_NAME:
-                    name = expr.left.sym
-                    stmt.u.method.fixedArgs = [expr.right]
+                if expr.left.kind == EXPR_ATTR:
+                    if (expr.oper == OPER_EQ and
+                        expr.left.obj.kind == EXPR_NAME and
+                        expr.left.obj.sym == 'self'
+                        ):
+                        name = expr.left.attr
+                        stmt.u.method.fixedArgs = [expr.right]
+                    else:
+                        checker.requestor.invalidMethodDeclarator(expr)
 
                 elif expr.left.kind == EXPR_CALL:
                     if (expr.left.oper != OPER_INDEX) or (expr.left.left.sym != 'self'):
@@ -201,31 +207,45 @@ def checkMethodDef(stmt, outer, checker, outerPass):
                     checker.requestor.invalidMethodDeclarator(expr)
 
         elif expr.kind == EXPR_CALL:
-            if expr.left.kind != EXPR_NAME:
-                checker.requestor.invalidMethodDeclarator(expr)
-
-            else:
+            if expr.left.kind == EXPR_NAME:
                 if expr.left.sym == 'self':
-                    name = expr.oper.selector
-
-                elif expr.oper == OPER_APPLY:
+                    # "self(...)" or "self[...]"
+                    if outer.kind == STMT_DEF_CLASS:
+                        name = expr.oper.selector
+                    else:
+                        checker.requestor.invalidMethodDeclarator(expr)
+                elif outer.kind != STMT_DEF_CLASS and expr.oper == OPER_APPLY:
+                    # naked functions
                     name = expr.left.sym
-
                 else:
-                    # XXX: Should we allow "foo[...] {}" as a method
-                    # definition?  More generally, could the method
-                    # declarator be seen as the application of an inverse
-                    # thingy?
                     checker.requestor.invalidMethodDeclarator(expr)
 
-                if name:
-                    if (not outer) or (outer.kind != STMT_DEF_CLASS):
-                        # declare naked functions
-                        checker.st.insert(expr.left, checker.requestor)
-                        expr.left.specifiers = specifiers
+            elif expr.left.kind == EXPR_ATTR:
+                if (outer.kind == STMT_DEF_CLASS and
+                    expr.oper == OPER_APPLY and
+                    expr.left.obj.kind == EXPR_NAME and
+                    expr.left.obj.sym == 'self'
+                    ):
+                    # "self.foo(...)"
+                    name = expr.left.attr
+                else:
+                    # XXX: Should we allow "self.foo[...] {}" as a
+                    # method definition?  More generally, could the
+                    # method declarator be seen as the application of
+                    # an inverse thingy?
+                    checker.requestor.invalidMethodDeclarator(expr)
 
-                    stmt.u.method.fixedArgs = expr.fixedArgs
-                    stmt.u.method.varArg = expr.var
+            else:
+                checker.requestor.invalidMethodDeclarator(expr)
+
+            if name:
+                if outer.kind != STMT_DEF_CLASS:
+                    # declare naked functions
+                    checker.st.insert(expr.left, checker.requestor)
+                    expr.left.specifiers = specifiers
+
+                stmt.u.method.fixedArgs = expr.fixedArgs
+                stmt.u.method.varArg = expr.var
 
         elif expr.kind in (EXPR_UNARY, EXPR_BINARY):
             if (expr.left.kind != EXPR_NAME) or (expr.left.sym != 'self'):
@@ -274,8 +294,10 @@ def checkMethodDef(stmt, outer, checker, outerPass):
         stmt.u.method.name = name
 
     elif outerPass == 2:
-        if (not outer) or (outer.kind != STMT_DEF_CLASS):
-            # naked (global) function -- enter module instance context
+        if outer.kind != STMT_DEF_CLASS:
+            # naked (global) function -- enter instance context
+            # (conceptually, the "instance" is the function object
+            # itself)
             checker.st.enterScope(True)
 
         checker.st.enterScope(True)
@@ -342,7 +364,7 @@ def checkMethodDef(stmt, outer, checker, outerPass):
         stmt.u.method.localCount = (checker.st.currentScope.context.nDefs
                                     - stmt.u.method.maxArgumentCount)
         checker.st.exitScope()
-        if (not outer) or (outer.kind != STMT_DEF_CLASS):
+        if outer.kind != STMT_DEF_CLASS:
             checker.st.exitScope()
 
 
@@ -574,7 +596,7 @@ def check(tree, st, requestor):
     
     for _pass in range(1, 4):
         for s in tree:
-            checkStmt(s, None, checker, _pass)
+            checkStmt(s, tree, checker, _pass)
 
     checker.st.exitScope() # global
 

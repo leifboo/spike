@@ -3,8 +3,8 @@
 class MyArray : Array {
     obj label;
     
-    label { return label; }
-    label = aLabel { label = aLabel; }
+    self.label { return label; }
+    self.label = aLabel { label = aLabel; }
     
     self[i] {
         obj oldValue;

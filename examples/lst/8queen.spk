@@ -3,7 +3,7 @@
 class Queen : Object {
     obj row, column, neighbor, boardSize;
     
-    build(myNeighbor, c, size) {
+    self.build(myNeighbor, c, size) {
         neighbor = myNeighbor;
         column = c;
         row = 1;
@@ -13,7 +13,7 @@ class Queen : Object {
         return self;
     }
 
-    check(c, r) {
+    self.check(c, r) {
         obj cd;
         
         if (r == row)
@@ -28,17 +28,17 @@ class Queen : Object {
         return true;
     }
     
-    first() {
+    self.first() {
         row = 1;
         return self.checkRow();
     }
 
-    next() {
+    self.next() {
         row = row + 1;
         return self.checkRow();
     }
 
-    checkRow() {
+    self.checkRow() {
         if (neighbor === null)
             return row;
         while (row <= boardSize) {
@@ -52,7 +52,7 @@ class Queen : Object {
         return self.first();
     }
 
-    printBoard() {
+    self.printBoard() {
         if (neighbor !== null)
             neighbor.printBoard();
         printf("Col %d Row %d\n", column, row);
