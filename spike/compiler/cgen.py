@@ -991,7 +991,12 @@ def emitCodeForStmt(stmt, nextLabel, breakLabel, continueLabel, cgen):
         # evaluate result
         if stmt.expr:
             emitCodeForExpr(stmt.expr, None, cgen)
+        elif inClass(cgen):
+            # note that "return" inside a block closure is undefined
+            # anyway
+            emitOpcode(cgen, "pushl", "%%esi") # self
         else:
+            # naked function
             emitOpcode(cgen, "pushl", "$void")
         
         # store result
@@ -1411,6 +1416,14 @@ def emitCodeForClass(stmt, outer):
     emitCodeForCompound(stmt.top, False, cgen)
 
     return
+
+
+def inClass(cgen):
+    while cgen:
+        if cgen.kind == ClassCodeGen:
+            return True
+        cgen = cgen.outer
+    return False
 
 
 #------------------------------------------------------------------------

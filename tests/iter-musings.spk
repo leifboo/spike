@@ -44,7 +44,6 @@ class ArrayIter : Object {
     self.init(anArray) {
         array = anArray;
         i = 0;
-        return self;
     }
     self.atEnd {
         return i >= array.size;

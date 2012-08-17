@@ -13,11 +13,10 @@ class Point : Object {
     self x: newX y: newY {
         x = newX;
         y = newY;
-        return self;
     }
         
     // printing
-    self.printString() {
+    self.printString {
         return "(" + x.printString + ", " + y.printString + ")";
     }
     
@@ -51,7 +50,7 @@ class Point : Object {
 } meta {
     
     self x: xValue y: yValue {
-        return self.new() x: xValue y: yValue;
+        return (self new) x: xValue y: yValue;
     }
 }
 

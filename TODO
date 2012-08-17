@@ -48,9 +48,7 @@ Alpha 2 (i.e., embarrasing stuff)
 
     + note that this would require replacing "obj.*foo()" with "perform:"
   
-  - method return should default to 'self'
-  
-    + allow stmt-list-expr ?
+  - allow stmt-list-expr ?
 
 
 Refactoring

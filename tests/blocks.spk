@@ -60,7 +60,7 @@ amusingProblem() {
 class Range : Object {
     obj begin, end;
     
-    self begin: i end: j { begin = i; end = j; return self; }
+    self begin: i end: j { begin = i; end = j; }
     
     self do: block {
         obj i;
