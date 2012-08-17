@@ -204,7 +204,7 @@ class Symbol : Object {
 }
 
 
-class Boolean {
+class Boolean : Object {
     !self    { self subclassResponsibility; }
     ~self    { self subclassResponsibility; }
     self & x { self subclassResponsibility; }
@@ -318,7 +318,7 @@ class Void : Object {
 
 
 // This is here just to make the compiler generate symbols.
-class Junk {
+class Junk : Object {
     __ind__ {}
     __addr__ {}
     

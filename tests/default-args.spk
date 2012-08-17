@@ -21,7 +21,7 @@ hgg2(required, answer = 42, foo = "hey", weird = answer, ...extra) {
     }
 }
 
-class Foo {
+class Foo : Object {
     hgg3(required, answer = self.defaultAnswer, foo = self.defaultFoo, weird = answer) {
         printf("required is %d; ", required);
         printf("answer is %d; ", answer);

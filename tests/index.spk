@@ -78,5 +78,5 @@ incr() {
     return 0;
 }
 
-class Foo {
+class Foo : Object {
 }

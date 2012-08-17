@@ -6,7 +6,7 @@ foo(x) {
     g = x;
 }
 
-class Gremlin {
+class Gremlin : Object {
     obj anotherGizmo;
     
     self eachGizmoDo: aBlock {

@@ -57,7 +57,7 @@ amusingProblem() {
     }
 }
 
-class Range {
+class Range : Object {
     obj begin, end;
     
     init(i, j) { begin = i; end = j; return self; }

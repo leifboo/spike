@@ -1,7 +1,7 @@
 #!/usr/bin/env spike
 
 
-class Foo {
+class Foo : Object {
     self doesNotUnderstand: aMessage {
         printf("I don't understand %s with args %s!\n",
                aMessage.selector.printString,

@@ -1,6 +1,6 @@
 #!/usr/bin/env spike
 
-class Queen {
+class Queen : Object {
     obj row, column, neighbor, boardSize;
     
     build(myNeighbor, c, size) {

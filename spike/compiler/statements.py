@@ -42,14 +42,11 @@ class ClassDef(Stmt):
     def __init__(self, name, superclassName, body, metaBody):
         super(ClassDef, self).__init__()
         from expressions import Name
-        self.name = Name(name)
-        if not superclassName:
-            superclassName = "Object"
-        self.superclassName = Name(superclassName)
+        self.name = name
+        self.superclassName = superclassName
         self.body = body
         self.metaBody = metaBody
         self.superclassDef = None
-        self.subclassDefs = []
         return
 
 

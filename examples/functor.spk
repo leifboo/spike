@@ -1,6 +1,6 @@
 #!/usr/bin/env spike
 
-class Adder {
+class Adder : Object {
     obj value;
     
     init(aValue) {

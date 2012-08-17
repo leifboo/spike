@@ -1,6 +1,6 @@
 #!/usr/bin/env spike
 
-class Foo {
+class Foo : Object {
     obj answer;
     
     self init answer: a {

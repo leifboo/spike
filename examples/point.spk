@@ -1,7 +1,7 @@
 #!/usr/bin/env spike
 
 
-class Point {
+class Point : Object {
     obj x, y;
     
     // initializing

@@ -1,6 +1,6 @@
 #!/usr/bin/env spike
 
-class Foo {
+class Foo : Object {
     obj +x; // invalid variable definition
     
     // invalid argument definitions

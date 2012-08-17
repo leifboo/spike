@@ -1,6 +1,6 @@
 #!/usr/bin/env spike
 
-class Form {
+class Form : Object {
     self display medium: aDisplayMedium location: aPoint clippingBox: clipRect rule: anInteger fillColor: aForm {
         printf("display %s %d %d %s %s\n",
                aDisplayMedium, aPoint, clipRect, anInteger, aForm);

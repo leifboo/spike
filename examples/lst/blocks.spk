@@ -1,6 +1,6 @@
 #!/usr/bin/env spike
 
-class Main {
+class Main : Object {
     main() {
         ifTrue(2 < 3, [puts("correct-1")]);
         puts(ifTrue(2 < 3, ["correct-2"]));

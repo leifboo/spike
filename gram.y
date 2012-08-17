@@ -58,16 +58,7 @@ closed_statement(r) ::= RETURN expr(expr) SEMI.                                 
 closed_statement(r) ::= YIELD            SEMI.                                  { fprintf(spkout, "s%d = f.stmtYield(None)\n", r = ++S); }
 closed_statement(r) ::= YIELD expr(expr) SEMI.                                  { fprintf(spkout, "s%d = f.stmtYield(e%d)\n", r = ++S, expr); }
 closed_statement(r) ::= expr(expr) compound_statement(stmt).                    { fprintf(spkout, "s%d = f.stmtDefMethod(e%d, s%d)\n", r = ++S, expr, stmt); }
-closed_statement(r) ::= CLASS IDENTIFIER(name) class_body(body).                { fprintf(spkout, "s%d = f.stmtDefClass(t%d, None, tmp%d[0], tmp%d[1])\n", r = ++S, name, body, body); }
-closed_statement(r) ::= CLASS SPECIFIER(name) class_body(body).                 { fprintf(spkout, "s%d = f.stmtDefClass(t%d, None, tmp%d[0], tmp%d[1])\n", r = ++S, name, body, body); }
-closed_statement(r) ::= CLASS IDENTIFIER(name) COLON IDENTIFIER(super) class_body(body).
-                                                                                { fprintf(spkout, "s%d = f.stmtDefClass(t%d, t%d,  tmp%d[0], tmp%d[1])\n", r = ++S, name, super, body, body); }
-closed_statement(r) ::= CLASS IDENTIFIER(name) COLON SPECIFIER(super) class_body(body).
-                                                                                { fprintf(spkout, "s%d = f.stmtDefClass(t%d, t%d,  tmp%d[0], tmp%d[1])\n", r = ++S, name, super, body, body); }
-closed_statement(r) ::= CLASS SPECIFIER(name) COLON IDENTIFIER(super) class_body(body).
-                                                                                { fprintf(spkout, "s%d = f.stmtDefClass(t%d, t%d,  tmp%d[0], tmp%d[1])\n", r = ++S, name, super, body, body); }
-closed_statement(r) ::= CLASS SPECIFIER(name) COLON SPECIFIER(super) class_body(body).
-                                                                                { fprintf(spkout, "s%d = f.stmtDefClass(t%d, t%d,  tmp%d[0], tmp%d[1])\n", r = ++S, name, super, body, body); }
+closed_statement(r) ::= CLASS name(name) COLON name(super) class_body(body).    { fprintf(spkout, "s%d = f.stmtDefClass(e%d, e%d,  tmp%d[0], tmp%d[1])\n", r = ++S, name, super, body, body); }
 
 class_body(r) ::= compound_statement(body).                                     { fprintf(spkout, "tmp%d = (s%d, None)\n", r = ++TMP, body); }
 class_body(r) ::= compound_statement(body) META compound_statement(metaBody).   { fprintf(spkout, "tmp%d = (s%d,  s%d)\n", r = ++TMP, body, metaBody); } 
@@ -189,16 +180,18 @@ postfix_expr(r) ::= SPECIFIER(name) DOT CLASS(attr).                            
 postfix_expr(r) ::= postfix_expr(expr) INC.                                     { fprintf(spkout, "e%d = f.exprPostOp(f.operSucc, e%d)\n", r = ++E, expr); }
 postfix_expr(r) ::= postfix_expr(expr) DEC.                                     { fprintf(spkout, "e%d = f.exprPostOp(f.operPred, e%d)\n", r = ++E, expr); }
 
-primary_expr(r) ::= IDENTIFIER(name).                                           { fprintf(spkout, "e%d = f.exprName(t%d)\n", r = ++E, name); }
+primary_expr(r) ::= name(expr).                                                 { r = expr; }
 primary_expr(r) ::= LITERAL_SYMBOL(token).                                      { fprintf(spkout, "e%d = f.exprLiteral(t%d)\n", r = ++E, token); }
 primary_expr(r) ::= LITERAL_INT(token).                                         { fprintf(spkout, "e%d = f.exprLiteral(t%d)\n", r = ++E, token); }
 primary_expr(r) ::= LITERAL_FLOAT(token).                                       { fprintf(spkout, "e%d = f.exprLiteral(t%d)\n", r = ++E, token); }
 primary_expr(r) ::= LITERAL_CHAR(token).                                        { fprintf(spkout, "e%d = f.exprLiteral(t%d)\n", r = ++E, token); }
 primary_expr(r) ::= literal_string(expr).                                       { r = expr; }
 primary_expr(r) ::= LPAREN expr(expr) RPAREN.                                   { r = expr; }
-primary_expr(r) ::= LPAREN SPECIFIER(name) RPAREN.                              { fprintf(spkout, "e%d = f.exprName(t%d)\n", r = ++E, name); }
 primary_expr(r) ::= block(expr).                                                { r = expr; }
 //primary_expr(r) ::= LCURLY expr(expr) RCURLY.                                   { fprintf(spkout, "e%d = f.exprCompound(e%d)\n", r = ++E, expr); }
+
+name(r) ::= IDENTIFIER(name).                                                   { fprintf(spkout, "e%d = f.exprName(t%d)\n", r = ++E, name); }
+name(r) ::= LPAREN SPECIFIER(name) RPAREN.                                      { fprintf(spkout, "e%d = f.exprName(t%d)\n", r = ++E, name); }
 
 literal_string(r) ::= LITERAL_STR(token).                                       { fprintf(spkout, "e%d = f.exprLiteral(t%d)\n", r = ++E, token); }
 literal_string(r) ::= literal_string(expr) LITERAL_STR(token).                  { r = expr; fprintf(spkout, "e%d.concat(t%d)\n", r, token); }

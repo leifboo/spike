@@ -50,7 +50,7 @@ downDown(b) {
 }
 
 
-class Zoo {
+class Zoo : Object {
     self yield: tomato {
         return tomato;
     }

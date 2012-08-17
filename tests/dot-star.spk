@@ -1,6 +1,6 @@
 #!/usr/bin/env spike
 
-class Foo {
+class Foo : Object {
     foo() {
         puts("Hello from foo!");
     }

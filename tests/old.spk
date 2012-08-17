@@ -107,7 +107,7 @@ class XBar : Foo {
     }
 }
 
-class Foo {
+class Foo : Object {
     obj secret;
     
     answer() {

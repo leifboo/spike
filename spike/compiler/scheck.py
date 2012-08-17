@@ -8,11 +8,6 @@ from spike.il import *
 
 
 
-declareBuiltInClasses = False #True
-declareObject = False #True
-
-
-
 def checkDeclSpecs(declSpecs, checker, _pass):
 
     specifiers = 0
@@ -355,19 +350,6 @@ def checkMethodDef(stmt, outer, checker, outerPass):
     return
 
 
-def registerSubclass(subclassDef, checker):
-
-    # insert this class onto the superclass's subclass list
-    superclassDef = subclassDef.u.klass.superclassDef
-    superclassDef.subclassDefs.append(subclassDef)
-
-    if superclassDef.u.klass.predefined:
-        # this is a 'root' class
-        checker.rootClassList.append(subclassDef)
-
-    return
-
-
 def checkForSuperclassCycle(aClassDef, checker):
     # Floyd's cycle-finding algorithm
 
@@ -421,7 +403,6 @@ def checkClassDef(stmt, outer, checker, outerPass):
                 ):
                 # for convenience, cache a direct link to the superclass def
                 stmt.u.klass.superclassDef = expr.u._def.stmt
-                registerSubclass(stmt, checker)
             elif expr.sym == 'null':
                 # for class Object, which has no superclass
                 pass
@@ -559,37 +540,6 @@ def newPseudoVariable(pv, st):
     return newExpr
 
 
-def predefinedClassDef(predefClass, checker):
-    from statements import ClassDef
-    from expressions import Name
-    
-    newStmt = ClassDef()
-    newStmt.expr = Name(predefClass.name)
-    newStmt.expr.u._def.stmt = newStmt
-    newStmt.u.klass.predefined = True
-    
-    return newStmt
-
-
-def globalVarDef(name, checker):
-    from statements import VarDef
-    from expressions import Name
-    
-    newStmt = VarDef()
-    newStmt.expr = Name(name)
-    newStmt.expr.u._def.stmt = newStmt
-    
-    return newStmt
-
-
-def declareClass(aClass, predefList, checker):
-    classDef = predefinedClassDef(aClass, checker)
-    checker.st.insert(classDef.expr, checker.requestor)
-    classDef.expr.u._def.initValue = aClass
-    predefList.append(classDef)
-    return
-
-
 def declareBuiltIn(st, requestor):
     
     # XXX: where to exit this scope?
@@ -615,9 +565,6 @@ def check(tree, st, requestor):
     
     assert tree.kind == STMT_COMPOUND, "compound statement expected"
     
-    predefList = []
-    rootClassList = []
-    
     checker = Checker()
     checker.st = st
     checker.requestor = requestor
@@ -625,29 +572,9 @@ def check(tree, st, requestor):
     
     checker.st.enterScope(True) # global scope
     
-    # 'Object' is always needed -- see Parser_NewClassDef()
-    if declareObject: # Well, almost always.
-        declareClass(Object, predefList, checker)
-
-    if declareBuiltInClasses:
-        # XXX: What about the other core classes?
-        declareClass(Array, predefList, checker)
-        declareClass(IdentityDictionary, predefList, checker)
-        declareClass(Symbol, predefList, checker)
-        for cbr in essentialClassBootRec:
-            classVar = heart + cbr.classVarOffset
-            declareClass(classVar[00], predefList, checker)
-        for cbr in classBootRec:
-            classVar = heart + cbr.classVarOffset
-            declareClass(classVar[00], predefList, checker)
-
-    checker.rootClassList = rootClassList
-
     for _pass in range(1, 4):
         for s in tree:
             checkStmt(s, None, checker, _pass)
-
-    dataSize = checker.st.currentScope.context.nDefs
 
     checker.st.exitScope() # global
 

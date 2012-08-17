@@ -1,6 +1,6 @@
 #!/usr/bin/env spike
 
-class One {
+class One : Object {
     test() {
         return 1;
     }
