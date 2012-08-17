@@ -44,9 +44,9 @@ Alpha 2 (i.e., embarrasing stuff)
   
   - unordered keyword expressions
   
-  - require 'self' in method declarators
-  
   - abandon function-style methods?
+
+    + note that this would require replacing "obj.*foo()" with "perform:"
   
   - method return should default to 'self'
   

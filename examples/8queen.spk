@@ -1,19 +1,21 @@
 #!/usr/bin/env spike
 
+// Based on "8queen.st" from Little Smalltalk v1.
+
 class Queen : Object {
     obj row, column, neighbor, boardSize;
     
-    self.build(myNeighbor, c, size) {
-        neighbor = myNeighbor;
+    self build: n col: c size: s {
+        neighbor = n;
         column = c;
         row = 1;
-        boardSize = size;
+        boardSize = s;
         if (neighbor !== null)
-            neighbor.first();
+            neighbor first;
         return self;
     }
 
-    self.check(c, r) {
+    self checkCol: c row: r {
         obj cd;
         
         if (r == row)
@@ -24,37 +26,37 @@ class Queen : Object {
         if (row - cd == r)
             return false;
         if (neighbor !== null)
-            return neighbor.check(c, r);
+            return neighbor checkCol: c row: r;
         return true;
     }
     
-    self.first() {
+    self first {
         row = 1;
-        return self.checkRow();
+        return self checkRow;
     }
 
-    self.next() {
+    self next {
         row = row + 1;
-        return self.checkRow();
+        return self checkRow;
     }
 
-    self.checkRow() {
+    self checkRow {
         if (neighbor === null)
             return row;
         while (row <= boardSize) {
-            if (neighbor.check(column, row))
+            if (neighbor checkCol: column row: row)
                 return row;
             else
                 row = row + 1;
         }
-        if (neighbor.next() === null)
+        if ((neighbor next) === null)
             return null;
-        return self.first();
+        return self first;
     }
 
-    self.printBoard() {
+    self printBoard {
         if (neighbor !== null)
-            neighbor.printBoard();
+            neighbor printBoard;
         printf("Col %d Row %d\n", column, row);
     }
 }
@@ -65,9 +67,9 @@ main(argv) {
     size = 8;
     last = null;
     for (x = 1; x <= size; ++x) {
-        last = Queen.new().build(last, x, size);
+        last = Queen.new build: last col: x size: size;
     }
-    last.first();
-    last.printBoard();
+    last first;
+    last printBoard;
     return 0;
 }

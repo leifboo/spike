@@ -33,10 +33,10 @@ class Four : Three {
 main(argv) {
     obj example1, example2, example3, example4;
     
-    example1 = One.new();
-    example2 = Two.new();
-    example3 = Three.new();
-    example4 = Four.new();
+    example1 = One new;
+    example2 = Two new;
+    example3 = Three new;
+    example4 = Four new;
     
     printf("%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
            example1.test(),

@@ -1,7 +1,7 @@
 #!/usr/bin/env spike
 
 class Main : Object {
-    self.main() {
+    self main {
         ifTrue(2 < 3, [puts("correct-1")]);
         puts(ifTrue(2 < 3, ["correct-2"]));
         ([ :x | puts(x) ])("correct-3");
@@ -9,20 +9,20 @@ class Main : Object {
         ifTrue(2 > 3 || 3 < 4, [puts("correct-5")]);
         ifTrue(2 < 3 && 3 < 4, [puts("correct-6")]);
         ifFalse(2 > 3 && 3 < 4, [puts("correct-7")]);
-        puts(self.test1());
+        puts(self test1);
     }
 
-    self.test1() {
-        self.test2([return "correct-8";]);
+    self test1 {
+        self test2: [return "correct-8";];
         puts("should not print");
     }
     
-    self.test2(aBlock) {
-        self.test3(aBlock);
+    self test2: aBlock {
+        self test3: aBlock;
         puts("should not print");
     }
     
-    self.test3(bBlock) {
+    self test3: bBlock {
         bBlock();
         puts("should not print");
     }
@@ -38,7 +38,7 @@ ifFalse(c, b) {
 
 main(argv) {
     obj m;
-    m = Main.new();
-    m.main();
+    m = Main new;
+    m main;
     return 0;
 }

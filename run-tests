@@ -2,6 +2,7 @@
 
 
 allTests = [
+    "examples/8queen.spk",
     "examples/accgen.spk",
     "examples/fib.spk",
     "examples/fibgen.spk",
@@ -9,11 +10,6 @@ allTests = [
     "examples/foreach.spk",
     "examples/functor.spk",
     "examples/hello.spk",
-    "examples/lst/8queen.spk",
-    "examples/lst/blocks.spk",
-    "examples/lst/cond.spk",
-    "examples/lst/super.spk",
-    "examples/lst/temp.spk",
     "examples/nlines.spk",
     "examples/point.spk",
     "examples/primes.spk",
@@ -32,6 +28,10 @@ allTests = [
     "tests/iter-musings.spk",
     "tests/kw-permutations.spk",
     "tests/leaf.spk",
+    "tests/lst/blocks.spk",
+    "tests/lst/cond.spk",
+    "tests/lst/super.spk",
+    "tests/lst/temp.spk",
     "tests/my-array.spk",
     "tests/no-main.spk",
     "tests/old.spk",
