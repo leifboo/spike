@@ -1,20 +1,181 @@
 #!/usr/bin/env python
 
 
-import sys
+import os, sys
+from os.path import basename, splitext
+from tempfile import mktemp
+from optparse import OptionParser
+
 from spike.compiler import compile
 
 
-def main(argv):
-    
-    if len(argv) < 2:
-        print >>sys.stderr, "Spike Compiler"
-        print >>sys.stderr, "usage: %s FILE ..." % argv[0]
+obj = ".o" # XXX: .obj with VC++
+
+
+prog = None
+options = None
+tempFiles = []
+
+
+def temp(ext):
+    pathname = mktemp() + ext
+    tempFiles.append(pathname)
+    return pathname
+
+
+def remove(pathname):
+    if options.verbose:
+        print >>sys.stderr, "rm %s" % pathname
+    os.remove(pathname)
+    return
+
+
+def assemble(inputPathname, outputPathname):
+    spawn("as", "-o", outputPathname, inputPathname)
+    return
+
+
+def link(objectFiles, outputPathname):
+    # XXX: Spawn linker directly?
+    spawn("cc", "-o", outputPathname, *objectFiles)
+    return
+
+
+class SpawnException(Exception): pass
+
+
+def spawn(*argv):
+    if options.verbose:
+        print >>sys.stderr, ' '.join(argv)
+    status = os.spawnvp(os.P_WAIT, argv[0], argv)
+    if status < 0:
+        raise SpawnException("%s: signal %d" % (argv[0], -status))
+    elif status != 0:
+        raise SpawnException("%s: exit %d" % (argv[0], status))
+    return
+
+
+def cspk(argv):
+
+
+    #
+    # Process options.
+    #
+
+    parser = OptionParser(usage="%prog [options] FILE...")
+    parser.add_option("-c",
+                      action="store_false", dest="link", default=True,
+                      help="compile and assemble, but do not link")
+    parser.add_option("-l", "--library",
+                      action="append", dest="libraries", default=[],
+                      help="search for library LIBNAME", metavar="LIBNAME")
+    parser.add_option("-L", "--library-path",
+                      action="append", dest="libraryPath", default=[],
+                      help="add DIRECTORY to library search path", metavar="DIRECTORY")
+    parser.add_option("-o",
+                      dest="outputFile",
+                      help="place the output into FILE", metavar="FILE")
+    parser.add_option("-S",
+                      action="store_true", dest="compileOnly", default=False,
+                      help="compile only; do not assemble or link")
+    parser.add_option("-v", "--verbose",
+                      action="store_true", dest="verbose", default=False,
+                      help="display the programs invoked by the compiler")
+
+    global options
+    options, inputFiles = parser.parse_args(argv[1:])
+
+    if not inputFiles:
+        print >>sys.stderr, "%s: no input files" % prog
         return 1
 
-    compile(argv[1:], sys.stdout)
+
+    #
+    # Classify input files.
+    #
+    
+    sourceFiles = []
+    objectFiles = []
+    for pathname in inputFiles:
+        ext = splitext(pathname)[1]
+        if ext == ".spk":
+            sourceFiles.append(pathname)
+        else:
+            objectFiles.append(pathname)
+
+
+    #
+    # Determine the output filename.
+    #
+    
+    outputFile = options.outputFile
+    
+    if not outputFile:
+
+        # Since the Spike compiler is usually invoked with multiple
+        # source files, the tradition of deriving a default output
+        # filename from the input filename doesn't make sense.
+        outputFile = "spkout"
+        
+        # The extension depends upon which stages will be executed.
+        if options.compileOnly:
+            outputFile += ".s"
+        elif options.link:
+            pass # XXX: outputFile += ".exe" or ".dll" on Windows
+        else:
+            outputFile += obj
+
+
+    #
+    # Compile.
+    #
+    
+    assemblyFile = outputFile if options.compileOnly else temp(".s")
+    if options.verbose:
+        print >>sys.stderr, ' '.join(
+            ["<compile>", "-o", assemblyFile] + sourceFiles)
+    out = open(assemblyFile, "w")
+    compile(sourceFiles, out)
+    out.close()
+    
+    if options.compileOnly:
+        return 0
+
+
+    #
+    # Assemble.
+    #
+    
+    objectFile = outputFile if not options.link else temp(obj)
+    assemble(assemblyFile, objectFile)
+
+
+    if options.link:
+
+        #
+        # Link.
+        #
+
+        objectFiles.append(objectFile)
+        objectFiles.append("-lm")
+        exeFile = outputFile
+        link(objectFiles, exeFile)
     
     return 0
+
+
+def main(argv):
+    global prog
+    prog = basename(argv[0])
+    
+    try:
+        cspk(argv)
+    except SpawnException, e:
+        print >>sys.stderr, "%s: %s" % (prog, e)
+    finally:
+        for pathname in tempFiles:
+            remove(pathname)
+    return
 
 
 sys.exit(main(sys.argv))
