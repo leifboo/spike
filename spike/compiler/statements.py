@@ -36,7 +36,6 @@ class ClassDef(Stmt):
     expr = property(lambda self: self.name)
     top = property(lambda self: self.body)
     bottom = property(lambda self: self.metaBody)
-    predefined = False
 
 
     def __init__(self, name, superclassName, body, metaBody):

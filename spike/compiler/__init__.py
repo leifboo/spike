@@ -45,8 +45,8 @@ except:
     pass
 
 
-def compile(pathnames, out, err = sys.stderr):
-    from spike.compiler.scheck import check, declareBuiltIn
+def compile(pathnames, out, err = sys.stderr, externals = None):
+    from spike.compiler.scheck import check, declareBuiltIn, declareExternalSymbols
     from spike.compiler.symbols import SymbolTable
     from spike.compiler.cgen import generateCode
     from spike.compiler.statements import Compound, PragmaSource
@@ -55,6 +55,8 @@ def compile(pathnames, out, err = sys.stderr):
     
     st = SymbolTable()
     declareBuiltIn(st, notifier)
+    if externals:
+        declareExternalSymbols(externals, st, notifier)
     
     tree = Compound()
     
@@ -64,7 +66,7 @@ def compile(pathnames, out, err = sys.stderr):
             continue
         tree.append(PragmaSource(pathname))
         tree.extend(t)
-    
+
     check(tree, st, notifier)
     
     notifier.failOnError()

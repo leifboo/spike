@@ -48,6 +48,8 @@ class ModuleCodeGen(CodeGen):
         
         self.nextLabelNum = 1
 
+        self.symbolTable = []
+
         self.intData = []
         self.floatData = []
         self.charData = set()
@@ -379,18 +381,24 @@ def mangle(sym):
 def emitROData(cgen):
 
     out = cgen.out
-    fprintf(out, "\t.section\t.rodata\n")
+
+    # Conceptually, these constant objects are read-only data.  But
+    # they will have relocations against them, so they are not
+    # read-only from the linker's perspective.
+    fprintf(out, "\t.data\n")
+
+    # We don't bother unique-ifying ints, floats, chars or strings;
+    # instead, they have static linkage.
 
     fprintf(out, "\t.align\t4\n")
     for value in cgen.intData:
         fprintf(out,
                 "__int_%ld:\n"
-                "\t.globl\t__int_%ld\n"
                 "\t.type\t__int_%ld, @object\n"
                 "\t.size\t__int_%ld, 8\n"
                 "\t.long\tInteger\n"
                 "\t.long\t%ld\n",
-                value, value, value, value, value)
+                value, value, value, value)
 
     for i, value in enumerate(cgen.floatData):
         # XXX: I would find it comforting if the exact string from
@@ -399,34 +407,31 @@ def emitROData(cgen):
         fprintf(out,
                 "\t.align\t16\n"
                 "__float_%u:\n"
-                "\t.globl\t__float_%u\n"
                 "\t.type\t__float_%u, @object\n"
                 "\t.size\t__float_%u, 12\n"
                 "\t.long\tFloat\n"
                 "\t.double\t%f\n",
-                i, i, i, i, value)
+                i, i, i, value)
 
     fprintf(out, "\t.align\t4\n")
     for value in [ord(c) for c in sorted(list(cgen.charData))]:
         fprintf(out,
                 "__char_%02x:\n"
-                "\t.globl\t__char_%02x\n"
                 "\t.type\t__char_%02x, @object\n"
                 "\t.size\t__char_%02x, 8\n"
                 "\t.long\tChar\n"
                 "\t.long\t%u\n",
-                value, value, value, value, value)
+                value, value, value, value)
 
     for i, value in enumerate(cgen.strData):
         fprintf(out,
                 "\t.align\t4\n"
                 "__str_%u:\n"
-                "\t.globl\t__str_%u\n"
                 "\t.type\t__str_%u, @object\n"
                 "\t.long\tString\n"
                 "\t.long\t%lu\n"
                 "\t.string\t",
-                i, i, i,
+                i, i,
                 len(value) + 1)
         printStringLiteral(value, out)
         fprintf(out,
@@ -434,9 +439,13 @@ def emitROData(cgen):
                 "\t.size\t__str_%u, .-__str_%u\n",
                 i, i)
 
+    # We create a mess of comdat section groups to make Symbols unique
+    # within an executable or shared object.  (...and therefore
+    # globally unique?)
     for sym in cgen.symData:
         name = mangle(sym)
         fprintf(out,
+                '\t.section\tspksym.%s,"aG",@progbits,spksym.%s,comdat\n'
                 "\t.align\t4\n"
                 "__sym_%s:\n"
                 "\t.globl\t__sym_%s\n"
@@ -445,6 +454,7 @@ def emitROData(cgen):
                 "\t.long\t%lu\n"
                 "\t.string\t\"%s\"\n"
                 "\t.size\t__sym_%s, .-__sym_%s\n",
+                name, name,
                 name, name, name,
                 0, # XXX: hash
                 sym,
@@ -454,6 +464,18 @@ def emitROData(cgen):
 
     return
 
+
+#------------------------------------------------------------------------
+# spksymtab
+
+def emitSymbolTable(cgen):
+    out = cgen.out
+    fprintf(out, '\t.section\tspksymtab,"",@progbits\n')
+    for kind, name in cgen.module.symbolTable:
+        fprintf(out, '\t.string\t"%s %s"\n', kind, name)
+    fprintf(out, '\n')
+    return
+    
 
 #------------------------------------------------------------------------
 # expressions
@@ -1185,6 +1207,9 @@ def emitCodeForMethod(stmt, meta, outer):
         if s.kind in (STMT_DEF_CLASS, STMT_DEF_METHOD):
             assert False, "nested class/method not supported by x86 backend"
 
+    if outer.kind != ClassCodeGen:
+        cgen.module.symbolTable.append(('F', functionName))
+
     return
 
 
@@ -1196,14 +1221,15 @@ def emitCFunction(stmt, cgen):
 
     # XXX: comdat
     sym = stmt.u.method.name
-    suffix = ".thunk"
+    thunk = sym + ".thunk"
 
     fprintf(out,
             "\t.data\n"
             "\t.align\t4\n"
-            "%s%s:\n"
-            "\t.type\t%s%s, @object\n",
-            sym, suffix, sym, suffix)
+            "%s:\n"
+            "\t.globl\t%s\n"
+            "\t.type\t%s, @object\n",
+            thunk, thunk, thunk)
 
     t = stmt.decl.specifiers & SPEC_TYPE
     cc = stmt.decl.specifiers & SPEC_CALL_CONV
@@ -1229,9 +1255,12 @@ def emitCFunction(stmt, cgen):
             "\t.long\t%s\n", # pointer
             klass, signature, sym)
 
-    fprintf(out, "\t.size\t%s%s, .-%s%s\n",
-            sym, suffix, sym, suffix)
+    fprintf(out, "\t.size\t%s, .-%s\n",
+            thunk, thunk)
     fprintf(out, "\n")
+
+    # XXX: temporary
+    cgen.module.symbolTable.append(('T', sym))
 
     return
 
@@ -1275,6 +1304,9 @@ def emitCodeForCompound(body, meta, cgen):
                     fprintf(out, "\t.zero\t4\n")
 
                 fprintf(out, "\n")
+
+                cgen.module.symbolTable.append(('v', sym))
+
             else:
                 for expr in s.defList:
                     assert expr.kind == EXPR_NAME, "initializers not allowed here"
@@ -1415,6 +1447,8 @@ def emitCodeForClass(stmt, outer):
         emitCodeForCompound(stmt.bottom, True, cgen)
     emitCodeForCompound(stmt.top, False, cgen)
 
+    cgen.module.symbolTable.append(('C', stmt.expr.sym))
+
     return
 
 
@@ -1439,6 +1473,7 @@ def generateCode(tree, out):
     emitCodeForCompound(tree, False, cgen)
 
     emitROData(cgen)
+    emitSymbolTable(cgen)
 
     return
 

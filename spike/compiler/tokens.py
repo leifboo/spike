@@ -7,7 +7,7 @@ Token = namedtuple('Token', ('text', 'lineNum'))
 
 
 class Integer(Token):
-    value = property(lambda self: literals.Integer(self.text))
+    value = property(lambda self: literals.Integer(self.text, base=0))
 
 
 class Float(Token):

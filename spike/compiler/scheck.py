@@ -577,6 +577,35 @@ def declareBuiltIn(st, requestor):
     return
 
 
+def declareExternalSymbols(symbols, st, requestor):
+
+    for kind, name in symbols:
+
+        if kind == 'C':
+            extDef = ClassDef(Name(name), Name('null'),
+                              Compound(), Compound())
+            extName = extDef.name
+            extName.u._def.stmt = extDef
+        elif kind == 'F':
+            extName = Name(name)
+            extDef = MethodDef(Call(apply, extName, [], []), Compound())
+        elif kind == 'T':
+            # XXX: temporary
+            extName = Name(name)
+            extName.specifiers = (SPEC_STORAGE_EXTERN | SPEC_CALL_CONV_C)
+            extDef = MethodDef(Call(apply, extName, [], []), Compound())
+        elif kind == 'v':
+            extName = Name(name)
+            extDef = VarDef(extName)
+            extName.u._def.stmt = extDef
+        else:
+            assert False
+
+        st.insert(extName, requestor)
+        extName.u._def.level = 1
+
+    return
+        
 
 class Checker(object):
     pass

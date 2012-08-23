@@ -6,6 +6,8 @@ from os.path import basename, splitext
 from tempfile import mktemp
 from optparse import OptionParser
 
+from elftools.elf.elffile import ELFFile
+
 from spike.compiler import compile
 
 
@@ -35,9 +37,12 @@ def assemble(inputPathname, outputPathname):
     return
 
 
-def link(objectFiles, outputPathname):
+def link(objectFiles, unknownFiles, outputPathname):
     # XXX: Spawn linker directly?
-    spawn("cc", "-o", outputPathname, *objectFiles)
+    flags = []
+    if options.debug:
+        flags.append("-g")
+    spawn("cc", "-o", outputPathname, *(objectFiles + unknownFiles + flags))
     return
 
 
@@ -66,6 +71,9 @@ def cspk(argv):
     parser.add_option("-c",
                       action="store_false", dest="link", default=True,
                       help="compile and assemble, but do not link")
+    parser.add_option("-g",
+                      action="store_true", dest="debug", default=False,
+                      help="generate debug information")
     parser.add_option("-l", "--library",
                       action="append", dest="libraries", default=[],
                       help="search for library LIBNAME", metavar="LIBNAME")
@@ -96,12 +104,31 @@ def cspk(argv):
     
     sourceFiles = []
     objectFiles = []
+    unknownFiles = []
     for pathname in inputFiles:
         ext = splitext(pathname)[1]
         if ext == ".spk":
             sourceFiles.append(pathname)
-        else:
+        elif ext == obj:
             objectFiles.append(pathname)
+        else:
+            unknownFiles.append(pathname)
+
+
+    #
+    # Scan object files for externals.
+    #
+
+    externals = []
+    for pathname in objectFiles:
+        elffile = ELFFile(open(pathname, "rb"))
+        section = elffile.get_section_by_name("spksymtab")
+        if section is None:
+            continue
+        data = section.data()
+        externals.extend(
+            [item.split(' ') for item in data.split('\0') if item]
+            )
 
 
     #
@@ -129,14 +156,17 @@ def cspk(argv):
     #
     # Compile.
     #
-    
-    assemblyFile = outputFile if options.compileOnly else temp(".s")
-    if options.verbose:
-        print >>sys.stderr, ' '.join(
-            ["<compile>", "-o", assemblyFile] + sourceFiles)
-    out = open(assemblyFile, "w")
-    compile(sourceFiles, out)
-    out.close()
+
+    if sourceFiles:
+        assemblyFile = outputFile if options.compileOnly else temp(".s")
+        if options.verbose:
+            print >>sys.stderr, ' '.join(
+                ["<compile>", "-o", assemblyFile] + sourceFiles)
+        out = open(assemblyFile, "w")
+        compile(sourceFiles, out, externals = externals)
+        out.close()
+    else:
+        assemblyFile = None
     
     if options.compileOnly:
         return 0
@@ -145,9 +175,12 @@ def cspk(argv):
     #
     # Assemble.
     #
-    
-    objectFile = outputFile if not options.link else temp(obj)
-    assemble(assemblyFile, objectFile)
+
+    if assemblyFile:
+        objectFile = outputFile if not options.link else temp(obj)
+        assemble(assemblyFile, objectFile)
+    else:
+        objectFile = None
 
 
     if options.link:
@@ -156,10 +189,11 @@ def cspk(argv):
         # Link.
         #
 
-        objectFiles.append(objectFile)
+        if objectFile:
+            objectFiles.append(objectFile)
         objectFiles.append("-lm")
         exeFile = outputFile
-        link(objectFiles, exeFile)
+        link(objectFiles, unknownFiles, exeFile)
     
     return 0
 
