@@ -5,6 +5,7 @@ from operators import *
 from expressions import *
 from statements import *
 from spike.il import *
+from naming import *
 
 
 SIZEOF_OBJ_PTR = 4
@@ -127,6 +128,12 @@ def fprintf(stream, format, *args):
     return len(output)
 
 
+def fprintk(stream, format, **kwds):
+    output = format % kwds
+    stream.write(output)
+    return len(output)
+
+
 def fputs(s, stream):
     stream.write(s)
     return 0
@@ -222,10 +229,10 @@ def emitCodeForName(expr, super, cgen):
         builtins = {
             OPCODE_PUSH_SELF:    "%%esi",
             OPCODE_PUSH_SUPER:   "%%esi",
-            OPCODE_PUSH_FALSE:   "$false",
-            OPCODE_PUSH_TRUE:    "$true",
+            OPCODE_PUSH_FALSE:   "$" + mangleExternal('false'),
+            OPCODE_PUSH_TRUE:    "$" + mangleExternal('true'),
             OPCODE_PUSH_NULL:    "$0",
-            OPCODE_PUSH_VOID:    "$void",
+            OPCODE_PUSH_VOID:    "$" + mangleExternal('void'),
             OPCODE_PUSH_CONTEXT: "%%ebp",
             }
         builtin = builtins[pushOpcode]
@@ -238,9 +245,8 @@ def emitCodeForName(expr, super, cgen):
         
     else:
         if pushOpcode == OPCODE_PUSH_GLOBAL:
-            operands = "%s%s" if isVarDef(_def) else "$%s%s"
-            suffix = ".thunk" if ((_def.specifiers & SPEC_STORAGE) == SPEC_STORAGE_EXTERN) and ((_def.specifiers & SPEC_CALL_CONV) in cCallingConventions) else ""
-            emitOpcode(cgen, "pushl", operands, _def.sym, suffix)
+            mode = "" if isVarDef(_def) else "$"
+            emitOpcode(cgen, "pushl", "%s%s", mode, mangleExternal(_def.sym))
         elif pushOpcode == OPCODE_PUSH_INST_VAR:
             emitOpcode(cgen, "pushl", "%d(%%edi)", instVarOffset(_def, cgen))
         elif pushOpcode == OPCODE_PUSH_LOCAL:
@@ -257,7 +263,7 @@ def emitCodeForLiteral(literal, cgen):
     
     if klass is Symbol:
         willEmitSym(literal, cgen)
-        emitOpcode(cgen, "pushl", "$__sym_%s", mangle(literal))
+        emitOpcode(cgen, "pushl", "$%s%s", symPrefix, mangle(literal))
     
     elif klass is Integer:
         # a negative literal int is currently not possible
@@ -267,19 +273,19 @@ def emitCodeForLiteral(literal, cgen):
         else:
             # box
             willEmitInt(literal, cgen)
-            emitOpcode(cgen, "pushl", "$__int_%ld", literal)
+            emitOpcode(cgen, "pushl", "$%s%ld", intPrefix, literal)
     
     elif klass is Float:
         index = willEmitFloat(literal, cgen)
-        emitOpcode(cgen, "pushl", "$__float_%u", index)
+        emitOpcode(cgen, "pushl", "$%s%u", floatPrefix, index)
     
     elif klass == Character:
         willEmitChar(literal, cgen)
-        emitOpcode(cgen, "pushl", "$__char_%02x", ord(literal))
+        emitOpcode(cgen, "pushl", "$%s%02x", charPrefix, ord(literal))
     
     elif klass is String:
         index = willEmitStr(literal, cgen)
-        emitOpcode(cgen, "pushl", "$__str_%u", index)
+        emitOpcode(cgen, "pushl", "$%s%u", strPrefix, index)
     
     else:
         assert False, "unknown class of literal: %r" % klass
@@ -293,7 +299,7 @@ def store(var, cgen):
     storeOpcode = _def.u._def.storeOpcode
     if storeOpcode == OPCODE_STORE_GLOBAL:
         assert isVarDef(_def), "invalid lvalue"
-        emitOpcode(cgen, "movl", "%%eax, %s", _def.sym)
+        emitOpcode(cgen, "movl", "%%eax, %s", mangleExternal(_def.sym))
     elif storeOpcode == OPCODE_STORE_INST_VAR:
         emitOpcode(cgen, "movl", "%%eax, %d(%%edi)", instVarOffset(_def, cgen))
     elif storeOpcode == OPCODE_STORE_LOCAL:
@@ -358,17 +364,17 @@ substDict = {
     '"':  "\\\"",
     }
 
-def printStringLiteral(value, out):
-    fputc('"', out)
+def escapeStringLiteral(value):
+    result = '"'
     for c in value:
         # XXX: numeric escape codes
         subst = substDict.get(c)
         if subst:
-            fputs(subst, out)
+            result += subst
         else:
-            fputc(c, out)
-    fputc('\"', out)
-    return
+            result += c
+    result += '"'
+    return result
 
 
 def mangle(sym):
@@ -376,6 +382,10 @@ def mangle(sym):
     sym = sym.replace(' ', '$$')
     sym = sym.replace(':', '$')
     return sym
+
+
+def mangleExternal(sym):
+    return externalPrefix + sym
 
 
 def emitROData(cgen):
@@ -392,73 +402,77 @@ def emitROData(cgen):
 
     fprintf(out, "\t.align\t4\n")
     for value in cgen.intData:
-        fprintf(out,
-                "__int_%ld:\n"
-                "\t.type\t__int_%ld, @object\n"
-                "\t.size\t__int_%ld, 8\n"
-                "\t.long\tInteger\n"
-                "\t.long\t%ld\n",
-                value, value, value, value)
+        fprintk(out,
+                "%(sym)s:\n"
+                "\t.type\t%(sym)s, @object\n"
+                "\t.size\t%(sym)s, 8\n"
+                "\t.long\t%(klass)s\n"
+                "\t.long\t%(value)d\n",
+                sym = "%s%ld" % (intPrefix, value),
+                klass = mangleExternal('Integer'),
+                value = value)
 
     for i, value in enumerate(cgen.floatData):
         # XXX: I would find it comforting if the exact string from
         # the source was emitted here, or something... spitting out
         # "%f" seems fuzzy.
-        fprintf(out,
+        fprintk(out,
                 "\t.align\t16\n"
-                "__float_%u:\n"
-                "\t.type\t__float_%u, @object\n"
-                "\t.size\t__float_%u, 12\n"
-                "\t.long\tFloat\n"
-                "\t.double\t%f\n",
-                i, i, i, value)
+                "%(sym)s:\n"
+                "\t.type\t%(sym)s, @object\n"
+                "\t.size\t%(sym)s, 12\n"
+                "\t.long\t%(klass)s\n"
+                "\t.double\t%(value)f\n",
+                sym = "%s%u" % (floatPrefix, i),
+                klass = mangleExternal('Float'),
+                value = value)
 
     fprintf(out, "\t.align\t4\n")
     for value in [ord(c) for c in sorted(list(cgen.charData))]:
-        fprintf(out,
-                "__char_%02x:\n"
-                "\t.type\t__char_%02x, @object\n"
-                "\t.size\t__char_%02x, 8\n"
-                "\t.long\tChar\n"
-                "\t.long\t%u\n",
-                value, value, value, value)
+        fprintk(out,
+                "%(sym)s:\n"
+                "\t.type\t%(sym)s, @object\n"
+                "\t.size\t%(sym)s, 8\n"
+                "\t.long\t%(klass)s\n"
+                "\t.long\t%(value)u\n",
+                sym = "%s%02x" % (charPrefix, value),
+                klass = mangleExternal('Char'),
+                value = value)
 
     for i, value in enumerate(cgen.strData):
-        fprintf(out,
+        fprintk(out,
                 "\t.align\t4\n"
-                "__str_%u:\n"
-                "\t.type\t__str_%u, @object\n"
-                "\t.long\tString\n"
-                "\t.long\t%lu\n"
-                "\t.string\t",
-                i, i,
-                len(value) + 1)
-        printStringLiteral(value, out)
-        fprintf(out,
-                "\n"
-                "\t.size\t__str_%u, .-__str_%u\n",
-                i, i)
+                "%(sym)s:\n"
+                "\t.type\t%(sym)s, @object\n"
+                "\t.long\t%(klass)s\n"
+                "\t.long\t%(size)u\n"
+                "\t.string\t%(value)s\n"
+                "\t.size\t%(sym)s, .-%(sym)s\n",
+                sym = "%s%u" % (strPrefix, i),
+                klass = mangleExternal('String'),
+                size = len(value) + 1,
+                value = escapeStringLiteral(value))
 
     # We create a mess of comdat section groups to make Symbols unique
     # within an executable or shared object.  (...and therefore
     # globally unique?)
     for sym in cgen.symData:
         name = mangle(sym)
-        fprintf(out,
-                '\t.section\tspksym.%s,"aG",@progbits,spksym.%s,comdat\n'
+        fprintk(out,
+                '\t.section\tspksym.%(name)s,"aG",@progbits,spksym.%(name)s,comdat\n'
                 "\t.align\t4\n"
-                "__sym_%s:\n"
-                "\t.globl\t__sym_%s\n"
-                "\t.type\t__sym_%s, @object\n"
-                "\t.long\tSymbol\n"
-                "\t.long\t%lu\n"
-                "\t.string\t\"%s\"\n"
-                "\t.size\t__sym_%s, .-__sym_%s\n",
-                name, name,
-                name, name, name,
-                0, # XXX: hash
-                sym,
-                name, name)
+                "%(sym)s:\n"
+                "\t.globl\t%(sym)s\n"
+                "\t.type\t%(sym)s, @object\n"
+                "\t.long\t%(klass)s\n"
+                "\t.long\t%(hash)u\n"
+                "\t.string\t\"%(value)s\"\n"
+                "\t.size\t%(sym)s, .-%(sym)s\n",
+                name = name,
+                sym = symPrefix + name,
+                klass = mangleExternal('Symbol'),
+                hash = 0, # XXX
+                value = sym)
 
     fprintf(out, "\n")
 
@@ -509,7 +523,7 @@ def emitCodeForExpr(expr, super, cgen):
         emitCodeForExpr(expr[-1], super, cgen)
 
     elif expr.kind == EXPR_COMPOUND:
-        emitOpcode(cgen, "pushl", "__spike_xxx_push_context") # XXX
+        emitOpcode(cgen, "pushl", "%%ebp")
         for arg in expr:
             emitCodeForExpr(arg, None, cgen)
         if expr.var:
@@ -608,9 +622,9 @@ def emitCodeForExpr(expr, super, cgen):
         emitCodeForExpr(expr.right, None, cgen)
         pop(cgen)
         emitOpcode(cgen, "cmpl", "(%%esp), %%eax")
-        emitOpcode(cgen, "movl", "$false, (%%esp)")
+        emitOpcode(cgen, "movl", "$%s, (%%esp)", mangleExternal('false'))
         emitOpcode(cgen, "je" if expr.inverted else "jne", ".L%u", getLabel(expr.endLabel, cgen))
-        emitOpcode(cgen, "movl", "$true, (%%esp)")
+        emitOpcode(cgen, "movl", "$%s, (%%esp)", mangleExternal('true'))
 
     elif expr.kind == EXPR_AND:
         emitBranchForExpr(expr.left, False, expr.right.endLabel, expr.right.label, True, cgen)
@@ -812,7 +826,8 @@ def emitBranchForExpr(expr, cond, label, fallThroughLabel, dup, cgen):
             maybeEmitLabel(expr.label, cgen)
             if killCode:
                 if dup:
-                    emitOpcode(cgen, "pushl", "$true" if pushOpcode == OPCODE_PUSH_TRUE else "$false")
+                    emitOpcode(cgen, "pushl", "$%s",
+                               mangleExternal('true' if pushOpcode == OPCODE_PUSH_TRUE else 'false'))
 
                 emitBranch(OPCODE_BRANCH_ALWAYS, label, cgen)
 
@@ -1019,7 +1034,7 @@ def emitCodeForStmt(stmt, nextLabel, breakLabel, continueLabel, cgen):
             emitOpcode(cgen, "pushl", "%%esi") # self
         else:
             # naked function
-            emitOpcode(cgen, "pushl", "$void")
+            emitOpcode(cgen, "pushl", "$%s", mangleExternal('void'))
         
         # store result
         if cgen.varArgList:
@@ -1049,7 +1064,7 @@ def emitCodeForStmt(stmt, nextLabel, breakLabel, continueLabel, cgen):
         if stmt.expr:
             emitCodeForExpr(stmt.expr, None, cgen)
         else:
-            emitOpcode(cgen, "pushl", "$void")
+            emitOpcode(cgen, "pushl", "$%s", mangleExternal('void'))
 
         # save our %eip in BlockContext.pc and resume caller
         emitOpcode(cgen, "call", "SpikeYield")
@@ -1142,8 +1157,7 @@ def emitCodeForMethod(stmt, meta, outer):
 
     out = cgen.out
 
-    obj = ""
-    code = ".code"
+    functionName = mangle(selector)
 
     if outer.kind == ClassCodeGen:
         codeObjectClass = "Method"
@@ -1153,55 +1167,45 @@ def emitCodeForMethod(stmt, meta, outer):
             METHOD_NAMESPACE_RVALUE: ".0.",
             METHOD_NAMESPACE_LVALUE: ".1.",
             }[stmt.u.method.ns]
+        sym = className + suffix + ns + functionName
+        codeSym = sym + ".code"
+        linkage = ""
 
-    elif selector == 'main':
-        codeObjectClass = "Function"
-        className = ""
-        suffix = ""
-        ns = "spike."
     else:
         codeObjectClass = "Function"
-        className = ""
-        suffix = ""
-        ns = ""
-
-    functionName = mangle(selector)
+        sym = mangleExternal(functionName)
+        codeSym = codePrefix + functionName
+        linkage = "\t.globl\t%(sym)s\n"
 
     fprintf(out, "\t.text\n")
-    fprintf(out,
+    fprintk(out,
             "\t.align\t4\n"
-            "%s%s%s%s%s:\n"
-            "\t.globl\t%s%s%s%s%s\n"
-            "\t.type\t%s%s%s%s%s, @object\n"
-            "\t.size\t%s%s%s%s%s, 16\n"
-            "\t.long\t%s\n"
-            "\t.long\t%lu\n"
-            "\t.long\t%lu\n"
-            "\t.long\t%lu\n",
-            className, suffix, ns, functionName, obj,
-            className, suffix, ns, functionName, obj,
-            className, suffix, ns, functionName, obj,
-            className, suffix, ns, functionName, obj,
-            codeObjectClass,
-            cgen.minArgumentCount,
-            cgen.maxArgumentCount + (0x80000000 if cgen.varArgList else 0), cgen.localCount)
-    fprintf(out,
-            "%s%s%s%s%s:\n"
-            "\t.globl\t%s%s%s%s%s\n"
-            "\t.type\t%s%s%s%s%s, @function\n",
-            className, suffix, ns, functionName, code,
-            className, suffix, ns, functionName, code,
-            className, suffix, ns, functionName, code)
+            "%(sym)s:\n"
+            + linkage +
+            "\t.type\t%(sym)s, @object\n"
+            "\t.size\t%(sym)s, 16\n"
+            "\t.long\t%(klass)s\n"
+            "\t.long\t%(minArgumentCount)u\n"
+            "\t.long\t%(maxArgumentCount)u\n"
+            "\t.long\t%(localCount)u\n",
+            sym = sym,
+            klass = mangleExternal(codeObjectClass),
+            minArgumentCount = cgen.minArgumentCount,
+            maxArgumentCount = cgen.maxArgumentCount + (0x80000000 if cgen.varArgList else 0),
+            localCount = cgen.localCount)
+    fprintk(out,
+            "%(sym)s:\n"
+            "\t.type\t%(sym)s, @function\n",
+            sym = codeSym)
 
     emitCodeForArgList(stmt, cgen)
     emitCodeForStmt(body, sentinel.label, None, None, cgen)
     emitCodeForStmt(sentinel, None, None, None, cgen)
 
-    fprintf(out,
-            "\t.size\t%s%s%s%s.code, .-%s%s%s%s.code\n"
+    fprintk(out,
+            "\t.size\t%(sym)s, .-%(sym)s\n"
             "\n",
-            className, suffix, ns, functionName,
-            className, suffix, ns, functionName)
+            sym = codeSym)
 
     for s in body:
         if s.kind in (STMT_DEF_CLASS, STMT_DEF_METHOD):
@@ -1219,17 +1223,16 @@ def emitCFunction(stmt, cgen):
 
     out = cgen.out
 
-    # XXX: comdat
-    sym = stmt.u.method.name
-    thunk = sym + ".thunk"
+    name = stmt.u.method.name
+    sym = mangleExternal(name)
 
-    fprintf(out,
+    fprintk(out,
             "\t.data\n"
             "\t.align\t4\n"
-            "%s:\n"
-            "\t.globl\t%s\n"
-            "\t.type\t%s, @object\n",
-            thunk, thunk, thunk)
+            "%(sym)s:\n"
+            "\t.globl\t%(sym)s\n"
+            "\t.type\t%(sym)s, @object\n",
+            sym = sym)
 
     t = stmt.decl.specifiers & SPEC_TYPE
     cc = stmt.decl.specifiers & SPEC_CALL_CONV
@@ -1250,17 +1253,20 @@ def emitCFunction(stmt, cgen):
         SPEC_CALL_CONV_EXTENSION: 'XFunction',
         }[cc]
 
-    fprintf(out, "\t.long\t%s\n" # klass
+    fprintf(out,
+            "\t.long\t%s\n" # klass
             "\t.long\t%s\n" # signature
             "\t.long\t%s\n", # pointer
-            klass, signature, sym)
+            mangleExternal(klass),
+            mangleExternal(signature),
+            name)
 
-    fprintf(out, "\t.size\t%s, .-%s\n",
-            thunk, thunk)
+    fprintk(out,
+            "\t.size\t%(sym)s, .-%(sym)s\n",
+            sym = sym)
     fprintf(out, "\n")
 
-    # XXX: temporary
-    cgen.module.symbolTable.append(('T', sym))
+    cgen.module.symbolTable.append(('F', name))
 
     return
 
@@ -1294,18 +1300,17 @@ def emitCodeForCompound(body, meta, cgen):
                     assert expr.kind == EXPR_NAME, "initializers not allowed here"
                     if (expr.specifiers & SPEC_STORAGE) == SPEC_STORAGE_EXTERN:
                         continue
-                    sym = expr.sym
-                    fprintf(out,
-                            "%s:\n"
-                            "\t.globl\t%s\n"
-                            "\t.type\t%s, @object\n"
-                            "\t.size\t%s, 4\n",
-                            sym, sym, sym, sym)
+                    fprintk(out,
+                            "%(sym)s:\n"
+                            "\t.globl\t%(sym)s\n"
+                            "\t.type\t%(sym)s, @object\n"
+                            "\t.size\t%(sym)s, 4\n",
+                            sym = mangleExternal(expr.sym))
                     fprintf(out, "\t.zero\t4\n")
 
-                fprintf(out, "\n")
+                    cgen.module.symbolTable.append(('v', expr.sym))
 
-                cgen.module.symbolTable.append(('v', sym))
+                fprintf(out, "\n")
 
             else:
                 for expr in s.defList:
@@ -1326,17 +1331,32 @@ def emitCodeForCompound(body, meta, cgen):
 #------------------------------------------------------------------------
 # classes
 
+def mangleMeta(sym):
+    return metaPrefix + sym
+
+
+def methodTableSym(sym, suffix, ns):
+    return "%s%s.methodTable.%d" % (sym, suffix, ns)
+
+
 def emitCodeForBehaviorObject(classDef, meta, cgen):
     body = classDef.bottom if meta else classDef.top
     out = cgen.out
-    sym = classDef.expr.sym
+    name = classDef.expr.sym
 
     if classDef.u.klass.superclassName.u.ref.definition.u._def.pushOpcode == OPCODE_PUSH_NULL:
-        superSym = None # Class 'Object' has no superclass.
+        superName = None # Class 'Object' has no superclass.
     else:
-        superSym = classDef.u.klass.superclassName.sym
+        superName = classDef.u.klass.superclassName.sym
 
-    suffix = ".class" if meta else ""
+    if meta:
+        suffix = ".class"
+        sym = mangleMeta(name)
+        superSym = mangleMeta(superName) if superName else None
+    else:
+        suffix = ""
+        sym = mangleExternal(name)
+        superSym = mangleExternal(superName) if superName else None
 
     methodTally = [0 for ns in range(NUM_METHOD_NAMESPACES)]
     for ns in range(NUM_METHOD_NAMESPACES):
@@ -1346,23 +1366,23 @@ def emitCodeForBehaviorObject(classDef, meta, cgen):
             if s.kind == STMT_DEF_METHOD and s.u.method.ns == ns:
                 methodTally[ns] += 1
 
-    fprintf(out,
+    fprintk(out,
             "\t.data\n"
-            "\t.align\t4\n")
-
-    fprintf(out, "%s%s:\n"
-            "\t.globl\t%s%s\n"
-            "\t.type\t%s%s, @object\n", sym, suffix, sym, suffix, sym, suffix)
+            "\t.align\t4\n"
+            "%(sym)s:\n"
+            "\t.globl\t%(sym)s\n"
+            "\t.type\t%(sym)s, @object\n",
+            sym = sym)
 
     if meta:
-        fprintf(out, "\t.long\tMetaclass\n") # klass
+        fprintf(out, "\t.long\t%s\n", mangleExternal('Metaclass')) # klass
     else:
-        fprintf(out, "\t.long\t%s.class\n", sym) # klass
+        fprintf(out, "\t.long\t%s\n", mangleMeta(name)) # klass
 
     if superSym: # The metaclass hierarchy mirrors the class hierarchy.
-        fprintf(out, "\t.long\t%s%s\t/* superclass */\n", superSym, suffix) # superclass
+        fprintf(out, "\t.long\t%s\t/* superclass */\n", superSym) # superclass
     elif meta: # The metaclass of 'Object' is a subclass of 'Class'.
-        fprintf(out, "\t.long\tClass\t/* superclass */\n") # superclass
+        fprintf(out, "\t.long\t%s\t/* superclass */\n", mangleExternal('Class')) # superclass
     else: # Class 'Object' has no superclass.
         fprintf(out, "\t.long\t0\t/* superclass */\n") # superclass
 
@@ -1370,8 +1390,8 @@ def emitCodeForBehaviorObject(classDef, meta, cgen):
     for ns in range(NUM_METHOD_NAMESPACES):
         if methodTally[ns]:
             fprintf(out,
-                    "\t.long\t%s%s.methodTable.%d\t/* methodTable[%d] */\t\n",
-                    sym, suffix, ns, ns) # methodTable[ns]
+                    "\t.long\t%s\t/* methodTable[%d] */\t\n",
+                    methodTableSym(name, suffix, ns), ns) # methodTable[ns]
         else:
             fprintf(out,
                     "\t.long\t0\t/* methodTable[%d] */\t\n",
@@ -1383,10 +1403,10 @@ def emitCodeForBehaviorObject(classDef, meta, cgen):
             classDef.u.klass.classVarCount if meta else classDef.u.klass.instVarCount)
 
     if meta:
-        fprintf(out, "\t.long\t%s\t/* thisClass */\n", sym) # thisClass
+        fprintf(out, "\t.long\t%s\t/* thisClass */\n", mangleExternal(name)) # thisClass
     else:
         willEmitSym(classDef.expr.sym, cgen)
-        fprintf(out, "\t.long\t__sym_%s\t/* name */\n", sym) # name
+        fprintf(out, "\t.long\t%s%s\t/* name */\n", symPrefix, name) # name
 
     # XXX: Class objects need slots for class variables up the
     # superclass chain.  To be totally consistent, and robust with
@@ -1395,9 +1415,9 @@ def emitCodeForBehaviorObject(classDef, meta, cgen):
     if not meta:
         fprintf(out, "\t.long\t0,0,0,0,0,0,0,0\t/* XXX class variables */\n")
 
-    fprintf(out,
-            "\t.size\t%s%s, .-%s%s\n",
-            sym, suffix, sym, suffix)
+    fprintk(out,
+            "\t.size\t%(sym)s, .-%(sym)s\n",
+            sym = sym)
 
     # A method table is simply an Array of symbol/method key/value pairs.
 
@@ -1405,15 +1425,14 @@ def emitCodeForBehaviorObject(classDef, meta, cgen):
         if not methodTally[ns]:
             continue
 
-        fprintf(out,
-                "%s%s.methodTable.%d:\n"
-                "\t.globl\t%s%s.methodTable.%d\n"
-                "\t.type\t%s%s.methodTable.%d, @object\n",
-                sym, suffix, ns,
-                sym, suffix, ns,
-                sym, suffix, ns)
+        mts = methodTableSym(name, suffix, ns)
 
-        fprintf(out, "\t.long\tArray\n")
+        fprintk(out,
+                "%(mts)s:\n"
+                "\t.type\t%(mts)s, @object\n",
+                mts = mts)
+
+        fprintf(out, "\t.long\t%s\n", mangleExternal('Array'))
         fprintf(out, "\t.long\t%d\n", 2 * methodTally[ns])
 
         for s in body:
@@ -1422,14 +1441,13 @@ def emitCodeForBehaviorObject(classDef, meta, cgen):
                 willEmitSym(selector, cgen)
                 selector = mangle(selector)
                 fprintf(out,
-                        "\t.long\t__sym_%s, %s%s.%d.%s\n",
-                        selector,
-                        sym, suffix, ns, selector)
+                        "\t.long\t%s%s, %s%s.%d.%s\n",
+                        symPrefix, selector,
+                        name, suffix, ns, selector)
 
-        fprintf(out,
-                "\t.size\t%s%s.methodTable.%d, .-%s%s.methodTable.%d\n",
-                sym, suffix, ns,
-                sym, suffix, ns)
+        fprintk(out,
+                "\t.size\t%(mts)s, .-%(mts)s\n",
+                mts = mts)
 
     fprintf(out, "\n")
 

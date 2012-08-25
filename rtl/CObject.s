@@ -5,7 +5,7 @@ CObject.0.unboxed:
 	.globl	CObject.0.unboxed
 	.type	CObject.0.unboxed, @object
 	.size	CObject.0.unboxed, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0

@@ -5,7 +5,7 @@ Char.0.unboxed:
 	.globl	Char.0.unboxed
 	.type	Char.0.unboxed, @object
 	.size	Char.0.unboxed, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0

@@ -46,12 +46,7 @@ struct Float {
 };
 
 
-extern struct Behavior Float;
-extern Object __sym_typeError;
-extern Object false, true;
-
-
-#define BOOL(cond) ((cond) ? &true : &false)
+#define BOOL(cond) ((cond) ? &__spk_x_true : &__spk_x_false)
 
 
 /*------------------------------------------------------------------------*/
@@ -59,7 +54,7 @@ extern Object false, true;
 
 static struct Float *newFloat(void) {
     struct Float *result = (struct Float *)malloc(sizeof(struct Float));
-    result->base.klass = &Float;
+    result->base.klass = &__spk_x_Float;
     return result;
 }
 
@@ -82,7 +77,7 @@ static Object *Float_binaryOper(struct Float *self, Object *arg0, Oper oper) {
     
     arg = CAST(Float, arg0);
     if (!arg) {
-        SpikeError(&__sym_typeError);
+        SpikeError(&__spk_sym_typeError);
         return 0;
     }
     result = newFloat();
@@ -105,11 +100,11 @@ static Object *Float_binaryLogicalOper(struct Float *self, Object *arg0, Oper op
     if (!arg) switch (oper) {
     case OPER_EQ:
         /* XXX: 0.0 == 0 */
-        return &false;
+        return &__spk_x_false;
     case OPER_NE:
-        return &true;
+        return &__spk_x_true;
     default:
-        SpikeError(&__sym_typeError); /* XXX */
+        SpikeError(&__spk_sym_typeError); /* XXX */
         return 0;
     }
     

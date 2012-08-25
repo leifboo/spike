@@ -5,13 +5,13 @@
 
 SpikeOperSucc:
 	.globl	SpikeOperSucc
-	movl	$__sym___succ__, %edx	# selector
+	movl	$__spk_sym___succ__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperSuccSuper:
 	.globl	SpikeOperSuccSuper
-	movl	$__sym___succ__, %edx	# selector
+	movl	$__spk_sym___succ__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -20,13 +20,13 @@ SpikeOperSuccSuper:
 
 SpikeOperPred:
 	.globl	SpikeOperPred
-	movl	$__sym___pred__, %edx	# selector
+	movl	$__spk_sym___pred__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperPredSuper:
 	.globl	SpikeOperPredSuper
-	movl	$__sym___pred__, %edx	# selector
+	movl	$__spk_sym___pred__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -35,13 +35,13 @@ SpikeOperPredSuper:
 
 SpikeOperAddr:
 	.globl	SpikeOperAddr
-	movl	$__sym___addr__, %edx	# selector
+	movl	$__spk_sym___addr__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperAddrSuper:
 	.globl	SpikeOperAddrSuper
-	movl	$__sym___addr__, %edx	# selector
+	movl	$__spk_sym___addr__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -50,13 +50,13 @@ SpikeOperAddrSuper:
 
 SpikeOperPos:
 	.globl	SpikeOperPos
-	movl	$__sym___pos__, %edx	# selector
+	movl	$__spk_sym___pos__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperPosSuper:
 	.globl	SpikeOperPosSuper
-	movl	$__sym___pos__, %edx	# selector
+	movl	$__spk_sym___pos__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -65,13 +65,13 @@ SpikeOperPosSuper:
 
 SpikeOperNeg:
 	.globl	SpikeOperNeg
-	movl	$__sym___neg__, %edx	# selector
+	movl	$__spk_sym___neg__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperNegSuper:
 	.globl	SpikeOperNegSuper
-	movl	$__sym___neg__, %edx	# selector
+	movl	$__spk_sym___neg__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -80,13 +80,13 @@ SpikeOperNegSuper:
 
 SpikeOperBNeg:
 	.globl	SpikeOperBNeg
-	movl	$__sym___bneg__, %edx	# selector
+	movl	$__spk_sym___bneg__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperBNegSuper:
 	.globl	SpikeOperBNegSuper
-	movl	$__sym___bneg__, %edx	# selector
+	movl	$__spk_sym___bneg__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -95,13 +95,13 @@ SpikeOperBNegSuper:
 
 SpikeOperLNeg:
 	.globl	SpikeOperLNeg
-	movl	$__sym___lneg__, %edx	# selector
+	movl	$__spk_sym___lneg__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperLNegSuper:
 	.globl	SpikeOperLNegSuper
-	movl	$__sym___lneg__, %edx	# selector
+	movl	$__spk_sym___lneg__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -110,13 +110,13 @@ SpikeOperLNegSuper:
 
 SpikeOperMul:
 	.globl	SpikeOperMul
-	movl	$__sym___mul__, %edx	# selector
+	movl	$__spk_sym___mul__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperMulSuper:
 	.globl	SpikeOperMulSuper
-	movl	$__sym___mul__, %edx	# selector
+	movl	$__spk_sym___mul__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -125,13 +125,13 @@ SpikeOperMulSuper:
 
 SpikeOperDiv:
 	.globl	SpikeOperDiv
-	movl	$__sym___div__, %edx	# selector
+	movl	$__spk_sym___div__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperDivSuper:
 	.globl	SpikeOperDivSuper
-	movl	$__sym___div__, %edx	# selector
+	movl	$__spk_sym___div__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -140,13 +140,13 @@ SpikeOperDivSuper:
 
 SpikeOperMod:
 	.globl	SpikeOperMod
-	movl	$__sym___mod__, %edx	# selector
+	movl	$__spk_sym___mod__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperModSuper:
 	.globl	SpikeOperModSuper
-	movl	$__sym___mod__, %edx	# selector
+	movl	$__spk_sym___mod__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -155,13 +155,13 @@ SpikeOperModSuper:
 
 SpikeOperAdd:
 	.globl	SpikeOperAdd
-	movl	$__sym___add__, %edx	# selector
+	movl	$__spk_sym___add__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperAddSuper:
 	.globl	SpikeOperAddSuper
-	movl	$__sym___add__, %edx	# selector
+	movl	$__spk_sym___add__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -170,13 +170,13 @@ SpikeOperAddSuper:
 
 SpikeOperSub:
 	.globl	SpikeOperSub
-	movl	$__sym___sub__, %edx	# selector
+	movl	$__spk_sym___sub__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperSubSuper:
 	.globl	SpikeOperSubSuper
-	movl	$__sym___sub__, %edx	# selector
+	movl	$__spk_sym___sub__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -185,13 +185,13 @@ SpikeOperSubSuper:
 
 SpikeOperLShift:
 	.globl	SpikeOperLShift
-	movl	$__sym___lshift__, %edx	# selector
+	movl	$__spk_sym___lshift__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperLShiftSuper:
 	.globl	SpikeOperLShiftSuper
-	movl	$__sym___lshift__, %edx	# selector
+	movl	$__spk_sym___lshift__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -200,13 +200,13 @@ SpikeOperLShiftSuper:
 
 SpikeOperRShift:
 	.globl	SpikeOperRShift
-	movl	$__sym___rshift__, %edx	# selector
+	movl	$__spk_sym___rshift__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperRShiftSuper:
 	.globl	SpikeOperRShiftSuper
-	movl	$__sym___rshift__, %edx	# selector
+	movl	$__spk_sym___rshift__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -215,13 +215,13 @@ SpikeOperRShiftSuper:
 
 SpikeOperLT:
 	.globl	SpikeOperLT
-	movl	$__sym___lt__, %edx	# selector
+	movl	$__spk_sym___lt__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperLTSuper:
 	.globl	SpikeOperLTSuper
-	movl	$__sym___lt__, %edx	# selector
+	movl	$__spk_sym___lt__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -230,13 +230,13 @@ SpikeOperLTSuper:
 
 SpikeOperGT:
 	.globl	SpikeOperGT
-	movl	$__sym___gt__, %edx	# selector
+	movl	$__spk_sym___gt__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperGTSuper:
 	.globl	SpikeOperGTSuper
-	movl	$__sym___gt__, %edx	# selector
+	movl	$__spk_sym___gt__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -245,13 +245,13 @@ SpikeOperGTSuper:
 
 SpikeOperLE:
 	.globl	SpikeOperLE
-	movl	$__sym___le__, %edx	# selector
+	movl	$__spk_sym___le__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperLESuper:
 	.globl	SpikeOperLESuper
-	movl	$__sym___le__, %edx	# selector
+	movl	$__spk_sym___le__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -260,13 +260,13 @@ SpikeOperLESuper:
 
 SpikeOperGE:
 	.globl	SpikeOperGE
-	movl	$__sym___ge__, %edx	# selector
+	movl	$__spk_sym___ge__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperGESuper:
 	.globl	SpikeOperGESuper
-	movl	$__sym___ge__, %edx	# selector
+	movl	$__spk_sym___ge__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -275,13 +275,13 @@ SpikeOperGESuper:
 
 SpikeOperEq:
 	.globl	SpikeOperEq
-	movl	$__sym___eq__, %edx	# selector
+	movl	$__spk_sym___eq__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperEqSuper:
 	.globl	SpikeOperEqSuper
-	movl	$__sym___eq__, %edx	# selector
+	movl	$__spk_sym___eq__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -290,13 +290,13 @@ SpikeOperEqSuper:
 
 SpikeOperNE:
 	.globl	SpikeOperNE
-	movl	$__sym___ne__, %edx	# selector
+	movl	$__spk_sym___ne__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperNESuper:
 	.globl	SpikeOperNESuper
-	movl	$__sym___ne__, %edx	# selector
+	movl	$__spk_sym___ne__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -305,13 +305,13 @@ SpikeOperNESuper:
 
 SpikeOperBAnd:
 	.globl	SpikeOperBAnd
-	movl	$__sym___band__, %edx	# selector
+	movl	$__spk_sym___band__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperBAndSuper:
 	.globl	SpikeOperBAndSuper
-	movl	$__sym___band__, %edx	# selector
+	movl	$__spk_sym___band__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -320,13 +320,13 @@ SpikeOperBAndSuper:
 
 SpikeOperBXOr:
 	.globl	SpikeOperBXOr
-	movl	$__sym___bxor__, %edx	# selector
+	movl	$__spk_sym___bxor__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperBXOrSuper:
 	.globl	SpikeOperBXOrSuper
-	movl	$__sym___bxor__, %edx	# selector
+	movl	$__spk_sym___bxor__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -335,13 +335,13 @@ SpikeOperBXOrSuper:
 
 SpikeOperBOr:
 	.globl	SpikeOperBOr
-	movl	$__sym___bor__, %edx	# selector
+	movl	$__spk_sym___bor__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeOperBOrSuper:
 	.globl	SpikeOperBOrSuper
-	movl	$__sym___bor__, %edx	# selector
+	movl	$__spk_sym___bor__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -350,12 +350,12 @@ SpikeOperBOrSuper:
 
 SpikeCall:
 	.globl	SpikeCall
-	movl	$__sym___apply__, %edx	# selector
+	movl	$__spk_sym___apply__, %edx	# selector
 	jmp	SpikeSendMessage
 
 SpikeCallSuper:
 	.globl	SpikeCallSuper
-	movl	$__sym___apply__, %edx	# selector
+	movl	$__spk_sym___apply__, %edx	# selector
 	jmp	SpikeSendMessageSuper
 
 
@@ -363,12 +363,12 @@ SpikeCallSuper:
 
 SpikeGetIndex:
 	.globl	SpikeGetIndex
-	movl	$__sym___index__, %edx	# selector
+	movl	$__spk_sym___index__, %edx	# selector
 	jmp	SpikeSendMessage
 
 SpikeGetIndexSuper:
 	.globl	SpikeGetIndexSuper
-	movl	$__sym___index__, %edx	# selector
+	movl	$__spk_sym___index__, %edx	# selector
 	jmp	SpikeSendMessageSuper
 
 
@@ -376,12 +376,12 @@ SpikeGetIndexSuper:
 
 SpikeSetIndex:
 	.globl	SpikeSetIndex
-	movl	$__sym___index__, %edx	# selector
+	movl	$__spk_sym___index__, %edx	# selector
 	jmp	SpikeSendMessageLValue
 
 SpikeSetIndexSuper:
 	.globl	SpikeSetIndexSuper
-	movl	$__sym___index__, %edx	# selector
+	movl	$__spk_sym___index__, %edx	# selector
 	jmp	SpikeSendMessageSuperLValue
 
 
@@ -389,13 +389,13 @@ SpikeSetIndexSuper:
 
 SpikeGetInd:
 	.globl	SpikeGetInd
-	movl	$__sym___ind__, %edx	# selector
+	movl	$__spk_sym___ind__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessage
 
 SpikeGetIndSuper:
 	.globl	SpikeGetIndSuper
-	movl	$__sym___ind__, %edx	# selector
+	movl	$__spk_sym___ind__, %edx	# selector
 	movl	$0, %ecx		# argument count
 	jmp	SpikeSendMessageSuper
 
@@ -404,13 +404,13 @@ SpikeGetIndSuper:
 
 SpikeSetInd:
 	.globl	SpikeSetInd
-	movl	$__sym___ind__, %edx	# selector
+	movl	$__spk_sym___ind__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageLValue
 
 SpikeSetIndSuper:
 	.globl	SpikeSetIndSuper
-	movl	$__sym___ind__, %edx	# selector
+	movl	$__spk_sym___ind__, %edx	# selector
 	movl	$1, %ecx		# argument count
 	jmp	SpikeSendMessageSuperLValue
 
@@ -527,9 +527,9 @@ lookupMethod:
 /* lookup failed */
 	popl	%edx
 	popl	%ecx
-	cmpl	$__sym_doesNotUnderstand$, %edx
+	cmpl	$__spk_sym_doesNotUnderstand$, %edx
 	jne	createActualMessage
-	pushl	$__sym_doesNotUnderstand$
+	pushl	$__spk_sym_doesNotUnderstand$
 	call	SpikeError
 
 createActualMessage:
@@ -552,7 +552,7 @@ createActualMessage:
 
 /* lookup doesNotUnderstand: */
 	movl	$0, %edi	# rvalue namespace
-	movl	$__sym_doesNotUnderstand$, %edx  # new selector
+	movl	$__spk_sym_doesNotUnderstand$, %edx  # new selector
 	movl	$1, %ecx	# new argument count
 	call	SpikeGetClass 	# start over
 	jmp	lookupMethod

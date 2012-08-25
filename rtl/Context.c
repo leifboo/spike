@@ -5,9 +5,6 @@
 #include <string.h>
 
 
-extern struct Behavior BlockContext, Closure, Array;
-
-
 struct Context *SpikeCreateBlockContext(
     void *const pc,
     size_t argumentCount,
@@ -18,7 +15,7 @@ struct Context *SpikeCreateBlockContext(
     
     newContext = (struct Context *)calloc(1, offsetof(struct Context, method));
     
-    newContext->base.klass = &BlockContext;
+    newContext->base.klass = &__spk_x_BlockContext;
     newContext->caller = 0;
     newContext->homeContext = homeContext;
     newContext->argumentCount = argumentCount;
@@ -46,7 +43,7 @@ struct Context *SpikeCreateClosure(struct Context *blockContext) {
     memcpy(newContext, homeContext, size);
     
     /* reset certain fields */
-    newContext->base.klass = &Closure;
+    newContext->base.klass = &__spk_x_Closure;
     newContext->caller = 0;
     newContext->homeContext = newContext;
     newContext->stackBase = 0;
@@ -150,7 +147,7 @@ void SpikeMoveVarArgs(struct Context *context) {
     
     /* create the variable argument array */
     varArgArray = (struct Array *)calloc(1, offsetof(struct Array, item[varArgCount]));
-    varArgArray->base.klass = &Array;
+    varArgArray->base.klass = &__spk_x_Array;
     varArgArray->size = varArgCount;
     
     /* copy & reverse arguments from stack */

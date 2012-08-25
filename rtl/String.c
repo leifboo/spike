@@ -57,12 +57,7 @@ struct Char {
 extern void SpikeError(Object *);
 
 
-extern struct Behavior String, Char;
-extern Object __sym_typeError, __sym_rangeError;
-extern Object false, true;
-
-
-#define BOOL(cond) ((cond) ? &true : &false)
+#define BOOL(cond) ((cond) ? &__spk_x_true : &__spk_x_false)
 #define STR(op) ((char *)(op)->str)
 #define LEN(op) ((op)->size - 1)
 
@@ -79,11 +74,11 @@ static Object *String_binaryLogicalOper(struct String *self, Object *arg0, Oper 
         switch (oper) {
         case OPER_EQ:
             /* XXX: 0 == 0.0 */
-            return &false;
+            return &__spk_x_false;
         case OPER_NE:
-            return &true;
+            return &__spk_x_true;
         default:
-            SpikeError(&__sym_typeError);
+            SpikeError(&__spk_sym_typeError);
             return 0;
         }
     }
@@ -108,7 +103,7 @@ struct String *String_fromCStringAndLength(const char *str, size_t len) {
     result = (struct String *)malloc(sizeof(struct String) + len);
     if (!result)
         return 0;
-    result->base.klass = &String;
+    result->base.klass = &__spk_x_String;
     result->size = len + 1;
     buffer = STR(result);
     if (str)
@@ -127,7 +122,7 @@ struct Char *Char_fromCChar(char c) {
     struct Char *result;
 
     result = (struct Char *)malloc(sizeof(struct Char));
-    result->base.klass = &Char;
+    result->base.klass = &__spk_x_Char;
     result->value = c;
     return result;
 }
@@ -149,14 +144,14 @@ Object *String_add(struct String *self, Object *arg0) {
     
     arg = CAST(String, arg0);
     if (!arg) {
-        SpikeError(&__sym_typeError);
+        SpikeError(&__spk_sym_typeError);
         return 0;
     }
     resultLen = LEN(self) + LEN(arg);
     result = (struct String *)malloc(sizeof(struct String) + resultLen);
     if (!result)
         return 0;
-    result->base.klass = &String;
+    result->base.klass = &__spk_x_String;
     result->size = resultLen + 1;
     memcpy(STR(result), STR(self), LEN(self));
     memcpy(STR(result) + LEN(self), STR(arg), arg->size);
@@ -196,13 +191,13 @@ Object *String_ne(struct String *self, Object *arg0) {
 /* OPER_GET_ITEM */
 Object *String_item(struct String *self, int index) {
     if ((index & 3) != 2) {
-        SpikeError(&__sym_typeError);
+        SpikeError(&__spk_sym_typeError);
         return 0;
     }
     index >>= 2;
 
     if (index < 0 || LEN(self) <= (size_t)index) {
-        SpikeError(&__sym_rangeError);
+        SpikeError(&__spk_sym_rangeError);
         return 0;
     }
     return (Object *)Char_fromCChar(STR(self)[index]);
@@ -265,7 +260,7 @@ Object *String_fromInteger(int anInteger) {
     
 #if 0 /* XXX: already unboxed -- no type check */
     if ((anInteger & 3) != 2) {
-        SpikeError(&__sym_typeError);
+        SpikeError(&__spk_sym_typeError);
         return 0;
     }
     anInteger >>= 2;

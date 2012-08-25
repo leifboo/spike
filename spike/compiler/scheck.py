@@ -589,11 +589,6 @@ def declareExternalSymbols(symbols, st, requestor):
         elif kind == 'F':
             extName = Name(name)
             extDef = MethodDef(Call(apply, extName, [], []), Compound())
-        elif kind == 'T':
-            # XXX: temporary
-            extName = Name(name)
-            extName.specifiers = (SPEC_STORAGE_EXTERN | SPEC_CALL_CONV_C)
-            extDef = MethodDef(Call(apply, extName, [], []), Compound())
         elif kind == 'v':
             extName = Name(name)
             extDef = VarDef(extName)

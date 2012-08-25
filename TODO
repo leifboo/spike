@@ -26,8 +26,6 @@ Alpha 2 (i.e., embarrasing stuff)
 
   - type checking, more types
 
-  - related: name mangling
-  
   - CMethod?
 
 * PIC code
@@ -43,10 +41,6 @@ Alpha 2 (i.e., embarrasing stuff)
     + do we really need Symbol?
   
   - unordered keyword expressions
-  
-  - abandon function-style methods?
-
-    + note that this would require replacing "obj.*foo()" with "perform:"
   
   - allow stmt-list-expr ?
 

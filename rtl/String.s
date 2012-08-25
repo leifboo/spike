@@ -5,7 +5,7 @@ String.0.unboxed:
 	.globl	String.0.unboxed
 	.type	String.0.unboxed, @object
 	.size	String.0.unboxed, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0

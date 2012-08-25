@@ -5,7 +5,7 @@ CFunction.0.__apply__:
 	.globl	CFunction.0.__apply__
 	.type	CFunction.0.__apply__, @object
 	.size	CFunction.0.__apply__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	0		# minArgumentCount
 	.long	0x80000000	# maxArgumentCount
 	.long	0		# localCount
@@ -18,7 +18,7 @@ CFunction.0.__apply__.code:
 	jmp	.L2
 .L1:
 	pushl	64(%ebp,%esi,4)	# push arg
-	movl	$__sym_unboxed, %edx
+	movl	$__spk_sym_unboxed, %edx
 	call	SpikeGetAttr	# unbox arg
 	cmpl	$4, %ecx	# replace fake obj result with real one
 	je	.L3
@@ -42,7 +42,7 @@ CFunction.0.__apply__.code:
 	orl	$3, %eax
 	pushl	(%edi)		# receiver = signature
 	pushl	%eax		# arg
-	movl	$__sym_box$, %edx
+	movl	$__spk_sym_box$, %edx
 	movl	$1, %ecx	# argument count
 	call	SpikeSendMessage
 	movl	12(%ebp), %edx	# get argumentCount
@@ -61,7 +61,7 @@ CFunction.0.unboxed:
 	.globl	CFunction.0.unboxed
 	.type	CFunction.0.unboxed, @object
 	.size	CFunction.0.unboxed, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0

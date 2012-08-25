@@ -5,7 +5,7 @@ Float.0.unboxed:
 	.globl	Float.0.unboxed
 	.type	Float.0.unboxed, @object
 	.size	Float.0.unboxed, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0

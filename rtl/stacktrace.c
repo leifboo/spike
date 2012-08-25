@@ -10,9 +10,6 @@ struct Class {
 };
 
 
-extern struct Behavior Class;
-
-
 static const char *behaviorNameAsCString(struct Behavior *behavior) {
     struct Class *c = CAST(Class, behavior);
     return c ? c->name->str : "??";

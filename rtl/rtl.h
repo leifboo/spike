@@ -74,7 +74,23 @@ extern struct Symbol *SpikeFindSelectorOfMethod(struct Behavior *behavior, struc
 extern struct Object *SpikeCast(struct Behavior *target, struct Object *object);
 
 
-#define CAST(c, o) ((struct c *)SpikeCast(&(c), (struct Object *)(o)))
+extern struct Behavior
+    __spk_x_Array,
+    __spk_x_BlockContext,
+    __spk_x_Char,
+    __spk_x_Class,
+    __spk_x_Closure,
+    __spk_x_Float,
+    __spk_x_Message,
+    __spk_x_Metaclass,
+    __spk_x_String;
+
+extern struct Object __spk_sym_rangeError, __spk_sym_typeError;
+
+extern struct Object __spk_x_false, __spk_x_true;
+
+
+#define CAST(c, o) ((struct c *)SpikeCast(&(__spk_x_ ## c), (struct Object *)(o)))
 
 
 #endif /* __spike_rtl_h__ */

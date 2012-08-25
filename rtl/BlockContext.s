@@ -5,7 +5,7 @@ BlockContext.0.__apply__:
 	.globl	BlockContext.0.__apply__
 	.type	BlockContext.0.__apply__, @object
 	.size	BlockContext.0.__apply__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	0		# minArgumentCount
 	.long	0x80000000	# maxArgumentCount
 	.long	0		# localCount
@@ -17,7 +17,7 @@ BlockContext.0.__apply__.code:
 	movl	12(%ebp), %edx	# thisContext.argumentCount
 	cmpl	12(%esi), %edx	#   == self.argumentCount ?
 	je	.L1
-	pushl	$__sym_wrongNumberOfArguments
+	pushl	$__spk_sym_wrongNumberOfArguments
 	call	SpikeError
 
 .L1:
@@ -49,7 +49,7 @@ BlockContext.0.closure:
 	.globl	BlockContext.0.closure
 	.type	BlockContext.0.closure, @object
 	.size	BlockContext.0.closure, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0

@@ -10,7 +10,7 @@ Integer.0.__succ__:
 	.globl	Integer.0.__succ__
 	.type	Integer.0.__succ__, @object
 	.size	Integer.0.__succ__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0
@@ -28,7 +28,7 @@ Integer.0.__pred__:
 	.globl	Integer.0.__pred__
 	.type	Integer.0.__pred__, @object
 	.size	Integer.0.__pred__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0
@@ -46,7 +46,7 @@ Integer.0.__pos__:
 	.globl	Integer.0.__pos__
 	.type	Integer.0.__pos__, @object
 	.size	Integer.0.__pos__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0
@@ -63,7 +63,7 @@ Integer.0.__neg__:
 	.globl	Integer.0.__neg__
 	.type	Integer.0.__neg__, @object
 	.size	Integer.0.__neg__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0
@@ -82,7 +82,7 @@ Integer.0.__bneg__:
 	.globl	Integer.0.__bneg__
 	.type	Integer.0.__bneg__, @object
 	.size	Integer.0.__bneg__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0
@@ -108,7 +108,7 @@ binaryOperInit:
 	andl	$3, %edx	# test for SmallInteger
 	cmpl	$2, %edx
 	je	.L1
-	pushl	$__sym_typeError
+	pushl	$__spk_sym_typeError
 	call	SpikeError
 .L1:
 	sarl	$2, %esi	# unbox self
@@ -123,7 +123,7 @@ Integer.0.__mul__:
 	.globl	Integer.0.__mul__
 	.type	Integer.0.__mul__, @object
 	.size	Integer.0.__mul__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -144,7 +144,7 @@ Integer.0.__div__:
 	.globl	Integer.0.__div__
 	.type	Integer.0.__div__, @object
 	.size	Integer.0.__div__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -168,7 +168,7 @@ Integer.0.__mod__:
 	.globl	Integer.0.__mod__
 	.type	Integer.0.__mod__, @object
 	.size	Integer.0.__mod__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -192,7 +192,7 @@ Integer.0.__add__:
 	.globl	Integer.0.__add__
 	.type	Integer.0.__add__, @object
 	.size	Integer.0.__add__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -213,7 +213,7 @@ Integer.0.__sub__:
 	.globl	Integer.0.__sub__
 	.type	Integer.0.__sub__, @object
 	.size	Integer.0.__sub__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -234,7 +234,7 @@ Integer.0.__lshift__:
 	.globl	Integer.0.__lshift__
 	.type	Integer.0.__lshift__, @object
 	.size	Integer.0.__lshift__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -256,7 +256,7 @@ Integer.0.__rshift__:
 	.globl	Integer.0.__rshift__
 	.type	Integer.0.__rshift__, @object
 	.size	Integer.0.__rshift__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -278,7 +278,7 @@ Integer.0.__band__:
 	.globl	Integer.0.__band__
 	.type	Integer.0.__band__, @object
 	.size	Integer.0.__band__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -299,7 +299,7 @@ Integer.0.__bxor__:
 	.globl	Integer.0.__bxor__
 	.type	Integer.0.__bxor__, @object
 	.size	Integer.0.__bxor__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -320,7 +320,7 @@ Integer.0.__bor__:
 	.globl	Integer.0.__bor__
 	.type	Integer.0.__bor__, @object
 	.size	Integer.0.__bor__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -347,7 +347,7 @@ Integer.0.__lt__:
 	.globl	Integer.0.__lt__
 	.type	Integer.0.__lt__, @object
 	.size	Integer.0.__lt__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -355,10 +355,10 @@ Integer.0.__lt__.code:
 	.globl	Integer.0.__lt__.code
 	.type	Integer.0.__lt__.code, @function
 	call	binaryOperInit
-	movl	$true, 68(%ebp)
+	movl	$__spk_x_true, 68(%ebp)
 	cmpl	%eax, %esi
 	jl	.L2
-	movl	$false, 68(%ebp)
+	movl	$__spk_x_false, 68(%ebp)
 .L2:
 	ret
 	.size	Integer.0.__lt__.code, .-Integer.0.__lt__.code
@@ -369,7 +369,7 @@ Integer.0.__gt__:
 	.globl	Integer.0.__gt__
 	.type	Integer.0.__gt__, @object
 	.size	Integer.0.__gt__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -377,10 +377,10 @@ Integer.0.__gt__.code:
 	.globl	Integer.0.__gt__.code
 	.type	Integer.0.__gt__.code, @function
 	call	binaryOperInit
-	movl	$true, 68(%ebp)
+	movl	$__spk_x_true, 68(%ebp)
 	cmpl	%eax, %esi
 	jg	.L3
-	movl	$false, 68(%ebp)
+	movl	$__spk_x_false, 68(%ebp)
 .L3:
 	ret
 	.size	Integer.0.__gt__.code, .-Integer.0.__gt__.code
@@ -391,7 +391,7 @@ Integer.0.__le__:
 	.globl	Integer.0.__le__
 	.type	Integer.0.__le__, @object
 	.size	Integer.0.__le__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -399,10 +399,10 @@ Integer.0.__le__.code:
 	.globl	Integer.0.__le__.code
 	.type	Integer.0.__le__.code, @function
 	call	binaryOperInit
-	movl	$true, 68(%ebp)
+	movl	$__spk_x_true, 68(%ebp)
 	cmpl	%eax, %esi
 	jle	.L4
-	movl	$false, 68(%ebp)
+	movl	$__spk_x_false, 68(%ebp)
 .L4:
 	ret
 	.size	Integer.0.__le__.code, .-Integer.0.__le__.code
@@ -413,7 +413,7 @@ Integer.0.__ge__:
 	.globl	Integer.0.__ge__
 	.type	Integer.0.__ge__, @object
 	.size	Integer.0.__ge__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -421,10 +421,10 @@ Integer.0.__ge__.code:
 	.globl	Integer.0.__ge__.code
 	.type	Integer.0.__ge__.code, @function
 	call	binaryOperInit
-	movl	$true, 68(%ebp)
+	movl	$__spk_x_true, 68(%ebp)
 	cmpl	%eax, %esi
 	jge	.L5
-	movl	$false, 68(%ebp)
+	movl	$__spk_x_false, 68(%ebp)
 .L5:
 	ret
 	.size	Integer.0.__ge__.code, .-Integer.0.__ge__.code
@@ -435,7 +435,7 @@ Integer.0.__eq__:
 	.globl	Integer.0.__eq__
 	.type	Integer.0.__eq__, @object
 	.size	Integer.0.__eq__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -443,10 +443,10 @@ Integer.0.__eq__.code:
 	.globl	Integer.0.__eq__.code
 	.type	Integer.0.__eq__.code, @function
 	call	binaryOperInit
-	movl	$true, 68(%ebp)
+	movl	$__spk_x_true, 68(%ebp)
 	cmpl	%eax, %esi
 	je	.L6
-	movl	$false, 68(%ebp)
+	movl	$__spk_x_false, 68(%ebp)
 .L6:
 	ret
 	.size	Integer.0.__eq__.code, .-Integer.0.__eq__.code
@@ -457,7 +457,7 @@ Integer.0.__ne__:
 	.globl	Integer.0.__ne__
 	.type	Integer.0.__ne__, @object
 	.size	Integer.0.__ne__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -465,10 +465,10 @@ Integer.0.__ne__.code:
 	.globl	Integer.0.__ne__.code
 	.type	Integer.0.__ne__.code, @function
 	call	binaryOperInit
-	movl	$true, 68(%ebp)
+	movl	$__spk_x_true, 68(%ebp)
 	cmpl	%eax, %esi
 	jne	.L7
-	movl	$false, 68(%ebp)
+	movl	$__spk_x_false, 68(%ebp)
 .L7:
 	ret
 	.size	Integer.0.__ne__.code, .-Integer.0.__ne__.code
@@ -485,7 +485,7 @@ Integer.class.0.box$:
 	.globl	Integer.class.0.box$
 	.type	Integer.class.0.box$, @object
 	.size	Integer.class.0.box$, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -514,7 +514,7 @@ Integer.0.unboxed:
 	.globl	Integer.0.unboxed
 	.type	Integer.0.unboxed, @object
 	.size	Integer.0.unboxed, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0

@@ -67,7 +67,7 @@ newMethodContext:
 	addl	8(%edi), %eax	# add localCount
 	movl	%eax, 60(%esp)	# -> size
 
-	movl	$MethodContext, (%esp)	# -> klass is-a pointer
+	movl	$__spk_x_MethodContext, (%esp)	# -> klass is-a pointer
 	movl	%ebp, 4(%esp)	# -> caller
 	movl	%esp, 8(%esp)	# -> homeContext
 
@@ -125,5 +125,5 @@ newMethodContext:
 
 
 wrongNumberOfArguments:
-	pushl	$__sym_wrongNumberOfArguments
+	pushl	$__spk_sym_wrongNumberOfArguments
 	call	SpikeError

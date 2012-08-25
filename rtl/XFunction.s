@@ -5,7 +5,7 @@ XFunction.0.__apply__:
 	.globl	XFunction.0.__apply__
 	.type	XFunction.0.__apply__, @object
 	.size	XFunction.0.__apply__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	0		# minArgumentCount
 	.long	0x80000000	# maxArgumentCount
 	.long	0		# localCount
@@ -44,7 +44,7 @@ XFunction.0.unboxed:
 	.globl	XFunction.0.unboxed
 	.type	XFunction.0.unboxed, @object
 	.size	XFunction.0.unboxed, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0

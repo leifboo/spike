@@ -8,9 +8,6 @@
 struct Pair { struct Symbol *selector; struct Method *method; };
 
 
-extern struct Behavior Array, Message, Metaclass;
-
-
 struct Method *SpikeLookupMethod(
     struct Behavior *behavior,
     unsigned int ns,
@@ -24,7 +21,7 @@ struct Method *SpikeLookupMethod(
     fprintf(stderr,
             "@@@ lookup %s in %s\n",
             (char *)selector->str,
-            behavior->base.klass == &Metaclass
+            behavior->base.klass == &__spk_x_Metaclass
             ? "metaclass"
             : (*((struct Symbol **)(behavior + 1)))->str);
 #endif
@@ -119,14 +116,14 @@ struct Message *SpikeCreateActualMessage(
     arguments = (struct Array *)calloc(1, offsetof(struct Array, item[argumentCount]));
     message = (struct Message *)calloc(1, sizeof(struct Message));
     
-    arguments->base.klass = &Array;
+    arguments->base.klass = &__spk_x_Array;
     arguments->size = argumentCount;
     
     /* copy & reverse arguments from stack */
     for (i = 0; i < argumentCount; ++i)
         arguments->item[i] = arg[argumentCount - i - 1];
     
-    message->base.klass = &Message;
+    message->base.klass = &__spk_x_Message;
     message->ns = (ns << 2) | 2; /* box */
     message->selector = selector;
     message->arguments = arguments;

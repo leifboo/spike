@@ -8,7 +8,7 @@ Object.0.class:
 	.globl	Object.0.class
 	.type	Object.0.class, @object
 	.size	Object.0.class, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0
@@ -28,7 +28,7 @@ SpikeGetClass:
 	cmpl	$0, %esi	# test for null
 	jne	.L11
 
-	movl	$Null, %ebx
+	movl	$__spk_x_Null, %ebx
 	ret
 .L11:
 	movl	%esi, %eax
@@ -42,16 +42,16 @@ SpikeGetClass:
 	cmpl	$2, %eax	# test for SmallInteger
 	jne	.L13
 
-	movl	$Integer, %ebx
+	movl	$__spk_x_Integer, %ebx
 	ret
 .L13:
 	cmpl	$3, %eax	# test for CObject (aligned pointer)
 	jne	.L14
 
-	movl	$CObject, %ebx
+	movl	$__spk_x_CObject, %ebx
 	ret
 .L14:
-	pushl	$__sym_badObjectPointer
+	pushl	$__spk_sym_badObjectPointer
 	call	SpikeError
 	movl	$0, %ebx
 	ret
@@ -68,7 +68,7 @@ Object.class.0.basicNew$:
 	.globl	Object.class.0.basicNew$
 	.type	Object.class.0.basicNew$, @object
 	.size	Object.class.0.basicNew$, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -83,7 +83,7 @@ Object.class.0.basicNew$.code:
 	cmpl	$2, %eax
 	je	.L2
 .L1:
-	pushl	$__sym_typeError
+	pushl	$__spk_sym_typeError
 	call	SpikeError
 
 .L2:
@@ -130,7 +130,7 @@ Object.class.0.box$:
 	.globl	Object.class.0.box$
 	.type	Object.class.0.box$, @object
 	.size	Object.class.0.box$, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -157,7 +157,7 @@ Object.0.unboxed:
 	.globl	Object.0.unboxed
 	.type	Object.0.unboxed, @object
 	.size	Object.0.unboxed, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0

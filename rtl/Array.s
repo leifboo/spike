@@ -12,9 +12,9 @@ SpikePushVarArgs:
 
 	movl	4(%esp), %eax	# check arg type
 	movl	(%eax), %eax
-	cmpl	$Array, %eax
+	cmpl	$__spk_x_Array, %eax
 	je	.L8
-	pushl	$__sym_typeError
+	pushl	$__spk_sym_typeError
 	call	SpikeError
 .L8:
 	movl	4(%esp), %eax	# get array
@@ -91,7 +91,7 @@ Array.0.init$:
 	.globl	Array.0.init$
 	.type	Array.0.init$, @object
 	.size	Array.0.init$, 16
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -103,7 +103,7 @@ Array.0.init$.code:
 	andl	$3, %eax	# test for SmallInteger
 	cmpl	$2, %eax
 	je	.L1
-	pushl	$__sym_typeError
+	pushl	$__spk_sym_typeError
 	call	SpikeError
 .L1:
 	sarl	$2, %edx	# unbox size
@@ -116,7 +116,7 @@ Array.0.size:
 	.globl	Array.0.size
 	.type	Array.0.size, @object
 	.size	Array.0.size, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	0
 	.long	0
 	.long	0
@@ -135,7 +135,7 @@ Array.0.__index__:
 	.globl	Array.0.__index__
 	.type	Array.0.__index__, @object
 	.size	Array.0.__index__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	1
 	.long	1
 	.long	0
@@ -154,7 +154,7 @@ Array.1.__index__:
 	.globl	Array.1.__index__
 	.type	Array.1.__index__, @object
 	.size	Array.1.__index__, 4
-	.long	Method
+	.long	__spk_x_Method
 	.long	2
 	.long	2
 	.long	0
@@ -176,7 +176,7 @@ typeRangeCheck:
 	andl	$3, %eax	# test for SmallInteger
 	cmpl	$2, %eax
 	je	.L2
-	pushl	$__sym_typeError
+	pushl	$__spk_sym_typeError
 	call	SpikeError
 .L2:
 	sarl	$2, %edx	# unbox index arg
@@ -186,7 +186,7 @@ typeRangeCheck:
 	cmpl	%edx, %eax
 	ja	.L4
 .L3:
-	pushl	$__sym_rangeError
+	pushl	$__spk_sym_rangeError
 	call	SpikeError
 .L4:
 /* tally number of instance variables in %eax */

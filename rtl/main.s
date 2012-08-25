@@ -10,7 +10,7 @@ main:
 /* allocate and initialize the first Context */
 	leal	-64(%esp), %esp
 	movl	$0, %eax
-	movl	$MethodContext, (%esp)	# -> klass is-a pointer
+	movl	$__spk_x_MethodContext, (%esp)	# -> klass is-a pointer
 	movl	%eax, 4(%esp)	# 0 -> caller
 	movl	%esp, 8(%esp)	# -> homeContext
 	movl	%eax, 12(%esp)	# 0 -> argumentCount
@@ -29,18 +29,18 @@ main:
 	movl	%esp, %ebp
 	movl	%ebp, %ebx
 
-	pushl	$spike.main	# receiver / space for result
+	pushl	$__spk_x_main	# receiver / space for result
 	pushl	$0		# XXX: args
 	movl	$1, %ecx
 	call	SpikeCall	# call 'main' object
 	popl	%eax		# get result
-	cmpl	$void, %eax	# check for void
+	cmpl	$__spk_x_void, %eax	# check for void
 	je	.L2
 	movl	%eax, %edx
 	andl	$3, %edx	# test for SmallInteger
 	cmpl	$2, %edx
 	je	.L1
-	pushl	$__sym_typeError
+	pushl	$__spk_sym_typeError
 	call	SpikeError
 .L1:
 	sarl	$2, %eax	# unbox result
