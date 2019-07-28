@@ -33,7 +33,7 @@ def remove(pathname):
 
 
 def assemble(inputPathname, outputPathname):
-    spawn("as", "-o", outputPathname, inputPathname)
+    spawn("as", "--32", "-o", outputPathname, inputPathname)
     return
 
 
@@ -42,7 +42,8 @@ def link(objectFiles, unknownFiles, outputPathname):
     flags = []
     if options.debug:
         flags.append("-g")
-    spawn("cc", "-o", outputPathname, *(objectFiles + unknownFiles + flags))
+    spawn("gcc", "-D_GNU_SOURCE", "-m32", "-o", outputPathname,
+          *(objectFiles + unknownFiles + flags))
     return
 
 

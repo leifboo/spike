@@ -80,7 +80,7 @@ def assembleAndLink(assembly):
     from os import spawnlp, P_WAIT
     status = spawnlp(
         P_WAIT,
-        "gcc", "gcc", "-g", "-I.",
+        "gcc", "gcc", "-m32", "-D_GNU_SOURCE", "-g", "-I.",
         #"-DLOOKUP_DEBUG",
         assembly,
         "rtl/Array.s",

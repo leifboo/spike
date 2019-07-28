@@ -46,6 +46,9 @@ struct Float {
 };
 
 
+extern void SpikeError(Object *);
+
+
 #define BOOL(cond) ((cond) ? &__spk_x_true : &__spk_x_false)
 
 
