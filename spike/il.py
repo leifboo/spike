@@ -1,4 +1,30 @@
 
+
+# no operation opcode
+operNop = "nop"
+
+# load/store/stack opcodes
+operPush = "push"
+operStore = "store"
+operPop = "pop"
+operDup = "dup"
+operRot = "rot"
+
+# control opcodes
+operBranchIfFalse = "brf"
+operBranchIfTrue = "brt"
+operBranchAlways = "bra"
+operRet = "ret"
+operHome = "home"
+operYield = "yield"
+
+# identity comparison opcode
+operId = "id"
+
+# send opcode
+operSend = "send"
+
+
 (
     OPCODE_NOP,
     OPCODE_PUSH_LOCAL,

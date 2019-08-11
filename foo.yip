@@ -1,0 +1,69 @@
+
+x:
+y:	nop
+	push	.null
+	push	.self
+	push	.super
+	push	.thisContext
+	push	.true
+	push	.false
+	push	.void
+
+zoo:	push	&Class
+	push	globalVar
+	store	globalVar
+	pop
+	dup	1
+	pop
+	dup	2
+	rot	4
+
+
+_branches:
+	brf	zoo
+	brt	zoo
+	bra	zoo
+_ret:	ret
+_home:	home
+_yield:	yield
+
+id:	id	.L1,0
+nid:	id	.L1,1
+
+_send:
+	send	,1
+	send	,2,va
+	send	,3,super
+	send	,4,super,va
+	send	#foo,1
+_oper:
+	send	.Add
+	send	.Add,,super
+_operCall:
+	send	.Apply,42
+	send	.Apply,42,super
+	send	.Apply,42,va
+	send	.Index,42
+	send	.Index,42,va
+	send	.Index,42,super
+	send	.Index,42,super,va
+_lv:
+	send	.Ind
+	send	.Ind
+	send	.Ind,,super,lv
+	send	.Ind,,super,lv
+	send	.Index,42,lv
+_attr:
+	send	,0
+	send	,0,lv
+	send	,1
+	send	,1,lv
+	send	,2
+	send	,2,lv
+	send	#foo,0
+	send	#foo,0,lv
+	send	#foo,1
+	send	#foo,1,lv
+	send	#foo,2
+	send	#foo,2,lv
+
