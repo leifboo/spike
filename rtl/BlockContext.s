@@ -1,65 +1,64 @@
 
 	.text
-	.align	4
+	.align	8
 BlockContext.0.__apply__:
 	.globl	BlockContext.0.__apply__
 	.type	BlockContext.0.__apply__, @object
-	.size	BlockContext.0.__apply__, 4
-	.long	__spk_x_Method
-	.long	0		# minArgumentCount
-	.long	0x80000000	# maxArgumentCount
-	.long	0		# localCount
+	.size	BlockContext.0.__apply__, 32
+	.quad	__spk_x_Method
+	.quad	0		# minArgumentCount
+	.quad	0x80000000	# maxArgumentCount
+	.quad	0		# localCount
 BlockContext.0.__apply__.code:
 	.globl	BlockContext.0.__apply__.code
 	.type	BlockContext.0.__apply__.code, @function
 
 /* check argument count */
-	movl	12(%ebp), %edx	# thisContext.argumentCount
-	cmpl	12(%esi), %edx	#   == self.argumentCount ?
+	mov	24(%rbp), %rdx	# thisContext.argumentCount
+	cmp	24(%rsi), %rdx	#   == self.argumentCount ?
 	je	.L1
-	pushl	$__spk_sym_wrongNumberOfArguments
+	push	$__spk_sym_wrongNumberOfArguments
 	call	SpikeError
 
 .L1:
 /* move 'caller' from our MethodContext to the receiver */
-	movl	4(%ebp), %eax
-	movl	%eax, 4(%esi)
+	mov	8(%rbp), %rax
+	mov	%rax, 8(%rsi)
 
 /* discard our own MethodContext */
-	leal	64(%ebp), %esp
+	lea	128(%rbp), %rsp
 
 /* set activeContext to the receiver */
-	movl	%esi, %ebp
+	mov	%rsi, %rbp
 
 /* restore registers */
-	movl	24(%ebp), %ebx
-	movl	28(%ebp), %esi
-	movl	32(%ebp), %edi
+	mov	48(%rbp), %rbx
+	mov	56(%rbp), %rsi
+	mov	64(%rbp), %rdi
 
 /* jump to the code block */
-	movl	16(%ebp), %eax	# pc
-	jmp	*%eax
+	mov	32(%rbp), %rax	# pc
+	jmp	*%rax
 
 	.size	BlockContext.0.__apply__.code, .-BlockContext.0.__apply__.code
 
 
 	.text
-	.align	4
+	.align	8
 BlockContext.0.closure:
 	.globl	BlockContext.0.closure
 	.type	BlockContext.0.closure, @object
-	.size	BlockContext.0.closure, 16
-	.long	__spk_x_Method
-	.long	0
-	.long	0
-	.long	0
+	.size	BlockContext.0.closure, 32
+	.quad	__spk_x_Method
+	.quad	0
+	.quad	0
+	.quad	0
 BlockContext.0.closure.code:
 	.globl	BlockContext.0.closure.code
 	.type	BlockContext.0.closure.code, @function
-	pushl	%esi
+	mov	%rsi, %rdi
 	call	SpikeCreateClosure
-	addl	$4, %esp
-	movl	%eax, 64(%ebx)
+	mov	%rax, 128(%rbx)
 	ret
 	.size	BlockContext.0.closure.code, .-BlockContext.0.closure.code
 

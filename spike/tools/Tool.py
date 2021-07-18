@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 
+import sys
+
+
 class Tool(object):
 
 
@@ -25,7 +28,6 @@ class Tool(object):
 
 
     def start(self, argv):
-        from sys import stderr
         from os.path import basename
 
         self.prog = basename(argv[0])
@@ -35,7 +37,7 @@ class Tool(object):
         try:
             status = self.main(argv)
         except self.SpawnException, e:
-            print >>stderr, "%s: %s" % (self.prog, e)
+            print >>sys.stderr, "%s: %s" % (self.prog, e)
         finally:
             self.removeTempFiles()
 
@@ -76,16 +78,17 @@ class Tool(object):
 
     def removeTempFiles(self):
         for pathname in self.tempFiles:
-            self.remove(pathname)
+            try:
+                self.remove(pathname)
+            except OSError, e:
+                print >>sys.stderr, "rm: '%s': error %s" % (pathname, e)
         return
 
 
     def remove(self, pathname):
         import os
-        from sys import stderr
-        
         if self.options.verbose:
-            print >>stderr, "rm %s" % pathname
+            print >>sys.stderr, "rm %s" % pathname
         os.remove(pathname)
         return
 

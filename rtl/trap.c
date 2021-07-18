@@ -19,14 +19,14 @@ static void trapHandler(int sig, siginfo_t *info, void *vuc) {
     
     spikeTrap = (greg_t)&SpikeTrap;
     
-    if (uc->uc_mcontext.gregs[REG_EIP] == spikeTrap) {
+    if (uc->uc_mcontext.gregs[REG_RIP] == spikeTrap) {
         
         /* Print the stack trace. */
-        activeContext = (struct Context *)uc->uc_mcontext.gregs[REG_EBP];
+        activeContext = (struct Context *)uc->uc_mcontext.gregs[REG_RBP];
         SpikePrintStackTrace(activeContext, stderr);
         
         /* Print the trap symbol. */
-        sp = (struct Symbol **)uc->uc_mcontext.gregs[REG_ESP];
+        sp = (struct Symbol **)uc->uc_mcontext.gregs[REG_RSP];
         fprintf(stderr, "$%s\n", sp[1]->str);
     }
     

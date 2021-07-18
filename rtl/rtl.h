@@ -35,22 +35,22 @@ struct Method {
 };
 
 
-struct Context {  /* <- %ebp */
-    struct Object base;
-    struct Context *caller;                 /*  4 saved %ebp */
-    struct Context *homeContext;            /*  8 %ebx */
-    size_t argumentCount;                   /* 12 */
-    void *pc;                               /* 16 %eip (return address) */
-    void *sp;                               /* 20 %esp */
-    void *regSaveArea[4];                   /* 24 %ebx, %esi, %edi, (reserved) */
+struct Context {  /* <- %rbp */
+    struct Object base;                     /**32-*64-bit**/
+    struct Context *caller;                 /*  4   8 saved %rbp */
+    struct Context *homeContext;            /*  8  16 %rbx */
+    size_t argumentCount;                   /* 12  24 */
+    void *pc;                               /* 16  32 %rip (return address) */
+    void *sp;                               /* 20  40 %rsp */
+    void *regSaveArea[4];                   /* 24  48 %rbx, %rsi, %rdi, (reserved) */
     /* the following are not present for BlockContext */
-    struct Method *method;                  /* 40 */
-    struct Behavior *methodClass;           /* 44 */
-    struct Object *receiver;                /* 48 %esi */
-    struct Object **instVarPointer;         /* 52 %edi */
-    void *stackBase;                        /* 56 base/bottom %esp */
-    size_t size;                            /* 60 size of 'var' array */
-    struct Object *var[1];                  /* 64 */
+    struct Method *method;                  /* 40  80 */
+    struct Behavior *methodClass;           /* 44  88 */
+    struct Object *receiver;                /* 48  96 %rsi */
+    struct Object **instVarPointer;         /* 52 104 %rdi */
+    void *stackBase;                        /* 56 112 base/bottom %rsp */
+    size_t size;                            /* 60 120 size of 'var' array */
+    struct Object *var[1];                  /* 64 128 */
 };
 
 

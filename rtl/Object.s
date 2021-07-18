@@ -3,20 +3,20 @@
 /* class */
 
 	.text
-	.align	4
+	.align	8
 Object.0.class:
 	.globl	Object.0.class
 	.type	Object.0.class, @object
-	.size	Object.0.class, 16
-	.long	__spk_x_Method
-	.long	0
-	.long	0
-	.long	0
+	.size	Object.0.class, 32
+	.quad	__spk_x_Method
+	.quad	0
+	.quad	0
+	.quad	0
 Object.0.class.code:
 	.globl	Object.0.class.code
 	.type	Object.0.class.code, @function
 	call	SpikeGetClass
-	movl	%ebx, 64(%ebp)
+	mov	%rbx, 128(%rbp)
 	ret
 	.size	Object.0.class.code, .-Object.0.class.code
 
@@ -25,35 +25,35 @@ SpikeGetClass:
 	.globl	SpikeGetClass
 	.type	SpikeGetClass, @function
 
-	cmpl	$0, %esi	# test for null
+	cmp	$0, %rsi	# test for null
 	jne	.L11
 
-	movl	$__spk_x_Null, %ebx
+	mov	$__spk_x_Null, %rbx
 	ret
 .L11:
-	movl	%esi, %eax
-	andl	$3, %eax	# test for object pointer
-	cmpl	$0, %eax
+	mov	%rsi, %rax
+	and	$3, %rax	# test for object pointer
+	cmp	$0, %rax
 	jne	.L12
 
-	movl	(%esi), %ebx 	# get class
+	mov	(%rsi), %rbx 	# get class
 	ret
 .L12:
-	cmpl	$2, %eax	# test for SmallInteger
+	cmp	$2, %rax	# test for SmallInteger
 	jne	.L13
 
-	movl	$__spk_x_Integer, %ebx
+	mov	$__spk_x_Integer, %rbx
 	ret
 .L13:
-	cmpl	$3, %eax	# test for CObject (aligned pointer)
+	cmp	$3, %rax	# test for CObject (aligned pointer)
 	jne	.L14
 
-	movl	$__spk_x_CObject, %ebx
+	mov	$__spk_x_CObject, %rbx
 	ret
 .L14:
-	pushl	$__spk_sym_badObjectPointer
+	push	$__spk_sym_badObjectPointer
 	call	SpikeError
-	movl	$0, %ebx
+	mov	$0, %rbx
 	ret
 
 	.size	SpikeGetClass, .-SpikeGetClass
@@ -63,57 +63,60 @@ SpikeGetClass:
 /* basicNew: */
 
 	.text
-	.align	4
+	.align	8
 Object.class.0.basicNew$:
 	.globl	Object.class.0.basicNew$
 	.type	Object.class.0.basicNew$, @object
-	.size	Object.class.0.basicNew$, 16
-	.long	__spk_x_Method
-	.long	1
-	.long	1
-	.long	0
+	.size	Object.class.0.basicNew$, 32
+	.quad	__spk_x_Method
+	.quad	1
+	.quad	1
+	.quad	0
 Object.class.0.basicNew$.code:
 	.globl	Object.class.0.basicNew$.code
 	.type	Object.class.0.basicNew$.code, @function
 
 /* check type of arg */
-	movl	64(%ebp), %edx	# get arg
-	movl	%edx, %eax
-	andl	$3, %eax	# test for SmallInteger
-	cmpl	$2, %eax
+	mov	128(%rbp), %rdx	# get arg
+	mov	%rdx, %rax
+	and	$3, %rax	# test for SmallInteger
+	cmp	$2, %rax
 	je	.L2
 .L1:
-	pushl	$__spk_sym_typeError
+	push	$__spk_sym_typeError
 	call	SpikeError
 
 .L2:
-/* tally number of instance variables in %eax */
-	movl	%esi, %edi 	# get class of new object (i.e., self)
-	movl	$0, %eax 	# tally instance vars
+/* tally number of instance variables in %rax */
+	mov	%rsi, %rdi 	# get class of new object (i.e., self)
+	mov	$0, %rax 	# tally instance vars
 .L3:
-	addl	16(%edi), %eax	# instVarCount
-	movl	4(%edi), %edi 	# up superclass chain
-	testl	%edi, %edi
+	add	32(%rdi), %rax	# instVarCount
+	mov	8(%rdi), %rdi 	# up superclass chain
+	test	%rdi, %rdi
 	jne	.L3
 
 /* add the requested number of indexable variables */
-	sarl	$2, %edx
-	addl	%edx, %eax
+	sar	$2, %rdx
+	add	%rdx, %rax
 
 /* account for 'klass' is-a pointer */
-	incl	%eax
+	inc	%rax
 
 /* allocate memory (assume an infinite amount memory for now!) */
-	pushl	$4		# element size
-	pushl	%eax		# number of elements
+	push	$8		# element size
+	push	%rax		# number of elements
+	pop	%rdi
+	pop	%rsi
 	call	calloc
-	addl	$8, %esp
+	mov	104(%rbp), %rdi	# restore regs
+	mov	96(%rbp), %rsi
 
 /* initialize 'klass' is-a pointer */
-	movl	%esi, (%eax)
+	mov	%rsi, (%rax)
 	
 /* store result */
-	movl	%eax, 68(%ebp)
+	mov	%rax, 136(%rbp)
 
 /* return */
 	ret
@@ -125,48 +128,48 @@ Object.class.0.basicNew$.code:
 /* boxing/unboxing */
 
 	.text
-	.align	4
+	.align	8
 Object.class.0.box$:
 	.globl	Object.class.0.box$
 	.type	Object.class.0.box$, @object
-	.size	Object.class.0.box$, 16
-	.long	__spk_x_Method
-	.long	1
-	.long	1
-	.long	0
+	.size	Object.class.0.box$, 32
+	.quad	__spk_x_Method
+	.quad	1
+	.quad	1
+	.quad	0
 Object.class.0.box$.code:
 	.globl	Object.class.0.box$.code
 	.type	Object.class.0.box$.code, @function
-	movl	64(%ebp), %eax	# get pointer arg
-	movl	%eax, 68(%ebp)	# provisional result
-	andl	$3, %eax	# test for CObject
-	cmpl	$3, %eax
+	mov	128(%rbp), %rax	# get pointer arg
+	mov	%rax, 136(%rbp)	# provisional result
+	and	$3, %rax	# test for CObject
+	cmp	$3, %rax
 	jne	.L4
-	movl	64(%ebp), %eax	# get pointer arg
-	andl	$~3, %eax	# discard flags
-	movl	(%eax), %eax	# get result
-	movl	%eax, 68(%ebp)	# store result
+	mov	128(%rbp), %rax	# get pointer arg
+	and	$~3, %rax	# discard flags
+	mov	(%rax), %rax	# get result
+	mov	%rax, 136(%rbp)	# store result
 .L4:
 	ret
 	.size	Object.class.0.box$.code, .-Object.class.0.box$.code
 
 
 	.text
-	.align	4
+	.align	8
 Object.0.unboxed:
 	.globl	Object.0.unboxed
 	.type	Object.0.unboxed, @object
-	.size	Object.0.unboxed, 16
-	.long	__spk_x_Method
-	.long	0
-	.long	0
-	.long	0
+	.size	Object.0.unboxed, 32
+	.quad	__spk_x_Method
+	.quad	0
+	.quad	0
+	.quad	0
 Object.0.unboxed.code:
 	.globl	Object.0.unboxed.code
 	.type	Object.0.unboxed.code, @function
-	movl	%esi, %eax	# real result is object pointer
-	movl	%eax, 64(%ebp)	# fake result is the same
-	movl	$4, %ecx	# result size
+	mov	%rsi, %rax	# real result is object pointer
+	mov	%rax, 128(%rbp)	# fake result is the same
+	mov	$8, %rcx	# result size
 	ret
 	.size	Object.0.unboxed.code, .-Object.0.unboxed.code
 

@@ -7,20 +7,20 @@ SpikeEpilogue:
 
 /*
  * Return to the caller, destroying the active MethodContext.
- * Preserve %eax, %ecx, %edx.  Restore all other registers.
+ * Preserve %rax, %rcx, %rdx.  Restore all other registers.
  */
 
 /* restore registers */
-	movl	4(%ebp), %ebp	# activeContext = caller
-	movl	24(%ebp), %ebx	# restore registers
-	movl	28(%ebp), %esi
-	movl	32(%ebp), %edi
+	mov	8(%rbp), %rbp	# activeContext = caller
+	mov	48(%rbp), %rbx	# restore registers
+	mov	56(%rbp), %rsi
+	mov	64(%rbp), %rdi
 
 /* restore stack pointer, popping context */
-	movl	20(%ebp), %esp
+	mov	40(%rbp), %rsp
 
 /* return */
-	pushl	16(%ebp)	# pc
+	push	32(%rbp)	# pc
 	ret
 
 	.size	SpikeEpilogue, .-SpikeEpilogue

@@ -2,6 +2,7 @@
 
 
 from Tool import Tool
+import sys
 
 
 class Compiler(Tool):
@@ -202,7 +203,7 @@ class Compiler(Tool):
 
 
     def assemble(self, inputPathname, outputPathname):
-        self.spawn("as", "--32", "-o", outputPathname, inputPathname)
+        self.spawn("as", "-o", outputPathname, inputPathname)
         return
 
 
@@ -211,7 +212,7 @@ class Compiler(Tool):
         flags = []
         if self.options.debug:
             flags.append("-g")
-        self.spawn("gcc", "-D_GNU_SOURCE", "-m32", "-o", outputPathname,
+        self.spawn("gcc", "-D_GNU_SOURCE", "-o", outputPathname,
                    *(objectFiles + unknownFiles + flags + ["-lm"]))
         return
 

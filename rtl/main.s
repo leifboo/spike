@@ -3,52 +3,50 @@
 
 main:
 	.globl	main
-	.type	main, @function
 
 	call	SpikeInstallTrapHandler
 
 /* allocate and initialize the first Context */
-	leal	-64(%esp), %esp
-	movl	$0, %eax
-	movl	$__spk_x_MethodContext, (%esp)	# -> klass is-a pointer
-	movl	%eax, 4(%esp)	# 0 -> caller
-	movl	%esp, 8(%esp)	# -> homeContext
-	movl	%eax, 12(%esp)	# 0 -> argumentCount
-	movl	%eax, 16(%esp)	# 0 -> pc
-	movl	%eax, 20(%esp)	# 0 -> sp
-	movl	%eax, 24(%esp)	# 0 -> regSaveArea[0]
-	movl	%eax, 28(%esp)	# 0 -> regSaveArea[1]
-	movl	%eax, 32(%esp)	# 0 -> regSaveArea[2]
-	movl	%eax, 36(%esp)	# 0 -> regSaveArea[3]
-	movl	%eax, 40(%esp)	# 0 -> method
-	movl	%eax, 44(%esp)	# 0 -> methodClass
-	movl	%eax, 48(%esp)	# 0 -> receiver
-	movl	%eax, 52(%esp)	# 0 -> instVarPointer
-	movl	%esp, 56(%esp)	# -> stackBase
-	movl	%eax, 60(%esp)	# 0 -> size
-	movl	%esp, %ebp
-	movl	%ebp, %ebx
+	lea	-128(%rsp), %rsp
+	mov	$0, %rax
+	movq	$__spk_x_MethodContext, (%rsp)	# -> klass is-a pointer
+	mov	%rax, 8(%rsp)	# 0 -> caller
+	mov	%rsp, 16(%rsp)	# -> homeContext
+	mov	%rax, 24(%rsp)	# 0 -> argumentCount
+	mov	%rax, 32(%rsp)	# 0 -> pc
+	mov	%rax, 40(%rsp)	# 0 -> sp
+	mov	%rax, 48(%rsp)	# 0 -> regSaveArea[0]
+	mov	%rax, 56(%rsp)	# 0 -> regSaveArea[1]
+	mov	%rax, 64(%rsp)	# 0 -> regSaveArea[2]
+	mov	%rax, 72(%rsp)	# 0 -> regSaveArea[3]
+	mov	%rax, 80(%rsp)	# 0 -> method
+	mov	%rax, 88(%rsp)	# 0 -> methodClass
+	mov	%rax, 96(%rsp)	# 0 -> receiver
+	mov	%rax, 104(%rsp)	# 0 -> instVarPointer
+	mov	%rsp, 112(%rsp)	# -> stackBase
+	mov	%rax, 120(%rsp)	# 0 -> size
+	mov	%rsp, %rbp
+	mov	%rbp, %rbx
 
-	pushl	$__spk_x_main	# receiver / space for result
-	pushl	$0		# XXX: args
-	movl	$1, %ecx
+	push	$__spk_x_main	# receiver / space for result
+	push	$0		# XXX: args
+	mov	$1, %rcx
 	call	SpikeCall	# call 'main' object
-	popl	%eax		# get result
-	cmpl	$__spk_x_void, %eax	# check for void
+	pop	%rax		# get result
+	cmp	$__spk_x_void, %rax	# check for void
 	je	.L2
-	movl	%eax, %edx
-	andl	$3, %edx	# test for SmallInteger
-	cmpl	$2, %edx
+	mov	%rax, %rdx
+	and	$3, %rdx	# test for SmallInteger
+	cmp	$2, %rdx
 	je	.L1
-	pushl	$__spk_sym_typeError
+	push	$__spk_sym_typeError
 	call	SpikeError
 .L1:
-	sarl	$2, %eax	# unbox result
-	leal	64(%esp), %esp
+	sar	$2, %rax	# unbox result
+	lea	128(%rsp), %rsp
 	ret
 .L2:
-	movl	$0, %eax
-	leal	64(%esp), %esp
+	mov	$0, %rax
+	lea	128(%rsp), %rsp
 	ret
 
-	.size	main, .-main

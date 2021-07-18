@@ -1,26 +1,26 @@
 
 	.text
-	.align	4
+	.align	8
 Function.0.__apply__:
 	.globl	Function.0.__apply__
 	.type	Function.0.__apply__, @object
-	.size	Function.0.__apply__, 4
-	.long	__spk_x_Method
-	.long	0		# minArgumentCount
-	.long	0x80000000	# maxArgumentCount
-	.long	0		# localCount
+	.size	Function.0.__apply__, 32
+	.quad	__spk_x_Method
+	.quad	0		# minArgumentCount
+	.quad	0x80000000	# maxArgumentCount
+	.quad	0		# localCount
 Function.0.__apply__.code:
 	.globl	Function.0.__apply__.code
 	.type	Function.0.__apply__.code, @function
 
 /* discard our own context */
-	movl	12(%ebp), %edx	# get argumentCount
-	movl	4(%ebp), %ebp	# activeContext = caller
-	leal	64(%ebx), %esp	# pop context
+	mov	24(%rbp), %rdx	# get argumentCount
+	mov	8(%rbp), %rbp	# activeContext = caller
+	lea	128(%rbx), %rsp	# pop context
 
 /* jump to the code represented by the receiver */
-	movl	(%esi), %ebx	# methodClass = my class
-	leal	4(%esi), %edi	# method = self
+	mov	(%rsi), %rbx	# methodClass = my class
+	lea	8(%rsi), %rdi	# method = self
 	jmp	SpikePrologue
 
 	.size	Function.0.__apply__.code, .-Function.0.__apply__.code

@@ -5,17 +5,22 @@ SpikeBlockCopy:
 	.globl	SpikeBlockCopy
 	.type	SpikeBlockCopy, @function
 
-	movl	(%esp), %eax	# get return address
-	addl	$2, %eax	# account for branch
-	movl	%eax, (%esp)	# set pc
+	mov	(%rsp), %rax	# get return address
+	add	$2, %rax	# account for branch
+	mov	%rax, (%rsp)	# set pc
 
+	mov	0(%rsp), %rdi
+	mov	8(%rsp), %rsi
+	mov	16(%rsp), %rdx
 	call	SpikeCreateBlockContext
+	mov	104(%rbp), %rdi	# restore regs
+	mov	96(%rbp), %rsi
 
-	movl	%eax, 8(%esp)	# save new BlockContext
-	popl	%eax		# pop pc
-	subl	$2, %eax	# account for branch
-	addl	$4, %esp	# pop argumentCount
-	jmp	*%eax		# return
+	mov	%rax, 16(%rsp)	# save new BlockContext
+	pop	%rax		# pop pc
+	sub	$2, %rax	# account for branch
+	add	$8, %rsp	# pop argumentCount
+	jmp	*%rax		# return
 
 	.size	SpikeBlockCopy, .-SpikeBlockCopy
 
@@ -25,18 +30,18 @@ SpikeYield:
 	.type	SpikeYield, @function
 
 /* pop return address into BlockContext.pc */
-	popl	16(%ebp)
+	pop	32(%rbp)
 
 /* set activeContext to the caller */
-	movl	4(%ebp), %ebp
+	mov	8(%rbp), %rbp
 
 /* restore registers */
-	movl	24(%ebp), %ebx
-	movl	28(%ebp), %esi
-	movl	32(%ebp), %edi
+	mov	48(%rbp), %rbx
+	mov	56(%rbp), %rsi
+	mov	64(%rbp), %rdi
 
 /* return */
-	movl	16(%ebp), %eax	# pc
-	jmp	*%eax
+	mov	32(%rbp), %rax	# pc
+	jmp	*%rax
 
 	.size	SpikeYield, .-SpikeYield

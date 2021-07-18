@@ -1,53 +1,71 @@
 
 	.text
-	.align	4
+	.align	8
 CFunction.0.__apply__:
 	.globl	CFunction.0.__apply__
 	.type	CFunction.0.__apply__, @object
-	.size	CFunction.0.__apply__, 4
-	.long	__spk_x_Method
-	.long	0		# minArgumentCount
-	.long	0x80000000	# maxArgumentCount
-	.long	0		# localCount
+	.size	CFunction.0.__apply__, 32
+	.quad	__spk_x_Method
+	.quad	0		# minArgumentCount
+	.quad	0x80000000	# maxArgumentCount
+	.quad	0		# localCount
 CFunction.0.__apply__.code:
 	.globl	CFunction.0.__apply__.code
 	.type	CFunction.0.__apply__.code, @function
 
+/* pad the stack for our poor man's FFI */
+	push	$0
+	push	$0
+	push	$0
+	push	$0
+	push	$0
+	push	$0
+	push	$0
 /* copy, reverse, and unbox args */
-	movl	$0, %esi	# start at last arg
+	mov	$0, %rsi	# start at last arg
 	jmp	.L2
 .L1:
-	pushl	64(%ebp,%esi,4)	# push arg
-	movl	$__spk_sym_unboxed, %edx
+	push	128(%rbp,%rsi,8)	# push arg
+	mov	$__spk_sym_unboxed, %rdx
 	call	SpikeGetAttr	# unbox arg
-	cmpl	$4, %ecx	# replace fake obj result with real one
+	cmp	$8, %rcx	# replace fake obj result with real one
 	je	.L3
-	movl	%edx, (%esp)
-	pushl	$0
+	mov	%rdx, (%rsp)
+	push	$0
 .L3:
-	movl	%eax, (%esp)
-	addl	$1, %esi	# walk back to previous arg
+	mov	%rax, (%rsp)
+	add	$1, %rsi	# walk back to previous arg
 .L2:
-	cmpl	12(%ebp), %esi	# compare with argumentCount
+	cmp	24(%rbp), %rsi	# compare with argumentCount
 	jb	.L1
 
 /* call C function */
-	movl	4(%edi), %eax	# get function pointer
-	call	*%eax		# call it
-	movl	56(%ebp), %esp	# clean up C args
+	mov	8(%rdi), %rax	# get function pointer
+/* unfurl register args */
+	pop	%rdi
+	pop	%rsi
+	pop	%rdx
+	pop	%rcx
+	pop	%r8
+	pop	%r9
+	and	$0xfffffffffffffff0, %rsp
+	call	*%rax		# call it
+	mov	112(%rbp), %rsp	# clean up C args
+	mov	104(%rbp), %rdi	# restore regs
+	mov	96(%rbp), %rsi
 
 /* box result */
-	pushl	%eax		# arg is Spike pointer (CObject)
-	movl	%esp, %eax
-	orl	$3, %eax
-	pushl	(%edi)		# receiver = signature
-	pushl	%eax		# arg
-	movl	$__spk_sym_box$, %edx
-	movl	$1, %ecx	# argument count
+	push	%rax		# arg is Spike pointer (CObject)
+	mov	%rsp, %rax
+	or	$3, %rax
+	push	(%rdi)		# receiver = signature
+	push	%rax		# arg
+	mov	$__spk_sym_box$, %rdx
+	mov	$1, %rcx	# argument count
 	call	SpikeSendMessage
-	movl	12(%ebp), %edx	# get argumentCount
-	popl	64(%ebp,%edx,4)	# store result
-	popl	%eax		# pop arg storage
+	mov	24(%rbp), %rdx	# get argumentCount
+	pop	128(%rbp,%rdx,8)	# store result
+	pop	%rax		# pop arg storage
 
 /* return */
 	ret
@@ -56,20 +74,20 @@ CFunction.0.__apply__.code:
 
 
 	.text
-	.align	4
+	.align	8
 CFunction.0.unboxed:
 	.globl	CFunction.0.unboxed
 	.type	CFunction.0.unboxed, @object
-	.size	CFunction.0.unboxed, 16
-	.long	__spk_x_Method
-	.long	0
-	.long	0
-	.long	0
+	.size	CFunction.0.unboxed, 32
+	.quad	__spk_x_Method
+	.quad	0
+	.quad	0
+	.quad	0
 CFunction.0.unboxed.code:
 	.globl	CFunction.0.unboxed.code
 	.type	CFunction.0.unboxed.code, @function
-	movl	%esi, 64(%ebp)	# fake, safe result for Spike code
-	movl	4(%edi), %eax	# real result for C/asm code
-	movl	$4, %ecx	# result size
+	mov	%rsi, 128(%rbp)	# fake, safe result for Spike code
+	mov	8(%rdi), %rax	# real result for C/asm code
+	mov	$8, %rcx	# result size
 	ret
 	.size	CFunction.0.unboxed.code, .-CFunction.0.unboxed.code

@@ -8,7 +8,7 @@ from spike.il import *
 from naming import *
 
 
-SIZEOF_OBJ_PTR = 4
+SIZEOF_OBJ_PTR = 8
 SIZEOF_CONTEXT_HEADER = 16*SIZEOF_OBJ_PTR
 OFFSETOF_ARGUMENT_COUNT = 3*SIZEOF_OBJ_PTR
 OFFSETOF_STACK_BASE = 14*SIZEOF_OBJ_PTR
@@ -191,7 +191,7 @@ def emitBranch(opcode, target, cgen):
 
 def dupN(n, cgen):
     for i in range(n):
-        emitOpcode(cgen, "pushl", "%lu(%%esp)", SIZEOF_OBJ_PTR * (n - 1))
+        emitOpcode(cgen, "push", "%lu(%%rsp)", SIZEOF_OBJ_PTR * (n - 1))
     return
 
 
@@ -227,13 +227,13 @@ def emitCodeForName(expr, super, cgen):
     if _def.u._def.level == 0:
         # built-in
         builtins = {
-            OPCODE_PUSH_SELF:    "%%esi",
-            OPCODE_PUSH_SUPER:   "%%esi",
+            OPCODE_PUSH_SELF:    "%%rsi",
+            OPCODE_PUSH_SUPER:   "%%rsi",
             OPCODE_PUSH_FALSE:   "$" + mangleExternal('false'),
             OPCODE_PUSH_TRUE:    "$" + mangleExternal('true'),
             OPCODE_PUSH_NULL:    "$0",
             OPCODE_PUSH_VOID:    "$" + mangleExternal('void'),
-            OPCODE_PUSH_CONTEXT: "%%ebp",
+            OPCODE_PUSH_CONTEXT: "%%rbp",
             }
         builtin = builtins[pushOpcode]
         
@@ -241,16 +241,16 @@ def emitCodeForName(expr, super, cgen):
             assert super, "invalid use of 'super'"
             super[0] = True
         
-        emitOpcode(cgen, "pushl", builtin)
+        emitOpcode(cgen, "pushq", builtin)
         
     else:
         if pushOpcode == OPCODE_PUSH_GLOBAL:
             mode = "" if isVarDef(_def) else "$"
-            emitOpcode(cgen, "pushl", "%s%s", mode, mangleExternal(_def.sym))
+            emitOpcode(cgen, "pushq", "%s%s", mode, mangleExternal(_def.sym))
         elif pushOpcode == OPCODE_PUSH_INST_VAR:
-            emitOpcode(cgen, "pushl", "%d(%%edi)", instVarOffset(_def, cgen))
+            emitOpcode(cgen, "push", "%d(%%rdi)", instVarOffset(_def, cgen))
         elif pushOpcode == OPCODE_PUSH_LOCAL:
-            emitOpcode(cgen, "pushl", "%d(%%ebx)", localVarOffset(_def, cgen))
+            emitOpcode(cgen, "push", "%d(%%rbx)", localVarOffset(_def, cgen))
         else:
             assert False, "unexpected push opcode"
 
@@ -263,29 +263,29 @@ def emitCodeForLiteral(literal, cgen):
     
     if klass is Symbol:
         willEmitSym(literal, cgen)
-        emitOpcode(cgen, "pushl", "$%s%s", symPrefix, mangle(literal))
+        emitOpcode(cgen, "pushq", "$%s%s", symPrefix, mangle(literal))
     
     elif klass is Integer:
         # a negative literal int is currently not possible
         assert literal >= 0, "negative literal int"
         if literal <= 0x1fffffff:
-            emitOpcode(cgen, "pushl", "$%ld", (literal << 2) | 0x2)
+            emitOpcode(cgen, "pushq", "$%ld", (literal << 2) | 0x2)
         else:
             # box
             willEmitInt(literal, cgen)
-            emitOpcode(cgen, "pushl", "$%s%ld", intPrefix, literal)
+            emitOpcode(cgen, "pushq", "$%s%ld", intPrefix, literal)
     
     elif klass is Float:
         index = willEmitFloat(literal, cgen)
-        emitOpcode(cgen, "pushl", "$%s%u", floatPrefix, index)
+        emitOpcode(cgen, "pushq", "$%s%u", floatPrefix, index)
     
     elif klass == Character:
         willEmitChar(literal, cgen)
-        emitOpcode(cgen, "pushl", "$%s%02x", charPrefix, ord(literal))
+        emitOpcode(cgen, "pushq", "$%s%02x", charPrefix, ord(literal))
     
     elif klass is String:
         index = willEmitStr(literal, cgen)
-        emitOpcode(cgen, "pushl", "$%s%u", strPrefix, index)
+        emitOpcode(cgen, "pushq", "$%s%u", strPrefix, index)
     
     else:
         assert False, "unknown class of literal: %r" % klass
@@ -295,20 +295,20 @@ def emitCodeForLiteral(literal, cgen):
 
 def store(var, cgen):
     _def = var.u.ref.definition
-    emitOpcode(cgen, "movl", "(%%esp), %%eax")
+    emitOpcode(cgen, "mov", "(%%rsp), %%rax")
     storeOpcode = _def.u._def.storeOpcode
     if storeOpcode == OPCODE_STORE_GLOBAL:
         assert isVarDef(_def), "invalid lvalue"
-        emitOpcode(cgen, "movl", "%%eax, %s", mangleExternal(_def.sym))
+        emitOpcode(cgen, "mov", "%%rax, %s", mangleExternal(_def.sym))
     elif storeOpcode == OPCODE_STORE_INST_VAR:
-        emitOpcode(cgen, "movl", "%%eax, %d(%%edi)", instVarOffset(_def, cgen))
+        emitOpcode(cgen, "mov", "%%rax, %d(%%rdi)", instVarOffset(_def, cgen))
     elif storeOpcode == OPCODE_STORE_LOCAL:
-        emitOpcode(cgen, "movl", "%%eax, %d(%%ebx)", localVarOffset(_def, cgen))
+        emitOpcode(cgen, "mov", "%%rax, %d(%%rbx)", localVarOffset(_def, cgen))
     return
 
 
 def pop(cgen):
-    emitOpcode(cgen, "popl", "%%eax")
+    emitOpcode(cgen, "pop", "%%rax")
     return
 
 
@@ -400,14 +400,14 @@ def emitROData(cgen):
     # We don't bother unique-ifying ints, floats, chars or strings;
     # instead, they have static linkage.
 
-    fprintf(out, "\t.align\t4\n")
+    fprintf(out, "\t.align\t8\n")
     for value in cgen.intData:
         fprintk(out,
                 "%(sym)s:\n"
                 "\t.type\t%(sym)s, @object\n"
-                "\t.size\t%(sym)s, 8\n"
-                "\t.long\t%(klass)s\n"
-                "\t.long\t%(value)d\n",
+                "\t.size\t%(sym)s, 16\n"
+                "\t.quad\t%(klass)s\n"
+                "\t.quad\t%(value)d\n",
                 sym = "%s%ld" % (intPrefix, value),
                 klass = mangleExternal('Integer'),
                 value = value)
@@ -420,32 +420,32 @@ def emitROData(cgen):
                 "\t.align\t16\n"
                 "%(sym)s:\n"
                 "\t.type\t%(sym)s, @object\n"
-                "\t.size\t%(sym)s, 12\n"
-                "\t.long\t%(klass)s\n"
+                "\t.size\t%(sym)s, 16\n"
+                "\t.quad\t%(klass)s\n"
                 "\t.double\t%(value)f\n",
                 sym = "%s%u" % (floatPrefix, i),
                 klass = mangleExternal('Float'),
                 value = value)
 
-    fprintf(out, "\t.align\t4\n")
+    fprintf(out, "\t.align\t8\n")
     for value in [ord(c) for c in sorted(list(cgen.charData))]:
         fprintk(out,
                 "%(sym)s:\n"
                 "\t.type\t%(sym)s, @object\n"
-                "\t.size\t%(sym)s, 8\n"
-                "\t.long\t%(klass)s\n"
-                "\t.long\t%(value)u\n",
+                "\t.size\t%(sym)s, 16\n"
+                "\t.quad\t%(klass)s\n"
+                "\t.quad\t%(value)u\n",
                 sym = "%s%02x" % (charPrefix, value),
                 klass = mangleExternal('Char'),
                 value = value)
 
     for i, value in enumerate(cgen.strData):
         fprintk(out,
-                "\t.align\t4\n"
+                "\t.align\t8\n"
                 "%(sym)s:\n"
                 "\t.type\t%(sym)s, @object\n"
-                "\t.long\t%(klass)s\n"
-                "\t.long\t%(size)u\n"
+                "\t.quad\t%(klass)s\n"
+                "\t.quad\t%(size)u\n"
                 "\t.string\t%(value)s\n"
                 "\t.size\t%(sym)s, .-%(sym)s\n",
                 sym = "%s%u" % (strPrefix, i),
@@ -460,12 +460,12 @@ def emitROData(cgen):
         name = mangle(sym)
         fprintk(out,
                 '\t.section\tspksym.%(name)s,"aG",@progbits,spksym.%(name)s,comdat\n'
-                "\t.align\t4\n"
+                "\t.align\t8\n"
                 "%(sym)s:\n"
                 "\t.globl\t%(sym)s\n"
                 "\t.type\t%(sym)s, @object\n"
-                "\t.long\t%(klass)s\n"
-                "\t.long\t%(hash)u\n"
+                "\t.quad\t%(klass)s\n"
+                "\t.quad\t%(hash)u\n"
                 "\t.string\t\"%(value)s\"\n"
                 "\t.size\t%(sym)s, .-%(sym)s\n",
                 name = name,
@@ -510,8 +510,8 @@ def emitCodeForExpr(expr, super, cgen):
         emitCodeForName(expr, super, cgen)
 
     elif expr.kind == EXPR_BLOCK:
-        emitOpcode(cgen, "pushl", "%%ebx")
-        emitOpcode(cgen, "pushl", "$%lu", expr.aux.block.argumentCount)
+        emitOpcode(cgen, "push", "%%rbx")
+        emitOpcode(cgen, "pushq", "$%lu", expr.aux.block.argumentCount)
         emitOpcode(cgen, "call", "SpikeBlockCopy")
         emitBranch(OPCODE_BRANCH_ALWAYS, expr.endLabel, cgen)
         emitCodeForBlock(expr, cgen)
@@ -523,7 +523,7 @@ def emitCodeForExpr(expr, super, cgen):
         emitCodeForExpr(expr[-1], super, cgen)
 
     elif expr.kind == EXPR_COMPOUND:
-        emitOpcode(cgen, "pushl", "%%ebp")
+        emitOpcode(cgen, "push", "%%rbp")
         for arg in expr:
             emitCodeForExpr(arg, None, cgen)
         if expr.var:
@@ -551,12 +551,12 @@ def emitCodeForExpr(expr, super, cgen):
         # evaluate selector
         if expr.left.kind == EXPR_ATTR:
             emitCodeForLiteral(expr.left.attr, cgen)
-            emitOpcode(cgen, "popl", "%%edx")
+            emitOpcode(cgen, "pop", "%%rdx")
             routine = "SpikeSendMessage"
 
         elif expr.left.kind == EXPR_ATTR_VAR:
             emitCodeForExpr(expr.left.right, None, cgen)
-            emitOpcode(cgen, "popl", "%%edx")
+            emitOpcode(cgen, "pop", "%%rdx")
             routine = "SpikeSendMessage"
 
         else:
@@ -568,9 +568,9 @@ def emitCodeForExpr(expr, super, cgen):
         if expr.var:
             # push var args
             emitOpcode(cgen, "call", "SpikePushVarArgs")
-            emitOpcode(cgen, "addl", "$%lu, %%ecx", argumentCount)
+            emitOpcode(cgen, "add", "$%lu, %%rcx", argumentCount)
         else:
-            emitOpcode(cgen, "movl", "$%lu, %%ecx", argumentCount)
+            emitOpcode(cgen, "mov", "$%lu, %%rcx", argumentCount)
 
         # call RTL routine to send message
         emitOpcode(cgen, "call", "%s%s", routine, "Super" if isSuper[0] else "")
@@ -578,13 +578,13 @@ def emitCodeForExpr(expr, super, cgen):
     elif expr.kind == EXPR_ATTR:
         emitCodeForExpr(expr.left, isSuper, cgen)
         emitCodeForLiteral(expr.attr, cgen)
-        emitOpcode(cgen, "popl", "%%edx")
+        emitOpcode(cgen, "pop", "%%rdx")
         emitOpcode(cgen, "call", "SpikeGetAttr%s", "Super" if isSuper[0] else "")
 
     elif expr.kind == EXPR_ATTR_VAR:
         emitCodeForExpr(expr.left, isSuper, cgen)
         emitCodeForExpr(expr.right, None, cgen)
-        emitOpcode(cgen, "popl", "%%edx")
+        emitOpcode(cgen, "pop", "%%rdx")
         emitOpcode(cgen, "call", "SpikeGetAttr%s", "Super" if isSuper[0] else "")
 
     elif expr.kind in (EXPR_PREOP, EXPR_POSTOP):
@@ -621,10 +621,10 @@ def emitCodeForExpr(expr, super, cgen):
         emitCodeForExpr(expr.left, None, cgen)
         emitCodeForExpr(expr.right, None, cgen)
         pop(cgen)
-        emitOpcode(cgen, "cmpl", "(%%esp), %%eax")
-        emitOpcode(cgen, "movl", "$%s, (%%esp)", mangleExternal('false'))
+        emitOpcode(cgen, "cmp", "(%%rsp), %%rax")
+        emitOpcode(cgen, "movq", "$%s, (%%rsp)", mangleExternal('false'))
         emitOpcode(cgen, "je" if expr.inverted else "jne", ".L%u", getLabel(expr.endLabel, cgen))
-        emitOpcode(cgen, "movl", "$%s, (%%esp)", mangleExternal('true'))
+        emitOpcode(cgen, "movq", "$%s, (%%rsp)", mangleExternal('true'))
 
     elif expr.kind == EXPR_AND:
         emitBranchForExpr(expr.left, False, expr.right.endLabel, expr.right.label, True, cgen)
@@ -648,8 +648,8 @@ def emitCodeForExpr(expr, super, cgen):
         argumentCount = len(expr.fixedArgs)
 
         emitCodeForLiteral(expr.selector, cgen)
-        emitOpcode(cgen, "popl", "%%edx")
-        emitOpcode(cgen, "movl", "$%lu, %%ecx", argumentCount)
+        emitOpcode(cgen, "pop", "%%rdx")
+        emitOpcode(cgen, "mov", "$%lu, %%rcx", argumentCount)
         emitOpcode(cgen, "call", "SpikeSendMessage%s", "Super" if isSuper[0] else "")
 
     elif expr.kind == EXPR_ASSIGN:
@@ -682,7 +682,7 @@ def squirrel(resultDepth, cgen):
     # duplicate the last result
     dupN(1, cgen)
     # squirrel it away for later
-    emitOpcode(cgen, "movl", "$%lu, %%ecx", resultDepth + 1)
+    emitOpcode(cgen, "mov", "$%lu, %%rcx", resultDepth + 1)
     emitOpcode(cgen, "call", "SpikeRotate")
     return
 
@@ -730,7 +730,7 @@ def inPlaceAttrOp(expr, cgen):
         dupN(argumentCount + 1, cgen)
 
         if expr.left.kind in (EXPR_ATTR, EXPR_ATTR_VAR):
-            emitOpcode(cgen, "popl", "%%edx")
+            emitOpcode(cgen, "pop", "%%rdx")
             emitOpcode(cgen, "call", "SpikeGetAttr%s", "Super" if isSuper[0] else "")
         else:
             assert False, "invalid lvalue"
@@ -741,9 +741,9 @@ def inPlaceAttrOp(expr, cgen):
 
     if expr.left.kind in (EXPR_ATTR, EXPR_ATTR_VAR):
         # XXX: re-think this whole thing
-        emitOpcode(cgen, "popl", "%%eax")
-        emitOpcode(cgen, "popl", "%%edx")
-        emitOpcode(cgen, "pushl", "%%eax")
+        emitOpcode(cgen, "pop", "%%rax")
+        emitOpcode(cgen, "pop", "%%rdx")
+        emitOpcode(cgen, "push", "%%rax")
         emitOpcode(cgen, "call", "SpikeSetAttr%s", "Super" if isSuper[0] else "")
 
     else:
@@ -779,7 +779,7 @@ def inPlaceIndexOp(expr, cgen):
     else:
         # get __index__ {
         dupN(argumentCount + 1, cgen)
-        emitOpcode(cgen, "movl", "$%lu, %%ecx", argumentCount)
+        emitOpcode(cgen, "mov", "$%lu, %%rcx", argumentCount)
         if expr.left.oper == OPER_APPLY:
             emitOpcode(cgen, "call", "SpikeCall%s", "Super" if isSuper[0] else "")
         elif expr.left.oper == OPER_INDEX:
@@ -792,7 +792,7 @@ def inPlaceIndexOp(expr, cgen):
                   cgen)
 
     argumentCount += 1 # new item value
-    emitOpcode(cgen, "movl", "$%lu, %%ecx", argumentCount)
+    emitOpcode(cgen, "mov", "$%lu, %%rcx", argumentCount)
     emitOpcode(cgen, "call", "SpikeSetIndex%s", "Super" if isSuper[0] else "")
 
     # discard 'set' method result, exposing the value that was
@@ -826,7 +826,7 @@ def emitBranchForExpr(expr, cond, label, fallThroughLabel, dup, cgen):
             maybeEmitLabel(expr.label, cgen)
             if killCode:
                 if dup:
-                    emitOpcode(cgen, "pushl", "$%s",
+                    emitOpcode(cgen, "pushq", "$%s",
                                mangleExternal('true' if pushOpcode == OPCODE_PUSH_TRUE else 'false'))
 
                 emitBranch(OPCODE_BRANCH_ALWAYS, label, cgen)
@@ -888,7 +888,7 @@ def popBlockArgs(cgen):
         # store args into local variables
         for arg in reversed(xrange(argumentCount)):
             index = cgen.blockIndex + arg # XXX: interpreter cruft
-            emitOpcode(cgen, "popl", "%d(%%ebx)", offsetOfIndex(index, cgen))
+            emitOpcode(cgen, "popq", "%d(%%rbx)", offsetOfIndex(index, cgen))
     # pop receiver
     pop(cgen)
     return
@@ -942,7 +942,7 @@ def emitCodeForInitializer(expr, cgen):
     assert _def.kind == EXPR_NAME, "name expected"
     assert _def.u._def.storeOpcode == OPCODE_STORE_LOCAL, "local variable expected"
     pop(cgen)
-    emitOpcode(cgen, "movl", "%%eax, %d(%%ebx)", localVarOffset(_def, cgen))
+    emitOpcode(cgen, "mov", "%%rax, %d(%%rbx)", localVarOffset(_def, cgen))
 
     maybeEmitLabel(expr.endLabel, cgen)
 
@@ -1031,24 +1031,24 @@ def emitCodeForStmt(stmt, nextLabel, breakLabel, continueLabel, cgen):
         elif inClass(cgen):
             # note that "return" inside a block closure is undefined
             # anyway
-            emitOpcode(cgen, "pushl", "%%esi") # self
+            emitOpcode(cgen, "push", "%%rsi") # self
         else:
             # naked function
-            emitOpcode(cgen, "pushl", "$%s", mangleExternal('void'))
+            emitOpcode(cgen, "pushq", "$%s", mangleExternal('void'))
         
         # store result
         if cgen.varArgList:
-            emitOpcode(cgen, "movl", "%d(%%ebx), %%ecx", OFFSETOF_ARGUMENT_COUNT)
-            emitOpcode(cgen, "popl", "%d(%%ebx,%%ecx,4)",
+            emitOpcode(cgen, "mov", "%d(%%rbx), %%rcx", OFFSETOF_ARGUMENT_COUNT)
+            emitOpcode(cgen, "popq", "%d(%%rbx,%%rcx,8)",
                        SIZEOF_CONTEXT_HEADER + cgen.home.localCount * SIZEOF_OBJ_PTR
                        )
         else:
-            emitOpcode(cgen, "popl", "%d(%%ebx)", offsetOfIndex(-1, cgen))
+            emitOpcode(cgen, "popq", "%d(%%rbx)", offsetOfIndex(-1, cgen))
         
         if cgen.kind == BlockCodeGen:
             # resume home context
-            emitOpcode(cgen, "movl", "%d(%%ebx), %%esp", OFFSETOF_STACK_BASE) # reset stack pointer
-            emitOpcode(cgen, "movl", "%%ebx, %%ebp") # activeContext = homeContext
+            emitOpcode(cgen, "mov", "%d(%%rbx), %%rsp", OFFSETOF_STACK_BASE) # reset stack pointer
+            emitOpcode(cgen, "mov", "%%rbx, %%rbp") # activeContext = homeContext
 
         # return to SpikeEpilogue
         emitOpcode(cgen, "ret")
@@ -1064,9 +1064,9 @@ def emitCodeForStmt(stmt, nextLabel, breakLabel, continueLabel, cgen):
         if stmt.expr:
             emitCodeForExpr(stmt.expr, None, cgen)
         else:
-            emitOpcode(cgen, "pushl", "$%s", mangleExternal('void'))
+            emitOpcode(cgen, "pushq", "$%s", mangleExternal('void'))
 
-        # save our %eip in BlockContext.pc and resume caller
+        # save our %rip in BlockContext.pc and resume caller
         emitOpcode(cgen, "call", "SpikeYield")
 
         # upon return, pop arguments anew
@@ -1084,9 +1084,9 @@ def emitCodeForStmt(stmt, nextLabel, breakLabel, continueLabel, cgen):
 def emitCodeForArgList(stmt, cgen):
 
     if cgen.varArgList:
-        emitOpcode(cgen, "pushl", "%%ebp")
+        emitOpcode(cgen, "mov", "%%rbp, %%rdi")
         emitOpcode(cgen, "call", "SpikeMoveVarArgs")
-        emitOpcode(cgen, "addl", "$4, %%esp")
+        emitOpcode(cgen, "mov", "104(%%rbp), %%rdi")
 
 
     if cgen.minArgumentCount < cgen.maxArgumentCount:
@@ -1107,30 +1107,30 @@ def emitCodeForArgList(stmt, cgen):
         defineLabel(table, cgen)
 
         # load argumentCount
-        emitOpcode(cgen, "movl", "%d(%%ebx), %%ecx", OFFSETOF_ARGUMENT_COUNT)
+        emitOpcode(cgen, "mov", "%d(%%rbx), %%rcx", OFFSETOF_ARGUMENT_COUNT)
 
         if cgen.varArgList:
             # range check
-            emitOpcode(cgen, "cmpl", "$%lu, %%ecx", cgen.maxArgumentCount)
+            emitOpcode(cgen, "cmp", "$%lu, %%rcx", cgen.maxArgumentCount)
             emitOpcode(cgen, "jae", ".L%u", getLabel(skip, cgen))
 
         # switch jump
-        emitOpcode(cgen, "subl", "$%lu, %%ecx", cgen.minArgumentCount)
-        emitOpcode(cgen, "shll", "$2, %%ecx") # convert to byte offset
-        emitOpcode(cgen, "movl", ".L%u(%%ecx), %%eax", getLabel(table, cgen))
-        emitOpcode(cgen, "jmp", "*%%eax")
+        emitOpcode(cgen, "sub", "$%lu, %%rcx", cgen.minArgumentCount)
+        emitOpcode(cgen, "shl", "$3, %%rcx") # convert to byte offset
+        emitOpcode(cgen, "mov", ".L%u(%%rcx), %%rax", getLabel(table, cgen))
+        emitOpcode(cgen, "jmp", "*%%rax")
 
         # switch table
         fprintf(out, "\t.section\t.rodata\n")
-        fprintf(out, "\t.align\t4\n")
+        fprintf(out, "\t.align\t8\n")
         maybeEmitLabel(table, cgen)
         tally = 0
         for arg in optionalArgList:
             assert arg.kind == EXPR_ASSIGN, "assignment expected"
-            fprintf(out, "\t.long\t.L%u\n", getLabel(arg.label, cgen))
+            fprintf(out, "\t.quad\t.L%u\n", getLabel(arg.label, cgen))
             tally += 1
         if not cgen.varArgList:
-            fprintf(out, "\t.long\t.L%u\n", getLabel(skip, cgen))
+            fprintf(out, "\t.quad\t.L%u\n", getLabel(skip, cgen))
         fprintf(out, "\t.text\n")
 
         assert tally == (cgen.maxArgumentCount - cgen.minArgumentCount), "wrong number of default arguments"
@@ -1179,15 +1179,15 @@ def emitCodeForMethod(stmt, meta, outer):
 
     fprintf(out, "\t.text\n")
     fprintk(out,
-            "\t.align\t4\n"
+            "\t.align\t8\n"
             "%(sym)s:\n"
             + linkage +
             "\t.type\t%(sym)s, @object\n"
-            "\t.size\t%(sym)s, 16\n"
-            "\t.long\t%(klass)s\n"
-            "\t.long\t%(minArgumentCount)u\n"
-            "\t.long\t%(maxArgumentCount)u\n"
-            "\t.long\t%(localCount)u\n",
+            "\t.size\t%(sym)s, 32\n"
+            "\t.quad\t%(klass)s\n"
+            "\t.quad\t%(minArgumentCount)u\n"
+            "\t.quad\t%(maxArgumentCount)u\n"
+            "\t.quad\t%(localCount)u\n",
             sym = sym,
             klass = mangleExternal(codeObjectClass),
             minArgumentCount = cgen.minArgumentCount,
@@ -1228,7 +1228,7 @@ def emitCFunction(stmt, cgen):
 
     fprintk(out,
             "\t.data\n"
-            "\t.align\t4\n"
+            "\t.align\t8\n"
             "%(sym)s:\n"
             "\t.globl\t%(sym)s\n"
             "\t.type\t%(sym)s, @object\n",
@@ -1254,9 +1254,9 @@ def emitCFunction(stmt, cgen):
         }[cc]
 
     fprintf(out,
-            "\t.long\t%s\n" # klass
-            "\t.long\t%s\n" # signature
-            "\t.long\t%s\n", # pointer
+            "\t.quad\t%s\n" # klass
+            "\t.quad\t%s\n" # signature
+            "\t.quad\t%s\n", # pointer
             mangleExternal(klass),
             mangleExternal(signature),
             name)
@@ -1294,7 +1294,7 @@ def emitCodeForCompound(body, meta, cgen):
                 out = cgen.out
 
                 fprintf(out, "\t.bss\n")
-                fprintf(out, "\t.align\t4\n")
+                fprintf(out, "\t.align\t8\n")
 
                 for expr in s.defList:
                     assert expr.kind == EXPR_NAME, "initializers not allowed here"
@@ -1304,9 +1304,9 @@ def emitCodeForCompound(body, meta, cgen):
                             "%(sym)s:\n"
                             "\t.globl\t%(sym)s\n"
                             "\t.type\t%(sym)s, @object\n"
-                            "\t.size\t%(sym)s, 4\n",
+                            "\t.size\t%(sym)s, 8\n",
                             sym = mangleExternal(expr.sym))
-                    fprintf(out, "\t.zero\t4\n")
+                    fprintf(out, "\t.zero\t8\n")
 
                     cgen.module.symbolTable.append(('v', expr.sym))
 
@@ -1368,52 +1368,52 @@ def emitCodeForBehaviorObject(classDef, meta, cgen):
 
     fprintk(out,
             "\t.data\n"
-            "\t.align\t4\n"
+            "\t.align\t8\n"
             "%(sym)s:\n"
             "\t.globl\t%(sym)s\n"
             "\t.type\t%(sym)s, @object\n",
             sym = sym)
 
     if meta:
-        fprintf(out, "\t.long\t%s\n", mangleExternal('Metaclass')) # klass
+        fprintf(out, "\t.quad\t%s\n", mangleExternal('Metaclass')) # klass
     else:
-        fprintf(out, "\t.long\t%s\n", mangleMeta(name)) # klass
+        fprintf(out, "\t.quad\t%s\n", mangleMeta(name)) # klass
 
     if superSym: # The metaclass hierarchy mirrors the class hierarchy.
-        fprintf(out, "\t.long\t%s\t/* superclass */\n", superSym) # superclass
+        fprintf(out, "\t.quad\t%s\t/* superclass */\n", superSym) # superclass
     elif meta: # The metaclass of 'Object' is a subclass of 'Class'.
-        fprintf(out, "\t.long\t%s\t/* superclass */\n", mangleExternal('Class')) # superclass
+        fprintf(out, "\t.quad\t%s\t/* superclass */\n", mangleExternal('Class')) # superclass
     else: # Class 'Object' has no superclass.
-        fprintf(out, "\t.long\t0\t/* superclass */\n") # superclass
+        fprintf(out, "\t.quad\t0\t/* superclass */\n") # superclass
 
     # XXX: hash at compile time
     for ns in range(NUM_METHOD_NAMESPACES):
         if methodTally[ns]:
             fprintf(out,
-                    "\t.long\t%s\t/* methodTable[%d] */\t\n",
+                    "\t.quad\t%s\t/* methodTable[%d] */\t\n",
                     methodTableSym(name, suffix, ns), ns) # methodTable[ns]
         else:
             fprintf(out,
-                    "\t.long\t0\t/* methodTable[%d] */\t\n",
+                    "\t.quad\t0\t/* methodTable[%d] */\t\n",
                     ns) # methodTable[ns]
 
     # instVarCount
     fprintf(out,
-            "\t.long\t%lu\t/* instVarCount */\n",
+            "\t.quad\t%lu\t/* instVarCount */\n",
             classDef.u.klass.classVarCount if meta else classDef.u.klass.instVarCount)
 
     if meta:
-        fprintf(out, "\t.long\t%s\t/* thisClass */\n", mangleExternal(name)) # thisClass
+        fprintf(out, "\t.quad\t%s\t/* thisClass */\n", mangleExternal(name)) # thisClass
     else:
         willEmitSym(classDef.expr.sym, cgen)
-        fprintf(out, "\t.long\t%s%s\t/* name */\n", symPrefix, name) # name
+        fprintf(out, "\t.quad\t%s%s\t/* name */\n", symPrefix, name) # name
 
     # XXX: Class objects need slots for class variables up the
     # superclass chain.  To be totally consistent, and robust with
     # dynamic linking (opaque superclasses), class objects would have
     # to be created at runtime.
     if not meta:
-        fprintf(out, "\t.long\t0,0,0,0,0,0,0,0\t/* XXX class variables */\n")
+        fprintf(out, "\t.quad\t0,0,0,0,0,0,0,0\t/* XXX class variables */\n")
 
     fprintk(out,
             "\t.size\t%(sym)s, .-%(sym)s\n",
@@ -1432,8 +1432,8 @@ def emitCodeForBehaviorObject(classDef, meta, cgen):
                 "\t.type\t%(mts)s, @object\n",
                 mts = mts)
 
-        fprintf(out, "\t.long\t%s\n", mangleExternal('Array'))
-        fprintf(out, "\t.long\t%d\n", 2 * methodTally[ns])
+        fprintf(out, "\t.quad\t%s\n", mangleExternal('Array'))
+        fprintf(out, "\t.quad\t%d\n", 2 * methodTally[ns])
 
         for s in body:
             if s.kind == STMT_DEF_METHOD and s.u.method.ns == ns:
@@ -1441,7 +1441,7 @@ def emitCodeForBehaviorObject(classDef, meta, cgen):
                 willEmitSym(selector, cgen)
                 selector = mangle(selector)
                 fprintf(out,
-                        "\t.long\t%s%s, %s%s.%d.%s\n",
+                        "\t.quad\t%s%s, %s%s.%d.%s\n",
                         symPrefix, selector,
                         name, suffix, ns, selector)
 

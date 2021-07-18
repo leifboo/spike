@@ -5,27 +5,27 @@ SpikeRotate:
 	.globl	SpikeRotate
 	.type	SpikeRotate, @function
 
-	pushl	%ebp
-	movl	%esp, %ebp
+	push	%rbp
+	mov	%rsp, %rbp
 
-	subl	$1, %ecx	# can't rotate less than 2 args
+	sub	$1, %rcx	# can't rotate less than 2 args
 	jbe	.L2
 
-	addl	$8, %ebp	# point to 1st arg
-	movl	0(%ebp), %eax	# save it on the stack
-	pushl	%eax
+	add	$16, %rbp	# point to 1st arg
+	mov	0(%rbp), %rax	# save it on the stack
+	push	%rax
 
 .L1:
-	movl	4(%ebp), %eax	# move next N-1 args
-	movl	%eax, 0(%ebp)	# towards the top of the stack
-	addl	$4, %ebp
+	mov	8(%rbp), %rax	# move next N-1 args
+	mov	%rax, 0(%rbp)	# towards the top of the stack
+	add	$8, %rbp
 	loop	.L1
 
-	popl	%eax
-	movl	%eax, 0(%ebp)	# place saved arg
+	pop	%rax
+	mov	%rax, 0(%rbp)	# place saved arg
 
 .L2:
-	popl	%ebp
+	pop	%rbp
 	ret
 
 	.size	SpikeRotate, .-SpikeRotate

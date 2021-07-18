@@ -8,24 +8,24 @@ SpikeTest:
 	.globl	SpikeTest
 	.type	SpikeTest, @function
 
-	movl	4(%esp), %eax	# get arg
+	mov	8(%rsp), %rax	# get arg
 
-	cmpl	$__spk_x_true, %eax
+	cmp	$__spk_x_true, %rax
 	jne	.L2
-	cmpl	$__spk_x_false, %eax	# Z = 1
+	cmp	$__spk_x_false, %rax	# Z = 1
 .L1:
-	popl	%eax		# pop return address
-	movl	%eax, 0(%esp)	# replace arg with RA
+	pop	%rax		# pop return address
+	mov	%rax, 0(%rsp)	# replace arg with RA
 	ret
 .L2:
-	cmpl	$__spk_x_false, %eax
+	cmp	$__spk_x_false, %rax
 	je	.L1
-	cmpl	$0, %eax	# null
+	cmp	$0, %rax	# null
 	je	.L1
 
 /* XXX: accept 0, 0.0, (hook?) */
 
-	pushl	$__spk_sym_mustBeBoolean
+	push	$__spk_sym_mustBeBoolean
 	call	SpikeError
 
 	.size	SpikeTest, .-SpikeTest

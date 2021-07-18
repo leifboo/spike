@@ -21,9 +21,9 @@ struct Context *SpikeCreateBlockContext(
     newContext->argumentCount = argumentCount;
     newContext->pc = pc;
     newContext->sp = 0;
-    newContext->regSaveArea[0] = homeContext; /* %ebx */
-    newContext->regSaveArea[1] = homeContext->receiver; /* %esi */
-    newContext->regSaveArea[2] = homeContext->instVarPointer; /* %edi */
+    newContext->regSaveArea[0] = homeContext; /* %rbx */
+    newContext->regSaveArea[1] = homeContext->receiver; /* %rsi */
+    newContext->regSaveArea[2] = homeContext->instVarPointer; /* %rdi */
     newContext->regSaveArea[3] = 0; /* reserved/unused */
     
     return newContext;

@@ -38,12 +38,14 @@ main(argv) {
     example3 = Three new;
     example4 = Four new;
     
-    printf("%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
+    printf("%d\n%d\n%d\n%d\n%d\n",
            example1.test(),
            example1.result1(),
            example2.test(),
            example2.result1(),
-           example3.test(),
+           example3.test()
+        ); // split in two for now: overcome x64 FFI limitation
+    printf("%d\n%d\n%d\n%d\n%d\n",
            example4.result1(),
            example3.result2(),
            example4.result2(),
