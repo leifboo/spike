@@ -23,24 +23,40 @@ CFunction.0.__apply__.code:
 	push	$0
 /* copy, reverse, and unbox args */
 	mov	$0, %rsi	# start at last arg
+	mov	$6, %r12	# available SSE registers
 	jmp	.L2
 .L1:
 	push	128(%rbp,%rsi,8)	# push arg
 	mov	$__spk_sym_unboxed, %rdx
 	call	SpikeGetAttr	# unbox arg
-	cmp	$8, %rcx	# replace fake obj result with real one
-	je	.L3
-	mov	%rdx, (%rsp)
-	push	$0
+	cmp	$16, %rcx
+	jne	.L3
+	pop	%rdx		# real result in SSE register
+	jmp	.L4
 .L3:
-	mov	%rax, (%rsp)
+	mov	%rax, (%rsp)	# replace fake obj result with real one
+.L4:
 	add	$1, %rsi	# walk back to previous arg
 .L2:
 	cmp	24(%rbp), %rsi	# compare with argumentCount
 	jb	.L1
 
+	cmp	$0, %r12
+	je	.L6
+	cmp	$6, %r12
+	je	.L6
+	mov	%r12, %rcx
+/* shift SSE registers */
+.L5:
+	movsd	%xmm1, %xmm0
+	movsd	%xmm2, %xmm1
+	movsd	%xmm3, %xmm2
+	movsd	%xmm4, %xmm3
+	movsd	%xmm5, %xmm4
+	loop	.L5
+.L6:
 /* call C function */
-	mov	8(%rdi), %rax	# get function pointer
+	mov	8(%rdi), %r10	# get function pointer
 /* unfurl register args */
 	pop	%rdi
 	pop	%rsi
@@ -49,7 +65,8 @@ CFunction.0.__apply__.code:
 	pop	%r8
 	pop	%r9
 	and	$0xfffffffffffffff0, %rsp
-	call	*%rax		# call it
+	mov	$6, %rax
+	call	*%r10		# call it
 	mov	112(%rbp), %rsp	# clean up C args
 	mov	104(%rbp), %rdi	# restore regs
 	mov	96(%rbp), %rsi
