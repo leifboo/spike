@@ -16,6 +16,7 @@ class NodeFactory(object):
     from statements import IfElse     as stmtIfElse
     # STMT_PRAGMA_SOURCE
     from statements import Return     as stmtReturn
+    from statements import Trap       as stmtTrap
     from statements import While      as stmtWhile
     from statements import Yield      as stmtYield
 

@@ -225,6 +225,11 @@ class SpecDef(Stmt):
 
 
 
+class Trap(Stmt):
+    childAttrNames = ()
+
+
+
 class VarDef(Stmt):
 
 
@@ -294,5 +299,6 @@ STMT_FOR            = For
 STMT_IF_ELSE        = IfElse
 STMT_PRAGMA_SOURCE  = PragmaSource
 STMT_RETURN         = Return
+STMT_TRAP           = Trap
 STMT_WHILE          = While
 STMT_YIELD          = Yield

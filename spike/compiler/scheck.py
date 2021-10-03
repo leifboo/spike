@@ -448,7 +448,7 @@ def checkClassDef(stmt, outer, checker, outerPass):
 
 def checkStmt(stmt, outer, checker, outerPass):
 
-    if stmt.kind in (STMT_BREAK, STMT_CONTINUE):
+    if stmt.kind in (STMT_BREAK, STMT_CONTINUE, STMT_TRAP):
         pass
 
     elif stmt.kind == STMT_COMPOUND:

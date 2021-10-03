@@ -40,6 +40,7 @@ static int T;
 "return"		{ count(yyscanner); return TOKEN_RETURN; }
 "while"			{ count(yyscanner); return TOKEN_WHILE; }
 "yield"			{ count(yyscanner); return TOKEN_YIELD; }
+"__trap"		{ count(yyscanner); return TOKEN_TRAP; }
 
 {L}({L}|{D})*		{ count(yyscanner); return TOKEN_IDENTIFIER; }
 ${L}({L}|{D})*		{ count(yyscanner); return TOKEN_LITERAL_SYMBOL; }
@@ -273,6 +274,7 @@ int Lexer_GetNextToken(int *token, yyscan_t scanner) {
     case TOKEN_IF:
     case TOKEN_META:
     case TOKEN_RETURN:
+    case TOKEN_TRAP:
     case TOKEN_WHILE:
     case TOKEN_YIELD:
         *token = ++T;

@@ -55,6 +55,7 @@ closed_statement(r) ::= CONTINUE SEMI.                                          
 closed_statement(r) ::= BREAK SEMI.                                             { fprintf(spkout, "s%d = f.stmtBreak()\n", r = ++S); }
 closed_statement(r) ::= RETURN            SEMI.                                 { fprintf(spkout, "s%d = f.stmtReturn(None)\n", r = ++S); }
 closed_statement(r) ::= RETURN expr(expr) SEMI.                                 { fprintf(spkout, "s%d = f.stmtReturn(e%d)\n", r = ++S, expr); }
+closed_statement(r) ::= TRAP SEMI.                                              { fprintf(spkout, "s%d = f.stmtTrap()\n", r = ++S); }
 closed_statement(r) ::= YIELD            SEMI.                                  { fprintf(spkout, "s%d = f.stmtYield(None)\n", r = ++S); }
 closed_statement(r) ::= YIELD expr(expr) SEMI.                                  { fprintf(spkout, "s%d = f.stmtYield(e%d)\n", r = ++S, expr); }
 closed_statement(r) ::= expr(expr) compound_statement(stmt).                    { fprintf(spkout, "s%d = f.stmtDefMethod(e%d, s%d)\n", r = ++S, expr, stmt); }

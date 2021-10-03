@@ -1053,6 +1053,9 @@ def emitCodeForStmt(stmt, nextLabel, breakLabel, continueLabel, cgen):
         # return to SpikeEpilogue
         emitOpcode(cgen, "ret")
 
+    elif stmt.kind == STMT_TRAP:
+        emitOpcode(cgen, "int3")
+
     elif stmt.kind == STMT_WHILE:
         childNextLabel = stmt.expr.label
         emitBranch(OPCODE_BRANCH_ALWAYS, stmt.expr.label, cgen)
