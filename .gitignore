@@ -5,3 +5,5 @@ gram.h
 gram.out
 lexer.c
 lemon
+dist
+MANIFEST

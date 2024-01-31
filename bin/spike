@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 
-import os, sys
-from os.path import basename
+import os, sys, spike
+from os.path import basename, dirname, join
 from spike.compiler import compile, assembleAndLink
 
 
@@ -17,7 +17,8 @@ def main(argv):
     assembly = basename(script) + ".s"
     
     out = open(assembly, "w")
-    compile(["rtl/rtl.spk", "libc.spk", script], out)
+    sdir = dirname(spike.__file__)
+    compile([join(sdir, "rtl/rtl.spk"), join(sdir, "libc.spk"), script], out)
     out.close()
     
     status = assembleAndLink(assembly)

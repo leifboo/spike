@@ -78,39 +78,48 @@ def compile(pathnames, out, err = sys.stderr, externals = None):
 
 def assembleAndLink(assembly):
     from os import spawnlp, P_WAIT
+    from os.path import dirname, join
+    import spike
+
+    rtl = [
+        "Array.s",
+        "BlockContext.s",
+        "blocks.s",
+        "CFunction.s",
+        "CObject.s",
+        "Context.c",
+        "Char.s",
+        "epilogue.s",
+        "error.s",
+        "Float.c",
+        "Float.s",
+        "Function.s",
+        "Integer.s",
+        "main.s",
+        "Object.s",
+        "prologue.s",
+        "rot.s",
+        "send.s",
+        "singletons.s",
+        "stacktrace.c",
+        "String.c",
+        "String.s",
+        "Symbol.c",
+        "test.s",
+        "trap.c",
+        "lookup.c",
+        "XFunction.s",
+        ]
+    sdir = join(dirname(spike.__file__), 'rtl')
+    rtl = [join(sdir, item) for item in rtl]
+    rtl.append("-lm")
+
     status = spawnlp(
         P_WAIT,
         "gcc", "gcc", "-D_GNU_SOURCE", "-g", "-I.",
         #"-DLOOKUP_DEBUG",
         assembly,
-        "rtl/Array.s",
-        "rtl/BlockContext.s",
-        "rtl/blocks.s",
-        "rtl/CFunction.s",
-        "rtl/CObject.s",
-        "rtl/Context.c",
-        "rtl/Char.s",
-        "rtl/epilogue.s",
-        "rtl/error.s",
-        "rtl/Float.c",
-        "rtl/Float.s",
-        "rtl/Function.s",
-        "rtl/Integer.s",
-        "rtl/main.s",
-        "rtl/Object.s",
-        "rtl/prologue.s",
-        "rtl/rot.s",
-        "rtl/send.s",
-        "rtl/singletons.s",
-        "rtl/stacktrace.c",
-        "rtl/String.c",
-        "rtl/String.s",
-        "rtl/Symbol.c",
-        "rtl/test.s",
-        "rtl/trap.c",
-        "rtl/lookup.c",
-        "rtl/XFunction.s",
-        "-lm",
+        *rtl
         )
     return status
 
