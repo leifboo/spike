@@ -17,6 +17,7 @@ the number of things that are missing are too numerous to mention.
 Spike currently only works on Linux x86_64.
 
 ```
+make  # generate gram.c
 python setup.py install --prefix=PREFIX
  # add 'spike' to your PATH and PYTHONPATH
 ./examples/hello.spk
